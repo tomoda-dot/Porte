@@ -130,3 +130,50 @@ function updateSetting(k,v){var s=getSheet('設定');if(!s)return false;var lr=s
 // CSV
 function getWageCSV(ym){var us=getUsers(),att=getAttendance(ym),wts=getWorkTypes();var csv='氏名,出勤日数,総作業時間(h),工賃合計(円)\n';for(var u=0;u<us.length;u++){var user=us[u];var recs=[];for(var a=0;a<att.length;a++){if(String(att[a].userId)===String(user.id)&&(att[a].status==='出席'||att[a].status==='遅刻'||att[a].status==='早退'))recs.push(att[a]);}if(recs.length===0)continue;var tH=0,tW=0;for(var r=0;r<recs.length;r++){var h=calcHours(recs[r].startTime,recs[r].endTime,Number(recs[r].breakMin)||0);var wt=null;for(var w=0;w<wts.length;w++){if(String(wts[w].id)===String(recs[r].workTypeId)){wt=wts[w];break;}}tH+=h;tW+=h*(wt?Number(wt.rate):0);}csv+=user.name+','+recs.length+','+tH.toFixed(1)+','+Math.round(tW)+'\n';}return csv;}
 function calcHours(s,e,b){if(!s||!e)return 0;var sp=String(s).split(':'),ep=String(e).split(':');return Math.max(0,(Number(ep[0])*60+Number(ep[1])-Number(sp[0])*60-Number(sp[1])-(b||0))/60);}
+
+// ============================================================
+// APIエンドポイント (GitHub Pages等の外部からのリクエスト処理用)
+// ============================================================
+function doPost(e) {
+  try {
+    var payload = JSON.parse(e.postData.contents);
+    var action = payload.action;
+    var args = payload.args || [];
+    var result = null;
+
+    if (action === 'getUsers') result = getUsers();
+    else if (action === 'addUser') result = addUser(args[0]);
+    else if (action === 'updateUser') result = updateUser(args[0]);
+    else if (action === 'deleteUser') result = deleteUser(args[0]);
+    else if (action === 'getStaff') result = getStaff();
+    else if (action === 'addStaff') result = addStaff(args[0]);
+    else if (action === 'updateStaff') result = updateStaff(args[0]);
+    else if (action === 'deleteStaff') result = deleteStaff(args[0]);
+    else if (action === 'getAttendance') result = getAttendance(args[0]);
+    else if (action === 'getAttendanceByDate') result = getAttendanceByDate(args[0]);
+    else if (action === 'addAttendance') result = addAttendance(args[0]);
+    else if (action === 'updateAttendance') result = updateAttendance(args[0]);
+    else if (action === 'upsertAttendance') result = upsertAttendance(args[0]);
+    else if (action === 'bulkAddAttendance') result = bulkAddAttendance(args[0]);
+    else if (action === 'getDailyByDate') result = getDailyByDate(args[0]);
+    else if (action === 'addDailyReport') result = addDailyReport(args[0]);
+    else if (action === 'updateDailyReport') result = updateDailyReport(args[0]);
+    else if (action === 'getTransportByDate') result = getTransportByDate(args[0]);
+    else if (action === 'addTransport') result = addTransport(args[0]);
+    else if (action === 'updateTransport') result = updateTransport(args[0]);
+    else if (action === 'getWorkTypes') result = getWorkTypes();
+    else if (action === 'addWorkType') result = addWorkType(args[0]);
+    else if (action === 'updateWorkType') result = updateWorkType(args[0]);
+    else if (action === 'deleteWorkType') result = deleteWorkType(args[0]);
+    else if (action === 'getSettings') result = getSettings();
+    else if (action === 'updateSetting') result = updateSetting(args[0], args[1]);
+    else if (action === 'getWageCSV') result = getWageCSV(args[0]);
+    else throw new Error('不明なアクションです: ' + action);
+
+    return ContentService.createTextOutput(JSON.stringify({ success: true, data: result }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
