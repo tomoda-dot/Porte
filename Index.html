@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
+:root{--bg:#f5f0eb;--card:#fff;--pri:#3d5a3e;--pri-l:#5a7d5c;--acc:#c07830;--txt:#2c2c2c;--sub:#6b6b6b;--bdr:#e0d8d0;--hov:#f0ebe5;--red:#b33a3a;--grn:#3d7a3d;--shd:0 2px 12px rgba(0,0,0,.06)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--txt);font-size:13px}
+input,select,textarea,button{font-family:inherit;font-size:13px}
+input,select,textarea{border:1.5px solid var(--bdr);border-radius:7px;padding:7px 10px;background:#fff;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--pri)}
+button{cursor:pointer;border:none;border-radius:7px;padding:7px 15px;font-weight:500;transition:all .15s}
+button:hover{opacity:.85}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--bdr);font-size:12px}
+th{background:var(--bg);font-weight:600;position:sticky;top:0;z-index:1}
+tr:hover td{background:var(--hov)}
+.bp{background:var(--pri);color:#fff}.ba{background:var(--acc);color:#fff}.br{background:var(--red);color:#fff}
+.bg{background:transparent;color:var(--pri);border:1.5px solid var(--bdr)}
+.badge{display:inline-block;padding:2px 9px;border-radius:11px;font-size:10px;font-weight:600;color:#fff}
+.app{display:flex;min-height:100vh}
+.side{width:200px;background:var(--pri);color:#fff;display:flex;flex-direction:column;flex-shrink:0}
+.side-hd{padding:16px 12px;border-bottom:1px solid rgba(255,255,255,.15);text-align:center;font-size:12px;font-weight:700;line-height:1.6}
+.side nav{flex:1;padding:4px 0}
+.side nav button{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:transparent;color:#fff;border-radius:0;font-size:12px;text-align:left;border-left:3px solid transparent}
+.side nav button:hover{background:rgba(255,255,255,.08)}
+.side nav button.act{background:rgba(255,255,255,.15);border-left-color:#fff}
+.main{flex:1;padding:20px 24px;overflow-y:auto;max-height:100vh}
+.card{background:var(--card);border-radius:13px;box-shadow:var(--shd);padding:16px 20px;margin-bottom:16px}
+.card-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.card-t{font-size:14px;font-weight:600;color:var(--pri)}
+.stats{display:flex;gap:11px;flex-wrap:wrap;margin-bottom:18px}
+.stat{background:var(--card);border-radius:11px;padding:13px 16px;box-shadow:var(--shd);flex:1 1 130px;border-left:4px solid var(--pri)}
+.stat-l{font-size:11px;color:var(--sub);margin-bottom:3px}
+.stat-v{font-size:22px;font-weight:700;color:var(--pri)}
+.stat-s{font-size:10px;color:var(--sub);margin-top:2px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--sub);margin-bottom:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 14px}
+.hd-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px}
+.hd-row h2{font-size:19px;font-weight:700}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:#fff;border-radius:14px;padding:24px 28px;width:700px;max-width:95vw;max-height:85vh;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-hd h3{font-size:16px;font-weight:600}
+.modal-close{background:none;font-size:18px;color:var(--sub)}
+.btns{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.loading{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;color:var(--sub)}
+.tbl-wrap{overflow:auto;max-height:460px}
+.section-title{font-size:13px;font-weight:600;color:var(--pri);margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--bdr)}
+.day-check{display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-size:12px}
+.day-check input{width:16px;height:16px}
+
+/* フィルタータブ */
+.filter-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.filter-tab{padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;border:2px solid var(--bdr);background:#fff;color:var(--sub)}
+.filter-tab.active{background:var(--pri);color:#fff;border-color:var(--pri)}
+.filter-tab .count{margin-left:4px;font-size:10px;opacity:.8}
+
+/* あかさたなフィルター */
+.kana-filter{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.kana-btn{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;background:#fff;border:1.5px solid var(--bdr);color:var(--sub);min-width:30px;text-align:center}
+.kana-btn.active{background:var(--acc);color:#fff;border-color:var(--acc)}
+.kana-btn:hover{border-color:var(--acc)}
+
+/* ステータスバッジ */
+.status-active{color:var(--grn);font-weight:700;font-size:12px}
+.status-ended{color:var(--red);font-weight:700;font-size:12px}
+
+/* カレンダー */
+.cal{border-collapse:collapse;width:100%;table-layout:fixed}
+.cal th{background:var(--bg);text-align:center;padding:8px 4px;font-size:11px;border:1px solid var(--bdr)}
+.cal td{border:1px solid var(--bdr);vertical-align:top;padding:4px;height:90px;font-size:11px;cursor:pointer;transition:background .1s}
+.cal td:hover{background:var(--hov)}
+.cal td.today{background:#e8f5e9}
+.cal td.other{color:#ccc;background:#fafafa}
+.cal td.sun{color:var(--red)}
+.cal td.sat{color:#1565c0}
+.cal .day-num{font-weight:700;font-size:13px;margin-bottom:2px}
+.cal .day-info{font-size:10px;line-height:1.5}
+.cal .bento-badge{background:var(--acc);color:#fff;border-radius:8px;padding:1px 6px;font-size:9px;font-weight:600}
+.cal .user-count{color:var(--pri);font-weight:600}
+.cal-nav{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.cal-nav button{background:var(--pri);color:#fff;padding:6px 14px;font-size:13px}
+.cal-nav .cal-month{font-size:18px;font-weight:700;min-width:160px;text-align:center}
+
+@media print{.no-print{display:none!important}body{background:#fff}}
+@media(max-width:768px){.side{width:52px}.side-hd{font-size:9px;padding:12px 4px}.side nav button span.lbl{display:none}.side nav button{justify-content:center;padding:10px 0}.main{padding:14px 12px}.grid2,.grid3{grid-template-columns:1fr}.modal{width:98vw}.cal td{height:60px}}
+</style>
+</head>
+<body>
+<div id="app" class="loading"><div style="font-size:36px">🏢</div><div>読み込み中...</div></div>
+<script>
+function gas(fn){var args=Array.prototype.slice.call(arguments,1);return new Promise(function(ok,ng){var r=google.script.run.withSuccessHandler(ok).withFailureHandler(ng);r[fn].apply(r,args);});}
+var S={tab:'dashboard',users:[],staff:[],workTypes:[],settings:{},ready:false};
+var today=function(){return new Date().toISOString().slice(0,10);};
+var fmtDate=function(d){if(!d||d==='undefined')return'';var p=String(d).split('-');if(p.length<3)return'';return p[0]+'/'+String(parseInt(p[1]))+'/'+String(parseInt(p[2]));};
+var fmtMonth=function(m){var p=m.split('-');return p[0]+'年'+parseInt(p[1])+'月';};
+var weekday=function(d){return['日','月','火','水','木','金','土'][new Date(d).getDay()];};
+var calcH=function(s,e,b){if(!s||!e)return 0;var sp=String(s).split(':').map(Number),ep=String(e).split(':').map(Number);return Math.max(0,(ep[0]*60+ep[1]-sp[0]*60-sp[1]-(b||0))/60);};
+var esc=function(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;};
+var statusColor={'出席':'#2e7d32','欠席':'#c62828','遅刻':'#e65100','早退':'#f9a825','体調不良':'#6a1b9a','通院':'#1565c0'};
+var userName=function(id){return(S.users.find(function(u){return u.id===id;})||{}).name||'?';};
+var wtName=function(id){return(S.workTypes.find(function(w){return w.id===id;})||{}).name||'-';};
+var wtRate=function(id){return Number((S.workTypes.find(function(w){return w.id===id;})||{}).rate)||0;};
+var staffName=function(id){return(S.staff.find(function(s){return s.id===id;})||{}).name||'';};
+var PREFS=['北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県','茨城県','栃木県','群馬県','埼玉県','千葉県','東京都','神奈川県','新潟県','富山県','石川県','福井県','山梨県','長野県','岐阜県','静岡県','愛知県','三重県','滋賀県','京都府','大阪府','兵庫県','奈良県','和歌山県','鳥取県','島根県','岡山県','広島県','山口県','徳島県','香川県','愛媛県','高知県','福岡県','佐賀県','長崎県','熊本県','大分県','宮崎県','鹿児島県','沖縄県'];
+var DAYS_JP=['月','火','水','木','金','土','日'];
+var KANA_GROUPS=[{label:'あ',chars:['あ','い','う','え','お','ア','イ','ウ','エ','オ']},{label:'か',chars:['か','き','く','け','こ','が','ぎ','ぐ','げ','ご','カ','キ','ク','ケ','コ','ガ','ギ','グ','ゲ','ゴ']},{label:'さ',chars:['さ','し','す','せ','そ','ざ','じ','ず','ぜ','ぞ','サ','シ','ス','セ','ソ','ザ','ジ','ズ','ゼ','ゾ']},{label:'た',chars:['た','ち','つ','て','と','だ','ぢ','づ','で','ど','タ','チ','ツ','テ','ト','ダ','ヂ','ヅ','デ','ド']},{label:'な',chars:['な','に','ぬ','ね','の','ナ','ニ','ヌ','ネ','ノ']},{label:'は',chars:['は','ひ','ふ','へ','ほ','ば','び','ぶ','べ','ぼ','ぱ','ぴ','ぷ','ぺ','ぽ','ハ','ヒ','フ','ヘ','ホ','バ','ビ','ブ','ベ','ボ','パ','ピ','プ','ペ','ポ']},{label:'ま',chars:['ま','み','む','め','も','マ','ミ','ム','メ','モ']},{label:'や',chars:['や','ゆ','よ','ヤ','ユ','ヨ']},{label:'ら',chars:['ら','り','る','れ','ろ','ラ','リ','ル','レ','ロ']},{label:'わ',chars:['わ','を','ん','ワ','ヲ','ン']}];
+
+async function loadAll(){
+  try{var r=await Promise.all([gas('getUsers'),gas('getWorkTypes'),gas('getSettings'),gas('getStaff')]);
+    S.users=r[0]||[];S.workTypes=r[1]||[];S.settings=r[2]||{};S.staff=r[3]||[];S.ready=true;render();
+  }catch(e){document.getElementById('app').innerHTML='<div class="loading"><div style="font-size:36px">⚠️</div><div>initSheets を実行してください</div><button class="bp" onclick="location.reload()">再読み込み</button></div>';}
+}
+
+var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['attendance','🕐','出欠管理'],['daily','📝','日報記録'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
+
+function render(){
+  var fn=S.settings.facilityName||'就労継続支援B型事業所';
+  document.getElementById('app').className='app';
+  document.getElementById('app').innerHTML='<div class="side no-print"><div class="side-hd">'+esc(fn)+'</div><nav>'+
+    TABS.map(function(t){return'<button class="'+(S.tab===t[0]?'act':'')+'" onclick="switchTab(\''+t[0]+'\')">'+t[1]+' <span class="lbl">'+t[2]+'</span></button>';}).join('')+
+    '</nav><div style="padding:8px;font-size:8px;color:rgba(255,255,255,.3);text-align:center">v3.0</div></div><div class="main" id="content"></div>';
+  renderTab();
+}
+function switchTab(t){S.tab=t;render();}
+function renderTab(){var c=document.getElementById('content');var fn='render'+S.tab.charAt(0).toUpperCase()+S.tab.slice(1);if(typeof window[fn]==='function')window[fn](c);else c.innerHTML='準備中';}
+function closeModal(id){document.getElementById(id).innerHTML='';}
+
+// ═══ ダッシュボード ═══
+async function renderDashboard(c){
+  var d=today(),dow=new Date(d).getDay(),dowJp=['日','月','火','水','木','金','土'][dow];
+  var activeUsers=S.users.filter(function(u){return u.userStatus!=='利用終了';});
+  var scheduled=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dowJp)>=0;});
+  var bc=scheduled.filter(function(u){return u.bento==='あり';}).length;
+  var pc=scheduled.filter(function(u){return u.pickup==='あり';}).length;
+  c.innerHTML='<div class="hd-row"><h2>📊 ダッシュボード</h2><span style="color:var(--sub)">'+fmtDate(d)+'（'+weekday(d)+'）</span></div>'+
+    '<div class="stats"><div class="stat"><div class="stat-l">利用中</div><div class="stat-v">'+activeUsers.length+'</div><div class="stat-s">定員'+(S.settings.capacity||30)+'名</div></div>'+
+    '<div class="stat" style="border-color:var(--grn)"><div class="stat-l">本日の予定</div><div class="stat-v">'+scheduled.length+'</div></div>'+
+    '<div class="stat" style="border-color:var(--acc)"><div class="stat-l">🍱弁当</div><div class="stat-v">'+bc+'</div></div>'+
+    '<div class="stat" style="border-color:#1565c0"><div class="stat-l">🚐送迎</div><div class="stat-v">'+pc+'</div></div></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'+
+    '<div class="card"><div class="card-hd"><span class="card-t">本日の予定者</span></div><div id="ds-s"></div></div>'+
+    '<div class="card"><div class="card-hd"><span class="card-t">本日の出欠</span></div><div id="ds-a">読み込み中...</div></div></div>';
+  document.getElementById('ds-s').innerHTML=scheduled.length===0?'<p style="color:var(--sub)">予定なし</p>':
+    '<table><thead><tr><th>氏名</th><th>時間</th><th>弁当</th><th>送迎</th></tr></thead><tbody>'+scheduled.map(function(u){return'<tr><td>'+esc(u.name)+'</td><td>'+(u.scheduleStart||'')+'～'+(u.scheduleEnd||'')+'</td><td>'+(u.bento==='あり'?'🍱':'−')+'</td><td>'+(u.pickup==='あり'?'🚐':'−')+'</td></tr>';}).join('')+'</tbody></table>';
+  try{var att=await gas('getAttendanceByDate',d);
+    document.getElementById('ds-a').innerHTML=att.length===0?'<p style="color:var(--sub)">記録なし</p>':
+      '<table><thead><tr><th>氏名</th><th>状態</th><th>出勤</th><th>退勤</th></tr></thead><tbody>'+att.map(function(a){return'<tr><td>'+esc(userName(a.userId))+'</td><td><span class="badge" style="background:'+(statusColor[a.status]||'#888')+'">'+esc(a.status)+'</span></td><td>'+(a.startTime||'-')+'</td><td>'+(a.endTime||'-')+'</td></tr>';}).join('')+'</tbody></table>';
+  }catch(e){document.getElementById('ds-a').innerHTML='読み込み失敗';}
+}
+
+// ═══ カレンダー ═══
+var calY,calM;function initCM(){var d=new Date();calY=d.getFullYear();calM=d.getMonth()+1;}if(!calY)initCM();
+async function renderCalendar(c){
+  c.innerHTML='<div class="hd-row"><h2>📅 カレンダー</h2></div>'+
+    '<div class="cal-nav no-print"><button onclick="calY-=(calM===1?0:0);calM--;if(calM<1){calM=12;calY--;}renderCalendar(document.getElementById(\'content\'))">◀</button><div class="cal-month">'+calY+'年'+calM+'月</div><button onclick="calM++;if(calM>12){calM=1;calY++;}renderCalendar(document.getElementById(\'content\'))">▶</button><button class="bg" onclick="initCM();renderCalendar(document.getElementById(\'content\'))" style="font-size:11px;margin-left:8px">今月</button></div>'+
+    '<div class="card" style="padding:10px"><div id="cal-g">読み込み中...</div></div><div id="cal-d"></div>';
+  var ym=calY+'-'+String(calM).padStart(2,'0');var att=[];try{att=await gas('getAttendance',ym);}catch(e){}
+  var activeUsers=S.users.filter(function(u){return u.userStatus!=='利用終了';});
+  var fd=new Date(calY,calM-1,1).getDay(),dim=new Date(calY,calM,0).getDate(),ts=today();
+  var html='<table class="cal"><thead><tr>';['日','月','火','水','木','金','土'].forEach(function(d,i){html+='<th'+(i===0?' style="color:var(--red)"':'')+(i===6?' style="color:#1565c0"':'')+'">'+d+'</th>';});html+='</tr></thead><tbody><tr>';
+  for(var i=0;i<fd;i++)html+='<td class="other"></td>';
+  for(var d=1;d<=dim;d++){
+    var ds=calY+'-'+String(calM).padStart(2,'0')+'-'+String(d).padStart(2,'0'),dw=new Date(calY,calM-1,d).getDay(),dwj=['日','月','火','水','木','金','土'][dw];
+    var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;});
+    var bc=sch.filter(function(u){return u.bento==='あり';}).length;
+    var da=att.filter(function(a){return String(a.date)===ds;});
+    var pr=da.filter(function(a){return a.status==='出席'||a.status==='遅刻';}).length;
+    var cls=(ds===ts?' today':'')+(dw===0?' sun':'')+(dw===6?' sat':'');
+    html+='<td class="'+cls+'" onclick="showDD(\''+ds+'\')"><div class="day-num">'+d+'</div><div class="day-info">';
+    if(sch.length>0){html+='<div class="user-count">👤'+sch.length+'</div>';if(da.length>0)html+='<div style="color:var(--grn)">✓'+pr+'</div>';if(bc>0)html+='<span class="bento-badge">🍱'+bc+'</span> ';}
+    html+='</div></td>';if(dw===6&&d<dim)html+='</tr><tr>';
+  }
+  var lw=new Date(calY,calM-1,dim).getDay();for(var i=lw+1;i<=6;i++)html+='<td class="other"></td>';html+='</tr></tbody></table>';
+  var tS=0,tB=0,tP=0;for(var d2=1;d2<=dim;d2++){var dw2=new Date(calY,calM-1,d2).getDay(),dwj2=['日','月','火','水','木','金','土'][dw2];var sc=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj2)>=0;});tS+=sc.length;tB+=sc.filter(function(u){return u.bento==='あり';}).length;tP+=sc.filter(function(u){return u.pickup==='あり';}).length;}
+  document.getElementById('cal-g').innerHTML='<div class="stats" style="margin:8px 0"><div class="stat"><div class="stat-l">延べ人数</div><div class="stat-v">'+tS+'</div></div><div class="stat" style="border-color:var(--acc)"><div class="stat-l">🍱弁当合計</div><div class="stat-v">'+tB+'</div></div><div class="stat" style="border-color:#1565c0"><div class="stat-l">🚐送迎合計</div><div class="stat-v">'+tP+'</div></div></div>'+html;
+}
+function showDD(ds){
+  var dw=new Date(ds).getDay(),dwj=['日','月','火','水','木','金','土'][dw];
+  var activeUsers=S.users.filter(function(u){return u.userStatus!=='利用終了';});
+  var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;});
+  var bc=sch.filter(function(u){return u.bento==='あり';}).length;
+  document.getElementById('cal-d').innerHTML='<div class="card" style="margin-top:14px"><div class="card-hd"><span class="card-t">'+fmtDate(ds)+'（'+weekday(ds)+'）</span><button class="modal-close" onclick="document.getElementById(\'cal-d\').innerHTML=\'\'">✕</button></div>'+
+    '<div class="stats" style="margin-bottom:12px"><div class="stat"><div class="stat-l">予定者</div><div class="stat-v">'+sch.length+'</div></div><div class="stat" style="border-color:var(--acc)"><div class="stat-l">🍱弁当</div><div class="stat-v">'+bc+'</div></div></div>'+
+    (sch.length===0?'<p style="color:var(--sub)">予定なし</p>':'<table><thead><tr><th>氏名</th><th>時間</th><th>弁当</th><th>送迎</th><th>担当</th></tr></thead><tbody>'+sch.map(function(u){return'<tr><td>'+esc(u.name)+'</td><td>'+(u.scheduleStart||'')+'～'+(u.scheduleEnd||'')+'</td><td>'+(u.bento==='あり'?'🍱':'−')+'</td><td>'+(u.pickup==='あり'?'🚐':'−')+'</td><td>'+esc(staffName(u.staffId))+'</td></tr>';}).join('')+'</tbody></table>')+'</div>';
+}
+
+// ═══ 利用者管理（参考画面準拠） ═══
+var uFilter='all',uKana='',uSearch='',uStaff='';
+function renderUsers(c){
+  var all=S.users.length,act=S.users.filter(function(u){return u.userStatus!=='利用終了';}).length,end=S.users.filter(function(u){return u.userStatus==='利用終了';}).length;
+  c.innerHTML='<div class="hd-row"><h2>👥 利用者一覧</h2><button class="bp" onclick="openUserModal()">＋ 利用者登録</button></div>'+
+    '<div class="card">'+
+    // ステータスフィルター
+    '<div class="filter-tabs">'+
+      '<button class="filter-tab'+(uFilter==='all'?' active':'')+'" onclick="uFilter=\'all\';filterU()">すべて<span class="count">'+all+'</span></button>'+
+      '<button class="filter-tab'+(uFilter==='active'?' active':'')+'" onclick="uFilter=\'active\';filterU()" style="'+(uFilter==='active'?'background:var(--grn);border-color:var(--grn)':'')+'">利用中<span class="count">'+act+'</span></button>'+
+      '<button class="filter-tab'+(uFilter==='ended'?' active':'')+'" onclick="uFilter=\'ended\';filterU()" style="'+(uFilter==='ended'?'background:var(--red);border-color:var(--red)':'')+'">利用終了<span class="count">'+end+'</span></button>'+
+    '</div>'+
+    // あかさたなフィルター
+    '<div class="kana-filter">'+
+      KANA_GROUPS.map(function(g){return'<button class="kana-btn'+(uKana===g.label?' active':'')+'" onclick="uKana=(uKana===\''+g.label+'\'?\'\'  :\''+g.label+'\');filterU()">'+g.label+'</button>';}).join('')+
+      '<button class="kana-btn'+(uKana===''?' active':'')+'" onclick="uKana=\'\';filterU()">すべて</button>'+
+    '</div>'+
+    // 検索・担当フィルター
+    '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'+
+      '<span style="font-size:12px;color:var(--sub)">検索:</span><input id="u-search" placeholder="氏名・ふりがなで検索..." value="'+esc(uSearch)+'" oninput="uSearch=this.value;filterU()" style="width:200px">'+
+      '<span style="font-size:12px;color:var(--sub);margin-left:10px">担当:</span><select id="u-staff" onchange="uStaff=this.value;filterU()" style="width:140px"><option value="">すべて</option>'+
+      S.staff.map(function(s){return'<option value="'+s.id+'"'+(uStaff===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select>'+
+    '</div>'+
+    // テーブル
+    '<div class="tbl-wrap"><table><thead><tr><th>ID(受給者証番号)</th><th>種類</th><th>氏名<span style="font-size:10px;color:var(--sub)">（ふりがな）</span></th><th>担当</th><th>利用開始日</th><th>受給者証満了日</th><th>利用終了日</th><th>状態</th><th>操作</th></tr></thead><tbody id="u-tbody"></tbody></table></div>'+
+    '<div id="u-count" style="margin-top:8px;font-size:11px;color:var(--sub)"></div>'+
+    '</div><div id="u-modal"></div>';
+  filterU();
+}
+
+function filterU(){
+  var list=S.users.slice();
+  // ステータスフィルター
+  if(uFilter==='active')list=list.filter(function(u){return u.userStatus!=='利用終了';});
+  if(uFilter==='ended')list=list.filter(function(u){return u.userStatus==='利用終了';});
+  // あかさたなフィルター
+  if(uKana){var group=KANA_GROUPS.find(function(g){return g.label===uKana;});
+    if(group)list=list.filter(function(u){var f=(u.furigana||'').charAt(0);return group.chars.indexOf(f)>=0;});}
+  // テキスト検索
+  if(uSearch){var q=uSearch.toLowerCase();list=list.filter(function(u){return u.name.toLowerCase().indexOf(q)>=0||(u.furigana||'').toLowerCase().indexOf(q)>=0;});}
+  // 担当フィルター
+  if(uStaff)list=list.filter(function(u){return u.staffId===uStaff;});
+
+  document.getElementById('u-tbody').innerHTML=list.length===0
+    ?'<tr><td colspan="9" style="text-align:center;color:var(--sub);padding:28px">該当する利用者がいません</td></tr>'
+    :list.map(function(u){
+      var isActive=u.userStatus!=='利用終了';
+      return'<tr>'+
+        '<td style="font-size:11px;color:var(--acc);font-weight:600">'+esc(u.recipientNumber||'−')+'</td>'+
+        '<td style="font-size:11px">'+esc(u.serviceType||'就労B型')+'</td>'+
+        '<td><span style="font-weight:600;color:'+(isActive?'var(--pri)':'var(--sub)')+'">'+esc(u.name)+'</span><br><span style="font-size:10px;color:var(--sub)">'+esc(u.furigana||'')+'</span></td>'+
+        '<td style="font-size:11px">'+esc(staffName(u.staffId))+'</td>'+
+        '<td style="font-size:11px">'+fmtDate(u.enrollDate)+'</td>'+
+        '<td style="font-size:11px">'+fmtDate(u.supportEndDate)+'</td>'+
+        '<td style="font-size:11px">'+fmtDate(u.endDate)+'</td>'+
+        '<td><span class="'+(isActive?'status-active':'status-ended')+'">'+(isActive?'利用中':'利用終了')+'</span></td>'+
+        '<td><button class="bg" onclick=\'openUserModal('+JSON.stringify(u).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delUser(\''+u.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';
+    }).join('');
+  document.getElementById('u-count').textContent='表示: '+list.length+'件 / 全'+S.users.length+'件';
+  // タブのアクティブ表示を更新
+  document.querySelectorAll('.filter-tab').forEach(function(el,i){
+    var f=['all','active','ended'][i];
+    el.className='filter-tab'+(uFilter===f?' active':'');
+    if(f==='active'&&uFilter==='active')el.style.cssText='background:var(--grn);border-color:var(--grn);color:#fff';
+    else if(f==='ended'&&uFilter==='ended')el.style.cssText='background:var(--red);border-color:var(--red);color:#fff';
+    else if(uFilter===f)el.style.cssText='background:var(--pri);border-color:var(--pri);color:#fff';
+    else el.style.cssText='';
+  });
+  document.querySelectorAll('.kana-btn').forEach(function(el){
+    var v=el.textContent==='すべて'?'':el.textContent;
+    el.className='kana-btn'+(uKana===v?' active':'');
+  });
+}
+
+function openUserModal(u){
+  var d=u||{name:'',furigana:'',birthdate:'',gender:'男性',disability:'',serviceType:'就労B型',staffId:'',
+    prefecture:'大阪府',city:'',address:'',contact:'',contact2:'',contact3:'',emergencyContact:'',emergencyPhone:'',
+    recipientNumber:'',supportStartDate:'',supportEndDate:'',supportDays:'',category:'',
+    scheduleDays:'',scheduleStart:'10:00',scheduleEnd:'16:00',bento:'なし',pickup:'なし',
+    enrollDate:today(),endDate:'',userStatus:'利用中',notes:''};
+  var isEdit=!!d.id;var schDays=(d.scheduleDays||'').split(',');
+  var html='<div class="overlay" onclick="closeModal(\'u-modal\')"><div class="modal" onclick="event.stopPropagation()">'+
+    '<div class="modal-hd"><h3>'+(isEdit?'利用者情報の編集':'新規利用者登録')+'</h3><button class="modal-close" onclick="closeModal(\'u-modal\')">✕</button></div>';
+  
+  // 障害種別の選択肢
+  var disOptions = ['身体障害','知的障害','精神障害','発達障害','難病等','その他'];
+  
+  // 基本情報
+  html+='<div class="section-title">基本情報</div><div class="grid3">'+
+    '<div class="field"><label>氏名 *</label><input id="uf-name" value="'+esc(d.name)+'" style="width:100%"></div>'+
+    '<div class="field"><label>ふりがな</label><input id="uf-furi" value="'+esc(d.furigana||'')+'" style="width:100%"></div>'+
+    '<div class="field"><label>種類</label><select id="uf-stype" style="width:100%"><option'+(d.serviceType==='就労B型'?' selected':'')+'>就労B型</option><option'+(d.serviceType==='就労A型'?' selected':'')+'>就労A型</option><option'+(d.serviceType==='生活介護'?' selected':'')+'>生活介護</option></select></div></div>'+
+    '<div class="grid3">'+
+    '<div class="field"><label>生年月日</label><input type="date" id="uf-birth" value="'+(d.birthdate||'')+'" style="width:100%"></div>'+
+    '<div class="field"><label>性別</label><select id="uf-gender" style="width:100%"><option'+(d.gender==='男性'?' selected':'')+'>男性</option><option'+(d.gender==='女性'?' selected':'')+'>女性</option><option'+(d.gender==='その他'?' selected':'')+'>その他</option></select></div>'+
+    '<div class="field"><label>障害種別</label><select id="uf-dis" style="width:100%"><option value="">選択</option>'+disOptions.map(function(o){return'<option'+(d.disability===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select></div></div>'+
+    '<div class="grid2">'+
+    '<div class="field"><label>担当スタッフ</label><select id="uf-staff" style="width:100%"><option value="">未設定</option>'+S.staff.map(function(s){return'<option value="'+s.id+'"'+(d.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
+    '<div class="field"><label>状態</label><select id="uf-ustatus" style="width:100%"><option'+(d.userStatus!=='利用終了'?' selected':'')+'>利用中</option><option'+(d.userStatus==='利用終了'?' selected':'')+'>利用終了</option></select></div></div>';
+  
+  // 住所
+  html+='<div class="section-title">住所</div><div class="grid3">'+
+    '<div class="field"><label>都道府県</label><select id="uf-pref" style="width:100%"><option value="">選択</option>'+PREFS.map(function(p){return'<option'+((d.prefecture||'大阪府')===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select></div>'+
+    '<div class="field"><label>市区町村</label><input id="uf-city" value="'+esc(d.city||'')+'" style="width:100%"></div>'+
+    '<div class="field"><label>番地・建物名など</label><input id="uf-addr" value="'+esc(d.address||'')+'" style="width:100%"></div></div>';
+  
+  // 連絡先
+  html+='<div class="section-title">連絡先</div><p style="font-size:11px;color:var(--sub);margin-bottom:8px">※「連絡先」は利用者ご本人、「緊急連絡先」はご家族・保護者等を入力してください。</p>'+
+    '<div class="grid3">'+
+    '<div class="field"><label>連絡先1 (本人)</label><input id="uf-contact" value="'+esc(d.contact||'')+'" style="width:100%"></div>'+
+    '<div class="field"><label>連絡先2</label><input id="uf-contact2" value="'+esc(d.contact2||'')+'" style="width:100%"></div>'+
+    '<div class="field"><label>連絡先3</label><input id="uf-contact3" value="'+esc(d.contact3||'')+'" style="width:100%"></div></div>'+
+    '<div class="grid2">'+
+    '<div class="field"><label>緊急連絡先 (氏名・続柄)</label><input id="uf-ec" value="'+esc(d.emergencyContact||'')+'" style="width:100%"></div>'+
+    '<div class="field"><label>緊急電話番号</label><input id="uf-ep" value="'+esc(d.emergencyPhone||'')+'" style="width:100%"></div></div>';
+  
+  // 区分の選択肢
+  var catOptions = ['区分なし','区分1','区分2','区分3','区分4','区分5','区分6'];
+
+  // 受給者証
+  html+='<div class="section-title">受給者証情報</div><div class="grid3">'+
+    '<div class="field"><label>受給者証番号</label><input id="uf-rcpt" value="'+esc(d.recipientNumber||'')+'" style="width:100%"></div>'+
+    '<div class="field"><label>区分</label><select id="uf-cat" style="width:100%"><option value="">選択</option>'+catOptions.map(function(o){return'<option'+(d.category===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select></div>'+
+    '<div class="field"><label>支給量（日/月）</label><input id="uf-sdays" value="'+esc(d.supportDays||'')+'" style="width:100%"></div></div>'+
+    '<div class="grid3">'+
+    '<div class="field"><label>支給開始日</label><input type="date" id="uf-sstart" value="'+(d.supportStartDate||'')+'" style="width:100%"></div>'+
+    '<div class="field"><label>受給者証満了日</label><input type="date" id="uf-send" value="'+(d.supportEndDate||'')+'" style="width:100%"></div>'+
+    '<div class="field"><label>利用開始日</label><input type="date" id="uf-enroll" value="'+(d.enrollDate||'')+'" style="width:100%"></div></div>'+
+    '<div class="grid2"><div class="field"><label>利用終了日</label><input type="date" id="uf-edate" value="'+(d.endDate||'')+'" style="width:100%"></div><div></div></div>';
+  
+  // スケジュール
+  html+='<div class="section-title">利用スケジュール</div>'+
+    '<div class="field"><label>利用日（曜日）</label><div style="display:flex;flex-wrap:wrap;gap:2px">'+DAYS_JP.map(function(day){return'<label class="day-check"><input type="checkbox" class="uf-day" value="'+day+'"'+(schDays.indexOf(day)>=0?' checked':'')+'>'+day+'</label>';}).join('')+'</div></div>'+
+    '<div class="grid2"><div class="field"><label>利用時間（開始）</label><input type="time" id="uf-tstart" value="'+(d.scheduleStart||'10:00')+'" style="width:100%"></div>'+
+    '<div class="field"><label>利用時間（終了）</label><input type="time" id="uf-tend" value="'+(d.scheduleEnd||'16:00')+'" style="width:100%"></div></div>'+
+    '<div class="grid2"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%"><option'+(d.bento==='あり'?' selected':'')+'>あり</option><option'+(d.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
+    '<div class="field"><label>送迎</label><select id="uf-pickup" style="width:100%"><option'+(d.pickup==='あり'?' selected':'')+'>あり</option><option'+(d.pickup!=='あり'?' selected':'')+'>なし</option></select></div></div>';
+  html+='<div class="section-title">備考</div><div class="field"><textarea id="uf-notes" rows="2" style="width:100%">'+esc(d.notes||'')+'</textarea></div>';
+  html+='<div class="btns"><button class="bg" onclick="closeModal(\'u-modal\')">キャンセル</button><button class="bp" onclick="saveUser(\''+(d.id||'')+'\')">保存</button></div></div></div>';
+  document.getElementById('u-modal').innerHTML=html;
+}
+
+async function saveUser(id){
+  var days=[];document.querySelectorAll('.uf-day').forEach(function(cb){if(cb.checked)days.push(cb.value);});
+  var data={name:document.getElementById('uf-name').value,furigana:document.getElementById('uf-furi').value,
+    serviceType:document.getElementById('uf-stype').value,birthdate:document.getElementById('uf-birth').value,
+    gender:document.getElementById('uf-gender').value,disability:document.getElementById('uf-dis').value,
+    staffId:document.getElementById('uf-staff').value,userStatus:document.getElementById('uf-ustatus').value,
+    prefecture:document.getElementById('uf-pref').value,city:document.getElementById('uf-city').value,address:document.getElementById('uf-addr').value,
+    contact:document.getElementById('uf-contact').value,contact2:document.getElementById('uf-contact2').value,contact3:document.getElementById('uf-contact3').value,emergencyContact:document.getElementById('uf-ec').value,emergencyPhone:document.getElementById('uf-ep').value,
+    recipientNumber:document.getElementById('uf-rcpt').value,category:document.getElementById('uf-cat').value,supportDays:document.getElementById('uf-sdays').value,
+    supportStartDate:document.getElementById('uf-sstart').value,supportEndDate:document.getElementById('uf-send').value,
+    enrollDate:document.getElementById('uf-enroll').value,endDate:document.getElementById('uf-edate').value,
+    scheduleDays:days.join(','),scheduleStart:document.getElementById('uf-tstart').value,scheduleEnd:document.getElementById('uf-tend').value,
+    bento:document.getElementById('uf-bento').value,pickup:document.getElementById('uf-pickup').value,notes:document.getElementById('uf-notes').value};
+  if(!data.name){alert('氏名を入力してください');return;}
+  try{if(id){data.id=id;await gas('updateUser',data);}else{await gas('addUser',data);}S.users=await gas('getUsers');closeModal('u-modal');renderUsers(document.getElementById('content'));}
+  catch(e){alert('保存に失敗: '+e);}
+}
+async function delUser(id){if(!confirm('削除しますか？'))return;try{await gas('deleteUser',id);S.users=await gas('getUsers');renderUsers(document.getElementById('content'));}catch(e){alert('削除失敗');}}
+
+// ═══ 出欠管理 ═══
+var attDate=today(),attData=[];
+async function renderAttendance(c){
+  c.innerHTML='<div class="hd-row"><h2>🕐 出欠管理</h2><div style="display:flex;gap:8px;align-items:center"><input type="date" id="att-date" value="'+attDate+'" onchange="attDate=this.value;loadAtt()"><span style="font-size:12px;color:var(--sub)" id="att-wd">('+weekday(attDate)+')</span><button class="ba" onclick="bulkPresent()" style="font-size:11px">予定者を一括出席</button></div></div><div class="card"><div class="tbl-wrap" id="att-tbl">読み込み中...</div></div><div id="att-modal"></div>';loadAtt();
+}
+async function loadAtt(){try{attData=await gas('getAttendanceByDate',attDate);document.getElementById('att-wd').textContent='('+weekday(attDate)+')';renderAttTbl();}catch(e){document.getElementById('att-tbl').innerHTML='読み込み失敗';}}
+function renderAttTbl(){
+  var activeUsers=S.users.filter(function(u){return u.userStatus!=='利用終了';});
+  document.getElementById('att-tbl').innerHTML='<table><thead><tr><th>利用者名</th><th>状態</th><th>出勤</th><th>退勤</th><th>休憩</th><th>作業種別</th><th>実働(h)</th><th>操作</th></tr></thead><tbody>'+
+    activeUsers.map(function(u){var r=attData.find(function(a){return a.userId===u.id;});var h=r?calcH(r.startTime,r.endTime,Number(r.breakMin)||0):0;
+      return'<tr><td style="font-weight:500">'+esc(u.name)+'</td><td>'+(r?'<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>':'<span style="color:var(--sub);font-size:11px">未記録</span>')+'</td><td>'+(r?r.startTime||'-':'-')+'</td><td>'+(r?r.endTime||'-':'-')+'</td><td>'+(r?r.breakMin||'-':'-')+'</td><td>'+(r?esc(wtName(r.workTypeId)):'-')+'</td><td style="font-weight:600">'+(r?h.toFixed(1):'-')+'</td><td><button class="bg" onclick=\'openAttM("'+u.id+'")\' style="font-size:11px;padding:3px 9px">'+(r?'編集':'記録')+'</button></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+function openAttM(uid){
+  var r=attData.find(function(a){return a.userId===uid;})||{userId:uid,date:attDate,status:'出席',startTime:'10:00',endTime:'16:00',workTypeId:S.workTypes[0]?S.workTypes[0].id:'',breakMin:60,notes:''};
+  var u=S.users.find(function(x){return x.id===uid;});if(!r.id&&u){if(u.scheduleStart)r.startTime=u.scheduleStart;if(u.scheduleEnd)r.endTime=u.scheduleEnd;}
+  document.getElementById('att-modal').innerHTML='<div class="overlay" onclick="closeModal(\'att-modal\')"><div class="modal" style="width:520px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>出欠記録</h3><button class="modal-close" onclick="closeModal(\'att-modal\')">✕</button></div><p style="font-size:13px;font-weight:600;margin-bottom:12px">'+esc(u?u.name:'?')+' ─ '+fmtDate(attDate)+'</p><div class="grid2"><div class="field"><label>状態</label><select id="af-st" style="width:100%" onchange="updateAH()">'+['出席','欠席','遅刻','早退','体調不良','通院'].map(function(s){return'<option'+(r.status===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select></div><div class="field"><label>作業種別</label><select id="af-wt" style="width:100%">'+S.workTypes.map(function(w){return'<option value="'+w.id+'"'+(r.workTypeId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';}).join('')+'</select></div><div class="field"><label>出勤</label><input type="time" id="af-s" value="'+(r.startTime||'10:00')+'" style="width:100%" onchange="updateAH()"></div><div class="field"><label>退勤</label><input type="time" id="af-e" value="'+(r.endTime||'16:00')+'" style="width:100%" onchange="updateAH()"></div><div class="field"><label>休憩(分)</label><input type="number" id="af-b" value="'+(r.breakMin||60)+'" style="width:100%" onchange="updateAH()"></div><div class="field"><label>実働</label><div id="af-h" style="padding:7px 0;font-weight:700;font-size:16px;color:var(--pri)"></div></div></div><div class="field"><label>備考</label><textarea id="af-n" rows="2" style="width:100%">'+esc(r.notes||'')+'</textarea></div><div class="btns"><button class="bg" onclick="closeModal(\'att-modal\')">キャンセル</button><button class="bp" onclick="saveAtt(\''+uid+'\')">保存</button></div></div></div>';updateAH();
+}
+function updateAH(){document.getElementById('af-h').textContent=calcH(document.getElementById('af-s').value,document.getElementById('af-e').value,Number(document.getElementById('af-b').value)||0).toFixed(2)+' 時間';}
+async function saveAtt(uid){var d={userId:uid,date:attDate,status:document.getElementById('af-st').value,startTime:document.getElementById('af-s').value,endTime:document.getElementById('af-e').value,breakMin:Number(document.getElementById('af-b').value)||0,workTypeId:document.getElementById('af-wt').value,notes:document.getElementById('af-n').value};try{await gas('upsertAttendance',d);closeModal('att-modal');loadAtt();}catch(e){alert('保存失敗');}}
+async function bulkPresent(){var dow=new Date(attDate).getDay(),dwj=['日','月','火','水','木','金','土'][dow];var rec=attData.map(function(a){return a.userId;});var activeUsers=S.users.filter(function(u){return u.userStatus!=='利用終了';});var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0&&rec.indexOf(u.id)<0;});if(sch.length===0){alert('対象者なし');return;}if(!confirm(sch.length+'名を一括出席にしますか？'))return;var recs=sch.map(function(u){return{userId:u.id,date:attDate,status:'出席',startTime:u.scheduleStart||'10:00',endTime:u.scheduleEnd||'16:00',workTypeId:S.workTypes[0]?S.workTypes[0].id:'',breakMin:60,notes:''};});try{await gas('bulkAddAttendance',recs);loadAtt();}catch(e){alert('失敗');}}
+
+// ═══ 日報 ═══
+var dDate=today(),dData=[];
+async function renderDaily(c){c.innerHTML='<div class="hd-row"><h2>📝 日報</h2><div style="display:flex;gap:8px"><input type="date" value="'+dDate+'" onchange="dDate=this.value;loadD()"><button class="bp" onclick="openDM()">＋ 新規</button></div></div><div class="card"><div class="tbl-wrap" id="d-tbl">読み込み中...</div></div><div id="d-modal"></div>';loadD();}
+async function loadD(){try{dData=await gas('getDailyByDate',dDate);document.getElementById('d-tbl').innerHTML=dData.length===0?'<p style="color:var(--sub);padding:20px;text-align:center">日報なし</p>':'<table><thead><tr><th>氏名</th><th>作業</th><th>内容</th><th>体調</th><th>操作</th></tr></thead><tbody>'+dData.map(function(d){return'<tr><td>'+esc(userName(d.userId))+'</td><td>'+esc(wtName(d.workTypeId))+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(d.content||'')+'</td><td>'+esc(d.mood||'')+'</td><td><button class="bg" onclick=\'openDM('+JSON.stringify(d).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px">編集</button></td></tr>';}).join('')+'</tbody></table>';}catch(e){document.getElementById('d-tbl').innerHTML='失敗';}}
+function openDM(d){d=d||{date:dDate,userId:S.users[0]?S.users[0].id:'',workTypeId:S.workTypes[0]?S.workTypes[0].id:'',content:'',mood:'普通',notes:''};document.getElementById('d-modal').innerHTML='<div class="overlay" onclick="closeModal(\'d-modal\')"><div class="modal" style="width:520px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>日報</h3><button class="modal-close" onclick="closeModal(\'d-modal\')">✕</button></div><div class="grid2"><div class="field"><label>利用者</label><select id="dm-u" style="width:100%">'+S.users.map(function(u){return'<option value="'+u.id+'"'+(d.userId===u.id?' selected':'')+'>'+esc(u.name)+'</option>';}).join('')+'</select></div><div class="field"><label>作業</label><select id="dm-w" style="width:100%">'+S.workTypes.map(function(w){return'<option value="'+w.id+'"'+(d.workTypeId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';}).join('')+'</select></div></div><div class="field"><label>作業内容</label><textarea id="dm-c" rows="3" style="width:100%">'+esc(d.content||'')+'</textarea></div><div class="field"><label>体調</label><select id="dm-m" style="width:100%">'+['良好','普通','やや不調','不調'].map(function(m){return'<option'+(d.mood===m?' selected':'')+'>'+m+'</option>';}).join('')+'</select></div><div class="field"><label>備考</label><textarea id="dm-n" rows="2" style="width:100%">'+esc(d.notes||'')+'</textarea></div><div class="btns"><button class="bg" onclick="closeModal(\'d-modal\')">取消</button><button class="bp" onclick="saveD(\''+(d.id||'')+'\')">保存</button></div></div></div>';}
+async function saveD(id){var d={userId:document.getElementById('dm-u').value,date:dDate,workTypeId:document.getElementById('dm-w').value,content:document.getElementById('dm-c').value,mood:document.getElementById('dm-m').value,notes:document.getElementById('dm-n').value};try{if(id){d.id=id;await gas('updateDailyReport',d);}else{await gas('addDailyReport',d);}closeModal('d-modal');loadD();}catch(e){alert('失敗');}}
+
+// ═══ 送迎 ═══
+var tDate=today(),tData=[];
+async function renderTransport(c){c.innerHTML='<div class="hd-row"><h2>🚐 送迎</h2><div style="display:flex;gap:8px"><input type="date" value="'+tDate+'" onchange="tDate=this.value;loadT()"><button class="bp" onclick="openTM()">＋ 新規</button></div></div><div class="card"><div class="tbl-wrap" id="t-tbl">読み込み中...</div></div><div id="t-modal"></div>';loadT();}
+async function loadT(){try{tData=await gas('getTransportByDate',tDate);document.getElementById('t-tbl').innerHTML=tData.length===0?'<p style="color:var(--sub);padding:20px;text-align:center">記録なし</p>':'<table><thead><tr><th>氏名</th><th>迎え</th><th>送り</th><th>ドライバー</th><th>ルート</th><th>操作</th></tr></thead><tbody>'+tData.map(function(t){return'<tr><td>'+esc(userName(t.userId))+'</td><td>'+(t.pickupTime||'-')+'</td><td>'+(t.dropoffTime||'-')+'</td><td>'+esc(t.driver||'')+'</td><td>'+esc(t.route||'')+'</td><td><button class="bg" onclick=\'openTM('+JSON.stringify(t).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px">編集</button></td></tr>';}).join('')+'</tbody></table>';}catch(e){document.getElementById('t-tbl').innerHTML='失敗';}}
+function openTM(t){t=t||{date:tDate,userId:S.users[0]?S.users[0].id:'',pickupTime:'',dropoffTime:'',driver:'',route:'',notes:''};document.getElementById('t-modal').innerHTML='<div class="overlay" onclick="closeModal(\'t-modal\')"><div class="modal" style="width:520px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>送迎</h3><button class="modal-close" onclick="closeModal(\'t-modal\')">✕</button></div><div class="grid2"><div class="field"><label>利用者</label><select id="tm-u" style="width:100%">'+S.users.map(function(u){return'<option value="'+u.id+'"'+(t.userId===u.id?' selected':'')+'>'+esc(u.name)+'</option>';}).join('')+'</select></div><div class="field"><label>ドライバー</label><input id="tm-d" value="'+esc(t.driver||'')+'" style="width:100%"></div><div class="field"><label>迎え</label><input type="time" id="tm-p" value="'+(t.pickupTime||'')+'" style="width:100%"></div><div class="field"><label>送り</label><input type="time" id="tm-dr" value="'+(t.dropoffTime||'')+'" style="width:100%"></div></div><div class="field"><label>ルート</label><input id="tm-r" value="'+esc(t.route||'')+'" style="width:100%"></div><div class="field"><label>備考</label><textarea id="tm-n" rows="2" style="width:100%">'+esc(t.notes||'')+'</textarea></div><div class="btns"><button class="bg" onclick="closeModal(\'t-modal\')">取消</button><button class="bp" onclick="saveT(\''+(t.id||'')+'\')">保存</button></div></div></div>';}
+async function saveT(id){var d={userId:document.getElementById('tm-u').value,date:tDate,pickupTime:document.getElementById('tm-p').value,dropoffTime:document.getElementById('tm-dr').value,driver:document.getElementById('tm-d').value,route:document.getElementById('tm-r').value,notes:document.getElementById('tm-n').value};try{if(id){d.id=id;await gas('updateTransport',d);}else{await gas('addTransport',d);}closeModal('t-modal');loadT();}catch(e){alert('失敗');}}
+
+// ═══ 工賃 ═══
+var wM=today().slice(0,7);
+async function renderWages(c){c.innerHTML='<div class="hd-row"><h2>💰 工賃計算</h2><input type="month" value="'+wM+'" onchange="wM=this.value;loadW()"></div><div class="stats" id="w-st"></div><div class="card"><div class="card-hd"><span class="card-t">'+fmtMonth(wM)+' 工賃一覧</span></div><div class="tbl-wrap" id="w-tbl">読み込み中...</div></div>';loadW();}
+async function loadW(){try{var att=await gas('getAttendance',wM);var data=S.users.map(function(u){var recs=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});var tH=0,tW=0,bt={};recs.forEach(function(r){var h=calcH(r.startTime,r.endTime,Number(r.breakMin)||0);var wt=S.workTypes.find(function(w){return w.id===r.workTypeId;});var rt=wt?Number(wt.rate):0;tH+=h;tW+=h*rt;var tn=wt?wt.name:'不明';if(!bt[tn])bt[tn]={h:0,w:0,r:rt};bt[tn].h+=h;bt[tn].w+=h*rt;});return{u:u,d:recs.length,tH:tH,tW:tW,bt:bt};}).filter(function(d){return d.d>0;});var g=data.reduce(function(s,d){return s+d.tW;},0),th=data.reduce(function(s,d){return s+d.tH;},0);
+  document.getElementById('w-st').innerHTML='<div class="stat"><div class="stat-l">対象者</div><div class="stat-v">'+data.length+'</div></div><div class="stat" style="border-color:#1565c0"><div class="stat-l">総時間</div><div class="stat-v" style="color:#1565c0">'+th.toFixed(1)+'h</div></div><div class="stat" style="border-color:var(--acc)"><div class="stat-l">工賃合計</div><div class="stat-v" style="color:var(--acc)">¥'+Math.round(g).toLocaleString()+'</div></div><div class="stat" style="border-color:var(--grn)"><div class="stat-l">平均</div><div class="stat-v" style="color:var(--grn)">¥'+(data.length?Math.round(g/data.length).toLocaleString():'0')+'</div></div>';
+  document.getElementById('w-tbl').innerHTML=data.length===0?'<p style="color:var(--sub);padding:20px;text-align:center">記録なし</p>':'<table><thead><tr><th>氏名</th><th>日数</th><th>時間</th><th>内訳</th><th style="text-align:right">合計</th></tr></thead><tbody>'+data.map(function(d){return'<tr><td style="font-weight:600">'+esc(d.u.name)+'</td><td>'+d.d+'日</td><td>'+d.tH.toFixed(1)+'h</td><td style="font-size:11px">'+Object.keys(d.bt).map(function(n){var v=d.bt[n];return esc(n)+': '+v.h.toFixed(1)+'h×¥'+v.r+'=¥'+Math.round(v.w).toLocaleString();}).join('<br>')+'</td><td style="text-align:right;font-weight:700;color:var(--acc)">¥'+Math.round(d.tW).toLocaleString()+'</td></tr>';}).join('')+'</tbody><tfoot><tr style="font-weight:700;background:var(--bg)"><td>合計</td><td>'+data.reduce(function(s,d){return s+d.d;},0)+'日</td><td>'+th.toFixed(1)+'h</td><td></td><td style="text-align:right;color:var(--pri)">¥'+Math.round(g).toLocaleString()+'</td></tr></tfoot></table>';}catch(e){document.getElementById('w-tbl').innerHTML='失敗';}}
+
+// ═══ 帳票 ═══
+var eM=today().slice(0,7),eT='monthly';
+async function renderExport(c){c.innerHTML='<div class="hd-row"><h2>📄 帳票出力</h2><div style="display:flex;gap:8px"><select onchange="eT=this.value;loadE()"><option value="monthly">月次明細</option><option value="annual">年間一覧</option></select><input type="month" value="'+eM+'" onchange="eM=this.value;loadE()"></div></div><div class="no-print" style="display:flex;gap:8px;margin-bottom:16px"><button class="ba" onclick="dlCSV()">📥 CSV</button><button class="bp" onclick="window.print()">🖨 印刷</button></div><div class="card" id="e-c">読み込み中...</div>';loadE();}
+async function loadE(){var fn=S.settings.facilityName||'事業所';try{if(eT==='monthly'){var att=await gas('getAttendance',eM);var d=S.users.map(function(u){var r=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});var h=0,w=0;r.forEach(function(a){var hh=calcH(a.startTime,a.endTime,Number(a.breakMin)||0);h+=hh;w+=hh*wtRate(a.workTypeId);});return{n:u.name,d:r.length,h:h,w:w};}).filter(function(x){return x.d>0;});document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">'+fmtMonth(eM)+' 工賃明細書</span></div><p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'</p><table><thead><tr><th>No.</th><th>氏名</th><th>日数</th><th>時間</th><th style="text-align:right">工賃</th></tr></thead><tbody>'+d.map(function(x,i){return'<tr><td>'+(i+1)+'</td><td>'+esc(x.n)+'</td><td>'+x.d+'日</td><td>'+x.h.toFixed(1)+'h</td><td style="text-align:right;font-weight:700">¥'+Math.round(x.w).toLocaleString()+'</td></tr>';}).join('')+'</tbody>'+(d.length>0?'<tfoot><tr style="font-weight:700;background:var(--bg)"><td colspan="4">合計</td><td style="text-align:right">¥'+d.reduce(function(s,x){return s+Math.round(x.w);},0).toLocaleString()+'</td></tr></tfoot>':'')+'</table>';}else{var y=eM.slice(0,4);var md={};for(var m=1;m<=12;m++){md[m]=await gas('getAttendance',y+'-'+String(m).padStart(2,'0'));}var d2=S.users.map(function(u){var ms={},t=0;for(var m=1;m<=12;m++){var r=(md[m]||[]).filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});var w=0;r.forEach(function(a){w+=calcH(a.startTime,a.endTime,Number(a.breakMin)||0)*wtRate(a.workTypeId);});ms[m]=Math.round(w);t+=w;}return{n:u.name,ms:ms,t:Math.round(t)};}).filter(function(x){return x.t>0;});document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">'+y+'年度 年間工賃一覧</span></div><p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'</p><div style="overflow:auto"><table><thead><tr><th>氏名</th>'+[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){return'<th style="text-align:right;font-size:10px">'+m+'月</th>';}).join('')+'<th style="text-align:right">合計</th></tr></thead><tbody>'+d2.map(function(x){return'<tr><td>'+esc(x.n)+'</td>'+[1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){return'<td style="text-align:right;font-size:11px">'+(x.ms[m]?'¥'+x.ms[m].toLocaleString():'-')+'</td>';}).join('')+'<td style="text-align:right;font-weight:700">¥'+x.t.toLocaleString()+'</td></tr>';}).join('')+'</tbody></table></div>';}}catch(e){document.getElementById('e-c').innerHTML='失敗: '+e;}}
+async function dlCSV(){try{var csv=await gas('getWageCSV',eM);var b=new Blob(['\uFEFF'+csv],{type:'text/csv'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='工賃_'+eM+'.csv';a.click();}catch(e){alert('CSV失敗');}}
+
+// ═══ スタッフ管理 ═══
+function renderStaff(c){
+  c.innerHTML='<div class="hd-row"><h2>👔 スタッフ管理</h2><button class="bp" onclick="openSM()">＋ 新規登録</button></div>'+
+    '<div class="card"><table><thead><tr><th>氏名</th><th>役職</th><th>担当利用者数</th><th>操作</th></tr></thead><tbody id="st-tb"></tbody></table></div><div id="st-modal"></div>';
+  renderSTbl();
+}
+function renderSTbl(){
+  document.getElementById('st-tb').innerHTML=S.staff.length===0?'<tr><td colspan="4" style="text-align:center;color:var(--sub);padding:28px">スタッフが登録されていません</td></tr>':
+    S.staff.map(function(s){var cnt=S.users.filter(function(u){return u.staffId===s.id;}).length;
+      return'<tr><td style="font-weight:600">'+esc(s.name)+'</td><td>'+esc(s.role||'')+'</td><td>'+cnt+'名</td>'+
+        '<td><button class="bg" onclick=\'openSM('+JSON.stringify(s).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delS(\''+s.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';
+    }).join('');
+}
+function openSM(s){
+  s=s||{name:'',role:'',loginId:'',password:''};var isE=!!s.id;
+  document.getElementById('st-modal').innerHTML='<div class="overlay" onclick="closeModal(\'st-modal\')"><div class="modal" style="width:420px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>スタッフ'+(isE?'編集':'登録')+'</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div><div class="field"><label>氏名</label><input id="sm-n" value="'+esc(s.name)+'" style="width:100%"></div><div class="field"><label>役職</label><input id="sm-r" value="'+esc(s.role||'')+'" style="width:100%" placeholder="例: サービス管理責任者"></div><div class="field"><label>ログインID</label><input id="sm-lid" value="'+esc(s.loginId||'')+'" style="width:100%" placeholder="後日のログイン用"></div><div class="field"><label>パスワード</label><input type="text" id="sm-pwd" value="'+esc(s.password||'')+'" style="width:100%"></div><div class="btns"><button class="bg" onclick="closeModal(\'st-modal\')">取消</button><button class="bp" onclick="saveS(\''+(s.id||'')+'\')">保存</button></div></div></div>';
+}
+async function saveS(id){var d={name:document.getElementById('sm-n').value,role:document.getElementById('sm-r').value,loginId:document.getElementById('sm-lid').value,password:document.getElementById('sm-pwd').value};if(!d.name){alert('氏名を入力');return;}try{if(id){d.id=id;await gas('updateStaff',d);}else{await gas('addStaff',d);}S.staff=await gas('getStaff');closeModal('st-modal');renderStaff(document.getElementById('content'));}catch(e){alert('失敗');}}
+async function delS(id){if(!confirm('削除しますか？'))return;try{await gas('deleteStaff',id);S.staff=await gas('getStaff');renderStaff(document.getElementById('content'));}catch(e){alert('失敗');}}
+
+// ═══ 設定 ═══
+function renderSettings(c){
+  c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:18px">⚙️ 設定</h2>'+
+    '<div class="card"><div class="card-hd"><span class="card-t">事業所情報</span></div><div class="grid2"><div class="field"><label>事業所名</label><input id="sf-n" value="'+esc(S.settings.facilityName||'')+'" style="width:100%"></div><div class="field"><label>定員</label><input type="number" id="sf-c" value="'+(S.settings.capacity||30)+'" style="width:100%"></div></div><button class="bp" onclick="saveFac()">保存</button></div>'+
+    '<div class="card"><div class="card-hd"><span class="card-t">作業種別・時給</span><button class="bp" onclick="openWT()" style="font-size:12px">＋ 追加</button></div><table><thead><tr><th>作業種別</th><th>時給</th><th>操作</th></tr></thead><tbody id="wt-tb"></tbody></table></div><div id="wt-modal"></div>';
+  document.getElementById('wt-tb').innerHTML=S.workTypes.map(function(w){return'<tr><td>'+esc(w.name)+'</td><td>¥'+Number(w.rate).toLocaleString()+'/h</td><td><button class="bg" onclick=\'openWT('+JSON.stringify(w).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delWT(\''+w.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';}).join('');
+}
+async function saveFac(){try{await gas('updateSetting','facilityName',document.getElementById('sf-n').value);await gas('updateSetting','capacity',document.getElementById('sf-c').value);S.settings=await gas('getSettings');alert('保存しました');render();}catch(e){alert('失敗');}}
+function openWT(w){w=w||{name:'',rate:200};document.getElementById('wt-modal').innerHTML='<div class="overlay" onclick="closeModal(\'wt-modal\')"><div class="modal" style="width:420px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>作業種別</h3><button class="modal-close" onclick="closeModal(\'wt-modal\')">✕</button></div><div class="field"><label>名前</label><input id="wt-n" value="'+esc(w.name)+'" style="width:100%"></div><div class="field"><label>時給</label><input type="number" id="wt-r" value="'+w.rate+'" style="width:100%"></div><div class="btns"><button class="bg" onclick="closeModal(\'wt-modal\')">取消</button><button class="bp" onclick="saveWT(\''+(w.id||'')+'\')">保存</button></div></div></div>';}
+async function saveWT(id){var d={name:document.getElementById('wt-n').value,rate:Number(document.getElementById('wt-r').value)};if(!d.name)return;try{if(id){d.id=id;await gas('updateWorkType',d);}else{await gas('addWorkType',d);}S.workTypes=await gas('getWorkTypes');closeModal('wt-modal');renderSettings(document.getElementById('content'));}catch(e){alert('失敗');}}
+async function delWT(id){if(!confirm('削除？'))return;try{await gas('deleteWorkType',id);S.workTypes=await gas('getWorkTypes');renderSettings(document.getElementById('content'));}catch(e){alert('失敗');}}
+
+loadAll();
+</script>
+</body>
+</html>
