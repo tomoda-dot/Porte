@@ -9,26 +9,29 @@ var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // ID生成（GASと同じ形式）
 function _genId(prefix){return prefix+new Date().getTime()+Math.random().toString(36).substr(2,5);}
 
+// エラーを文字列に変換
+function _throwErr(e){throw new Error(e.message||e.hint||JSON.stringify(e));}
+
 // テーブルから全件取得
-async function _getAll(table){var r=await supabase.from(table).select('*');if(r.error)throw r.error;return r.data||[];}
+async function _getAll(table){var r=await supabase.from(table).select('*');if(r.error)_throwErr(r.error);return r.data||[];}
 
 // テーブルからフィルタ取得
-async function _getFiltered(table,col,val){var r=await supabase.from(table).select('*').eq(col,val);if(r.error)throw r.error;return r.data||[];}
+async function _getFiltered(table,col,val){var r=await supabase.from(table).select('*').eq(col,val);if(r.error)_throwErr(r.error);return r.data||[];}
 
 // 前方一致フィルタ（日付のym検索用）
-async function _getLike(table,col,prefix){var r=await supabase.from(table).select('*').like(col,prefix+'%');if(r.error)throw r.error;return r.data||[];}
+async function _getLike(table,col,prefix){var r=await supabase.from(table).select('*').like(col,prefix+'%');if(r.error)_throwErr(r.error);return r.data||[];}
 
 // 以上フィルタ
-async function _getGte(table,col,val){var r=await supabase.from(table).select('*').gte(col,val).order(col);if(r.error)throw r.error;return r.data||[];}
+async function _getGte(table,col,val){var r=await supabase.from(table).select('*').gte(col,val).order(col);if(r.error)_throwErr(r.error);return r.data||[];}
 
 // 追加
-async function _add(table,obj){var r=await supabase.from(table).insert([obj]).select();if(r.error)throw r.error;return(r.data&&r.data[0])||obj;}
+async function _add(table,obj){var r=await supabase.from(table).insert([obj]).select();if(r.error)_throwErr(r.error);return(r.data&&r.data[0])||obj;}
 
 // 更新
-async function _update(table,obj){var id=obj.id;var r=await supabase.from(table).update(obj).eq('id',id).select();if(r.error)throw r.error;return(r.data&&r.data[0])||obj;}
+async function _update(table,obj){var id=obj.id;var r=await supabase.from(table).update(obj).eq('id',id).select();if(r.error)_throwErr(r.error);return(r.data&&r.data[0])||obj;}
 
 // 削除
-async function _del(table,id){var r=await supabase.from(table).delete().eq('id',id);if(r.error)throw r.error;return true;}
+async function _del(table,id){var r=await supabase.from(table).delete().eq('id',id);if(r.error)_throwErr(r.error);return true;}
 
 // Upsert（userId+dateで既存チェック）
 async function _upsertByUserDate(table,obj,idPrefix){
