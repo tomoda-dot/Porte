@@ -28,14 +28,16 @@ async function _getCols(table){
   return _colCache[table];
 }
 
-// オブジェクトからテーブルに存在するカラムだけ抽出
+// オブジェクトからテーブルに存在するカラムだけ抽出 + 空文字→null変換
 async function _filterCols(table,obj){
   var cols=await _getCols(table);
-  if(!cols)return obj; // キャッシュなし（空テーブル）→そのまま
   var filtered={};
-  for(var i=0;i<cols.length;i++){
-    var k=cols[i];
-    if(obj[k]!==undefined)filtered[k]=obj[k];
+  var keys=cols||Object.keys(obj);
+  for(var i=0;i<keys.length;i++){
+    var k=keys[i];
+    if(obj[k]!==undefined){
+      filtered[k]=obj[k]===''?null:obj[k];
+    }
   }
   return filtered;
 }
