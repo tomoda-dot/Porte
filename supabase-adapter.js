@@ -144,6 +144,7 @@ async function gas(fn){
       var results=[];for(var i=0;i<a1.length;i++)results.push(await _upsertByUserDate('出欠',a1[i],'a'));return results;
 
     // ── 日報 ──
+    case 'getDaily': return a1?_getLike('日報','date',a1):_getAll('日報');
     case 'getDailyByDate': return _getFiltered('日報','date',a1);
     case 'upsertDailyReport': return _upsertByUserDate('日報',a1,'d');
 
