@@ -403,8 +403,7 @@ async function _calcWorkTypeSummary(ym){
       uWD[day-1]+=wage;uHD[day-1]+=netH;uWT+=wage;uHT+=netH;uWC++;
       gWD[day-1]+=wage;gHD[day-1]+=netH;gWT+=wage;gHT+=netH;gWC++;
     });
-    var wtArr=[];Object.keys(byWt).forEach(function(k){var v=byWt[k];wtArr.push({name:k,wageByDay:v.wageByDay,hoursByDay:v.hoursByDay,wageTotal:Math.round(v.wageTotal),hoursTotal:Math.round(v.hoursTotal*100)/100,count:v.count});});
-    users.push({id:user.id,name:user.name,workTypes:wtArr,wageByDay:uWD,hoursByDay:uHD,wageTotal:Math.round(uWT),hoursTotal:Math.round(uHT*100)/100,workCount:uWC});
+    users.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',byWt:byWt,wageByDay:uWD,hoursByDay:uHD,wageTotal:Math.round(uWT),hoursTotal:Math.round(uHT*100)/100,workCount:uWC});
   });
   return{ym:ym,daysInMonth:dim,dayDows:dayDows,users:users,grandWageByDay:gWD,grandHoursByDay:gHD,grandWageTotal:Math.round(gWT),grandHoursTotal:Math.round(gHT*100)/100,grandWorkCount:gWC};
 }
@@ -425,7 +424,7 @@ async function _calcUtilizationData(ym){
     result.push({ym:mym,label:mym.replace('-','/'),capacity:capacity,openDays:openDays,totalAttend:totalAttend,rate:rate});
   }
   for(var ri=0;ri<result.length;ri++){result[ri].avg3=ri>=2?Math.round((result[ri].rate+result[ri-1].rate+result[ri-2].rate)/3*10)/10:null;}
-  return result;
+  return{months:result,facilityName:settings.facilityName||'',facilityType:settings.facilityType||'就労継続支援B型'};
 }
 
 async function _calcServiceRecordData(srYm){
@@ -459,25 +458,38 @@ async function _calcServiceRecordData(srYm){
 }
 
 async function _calcAnnualWageDetail(fiscalYear){
-  var us=await _getAll('利用者');var wts=await _getAll('作業種別');var settings=await _getSettings();
-  var bentoPrice=Number(settings.bentoPrice)||100;var KAIKIN_BONUS=3000;
-  var fy=Number(fiscalYear);var months=[];
-  for(var m=4;m<=15;m++){var rm=m>12?m-12:m;var ry=m>12?fy+1:fy;months.push(ry+'-'+String(rm).padStart(2,'0'));}
-  var allAtt=[];for(var mi=0;mi<months.length;mi++){try{var ma=await _getLike('出欠','date',months[mi]);allAtt=allAtt.concat(ma);}catch(e){}}
+  var fy=Number(fiscalYear);
+  var us=await _getAll('利用者');var wts=await _getAll('作業種別');
+  var months=[];
+  for(var m=4;m<=12;m++)months.push(fy+'-'+String(m).padStart(2,'0'));
+  for(var m2=1;m2<=3;m2++)months.push((fy+1)+'-'+String(m2).padStart(2,'0'));
+  // 全月の出欠を一括取得
+  var allAtt=[];
+  for(var mi=0;mi<months.length;mi++){try{var ma=await _getLike('出欠','date',months[mi]);allAtt=allAtt.concat(ma);}catch(e){}}
+  var attByMonth={};months.forEach(function(ym){attByMonth[ym]=allAtt.filter(function(a){return String(a.date).indexOf(ym)===0;});});
   var result=[];
   us.forEach(function(user){
-    var monthly=[];var yearTotal=0;
+    var monthData=[],yearDays=0,yearHours=0,yearWage=0;
     months.forEach(function(ym){
-      var recs=allAtt.filter(function(a){return String(a.userId)===String(user.id)&&String(a.date).indexOf(ym)===0&&_isAttend(a);});
-      if(recs.length===0){monthly.push({ym:ym,days:0,wage:0,bonus:0,bentoDed:0,total:0});return;}
-      var tW=0,bc=0;recs.forEach(function(r){tW+=_calcRecWage(r,wts).wage;if(_isBento(r))bc++;});
-      var kk=_checkKaikin(user,allAtt.filter(function(a){return String(a.date).indexOf(ym)===0;}),ym);
-      var bonus=kk?KAIKIN_BONUS:0;var bd=bc*bentoPrice;var total=Math.round(tW)+bonus-bd;
-      yearTotal+=total;
-      monthly.push({ym:ym,days:recs.length,wage:Math.round(tW),bonus:bonus,bentoDed:bd,total:total});
+      var att=attByMonth[ym]||[];
+      var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
+      var days=recs.length,hours=0,wage=0;
+      recs.forEach(function(rec){var cw=_calcRecWage(rec,wts);hours+=cw.netH;wage+=cw.wage;});
+      monthData.push({ym:ym,days:days,hours:Math.round(hours*100)/100,wage:Math.round(wage)});
+      yearDays+=days;yearHours+=hours;yearWage+=wage;
     });
-    if(yearTotal===0&&monthly.every(function(m){return m.days===0;}))return;
-    result.push({id:user.id,name:user.name,monthly:monthly,yearTotal:yearTotal});
+    if(yearDays===0)return;
+    var initials='';var fn=user.furigana||'';
+    if(fn){var parts=fn.replace(/\s+/g,' ').trim().split(' ');initials=parts.map(function(p){return p.charAt(0).toUpperCase();}).join('.');}
+    result.push({name:user.name,initials:initials,months:monthData,totalDays:yearDays,totalHours:Math.round(yearHours*100)/100,totalWage:Math.round(yearWage)});
   });
-  return{fiscalYear:fy,months:months,users:result};
+  var monthTotals=[];
+  for(var mi2=0;mi2<months.length;mi2++){
+    var td=0,th=0,tw=0;
+    result.forEach(function(u){td+=u.months[mi2].days;th+=u.months[mi2].hours;tw+=u.months[mi2].wage;});
+    var mAtt=attByMonth[months[mi2]]||[];
+    var uniqueDates={};mAtt.forEach(function(a){if(_isAttend(a))uniqueDates[a.date]=1;});
+    monthTotals.push({ym:months[mi2],bizDays:Object.keys(uniqueDates).length,totalDays:td,totalHours:Math.round(th*100)/100,totalWage:Math.round(tw)});
+  }
+  return{fiscalYear:fy,users:result,monthTotals:monthTotals};
 }
