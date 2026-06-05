@@ -12,6 +12,34 @@ function _genId(prefix){return prefix+new Date().getTime()+Math.random().toStrin
 // エラーを文字列に変換
 function _throwErr(e){throw new Error(e.message||e.hint||JSON.stringify(e));}
 
+// テーブルのカラム名キャッシュ
+var _colCache={};
+async function _getCols(table){
+  if(_colCache[table])return _colCache[table];
+  var r=await supabase.from(table).select('*').limit(0);
+  // レスポンスヘッダーからカラムを取得できないので、1件取得して判断
+  var r2=await supabase.from(table).select('*').limit(1);
+  if(r2.data&&r2.data.length>0){
+    _colCache[table]=Object.keys(r2.data[0]);
+  }else{
+    // テーブルが空の場合、全カラムを通す（フィルタしない）
+    _colCache[table]=null;
+  }
+  return _colCache[table];
+}
+
+// オブジェクトからテーブルに存在するカラムだけ抽出
+async function _filterCols(table,obj){
+  var cols=await _getCols(table);
+  if(!cols)return obj; // キャッシュなし（空テーブル）→そのまま
+  var filtered={};
+  for(var i=0;i<cols.length;i++){
+    var k=cols[i];
+    if(obj[k]!==undefined)filtered[k]=obj[k];
+  }
+  return filtered;
+}
+
 // テーブルから全件取得
 async function _getAll(table){var r=await supabase.from(table).select('*');if(r.error)_throwErr(r.error);return r.data||[];}
 
@@ -24,11 +52,11 @@ async function _getLike(table,col,prefix){var r=await supabase.from(table).selec
 // 以上フィルタ
 async function _getGte(table,col,val){var r=await supabase.from(table).select('*').gte(col,val).order(col);if(r.error)_throwErr(r.error);return r.data||[];}
 
-// 追加
-async function _add(table,obj){var r=await supabase.from(table).insert([obj]).select();if(r.error)_throwErr(r.error);return(r.data&&r.data[0])||obj;}
+// 追加（カラムフィルタ付き）
+async function _add(table,obj){var safe=await _filterCols(table,obj);var r=await supabase.from(table).insert([safe]).select();if(r.error)_throwErr(r.error);return(r.data&&r.data[0])||obj;}
 
-// 更新
-async function _update(table,obj){var id=obj.id;var r=await supabase.from(table).update(obj).eq('id',id).select();if(r.error)_throwErr(r.error);return(r.data&&r.data[0])||obj;}
+// 更新（カラムフィルタ付き）
+async function _update(table,obj){var id=obj.id;var safe=await _filterCols(table,obj);var r=await supabase.from(table).update(safe).eq('id',id).select();if(r.error)_throwErr(r.error);return(r.data&&r.data[0])||obj;}
 
 // 削除
 async function _del(table,id){var r=await supabase.from(table).delete().eq('id',id);if(r.error)_throwErr(r.error);return true;}
