@@ -52,11 +52,35 @@ async function _getLike(table,col,prefix){var r=await supabase.from(table).selec
 // 以上フィルタ
 async function _getGte(table,col,val){var r=await supabase.from(table).select('*').gte(col,val).order(col);if(r.error)_throwErr(r.error);return r.data||[];}
 
-// 追加（カラムフィルタ付き）
-async function _add(table,obj){var safe=await _filterCols(table,obj);var r=await supabase.from(table).insert([safe]).select();if(r.error)_throwErr(r.error);return(r.data&&r.data[0])||obj;}
+// 追加（不明カラム自動除去リトライ付き）
+async function _add(table,obj){
+  var safe=await _filterCols(table,obj);
+  for(var retry=0;retry<10;retry++){
+    var r=await supabase.from(table).insert([safe]).select();
+    if(!r.error)return(r.data&&r.data[0])||obj;
+    if(r.error.message&&r.error.message.indexOf('Could not find the')>=0){
+      var m=r.error.message.match(/find the '([^']+)'/);
+      if(m){console.warn('カラム除去:',table+'.'+m[1]);delete safe[m[1]];continue;}
+    }
+    _throwErr(r.error);
+  }
+  _throwErr(r.error);
+}
 
-// 更新（カラムフィルタ付き）
-async function _update(table,obj){var id=obj.id;var safe=await _filterCols(table,obj);var r=await supabase.from(table).update(safe).eq('id',id).select();if(r.error)_throwErr(r.error);return(r.data&&r.data[0])||obj;}
+// 更新（不明カラム自動除去リトライ付き）
+async function _update(table,obj){
+  var id=obj.id;var safe=await _filterCols(table,obj);
+  for(var retry=0;retry<10;retry++){
+    var r=await supabase.from(table).update(safe).eq('id',id).select();
+    if(!r.error)return(r.data&&r.data[0])||obj;
+    if(r.error.message&&r.error.message.indexOf('Could not find the')>=0){
+      var m=r.error.message.match(/find the '([^']+)'/);
+      if(m){console.warn('カラム除去:',table+'.'+m[1]);delete safe[m[1]];continue;}
+    }
+    _throwErr(r.error);
+  }
+  _throwErr(r.error);
+}
 
 // 削除
 async function _del(table,id){var r=await supabase.from(table).delete().eq('id',id);if(r.error)_throwErr(r.error);return true;}
@@ -230,10 +254,40 @@ async function gas(fn){
     // ── 帳票系（クライアント側で計算）──
     case 'getAttendanceList': return a1?_getLike('出欠','date',a1):_getAll('出欠');
     case 'getServiceRecordData':
-      var srAtt=await _getLike('出欠','date',a1);
+      var srYm=a1;
+      var srAtt=await _getLike('出欠','date',srYm);
       var srUsers=await _getAll('利用者');
       var srSettings=await _getSettings();
-      return{attendance:srAtt,users:srUsers,settings:srSettings,reiwa:''};
+      var srFn=srSettings.facilityName||'';
+      var srFNum=srSettings.facilityNumber||'';
+      var srParts=srYm.split('-');var srY=Number(srParts[0]);var srM=Number(srParts[1]);
+      var srDays=new Date(srY,srM,0).getDate();
+      var srDow=['日','月','火','水','木','金','土'];
+      var srReiwa='令和'+(srY-2018)+'年'+srM+'月分';
+      var srResult=[];
+      srUsers.forEach(function(user){
+        var recs=srAtt.filter(function(a){return String(a.userId)===String(user.id);});
+        var attendRecs=recs.filter(function(a){return['出席','遅刻','早退'].indexOf(a.status)>=0;});
+        if(attendRecs.length===0)return;
+        var days=[],totalDays=0,pickupCount=0,dropoffCount=0,mealCount=0;
+        for(var d=1;d<=srDays;d++){
+          var ds=srYm+'-'+String(d).padStart(2,'0');
+          var dow=srDow[new Date(srY,srM-1,d).getDay()];
+          var rec=null;for(var ri=0;ri<recs.length;ri++){if(String(recs[ri].date)===ds){rec=recs[ri];break;}}
+          var dd={day:d,dow:dow,status:'',startTime:'',endTime:'',pickup:false,dropoff:false,meal:false,notes:'',signUrl:''};
+          if(rec&&['出席','遅刻','早退'].indexOf(rec.status)>=0){
+            totalDays++;dd.status='1';dd.startTime=rec.startTime||'';dd.endTime=rec.endTime||'';
+            var pu=String(rec.pickup||'');
+            if(pu.indexOf('往')>=0||pu.indexOf('迎')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.pickup=true;pickupCount++;}
+            if(pu.indexOf('復')>=0||pu.indexOf('送')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.dropoff=true;dropoffCount++;}
+            if(rec.bento&&String(rec.bento)!=='0'&&String(rec.bento)!=='false'&&String(rec.bento)!==''){dd.meal=true;mealCount++;}
+            dd.notes=rec.notes||'';dd.signUrl=rec.signature||'';
+          }
+          days.push(dd);
+        }
+        srResult.push({id:user.id,name:user.name,recipientNumber:user.recipientNumber||'',contractDays:user.supportDays||'',startDate:user.enrollDate||user.supportStartDate||'',serviceType:user.serviceType||'Ｂ型',days:days,totalDays:totalDays,pickupCount:pickupCount,dropoffCount:dropoffCount,mealCount:mealCount});
+      });
+      return{ym:srYm,reiwa:srReiwa,facilityName:srFn,facilityNumber:srFNum,users:srResult,daysInMonth:srDays};
     case 'getUtilizationData': return a1?_getLike('出欠','date',a1):_getAll('出欠');
     case 'getAnnualWageDetail': return _getLike('出欠','date',a1);
     case 'getWageDetailPerUser':
