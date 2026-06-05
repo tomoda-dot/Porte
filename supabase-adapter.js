@@ -72,10 +72,10 @@ async function gas(fn){
     case 'deleteStaff': return _del('スタッフ',a1);
 
     // ── 作業種別 ──
-    case 'getWorkTypes': return _getAll('作業種類');
-    case 'addWorkType': a1.id=_genId('w');return _add('作業種類',a1);
-    case 'updateWorkType': return _update('作業種類',a1);
-    case 'deleteWorkType': return _del('作業種類',a1);
+    case 'getWorkTypes': return _getAll('作業種別');
+    case 'addWorkType': a1.id=_genId('w');return _add('作業種別',a1);
+    case 'updateWorkType': return _update('作業種別',a1);
+    case 'deleteWorkType': return _del('作業種別',a1);
 
     // ── 出欠 ──
     case 'getAttendance': return a1?_getLike('出欠','date',a1):_getAll('出欠');
@@ -186,7 +186,7 @@ async function gas(fn){
 
     // ── 初期データ（複合）──
     case 'getInitialData':
-      var p=await Promise.all([_getAll('利用者'),_getAll('作業種類'),_getSettings(),_getAll('スタッフ')]);
+      var p=await Promise.all([_getAll('利用者'),_getAll('作業種別'),_getSettings(),_getAll('スタッフ')]);
       return{users:p[0],workTypes:p[1],settings:p[2],staff:p[3]};
     case 'getDeferredData':
       var p2=await Promise.all([
