@@ -253,40 +253,12 @@ async function gas(fn){
 
     // ── 帳票系（クライアント側で完全計算）──
     case 'getAttendanceList': return _calcAttendanceList(a1);
+    case 'getWorkTypeSummary': return _calcWorkTypeSummary(a1);
+    case 'getUtilizationData': return _calcUtilizationData(a1);
     case 'getWageDetailPerUser': return _calcWageDetailPerUser(a1);
-      var srAtt=await _getLike('出欠','date',srYm);
-      var srUsers=await _getAll('利用者');
-      var srSettings=await _getSettings();
-      var srFn=srSettings.facilityName||'';
-      var srFNum=srSettings.facilityNumber||'';
-      var srParts=srYm.split('-');var srY=Number(srParts[0]);var srM=Number(srParts[1]);
-      var srDays=new Date(srY,srM,0).getDate();
-      var srDow=['日','月','火','水','木','金','土'];
-      var srReiwa='令和'+(srY-2018)+'年'+srM+'月分';
-      var srResult=[];
-      srUsers.forEach(function(user){
-        var recs=srAtt.filter(function(a){return String(a.userId)===String(user.id);});
-        var attendRecs=recs.filter(function(a){return['出席','遅刻','早退'].indexOf(a.status)>=0;});
-        if(attendRecs.length===0)return;
-        var days=[],totalDays=0,pickupCount=0,dropoffCount=0,mealCount=0;
-        for(var d=1;d<=srDays;d++){
-          var ds=srYm+'-'+String(d).padStart(2,'0');
-          var dow=srDow[new Date(srY,srM-1,d).getDay()];
-          var rec=null;for(var ri=0;ri<recs.length;ri++){if(String(recs[ri].date)===ds){rec=recs[ri];break;}}
-          var dd={day:d,dow:dow,status:'',startTime:'',endTime:'',pickup:false,dropoff:false,meal:false,notes:'',signUrl:''};
-          if(rec&&['出席','遅刻','早退'].indexOf(rec.status)>=0){
-            totalDays++;dd.status='1';dd.startTime=rec.startTime||'';dd.endTime=rec.endTime||'';
-            var pu=String(rec.pickup||'');
-            if(pu.indexOf('往')>=0||pu.indexOf('迎')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.pickup=true;pickupCount++;}
-            if(pu.indexOf('復')>=0||pu.indexOf('送')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.dropoff=true;dropoffCount++;}
-            if(rec.bento&&String(rec.bento)!=='0'&&String(rec.bento)!=='false'&&String(rec.bento)!==''){dd.meal=true;mealCount++;}
-            dd.notes=rec.notes||'';dd.signUrl=rec.signature||'';
-          }
-          days.push(dd);
-        }
-        srResult.push({id:user.id,name:user.name,recipientNumber:user.recipientNumber||'',contractDays:user.supportDays||'',startDate:user.enrollDate||user.supportStartDate||'',serviceType:user.serviceType||'Ｂ型',days:days,totalDays:totalDays,pickupCount:pickupCount,dropoffCount:dropoffCount,mealCount:mealCount});
-      });
-      return{ym:srYm,reiwa:srReiwa,facilityName:srFn,facilityNumber:srFNum,users:srResult,daysInMonth:srDays};
+    case 'getAnnualWageDetail': return _calcAnnualWageDetail(a1);
+    case 'getWageCSV': return a1?_getLike('出欠','date',a1):_getAll('出欠');
+    case 'getServiceRecordData': return _calcServiceRecordData(a1);
 
     // ── ルート計算（要Maps API → 後日対応）──
     case 'calcFixedOrderRoute':
@@ -454,6 +426,36 @@ async function _calcUtilizationData(ym){
   }
   for(var ri=0;ri<result.length;ri++){result[ri].avg3=ri>=2?Math.round((result[ri].rate+result[ri-1].rate+result[ri-2].rate)/3*10)/10:null;}
   return result;
+}
+
+async function _calcServiceRecordData(srYm){
+  var srAtt=await _getLike('出欠','date',srYm);var srUsers=await _getAll('利用者');var srSettings=await _getSettings();
+  var srFn=srSettings.facilityName||'';var srFNum=srSettings.facilityNumber||'';
+  var srParts=srYm.split('-');var srY=Number(srParts[0]);var srM=Number(srParts[1]);
+  var srDays=new Date(srY,srM,0).getDate();var srDow=['日','月','火','水','木','金','土'];
+  var srReiwa='令和'+(srY-2018)+'年'+srM+'月分';var srResult=[];
+  srUsers.forEach(function(user){
+    var recs=srAtt.filter(function(a){return String(a.userId)===String(user.id);});
+    var attendRecs=recs.filter(function(a){return _isAttend(a);});
+    if(attendRecs.length===0)return;
+    var days=[],totalDays=0,pickupCount=0,dropoffCount=0,mealCount=0;
+    for(var d=1;d<=srDays;d++){
+      var ds=srYm+'-'+String(d).padStart(2,'0');var dow=srDow[new Date(srY,srM-1,d).getDay()];
+      var rec=null;for(var ri=0;ri<recs.length;ri++){if(String(recs[ri].date)===ds){rec=recs[ri];break;}}
+      var dd={day:d,dow:dow,status:'',startTime:'',endTime:'',pickup:false,dropoff:false,meal:false,notes:'',signUrl:''};
+      if(rec&&_isAttend(rec)){
+        totalDays++;dd.status='1';dd.startTime=rec.startTime||'';dd.endTime=rec.endTime||'';
+        var pu=String(rec.pickup||'');
+        if(pu.indexOf('往')>=0||pu.indexOf('迎')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.pickup=true;pickupCount++;}
+        if(pu.indexOf('復')>=0||pu.indexOf('送')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.dropoff=true;dropoffCount++;}
+        if(_isBento(rec)){dd.meal=true;mealCount++;}
+        dd.notes=rec.notes||'';dd.signUrl=rec.signature||'';
+      }
+      days.push(dd);
+    }
+    srResult.push({id:user.id,name:user.name,recipientNumber:user.recipientNumber||'',contractDays:user.supportDays||'',startDate:user.enrollDate||user.supportStartDate||'',serviceType:user.serviceType||'Ｂ型',days:days,totalDays:totalDays,pickupCount:pickupCount,dropoffCount:dropoffCount,mealCount:mealCount});
+  });
+  return{ym:srYm,reiwa:srReiwa,facilityName:srFn,facilityNumber:srFNum,users:srResult,daysInMonth:srDays};
 }
 
 async function _calcAnnualWageDetail(fiscalYear){
