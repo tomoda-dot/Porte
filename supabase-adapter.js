@@ -191,6 +191,8 @@ async function gas(fn){
     case 'getSupportPlans': return _getFiltered('個別支援計画','userId',a1);
     case 'getAllSupportPlans': return _getAll('個別支援計画');
     case 'upsertSupportPlan':
+      // signatureDataUrl → signatureUrl に変換（画面側はsignatureUrlで読む）
+      if(a1.signatureDataUrl!==undefined){a1.signatureUrl=a1.signatureDataUrl;delete a1.signatureDataUrl;}
       if(a1.id){var ex=await supabase.from('個別支援計画').select('id').eq('id',a1.id).limit(1);if(ex.data&&ex.data.length>0)return _update('個別支援計画',a1);}
       a1.id=_genId('sp');a1.createdAt=new Date().toISOString();return _add('個別支援計画',a1);
     case 'deleteSupportPlan': return _del('個別支援計画',a1);
