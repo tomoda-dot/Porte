@@ -5337,7 +5337,7 @@ async function delWT(id){if(!await cConfirm('削除？'))return;try{await gas('d
 async function openTimecard() {
   try {
     var url = await gas('getAppUrl');
-    window.open(url + '?page=timecard', '_blank');
+    window.open('timecard.html', '_blank');
   } catch (e) {
     await cAlert('URLの取得に失敗しました');
   }
