@@ -247,6 +247,12 @@ async function gas(fn){
 
     // ── 送迎ルート ──
     case 'getRoutesByDate': return _getFiltered('送迎ルート','date',a1);
+
+    // ── ヒヤリハット ──
+    case 'getIncidents': return _getAll('ヒヤリハット');
+    case 'addIncident': a1.id=_genId('inc');a1.createdAt=new Date().toISOString();return _add('ヒヤリハット',a1);
+    case 'updateIncident': a1.updatedAt=new Date().toISOString();return _update('ヒヤリハット',a1);
+    case 'deleteIncident': return _del('ヒヤリハット',a1);
     case 'addRouteRecord': a1.id=_genId('rt');a1.createdAt=new Date().toISOString();return _add('送迎ルート',a1);
     case 'updateRouteRecord': return _update('送迎ルート',a1);
     case 'deleteRouteRecord': return _del('送迎ルート',a1);
