@@ -332,17 +332,13 @@ async function _calcSmartRoutes(userIds,pattern,date){
   }
   candidates.sort(function(a,b){return a.timeMin-b.timeMin;});
   if(candidates.length===0)return{trips:[],pattern:pattern};
-  // グループ分け：全体の時間幅が90分以内なら1便にまとめる
+  // グループ分け：到着/退勤時間が30分以内の利用者を同じ便にまとめる
   var trips=[];var cur=[candidates[0]];
   for(var ci=1;ci<candidates.length;ci++){
-    var spanMin=candidates[ci].timeMin-cur[0].timeMin;
-    var estTripMin=cur.length*10+20;
-    // 時間幅が概算トリップ時間以内、または全体90分以内なら同じ便
-    if(spanMin<=90&&(spanMin<=estTripMin||cur.length<4)){
-      cur.push(candidates[ci]);
-    }else{
-      trips.push(cur);cur=[candidates[ci]];
-    }
+    var diff=candidates[ci].timeMin-candidates[ci-1].timeMin;
+    // 前の人との時間差が30分以内なら同じ便
+    if(diff<=30){cur.push(candidates[ci]);}
+    else{trips.push(cur);cur=[candidates[ci]];}
   }
   trips.push(cur);
   // 各トリップの結果
