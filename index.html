@@ -192,7 +192,7 @@ async function loadAll(){
   }catch(e){document.getElementById('app').innerHTML='<div class="loading"><div style="font-size:36px">⚠️</div><div>データ読み込みエラーです</div><div style="font-size:11px;color:#999;margin-top:8px">'+String(e)+'</div><button class="bp" onclick="location.reload()" style="margin-top:12px">再読み込み</button></div>';}
 }
 
-var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
+var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['incidents','⚠️','ヒヤリハット'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
 
 var _shellRendered=false;
 function render(){
@@ -5097,6 +5097,167 @@ function toggleCustomAllowance(userId,alName){
     window._expandedWageRows[el.id]=el.style.display!=='none';
   });
   loadW();
+}
+
+// ═══ ヒヤリハット・事故報告 ═══
+var _incidentData=[];
+async function renderIncidents(c){
+  c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:12px">⚠️ ヒヤリハット・事故報告</h2><div id="inc-area"><div class="loading-center"><div class="spin"></div></div></div>';
+  try{_incidentData=await gas('getIncidents');loadIncidentList();}
+  catch(e){document.getElementById('inc-area').innerHTML='<div class="card" style="color:#c62828">読み込みエラー: '+e+'</div>';}
+}
+function loadIncidentList(){
+  var el=document.getElementById('inc-area');
+  // 統計
+  var total=_incidentData.length;
+  var hiyari=_incidentData.filter(function(x){return x.severity==='ヒヤリハット';}).length;
+  var minor=_incidentData.filter(function(x){return x.severity==='軽微事故';}).length;
+  var major=_incidentData.filter(function(x){return x.severity==='事故';}).length;
+  var open=_incidentData.filter(function(x){return x.status!=='完了';}).length;
+
+  var h='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">';
+  h+='<div class="stat"><div class="stat-l">総件数</div><div class="stat-v">'+total+'</div></div>';
+  h+='<div class="stat" style="border-color:#ff9800"><div class="stat-l">⚡ ヒヤリハット</div><div class="stat-v" style="color:#ff9800">'+hiyari+'</div></div>';
+  h+='<div class="stat" style="border-color:#f44336"><div class="stat-l">🔴 事故</div><div class="stat-v" style="color:#f44336">'+(minor+major)+'</div></div>';
+  h+='<div class="stat" style="border-color:#1565c0"><div class="stat-l">📋 未対応</div><div class="stat-v" style="color:#1565c0">'+open+'</div></div>';
+  h+='</div>';
+
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="bp" onclick="openIncidentForm()">＋ 新規報告</button></div>';
+
+  // 一覧テーブル
+  h+='<div class="card" style="overflow-x:auto"><table><thead><tr><th style="width:90px">発生日</th><th>レベル</th><th>対象者</th><th>種別</th><th>概要</th><th>対応状況</th><th>操作</th></tr></thead><tbody>';
+  if(_incidentData.length===0){
+    h+='<tr><td colspan="7" style="text-align:center;color:var(--sub);padding:20px">報告がありません</td></tr>';
+  }
+  var sorted=_incidentData.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'');});
+  sorted.forEach(function(inc){
+    var sevColor=inc.severity==='事故'?'#c62828':(inc.severity==='軽微事故'?'#e65100':'#ff9800');
+    var sevBg=inc.severity==='事故'?'#ffebee':(inc.severity==='軽微事故'?'#fff3e0':'#fff8e1');
+    var stColor=inc.status==='完了'?'var(--grn)':(inc.status==='対応中'?'#1565c0':'#c62828');
+    h+='<tr>';
+    h+='<td style="font-size:12px">'+fmtDate(inc.date)+'</td>';
+    h+='<td><span style="background:'+sevBg+';color:'+sevColor+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">'+esc(inc.severity||'')+'</span></td>';
+    h+='<td>'+esc(inc.userName||'-')+'</td>';
+    h+='<td style="font-size:12px">'+esc(inc.category||'')+'</td>';
+    h+='<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(inc.description||'').substring(0,40)+'</td>';
+    h+='<td><span style="color:'+stColor+';font-weight:600;font-size:12px">'+esc(inc.status||'未対応')+'</span></td>';
+    h+='<td><button class="bg" onclick="openIncidentForm(\''+inc.id+'\')" style="font-size:11px;padding:2px 8px">詳細</button></td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  el.innerHTML=h;
+}
+
+function openIncidentForm(id){
+  var inc=id?_incidentData.find(function(x){return x.id===id;}):null;
+  var isEdit=!!inc;
+  if(!inc)inc={date:today(),time:'',location:'',category:'転倒',severity:'ヒヤリハット',userId:'',userName:'',staffName:'',description:'',response:'',prevention:'',status:'未対応'};
+
+  var el=document.getElementById('inc-area');
+  var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  h+='<h3 style="margin:0">'+(isEdit?'📝 報告を編集':'⚠️ 新規ヒヤリハット・事故報告')+'</h3>';
+  h+='<button class="bg" onclick="loadIncidentList()" style="font-size:12px">← 一覧に戻る</button></div>';
+
+  h+='<div class="grid2">';
+  h+='<div class="field"><label>発生日 *</label><input type="date" id="inc-date" value="'+(inc.date||'')+'" style="width:100%"></div>';
+  h+='<div class="field"><label>発生時刻</label><input type="time" id="inc-time" value="'+(inc.time||'')+'" style="width:100%"></div>';
+  h+='</div>';
+
+  h+='<div class="grid2">';
+  h+='<div class="field"><label>レベル *</label><select id="inc-sev" style="width:100%">';
+  ['ヒヤリハット','軽微事故','事故'].forEach(function(s){h+='<option'+(inc.severity===s?' selected':'')+'>'+s+'</option>';});
+  h+='</select></div>';
+  h+='<div class="field"><label>種別 *</label><select id="inc-cat" style="width:100%">';
+  ['転倒','体調変化','器具・設備','対人トラブル','外出・移動','食事','服薬','その他'].forEach(function(s){h+='<option'+(inc.category===s?' selected':'')+'>'+s+'</option>';});
+  h+='</select></div>';
+  h+='</div>';
+
+  h+='<div class="grid2">';
+  h+='<div class="field"><label>対象利用者</label><select id="inc-user" style="width:100%"><option value="">-- 選択 --</option>';
+  S.users.forEach(function(u){h+='<option value="'+u.id+'"'+(inc.userId===u.id?' selected':'')+'>'+esc(u.name)+'</option>';});
+  h+='</select></div>';
+  h+='<div class="field"><label>発生場所</label><input id="inc-loc" value="'+esc(inc.location||'')+'" placeholder="例：作業室、トイレ、送迎車内" style="width:100%"></div>';
+  h+='</div>';
+
+  h+='<div class="field"><label>発見者・報告者</label><input id="inc-staff" value="'+esc(inc.staffName||'')+'" placeholder="スタッフ名" style="width:100%"></div>';
+
+  h+='<div class="field"><label>状況・経緯 *</label><textarea id="inc-desc" rows="4" placeholder="いつ、どこで、誰が、何をしていた時に、どうなったか" style="width:100%">'+esc(inc.description||'')+'</textarea></div>';
+
+  h+='<div class="field"><label>対応内容</label><textarea id="inc-resp" rows="3" placeholder="発生後にとった対応" style="width:100%">'+esc(inc.response||'')+'</textarea></div>';
+
+  h+='<div class="field"><label>再発防止策</label><textarea id="inc-prev" rows="3" placeholder="今後の予防策・改善点" style="width:100%">'+esc(inc.prevention||'')+'</textarea></div>';
+
+  h+='<div class="field"><label>対応状況</label><select id="inc-status" style="width:200px">';
+  ['未対応','対応中','完了'].forEach(function(s){h+='<option'+(inc.status===s?' selected':'')+'>'+s+'</option>';});
+  h+='</select></div>';
+
+  h+='<div class="btns" style="margin-top:16px;border-top:1px solid #eee;padding-top:12px">';
+  if(isEdit)h+='<button style="background:#c62828;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px" onclick="deleteIncident(\''+inc.id+'\')">🗑️ 削除</button>';
+  h+='<button class="bg" onclick="loadIncidentList()">キャンセル</button>';
+  h+='<button class="bp" onclick="saveIncident('+(isEdit?"'"+inc.id+"'":"''")+')">'+(isEdit?'更新':'報告を登録')+'</button></div></div>';
+
+  // 印刷ボタン（編集時のみ）
+  if(isEdit){
+    h+='<div style="margin-top:12px;text-align:right"><button class="bg" onclick="printIncident(\''+inc.id+'\')" style="font-size:12px">🖨️ この報告を印刷</button></div>';
+  }
+
+  el.innerHTML=h;
+}
+
+async function saveIncident(id){
+  var date=document.getElementById('inc-date').value;
+  var desc=document.getElementById('inc-desc').value;
+  if(!date||!desc){await cAlert('発生日と状況・経緯は必須です');return;}
+  var userSel=document.getElementById('inc-user');
+  var userName='';
+  if(userSel.value){var su=S.users.find(function(x){return x.id===userSel.value;});if(su)userName=su.name;}
+  var obj={
+    date:date,time:document.getElementById('inc-time').value,
+    location:document.getElementById('inc-loc').value,
+    category:document.getElementById('inc-cat').value,
+    severity:document.getElementById('inc-sev').value,
+    userId:userSel.value,userName:userName,
+    staffName:document.getElementById('inc-staff').value,
+    description:desc,
+    response:document.getElementById('inc-resp').value,
+    prevention:document.getElementById('inc-prev').value,
+    status:document.getElementById('inc-status').value
+  };
+  if(!lockUI())return;
+  try{
+    if(id){obj.id=id;await gas('updateIncident',obj);}
+    else{await gas('addIncident',obj);}
+    _incidentData=await gas('getIncidents');
+    toast('✅ 保存しました');
+    loadIncidentList();
+  }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+}
+
+async function deleteIncident(id){
+  if(!await cConfirm('この報告を削除しますか？'))return;
+  if(!lockUI())return;
+  try{await gas('deleteIncident',id);_incidentData=await gas('getIncidents');toast('削除しました');loadIncidentList();}
+  catch(e){await cAlert('削除失敗: '+e);}finally{unlockUI();}
+}
+
+function printIncident(id){
+  var inc=_incidentData.find(function(x){return x.id===id;});if(!inc)return;
+  var w=window.open('','_blank');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ヒヤリハット報告書</title><style>';
+  html+='body{font-family:sans-serif;padding:30px;font-size:13px}h1{font-size:18px;text-align:center;margin-bottom:20px}';
+  html+='table{width:100%;border-collapse:collapse;margin-bottom:20px}th,td{border:1px solid #333;padding:8px}th{background:#f5f0ea;width:120px;text-align:left}';
+  html+='@media print{button{display:none!important}}</style></head><body>';
+  html+='<h1>ヒヤリハット・事故報告書</h1>';
+  html+='<table><tr><th>発生日時</th><td>'+fmtDate(inc.date)+' '+(inc.time||'')+'</td><th>レベル</th><td>'+esc(inc.severity||'')+'</td></tr>';
+  html+='<tr><th>種別</th><td>'+esc(inc.category||'')+'</td><th>発生場所</th><td>'+esc(inc.location||'')+'</td></tr>';
+  html+='<tr><th>対象利用者</th><td>'+esc(inc.userName||'-')+'</td><th>発見者</th><td>'+esc(inc.staffName||'')+'</td></tr>';
+  html+='<tr><th>状況・経緯</th><td colspan="3" style="white-space:pre-wrap">'+esc(inc.description||'')+'</td></tr>';
+  html+='<tr><th>対応内容</th><td colspan="3" style="white-space:pre-wrap">'+esc(inc.response||'')+'</td></tr>';
+  html+='<tr><th>再発防止策</th><td colspan="3" style="white-space:pre-wrap">'+esc(inc.prevention||'')+'</td></tr>';
+  html+='<tr><th>対応状況</th><td colspan="3">'+esc(inc.status||'')+'</td></tr></table>';
+  html+='<div style="margin-top:40px;display:flex;justify-content:space-around"><div>報告者：＿＿＿＿＿＿＿＿</div><div>管理者：＿＿＿＿＿＿＿＿</div></div>';
+  html+='<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>';
+  w.document.write(html);w.document.close();
 }
 
 function renderSettings(c){
