@@ -939,6 +939,7 @@ async function saveAttDaily(uid, ds){
       gas('upsertAttendance',attObj),
       gas('upsertDailyReport',dailyObj)
     ]);
+    toast('✅ 保存しました');
     S.dashboard=null;
     clearCache('getAttendance');clearCache('getDaily');clearCache('getAttendanceByDate');clearCache('getDailyByDate');
     if(S.tab==='calendar'){
