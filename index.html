@@ -192,7 +192,7 @@ async function loadAll(){
   }catch(e){document.getElementById('app').innerHTML='<div class="loading"><div style="font-size:36px">⚠️</div><div>データ読み込みエラーです</div><div style="font-size:11px;color:#999;margin-top:8px">'+String(e)+'</div><button class="bp" onclick="location.reload()" style="margin-top:12px">再読み込み</button></div>';}
 }
 
-var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['incidents','⚠️','ヒヤリハット'],['complaints','📞','苦情・相談'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
+var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['incidents','⚠️','ヒヤリハット'],['complaints','📞','苦情・相談'],['training','📚','研修・委員会'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
 
 var _shellRendered=false;
 function render(){
@@ -5397,6 +5397,234 @@ function printComplaint(id){
   html+='<tr><th>結果・経過</th><td colspan="3" style="white-space:pre-wrap">'+esc(cmp.result||'')+'</td></tr>';
   html+='<tr><th>対応状況</th><td colspan="3">'+esc(cmp.status||'')+'</td></tr></table>';
   html+='<div style="margin-top:40px;display:flex;justify-content:space-around"><div>受付者：＿＿＿＿＿＿＿＿</div><div>管理者：＿＿＿＿＿＿＿＿</div></div>';
+  html+='<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>';
+  w.document.write(html);w.document.close();
+}
+
+// ═══ 研修・委員会管理 ═══
+var _trainData=[],_trainReports=[];
+async function renderTraining(c){
+  c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:12px">📚 研修・委員会管理</h2><div id="trn-area"><div class="loading-center"><div class="spin"></div></div></div>';
+  try{
+    _trainData=await gas('getTrainings');
+    _trainReports=await gas('getTrainingReports');
+    loadTrainingList();
+  }catch(e){document.getElementById('trn-area').innerHTML='<div class="card" style="color:#c62828">読み込みエラー: '+e+'</div>';}
+}
+
+function loadTrainingList(){
+  var el=document.getElementById('trn-area');
+  var total=_trainData.length;
+  var kenshu=_trainData.filter(function(x){return x.category==='研修';}).length;
+  var iinkai=_trainData.filter(function(x){return x.category==='委員会';}).length;
+  var upcoming=_trainData.filter(function(x){return(x.date||'')>=today();}).length;
+
+  var h='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">';
+  h+='<div class="stat"><div class="stat-l">総件数</div><div class="stat-v">'+total+'</div></div>';
+  h+='<div class="stat" style="border-color:#1565c0"><div class="stat-l">📖 研修</div><div class="stat-v" style="color:#1565c0">'+kenshu+'</div></div>';
+  h+='<div class="stat" style="border-color:#2e7d32"><div class="stat-l">🏛️ 委員会</div><div class="stat-v" style="color:#2e7d32">'+iinkai+'</div></div>';
+  h+='<div class="stat" style="border-color:#ff9800"><div class="stat-l">📅 今後の予定</div><div class="stat-v" style="color:#ff9800">'+upcoming+'</div></div>';
+  h+='</div>';
+
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="bp" onclick="openTrainingForm()">＋ 新規登録</button></div>';
+
+  h+='<div class="card" style="overflow-x:auto"><table><thead><tr><th style="width:90px">日程</th><th>区分</th><th>種別</th><th>タイトル</th><th>報告状況</th><th>操作</th></tr></thead><tbody>';
+  if(_trainData.length===0){
+    h+='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">登録がありません</td></tr>';
+  }
+  var sorted=_trainData.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'');});
+  sorted.forEach(function(tr){
+    var catColor=tr.category==='研修'?'#1565c0':'#2e7d32';
+    var catBg=tr.category==='研修'?'#e3f2fd':'#e8f5e9';
+    var reports=_trainReports.filter(function(r){return r.trainingId===tr.id;});
+    var submitted=reports.filter(function(r){return r.report&&r.report.length>0;}).length;
+    var attended=reports.filter(function(r){return r.attended==='出席';}).length;
+    var isPast=(tr.date||'')<today();
+    h+='<tr>';
+    h+='<td style="font-size:12px">'+fmtDate(tr.date)+'</td>';
+    h+='<td><span style="background:'+catBg+';color:'+catColor+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">'+esc(tr.category||'')+'</span></td>';
+    h+='<td style="font-size:12px">'+esc(tr.type||'')+'</td>';
+    h+='<td style="font-weight:600">'+esc(tr.title||'')+'</td>';
+    h+='<td style="font-size:11px">';
+    if(isPast){h+='出席 '+attended+'名 / 報告 '+submitted+'名';}
+    else{h+='<span style="color:#ff9800">予定</span>';}
+    h+='</td>';
+    h+='<td><button class="bg" onclick="openTrainingDetail(\''+tr.id+'\')" style="font-size:11px;padding:2px 8px">詳細</button></td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  el.innerHTML=h;
+}
+
+function openTrainingForm(id){
+  var tr=id?_trainData.find(function(x){return x.id===id;}):null;
+  var isEdit=!!tr;
+  if(!tr)tr={date:'',category:'研修',type:'',title:'',content:'',location:'',required:'必須',status:'予定'};
+  var el=document.getElementById('trn-area');
+  var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  h+='<h3 style="margin:0">'+(isEdit?'📝 研修・委員会を編集':'📚 新規 研修・委員会登録')+'</h3>';
+  h+='<button class="bg" onclick="loadTrainingList()" style="font-size:12px">← 一覧に戻る</button></div>';
+
+  h+='<div class="grid2">';
+  h+='<div class="field"><label>日程 *</label><input type="date" id="trn-date" value="'+(tr.date||'')+'" style="width:100%"></div>';
+  h+='<div class="field"><label>区分 *</label><select id="trn-cat" style="width:100%">';
+  ['研修','委員会'].forEach(function(s){h+='<option'+(tr.category===s?' selected':'')+'>'+s+'</option>';});
+  h+='</select></div></div>';
+
+  h+='<div class="grid2">';
+  h+='<div class="field"><label>種別</label><select id="trn-type" style="width:100%"><option value="">-- 選択 --</option>';
+  ['虐待防止','身体拘束適正化','感染症対策','救急救命','防災訓練','交通安全','個人情報保護','衛生管理','人権研修','外部研修','運営委員会','虐待防止委員会','身体拘束適正化委員会','感染症対策委員会','防災委員会','その他'].forEach(function(s){h+='<option'+(tr.type===s?' selected':'')+'>'+s+'</option>';});
+  h+='</select></div>';
+  h+='<div class="field"><label>参加区分</label><select id="trn-req" style="width:100%">';
+  ['必須','任意'].forEach(function(s){h+='<option'+(tr.required===s?' selected':'')+'>'+s+'</option>';});
+  h+='</select></div></div>';
+
+  h+='<div class="field"><label>タイトル *</label><input id="trn-title" value="'+esc(tr.title||'')+'" placeholder="例：令和7年度 第1回虐待防止研修" style="width:100%"></div>';
+  h+='<div class="field"><label>場所</label><input id="trn-loc" value="'+esc(tr.location||'')+'" placeholder="例：事業所内、オンライン" style="width:100%"></div>';
+  h+='<div class="field"><label>内容・議題</label><textarea id="trn-content" rows="4" placeholder="研修内容や委員会の議題" style="width:100%">'+esc(tr.content||'')+'</textarea></div>';
+
+  h+='<div class="btns" style="margin-top:16px;border-top:1px solid #eee;padding-top:12px">';
+  if(isEdit)h+='<button style="background:#c62828;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px" onclick="deleteTraining(\''+tr.id+'\')">🗑️ 削除</button>';
+  h+='<button class="bg" onclick="loadTrainingList()">キャンセル</button>';
+  h+='<button class="bp" onclick="saveTraining('+(isEdit?"'"+tr.id+"'":"''")+')">'+(isEdit?'更新':'登録')+'</button></div></div>';
+  el.innerHTML=h;
+}
+
+async function saveTraining(id){
+  var date=document.getElementById('trn-date').value;
+  var title=document.getElementById('trn-title').value;
+  if(!date||!title){await cAlert('日程とタイトルは必須です');return;}
+  var obj={date:date,category:document.getElementById('trn-cat').value,
+    type:document.getElementById('trn-type').value,title:title,
+    location:document.getElementById('trn-loc').value,
+    content:document.getElementById('trn-content').value,
+    required:document.getElementById('trn-req').value};
+  if(!lockUI())return;
+  try{
+    if(id){obj.id=id;await gas('updateTraining',obj);}
+    else{await gas('addTraining',obj);}
+    _trainData=await gas('getTrainings');toast('✅ 保存しました');loadTrainingList();
+  }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+}
+
+async function deleteTraining(id){
+  if(!await cConfirm('この研修・委員会を削除しますか？報告書も削除されます。'))return;
+  if(!lockUI())return;
+  try{await gas('deleteTraining',id);_trainData=await gas('getTrainings');_trainReports=await gas('getTrainingReports');toast('削除しました');loadTrainingList();}
+  catch(e){await cAlert('削除失敗: '+e);}finally{unlockUI();}
+}
+
+function openTrainingDetail(id){
+  var tr=_trainData.find(function(x){return x.id===id;});if(!tr)return;
+  var reports=_trainReports.filter(function(r){return r.trainingId===id;});
+  var el=document.getElementById('trn-area');
+
+  var catColor=tr.category==='研修'?'#1565c0':'#2e7d32';
+  var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  h+='<h3 style="margin:0;color:'+catColor+'">'+esc(tr.category)+' : '+esc(tr.title)+'</h3>';
+  h+='<div><button class="bg" onclick="openTrainingForm(\''+id+'\')" style="font-size:12px;margin-right:6px">✏️ 編集</button>';
+  h+='<button class="bg" onclick="loadTrainingList()" style="font-size:12px">← 一覧</button></div></div>';
+
+  h+='<div class="grid2" style="margin-bottom:16px">';
+  h+='<div class="info-row" style="padding:10px 14px;background:#faf6f2;border-radius:8px"><span style="font-size:11px;color:var(--sub)">日程</span><span style="font-weight:700">'+fmtDate(tr.date)+'</span></div>';
+  h+='<div class="info-row" style="padding:10px 14px;background:#faf6f2;border-radius:8px"><span style="font-size:11px;color:var(--sub)">場所</span><span>'+esc(tr.location||'-')+'</span></div>';
+  h+='</div>';
+
+  if(tr.content){h+='<div style="background:#faf6f2;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px"><div style="font-size:11px;color:var(--sub);margin-bottom:4px">内容・議題</div><div style="white-space:pre-wrap">'+esc(tr.content)+'</div></div>';}
+
+  // 職員別 出欠・報告
+  h+='<div style="border-top:2px solid var(--pri);padding-top:16px;margin-top:16px">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h4 style="margin:0">👥 職員別 出欠・報告書</h4>';
+  h+='<button class="bg" onclick="printTrainingSummary(\''+id+'\')" style="font-size:11px">🖨️ 一覧印刷</button></div>';
+
+  h+='<table><thead><tr><th>職員名</th><th style="width:80px">出欠</th><th>報告書</th><th style="width:100px">操作</th></tr></thead><tbody>';
+  S.staff.forEach(function(st){
+    var rep=reports.find(function(r){return r.staffId===st.id;});
+    var attended=rep?rep.attended:'';
+    var report=rep?rep.report:'';
+    var attColor=attended==='出席'?'var(--grn)':(attended==='欠席'?'#c62828':'#999');
+    h+='<tr>';
+    h+='<td style="font-weight:600">'+esc(st.name)+'</td>';
+    h+='<td style="text-align:center"><span style="color:'+attColor+';font-weight:600">'+(attended||'未登録')+'</span></td>';
+    h+='<td style="font-size:12px">'+(report?esc(report).substring(0,60)+'...' :'<span style="color:#999">未記入</span>')+'</td>';
+    h+='<td><button class="bg" onclick="openReportForm(\''+id+'\',\''+st.id+'\')" style="font-size:11px;padding:2px 8px">記入</button></td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div></div>';
+  el.innerHTML=h;
+}
+
+function openReportForm(trainingId,staffId){
+  var tr=_trainData.find(function(x){return x.id===trainingId;});
+  var st=S.staff.find(function(x){return x.id===staffId;});
+  if(!tr||!st)return;
+  var rep=_trainReports.find(function(r){return r.trainingId===trainingId&&r.staffId===staffId;})||{attended:'出席',report:''};
+  var el=document.getElementById('trn-area');
+
+  var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  h+='<h3 style="margin:0">📝 報告書記入</h3>';
+  h+='<button class="bg" onclick="openTrainingDetail(\''+trainingId+'\')" style="font-size:12px">← 詳細に戻る</button></div>';
+
+  h+='<div style="background:#faf6f2;border-radius:8px;padding:12px;margin-bottom:16px">';
+  h+='<div style="font-size:12px;color:var(--sub)">'+esc(tr.category)+' : '+fmtDate(tr.date)+'</div>';
+  h+='<div style="font-size:16px;font-weight:700;margin-top:4px">'+esc(tr.title)+'</div>';
+  h+='<div style="font-size:13px;margin-top:8px;font-weight:600;color:var(--pri)">報告者：'+esc(st.name)+'</div></div>';
+
+  h+='<div class="field"><label>出欠</label><select id="rep-att" style="width:200px">';
+  ['出席','欠席'].forEach(function(s){h+='<option'+(rep.attended===s?' selected':'')+'>'+s+'</option>';});
+  h+='</select></div>';
+
+  h+='<div class="field"><label>報告書・所感</label><textarea id="rep-body" rows="8" placeholder="研修で学んだこと、気づき、今後に活かしたいこと等を記入してください" style="width:100%">'+esc(rep.report||'')+'</textarea></div>';
+
+  h+='<div class="btns" style="margin-top:16px;border-top:1px solid #eee;padding-top:12px">';
+  h+='<button class="bg" onclick="openTrainingDetail(\''+trainingId+'\')">キャンセル</button>';
+  h+='<button class="bp" onclick="saveReport(\''+trainingId+'\',\''+staffId+'\')">報告書を保存</button></div></div>';
+  el.innerHTML=h;
+}
+
+async function saveReport(trainingId,staffId){
+  var st=S.staff.find(function(x){return x.id===staffId;});
+  var existing=_trainReports.find(function(r){return r.trainingId===trainingId&&r.staffId===staffId;});
+  var obj={trainingId:trainingId,staffId:staffId,staffName:st?st.name:'',
+    attended:document.getElementById('rep-att').value,
+    report:document.getElementById('rep-body').value,
+    submittedAt:new Date().toISOString()};
+  if(!lockUI())return;
+  try{
+    if(existing){obj.id=existing.id;await gas('updateTrainingReport',obj);}
+    else{await gas('addTrainingReport',obj);}
+    _trainReports=await gas('getTrainingReports');toast('✅ 報告書を保存しました');openTrainingDetail(trainingId);
+  }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+}
+
+function printTrainingSummary(id){
+  var tr=_trainData.find(function(x){return x.id===id;});if(!tr)return;
+  var reports=_trainReports.filter(function(r){return r.trainingId===id;});
+  var w=window.open('','_blank');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>研修報告一覧</title><style>';
+  html+='body{font-family:sans-serif;padding:30px;font-size:13px}h1{font-size:18px;text-align:center;margin-bottom:6px}';
+  html+='h2{font-size:14px;text-align:center;color:#666;margin-bottom:20px}';
+  html+='table{width:100%;border-collapse:collapse;margin-bottom:20px}th,td{border:1px solid #333;padding:8px}th{background:#f5f0ea;text-align:left}';
+  html+='.report-box{page-break-inside:avoid;margin-bottom:16px;border:1px solid #ccc;border-radius:6px;padding:12px}';
+  html+='@media print{button{display:none!important}}</style></head><body>';
+  html+='<h1>'+esc(tr.category)+' 報告書</h1>';
+  html+='<h2>'+esc(tr.title)+' — '+fmtDate(tr.date)+'</h2>';
+  if(tr.content)html+='<div style="background:#f9f9f9;padding:10px;border-radius:6px;margin-bottom:20px;font-size:12px"><b>内容・議題：</b><br>'+esc(tr.content).replace(/\n/g,'<br>')+'</div>';
+
+  html+='<table><thead><tr><th>職員名</th><th style="width:60px">出欠</th><th>提出</th></tr></thead><tbody>';
+  S.staff.forEach(function(st){
+    var rep=reports.find(function(r){return r.staffId===st.id;});
+    html+='<tr><td>'+esc(st.name)+'</td><td style="text-align:center">'+(rep?esc(rep.attended):'−')+'</td><td>'+(rep&&rep.report?'✅':'−')+'</td></tr>';
+  });
+  html+='</tbody></table>';
+
+  // 個別報告書
+  reports.forEach(function(rep){
+    if(!rep.report)return;
+    html+='<div class="report-box"><div style="font-weight:700;margin-bottom:6px">'+esc(rep.staffName||'')+'</div>';
+    html+='<div style="white-space:pre-wrap;font-size:12px">'+esc(rep.report)+'</div></div>';
+  });
+
   html+='<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>';
   w.document.write(html);w.document.close();
 }
