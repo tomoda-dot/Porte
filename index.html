@@ -5002,7 +5002,7 @@ function buildAllowanceUI(){
     h+='<tr><td colspan="5" style="text-align:center;color:var(--sub);padding:16px">手当が登録されていません</td></tr>';
   }
   als.forEach(function(a,i){
-    var condLabel={'kaikin':'皆勤（NG日数0）','seikin':'精勤（欠席2日以内）','all':'全員','birthday':'誕生月','days_over':'出席日数が指定以上','custom':'カスタム'};
+    var condLabel={'kaikin':'皆勤（NG日数0）','seikin':'精勤（欠席2日以内）','all':'全員','birthday':'誕生月','days_over':'出席日数が指定以上','no_pickup':'自力来所（送迎なし）','custom':'カスタム'};
     h+='<tr><td style="font-weight:600">'+esc(a.name)+'</td>';
     h+='<td style="text-align:right">¥'+Number(a.amount).toLocaleString()+'</td>';
     h+='<td style="font-size:11px">'+(condLabel[a.condition]||a.condition)+(a.conditionValue?' ('+esc(a.conditionValue)+')':'')+'</td>';
@@ -5021,7 +5021,7 @@ function openAllowanceModal(idx){
   h+='<div class="field"><label>手当名 *</label><input id="al-name" value="'+esc(a.name)+'" placeholder="例: 皆勤手当" style="width:100%"></div>';
   h+='<div class="field"><label>金額（円）*</label><input type="number" id="al-amount" value="'+(a.amount||0)+'" style="width:200px"></div>';
   h+='<div class="field"><label>条件 *</label><select id="al-condition" onchange="document.getElementById(\'al-cv-wrap\').style.display=this.value===\'days_over\'||this.value===\'custom\'?\'block\':\'none\'" style="width:100%">';
-  var conditions=[['kaikin','皆勤（予定日すべて出席）'],['seikin','精勤（欠席2日以内）'],['all','全員（出席1日以上）'],['birthday','誕生月'],['days_over','出席日数が指定以上'],['custom','カスタム（メモ）']];
+  var conditions=[['kaikin','皆勤（予定日すべて出席）'],['seikin','精勤（欠席2日以内）'],['days_over','出席日数が指定以上'],['no_pickup','自力来所（送迎なし）'],['all','全員（出席1日以上）'],['birthday','誕生月'],['custom','カスタム（メモ）']];
   conditions.forEach(function(co){h+='<option value="'+co[0]+'"'+(a.condition===co[0]?' selected':'')+'>'+co[1]+'</option>';});
   h+='</select></div>';
   h+='<div id="al-cv-wrap" style="display:'+(a.condition==='days_over'||a.condition==='custom'?'block':'none')+'">';
@@ -5072,6 +5072,7 @@ function calcAllowances(user,att,ym,kaikinResult){
       if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
     }
     else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
+    else if(a.condition==='no_pickup'){match=recs.length>0&&String(user.pickup||'')!=='あり';}
     else if(a.condition==='custom'){
       // カスタム手当は手動選択。_customAllowanceMapに設定があればマッチ
       var key=user.id+'_'+a.name;
