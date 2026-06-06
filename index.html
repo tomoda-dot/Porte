@@ -5436,45 +5436,36 @@ function loadTrainingList(){
   h+='<div class="stat" style="border-color:#ff9800"><div class="stat-l">📅 今後</div><div class="stat-v" style="color:#ff9800">'+upcoming+'</div></div>';
   h+='</div>';
 
-  // 年度カレンダー（4月〜3月）
+  // 年度カレンダー（4月〜3月：月単位）
   h+='<div class="card" style="padding:12px;margin-bottom:16px">';
-  h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">';
-  var dowH=['日','月','火','水','木','金','土'];
+  h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">';
   for(var mi=0;mi<12;mi++){
     var mYear=mi<9?fy:fy+1;var mMonth=mi<9?mi+4:mi-8;
-    var dim=new Date(mYear,mMonth,0).getDate();
-    var firstDow=new Date(mYear,mMonth-1,1).getDay();
     var ym=mYear+'-'+String(mMonth).padStart(2,'0');
     var mEvents=fyData.filter(function(t){return(t.date||'').indexOf(ym)===0;});
     var isCurrentMonth=(ym===today().substring(0,7));
 
-    h+='<div style="border:1px solid '+(isCurrentMonth?'var(--pri)':'#e0d6cf')+';border-radius:8px;padding:8px;background:'+(isCurrentMonth?'#faf6f2':'#fff')+'">';
-    h+='<div style="text-align:center;font-weight:700;font-size:13px;margin-bottom:4px;color:'+(isCurrentMonth?'var(--pri)':'#333')+'">'+mMonth+'月</div>';
-    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:0;font-size:9px;text-align:center">';
-    for(var di=0;di<7;di++)h+='<div style="color:'+(di===0?'#c62828':(di===6?'#1565c0':'#999'))+';font-weight:600;padding:1px 0">'+dowH[di]+'</div>';
-    for(var blank=0;blank<firstDow;blank++)h+='<div></div>';
-    for(var d=1;d<=dim;d++){
-      var ds=ym+'-'+String(d).padStart(2,'0');
-      var dayDow=new Date(mYear,mMonth-1,d).getDay();
-      var evts=mEvents.filter(function(t){return t.date===ds;});
-      var isToday=ds===today();
-      var bgColor='transparent';var cursor='default';var onclick='';
-      if(evts.length>0){
-        bgColor=evts[0].category==='研修'?'#bbdefb':'#c8e6c9';cursor='pointer';
-        onclick='onclick="openTrainingDetail(\''+evts[0].id+'\')"';
-      }
-      h+='<div '+onclick+' style="padding:2px 0;cursor:'+cursor+';border-radius:3px;background:'+bgColor+';';
-      if(isToday)h+='outline:2px solid var(--pri);';
-      h+='color:'+(dayDow===0?'#c62828':(dayDow===6?'#1565c0':'#333'))+'">'+d+'</div>';
+    h+='<div style="border:1px solid '+(isCurrentMonth?'var(--pri)':'#e0d6cf')+';border-radius:8px;padding:8px;background:'+(isCurrentMonth?'#faf6f2':'#fff')+';min-height:80px">';
+    h+='<div style="font-weight:700;font-size:14px;margin-bottom:6px;color:'+(isCurrentMonth?'var(--pri)':'#333')+'">'+mMonth+'月</div>';
+    if(mEvents.length===0){
+      h+='<div style="font-size:10px;color:#ccc">予定なし</div>';
+    }else{
+      mEvents.sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+      mEvents.forEach(function(ev){
+        var catColor=ev.category==='研修'?'#1565c0':'#2e7d32';
+        var catBg=ev.category==='研修'?'#e3f2fd':'#e8f5e9';
+        var day=parseInt((ev.date||'').split('-')[2])||'';
+        h+='<div onclick="openTrainingDetail(\''+ev.id+'\')" style="font-size:10px;padding:3px 5px;margin-bottom:3px;background:'+catBg+';color:'+catColor+';border-radius:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">';
+        h+=day+'日 '+esc(ev.title||ev.type||'');
+        h+='</div>';
+      });
     }
-    h+='</div></div>';
+    h+='</div>';
   }
   h+='</div>';
-  // 凡例
   h+='<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:#666;justify-content:center">';
-  h+='<span><span style="display:inline-block;width:12px;height:12px;background:#bbdefb;border-radius:2px;vertical-align:middle;margin-right:3px"></span>研修</span>';
-  h+='<span><span style="display:inline-block;width:12px;height:12px;background:#c8e6c9;border-radius:2px;vertical-align:middle;margin-right:3px"></span>委員会</span>';
-  h+='<span><span style="display:inline-block;width:12px;height:12px;outline:2px solid var(--pri);border-radius:2px;vertical-align:middle;margin-right:3px"></span>今日</span>';
+  h+='<span><span style="display:inline-block;width:12px;height:12px;background:#e3f2fd;border-radius:2px;vertical-align:middle;margin-right:3px"></span>研修</span>';
+  h+='<span><span style="display:inline-block;width:12px;height:12px;background:#e8f5e9;border-radius:2px;vertical-align:middle;margin-right:3px"></span>委員会</span>';
   h+='</div></div>';
 
   h+='<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="bp" onclick="openTrainingForm()">＋ 新規登録</button></div>';
