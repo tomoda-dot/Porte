@@ -265,11 +265,10 @@ async function gas(fn){
     case 'getWageCSV': return a1?_getLike('出欠','date',a1):_getAll('出欠');
     case 'getServiceRecordData': return _calcServiceRecordData(a1);
 
-    // ── ルート計算（要Maps API → 後日対応）──
-    case 'calcFixedOrderRoute':
-    case 'calcOptimalRoute':
-    case 'calcSmartRoutes':
-      throw new Error('ルート計算はSupabase移行後に別途対応が必要です');
+    // ── ルート計算（Maps API不要版：概算+Googleマップリンク）──
+    case 'calcSmartRoutes': return _calcSmartRoutes(a1,a2,a3);
+    case 'calcOptimalRoute': return _calcOptimalRoute(a1,a2);
+    case 'calcFixedOrderRoute': return _calcFixedOrderRoute(a1,a2);
 
     // ── メール送信（要Edge Function → 後日対応）──
     case 'sendPlanEmail':
@@ -286,6 +285,89 @@ async function gas(fn){
 
 console.log('✅ Supabaseアダプター読み込み完了');
 
+// ═══ ルート計算ヘルパー（Maps API不要版）═══
+function _buildMapsUrl(facilityAddr,users,pattern){
+  var base='https://www.google.com/maps/dir/';
+  var parts=[encodeURIComponent(facilityAddr)];
+  for(var i=0;i<users.length;i++)parts.push(encodeURIComponent(users[i].address));
+  if(pattern==='morning')parts.push(encodeURIComponent(facilityAddr));
+  return base+parts.join('/');
+}
+
+async function _calcOptimalRoute(userIds,pattern){
+  var allUsers=await _getAll('利用者');var settings=await _getSettings();
+  var facilityAddr=settings.facilityAddress||settings.address||'大阪府豊中市小曽根1丁目10-23';
+  var ordered=[];
+  for(var i=0;i<userIds.length;i++){
+    for(var j=0;j<allUsers.length;j++){
+      if(String(allUsers[j].id)===String(userIds[i])){
+        var u=allUsers[j];var addr=(u.prefecture||'')+(u.city||'')+(u.address||'');
+        ordered.push({id:u.id,name:u.name,address:addr});break;
+      }
+    }
+  }
+  var totalMin=ordered.length*10+15;var drivingMin=ordered.length*8;
+  return{orderedUsers:ordered,totalMinutes:totalMin,drivingMinutes:drivingMin,mapsUrl:_buildMapsUrl(facilityAddr,ordered,pattern)};
+}
+
+async function _calcFixedOrderRoute(userIds,pattern){
+  return _calcOptimalRoute(userIds,pattern);
+}
+
+async function _calcSmartRoutes(userIds,pattern,date){
+  var allUsers=await _getAll('利用者');var att=await _getFiltered('出欠','date',date);
+  var settings=await _getSettings();
+  var facilityAddr=settings.facilityAddress||settings.address||'大阪府豊中市小曽根1丁目10-23';
+  var candidates=[];
+  for(var i=0;i<userIds.length;i++){
+    var u=null;for(var j=0;j<allUsers.length;j++){if(String(allUsers[j].id)===String(userIds[i])){u=allUsers[j];break;}}
+    if(!u)continue;
+    var addr=(u.prefecture||'')+(u.city||'')+(u.address||'');if(!addr||addr.length<3)continue;
+    var rec=null;for(var ai=0;ai<att.length;ai++){if(String(att[ai].userId)===String(u.id)){rec=att[ai];break;}}
+    var sTime=(rec&&rec.startTime)?rec.startTime:(u.scheduleStart||'10:00');
+    var eTime=(rec&&rec.endTime)?rec.endTime:(u.scheduleEnd||'16:00');
+    var timeKey=pattern==='morning'?sTime:eTime;
+    var tp=timeKey.split(':');var timeMin=Number(tp[0])*60+Number(tp[1]||0);
+    candidates.push({id:u.id,name:u.name,address:addr,startTime:sTime,endTime:eTime,timeKey:timeKey,timeMin:timeMin});
+  }
+  candidates.sort(function(a,b){return a.timeMin-b.timeMin;});
+  if(candidates.length===0)return{trips:[],pattern:pattern};
+  // グループ分け
+  var trips=[];var cur=[candidates[0]];
+  for(var ci=1;ci<candidates.length;ci++){
+    var diff=candidates[ci].timeMin-candidates[ci-1].timeMin;
+    var estMin=cur.length*10+15;
+    if(diff<=15||diff<=estMin){cur.push(candidates[ci]);}
+    else{trips.push(cur);cur=[candidates[ci]];}
+  }
+  trips.push(cur);
+  // 各トリップの結果
+  var results=[];
+  for(var ti=0;ti<trips.length;ti++){
+    var trip=trips[ti];var routeMin=trip.length*10+15;
+    var targetMin=trip[0].timeMin;
+    var departTime,arriveTime;
+    if(pattern==='morning'){
+      var depMin=targetMin-routeMin;if(depMin<0)depMin=0;
+      departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
+      arriveTime=trip[0].timeKey;
+    }else{
+      departTime=trip[0].timeKey;
+      var arrMin=targetMin+routeMin;
+      arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
+    }
+    results.push({tripIndex:ti+1,users:trip,
+      userIds:trip.map(function(t){return t.id;}),
+      userNames:trip.map(function(t){return t.name;}),
+      departTime:departTime,arriveTime:arriveTime,
+      totalMinutes:routeMin,drivingMinutes:trip.length*8,
+      facilityAddress:facilityAddr,
+      mapsUrl:_buildMapsUrl(facilityAddr,trip,pattern),
+      timeSlots:trip.map(function(t){return{name:t.name,time:pattern==='morning'?t.startTime:t.endTime};})
+    });
+  }
+  return{trips:results,pattern:pattern,facilityAddress:facilityAddr};
+}
 // ═══ 帳票計算ヘルパー ═══
 function _calcNetH(rec){
   if(!rec.startTime||!rec.endTime)return 0;
