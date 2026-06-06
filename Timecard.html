@@ -191,5 +191,6 @@ function closeSuccess(){document.getElementById('success-area').innerHTML='';}
 loadUsers();
 setInterval(function(){getTimecardUsers().then(function(d){TCData=d;renderUserGrid();}).catch(function(){});},300000);
 </script>
+<img src="kuma.png" style="position:fixed;bottom:10px;right:10px;width:180px;opacity:0.7;pointer-events:none;z-index:1">
 </body>
 </html>
