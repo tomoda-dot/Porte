@@ -192,7 +192,7 @@ async function loadAll(){
   }catch(e){document.getElementById('app').innerHTML='<div class="loading"><div style="font-size:36px">⚠️</div><div>データ読み込みエラーです</div><div style="font-size:11px;color:#999;margin-top:8px">'+String(e)+'</div><button class="bp" onclick="location.reload()" style="margin-top:12px">再読み込み</button></div>';}
 }
 
-var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['incidents','⚠️','ヒヤリハット'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
+var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['incidents','⚠️','ヒヤリハット'],['complaints','📞','苦情・相談'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
 
 var _shellRendered=false;
 function render(){
@@ -5256,6 +5256,147 @@ function printIncident(id){
   html+='<tr><th>再発防止策</th><td colspan="3" style="white-space:pre-wrap">'+esc(inc.prevention||'')+'</td></tr>';
   html+='<tr><th>対応状況</th><td colspan="3">'+esc(inc.status||'')+'</td></tr></table>';
   html+='<div style="margin-top:40px;display:flex;justify-content:space-around"><div>報告者：＿＿＿＿＿＿＿＿</div><div>管理者：＿＿＿＿＿＿＿＿</div></div>';
+  html+='<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>';
+  w.document.write(html);w.document.close();
+}
+
+// ═══ 苦情・相談記録 ═══
+var _complaintData=[];
+async function renderComplaints(c){
+  c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:12px">📞 苦情・相談記録</h2><div id="cmp-area"><div class="loading-center"><div class="spin"></div></div></div>';
+  try{_complaintData=await gas('getComplaints');loadComplaintList();}
+  catch(e){document.getElementById('cmp-area').innerHTML='<div class="card" style="color:#c62828">読み込みエラー: '+e+'</div>';}
+}
+function loadComplaintList(){
+  var el=document.getElementById('cmp-area');
+  var total=_complaintData.length;
+  var kujo=_complaintData.filter(function(x){return x.category==='苦情';}).length;
+  var soudan=_complaintData.filter(function(x){return x.category==='相談';}).length;
+  var open=_complaintData.filter(function(x){return x.status!=='完了';}).length;
+
+  var h='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">';
+  h+='<div class="stat"><div class="stat-l">総件数</div><div class="stat-v">'+total+'</div></div>';
+  h+='<div class="stat" style="border-color:#c62828"><div class="stat-l">📢 苦情</div><div class="stat-v" style="color:#c62828">'+kujo+'</div></div>';
+  h+='<div class="stat" style="border-color:#1565c0"><div class="stat-l">💬 相談</div><div class="stat-v" style="color:#1565c0">'+soudan+'</div></div>';
+  h+='<div class="stat" style="border-color:#ff9800"><div class="stat-l">📋 未対応</div><div class="stat-v" style="color:#ff9800">'+open+'</div></div>';
+  h+='</div>';
+
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="bp" onclick="openComplaintForm()">＋ 新規記録</button></div>';
+
+  h+='<div class="card" style="overflow-x:auto"><table><thead><tr><th style="width:90px">受付日</th><th>種別</th><th>申出人</th><th>対象者</th><th>内容</th><th>状況</th><th>操作</th></tr></thead><tbody>';
+  if(_complaintData.length===0){
+    h+='<tr><td colspan="7" style="text-align:center;color:var(--sub);padding:20px">記録がありません</td></tr>';
+  }
+  var sorted=_complaintData.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'');});
+  sorted.forEach(function(cmp){
+    var catColor=cmp.category==='苦情'?'#c62828':(cmp.category==='相談'?'#1565c0':(cmp.category==='要望'?'#2e7d32':'#666'));
+    var catBg=cmp.category==='苦情'?'#ffebee':(cmp.category==='相談'?'#e3f2fd':(cmp.category==='要望'?'#e8f5e9':'#f5f5f5'));
+    var stColor=cmp.status==='完了'?'var(--grn)':(cmp.status==='対応中'?'#1565c0':'#c62828');
+    h+='<tr>';
+    h+='<td style="font-size:12px">'+fmtDate(cmp.date)+'</td>';
+    h+='<td><span style="background:'+catBg+';color:'+catColor+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">'+esc(cmp.category||'')+'</span></td>';
+    h+='<td style="font-size:12px">'+esc(cmp.source||'-')+'</td>';
+    h+='<td>'+esc(cmp.userName||'-')+'</td>';
+    h+='<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(cmp.content||'').substring(0,40)+'</td>';
+    h+='<td><span style="color:'+stColor+';font-weight:600;font-size:12px">'+esc(cmp.status||'未対応')+'</span></td>';
+    h+='<td><button class="bg" onclick="openComplaintForm(\''+cmp.id+'\')" style="font-size:11px;padding:2px 8px">詳細</button></td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  el.innerHTML=h;
+}
+
+function openComplaintForm(id){
+  var cmp=id?_complaintData.find(function(x){return x.id===id;}):null;
+  var isEdit=!!cmp;
+  if(!cmp)cmp={date:today(),category:'相談',source:'',userId:'',userName:'',receivedBy:'',content:'',response:'',result:'',status:'未対応'};
+
+  var el=document.getElementById('cmp-area');
+  var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  h+='<h3 style="margin:0">'+(isEdit?'📝 記録を編集':'📞 新規 苦情・相談記録')+'</h3>';
+  h+='<button class="bg" onclick="loadComplaintList()" style="font-size:12px">← 一覧に戻る</button></div>';
+
+  h+='<div class="grid2">';
+  h+='<div class="field"><label>受付日 *</label><input type="date" id="cmp-date" value="'+(cmp.date||'')+'" style="width:100%"></div>';
+  h+='<div class="field"><label>種別 *</label><select id="cmp-cat" style="width:100%">';
+  ['苦情','相談','要望','その他'].forEach(function(s){h+='<option'+(cmp.category===s?' selected':'')+'>'+s+'</option>';});
+  h+='</select></div>';
+  h+='</div>';
+
+  h+='<div class="grid2">';
+  h+='<div class="field"><label>申出人 *</label><select id="cmp-src" style="width:100%">';
+  h+='<option value="">-- 選択 --</option>';
+  ['利用者本人','家族・保護者','相談支援専門員','関係機関','その他'].forEach(function(s){h+='<option'+(cmp.source===s?' selected':'')+'>'+s+'</option>';});
+  h+='</select></div>';
+  h+='<div class="field"><label>対象利用者</label><select id="cmp-user" style="width:100%"><option value="">-- 選択（任意）--</option>';
+  S.users.forEach(function(u){h+='<option value="'+u.id+'"'+(cmp.userId===u.id?' selected':'')+'>'+esc(u.name)+'</option>';});
+  h+='</select></div>';
+  h+='</div>';
+
+  h+='<div class="field"><label>受付者</label><input id="cmp-recv" value="'+esc(cmp.receivedBy||'')+'" placeholder="受付したスタッフ名" style="width:100%"></div>';
+
+  h+='<div class="field"><label>内容 *</label><textarea id="cmp-content" rows="4" placeholder="苦情・相談の詳細内容" style="width:100%">'+esc(cmp.content||'')+'</textarea></div>';
+
+  h+='<div class="field"><label>対応内容</label><textarea id="cmp-resp" rows="3" placeholder="行った対応" style="width:100%">'+esc(cmp.response||'')+'</textarea></div>';
+
+  h+='<div class="field"><label>結果・経過</label><textarea id="cmp-result" rows="3" placeholder="対応の結果や今後の方針" style="width:100%">'+esc(cmp.result||'')+'</textarea></div>';
+
+  h+='<div class="field"><label>対応状況</label><select id="cmp-status" style="width:200px">';
+  ['未対応','対応中','完了'].forEach(function(s){h+='<option'+(cmp.status===s?' selected':'')+'>'+s+'</option>';});
+  h+='</select></div>';
+
+  h+='<div class="btns" style="margin-top:16px;border-top:1px solid #eee;padding-top:12px">';
+  if(isEdit)h+='<button style="background:#c62828;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px" onclick="deleteComplaint(\''+cmp.id+'\')">🗑️ 削除</button>';
+  h+='<button class="bg" onclick="loadComplaintList()">キャンセル</button>';
+  h+='<button class="bp" onclick="saveComplaint('+(isEdit?"'"+cmp.id+"'":"''")+')">'+(isEdit?'更新':'記録を登録')+'</button></div></div>';
+  if(isEdit)h+='<div style="margin-top:12px;text-align:right"><button class="bg" onclick="printComplaint(\''+cmp.id+'\')" style="font-size:12px">🖨️ この記録を印刷</button></div>';
+  el.innerHTML=h;
+}
+
+async function saveComplaint(id){
+  var date=document.getElementById('cmp-date').value;
+  var content=document.getElementById('cmp-content').value;
+  if(!date||!content){await cAlert('受付日と内容は必須です');return;}
+  var userSel=document.getElementById('cmp-user');
+  var userName='';if(userSel.value){var su=S.users.find(function(x){return x.id===userSel.value;});if(su)userName=su.name;}
+  var obj={date:date,category:document.getElementById('cmp-cat').value,
+    source:document.getElementById('cmp-src').value,
+    userId:userSel.value,userName:userName,
+    receivedBy:document.getElementById('cmp-recv').value,
+    content:content,response:document.getElementById('cmp-resp').value,
+    result:document.getElementById('cmp-result').value,
+    status:document.getElementById('cmp-status').value};
+  if(!lockUI())return;
+  try{
+    if(id){obj.id=id;await gas('updateComplaint',obj);}
+    else{await gas('addComplaint',obj);}
+    _complaintData=await gas('getComplaints');toast('✅ 保存しました');loadComplaintList();
+  }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+}
+
+async function deleteComplaint(id){
+  if(!await cConfirm('この記録を削除しますか？'))return;
+  if(!lockUI())return;
+  try{await gas('deleteComplaint',id);_complaintData=await gas('getComplaints');toast('削除しました');loadComplaintList();}
+  catch(e){await cAlert('削除失敗: '+e);}finally{unlockUI();}
+}
+
+function printComplaint(id){
+  var cmp=_complaintData.find(function(x){return x.id===id;});if(!cmp)return;
+  var w=window.open('','_blank');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>苦情・相談記録</title><style>';
+  html+='body{font-family:sans-serif;padding:30px;font-size:13px}h1{font-size:18px;text-align:center;margin-bottom:20px}';
+  html+='table{width:100%;border-collapse:collapse;margin-bottom:20px}th,td{border:1px solid #333;padding:8px}th{background:#f5f0ea;width:120px;text-align:left}';
+  html+='@media print{button{display:none!important}}</style></head><body>';
+  html+='<h1>苦情・相談受付記録</h1>';
+  html+='<table><tr><th>受付日</th><td>'+fmtDate(cmp.date)+'</td><th>種別</th><td>'+esc(cmp.category||'')+'</td></tr>';
+  html+='<tr><th>申出人</th><td>'+esc(cmp.source||'')+'</td><th>対象利用者</th><td>'+esc(cmp.userName||'-')+'</td></tr>';
+  html+='<tr><th>受付者</th><td colspan="3">'+esc(cmp.receivedBy||'')+'</td></tr>';
+  html+='<tr><th>内容</th><td colspan="3" style="white-space:pre-wrap">'+esc(cmp.content||'')+'</td></tr>';
+  html+='<tr><th>対応内容</th><td colspan="3" style="white-space:pre-wrap">'+esc(cmp.response||'')+'</td></tr>';
+  html+='<tr><th>結果・経過</th><td colspan="3" style="white-space:pre-wrap">'+esc(cmp.result||'')+'</td></tr>';
+  html+='<tr><th>対応状況</th><td colspan="3">'+esc(cmp.status||'')+'</td></tr></table>';
+  html+='<div style="margin-top:40px;display:flex;justify-content:space-around"><div>受付者：＿＿＿＿＿＿＿＿</div><div>管理者：＿＿＿＿＿＿＿＿</div></div>';
   html+='<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>';
   w.document.write(html);w.document.close();
 }
