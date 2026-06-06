@@ -5402,8 +5402,10 @@ function printComplaint(id){
 }
 
 // ═══ 研修・委員会管理 ═══
-var _trainData=[],_trainReports=[];
+var _trainData=[],_trainReports=[],_trainFY=null;
+function _getFY(){var d=new Date();var y=d.getFullYear();return d.getMonth()<3?y-1:y;}
 async function renderTraining(c){
+  if(!_trainFY)_trainFY=_getFY();
   c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:12px">📚 研修・委員会管理</h2><div id="trn-area"><div class="loading-center"><div class="spin"></div></div></div>';
   try{
     _trainData=await gas('getTrainings');
@@ -5414,25 +5416,75 @@ async function renderTraining(c){
 
 function loadTrainingList(){
   var el=document.getElementById('trn-area');
-  var total=_trainData.length;
-  var kenshu=_trainData.filter(function(x){return x.category==='研修';}).length;
-  var iinkai=_trainData.filter(function(x){return x.category==='委員会';}).length;
-  var upcoming=_trainData.filter(function(x){return(x.date||'')>=today();}).length;
+  var fy=_trainFY;
+  // FY range: April fy ~ March fy+1
+  var fyStart=fy+'-04-01',fyEnd=(fy+1)+'-03-31';
+  var fyData=_trainData.filter(function(t){return(t.date||'')>=fyStart&&(t.date||'')<=fyEnd;});
+  var kenshu=fyData.filter(function(x){return x.category==='研修';}).length;
+  var iinkai=fyData.filter(function(x){return x.category==='委員会';}).length;
+  var upcoming=fyData.filter(function(x){return(x.date||'')>=today();}).length;
 
-  var h='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">';
-  h+='<div class="stat"><div class="stat-l">総件数</div><div class="stat-v">'+total+'</div></div>';
+  var h='<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">';
+  h+='<button class="bg" onclick="_trainFY--;loadTrainingList()" style="padding:4px 10px">◀</button>';
+  h+='<span style="font-size:16px;font-weight:700">令和'+(fy-2018)+'年度（'+fy+'年4月〜'+(fy+1)+'年3月）</span>';
+  h+='<button class="bg" onclick="_trainFY++;loadTrainingList()" style="padding:4px 10px">▶</button></div>';
+
+  h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">';
+  h+='<div class="stat"><div class="stat-l">年度合計</div><div class="stat-v">'+fyData.length+'</div></div>';
   h+='<div class="stat" style="border-color:#1565c0"><div class="stat-l">📖 研修</div><div class="stat-v" style="color:#1565c0">'+kenshu+'</div></div>';
   h+='<div class="stat" style="border-color:#2e7d32"><div class="stat-l">🏛️ 委員会</div><div class="stat-v" style="color:#2e7d32">'+iinkai+'</div></div>';
-  h+='<div class="stat" style="border-color:#ff9800"><div class="stat-l">📅 今後の予定</div><div class="stat-v" style="color:#ff9800">'+upcoming+'</div></div>';
+  h+='<div class="stat" style="border-color:#ff9800"><div class="stat-l">📅 今後</div><div class="stat-v" style="color:#ff9800">'+upcoming+'</div></div>';
   h+='</div>';
+
+  // 年度カレンダー（4月〜3月）
+  h+='<div class="card" style="padding:12px;margin-bottom:16px">';
+  h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">';
+  var dowH=['日','月','火','水','木','金','土'];
+  for(var mi=0;mi<12;mi++){
+    var mYear=mi<9?fy:fy+1;var mMonth=mi<9?mi+4:mi-8;
+    var dim=new Date(mYear,mMonth,0).getDate();
+    var firstDow=new Date(mYear,mMonth-1,1).getDay();
+    var ym=mYear+'-'+String(mMonth).padStart(2,'0');
+    var mEvents=fyData.filter(function(t){return(t.date||'').indexOf(ym)===0;});
+    var isCurrentMonth=(ym===today().substring(0,7));
+
+    h+='<div style="border:1px solid '+(isCurrentMonth?'var(--pri)':'#e0d6cf')+';border-radius:8px;padding:8px;background:'+(isCurrentMonth?'#faf6f2':'#fff')+'">';
+    h+='<div style="text-align:center;font-weight:700;font-size:13px;margin-bottom:4px;color:'+(isCurrentMonth?'var(--pri)':'#333')+'">'+mMonth+'月</div>';
+    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:0;font-size:9px;text-align:center">';
+    for(var di=0;di<7;di++)h+='<div style="color:'+(di===0?'#c62828':(di===6?'#1565c0':'#999'))+';font-weight:600;padding:1px 0">'+dowH[di]+'</div>';
+    for(var blank=0;blank<firstDow;blank++)h+='<div></div>';
+    for(var d=1;d<=dim;d++){
+      var ds=ym+'-'+String(d).padStart(2,'0');
+      var dayDow=new Date(mYear,mMonth-1,d).getDay();
+      var evts=mEvents.filter(function(t){return t.date===ds;});
+      var isToday=ds===today();
+      var bgColor='transparent';var cursor='default';var onclick='';
+      if(evts.length>0){
+        bgColor=evts[0].category==='研修'?'#bbdefb':'#c8e6c9';cursor='pointer';
+        onclick='onclick="openTrainingDetail(\''+evts[0].id+'\')"';
+      }
+      h+='<div '+onclick+' style="padding:2px 0;cursor:'+cursor+';border-radius:3px;background:'+bgColor+';';
+      if(isToday)h+='outline:2px solid var(--pri);';
+      h+='color:'+(dayDow===0?'#c62828':(dayDow===6?'#1565c0':'#333'))+'">'+d+'</div>';
+    }
+    h+='</div></div>';
+  }
+  h+='</div>';
+  // 凡例
+  h+='<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:#666;justify-content:center">';
+  h+='<span><span style="display:inline-block;width:12px;height:12px;background:#bbdefb;border-radius:2px;vertical-align:middle;margin-right:3px"></span>研修</span>';
+  h+='<span><span style="display:inline-block;width:12px;height:12px;background:#c8e6c9;border-radius:2px;vertical-align:middle;margin-right:3px"></span>委員会</span>';
+  h+='<span><span style="display:inline-block;width:12px;height:12px;outline:2px solid var(--pri);border-radius:2px;vertical-align:middle;margin-right:3px"></span>今日</span>';
+  h+='</div></div>';
 
   h+='<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="bp" onclick="openTrainingForm()">＋ 新規登録</button></div>';
 
+  // 一覧テーブル
   h+='<div class="card" style="overflow-x:auto"><table><thead><tr><th style="width:90px">日程</th><th>区分</th><th>種別</th><th>タイトル</th><th>報告状況</th><th>操作</th></tr></thead><tbody>';
-  if(_trainData.length===0){
-    h+='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">登録がありません</td></tr>';
+  if(fyData.length===0){
+    h+='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">この年度の登録がありません</td></tr>';
   }
-  var sorted=_trainData.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'');});
+  var sorted=fyData.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
   sorted.forEach(function(tr){
     var catColor=tr.category==='研修'?'#1565c0':'#2e7d32';
     var catBg=tr.category==='研修'?'#e3f2fd':'#e8f5e9';
