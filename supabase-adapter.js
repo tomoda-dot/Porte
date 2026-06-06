@@ -42,17 +42,29 @@ async function _filterCols(table,obj){
   return filtered;
 }
 
-// テーブルから全件取得
-async function _getAll(table){var r=await supabase.from(table).select('*');if(r.error)_throwErr(r.error);return r.data||[];}
+// テーブルから全件取得（時刻パディング付き）
+async function _getAll(table){var r=await supabase.from(table).select('*');if(r.error)_throwErr(r.error);return(r.data||[]).map(_padTimes);}
 
 // テーブルからフィルタ取得
-async function _getFiltered(table,col,val){var r=await supabase.from(table).select('*').eq(col,val);if(r.error)_throwErr(r.error);return r.data||[];}
+async function _getFiltered(table,col,val){var r=await supabase.from(table).select('*').eq(col,val);if(r.error)_throwErr(r.error);return(r.data||[]).map(_padTimes);}
 
 // 前方一致フィルタ（日付のym検索用）
-async function _getLike(table,col,prefix){var r=await supabase.from(table).select('*').like(col,prefix+'%');if(r.error)_throwErr(r.error);return r.data||[];}
+async function _getLike(table,col,prefix){var r=await supabase.from(table).select('*').like(col,prefix+'%');if(r.error)_throwErr(r.error);return(r.data||[]).map(_padTimes);}
 
 // 以上フィルタ
-async function _getGte(table,col,val){var r=await supabase.from(table).select('*').gte(col,val).order(col);if(r.error)_throwErr(r.error);return r.data||[];}
+async function _getGte(table,col,val){var r=await supabase.from(table).select('*').gte(col,val).order(col);if(r.error)_throwErr(r.error);return(r.data||[]).map(_padTimes);}
+
+// 時刻フィールドをHH:mm形式にパディング
+function _padTimes(row){
+  var timeFields=['startTime','endTime','scheduleStart','scheduleEnd','departTime','arriveTime'];
+  for(var i=0;i<timeFields.length;i++){
+    var k=timeFields[i];
+    if(row[k]&&typeof row[k]==='string'&&row[k].match(/^\d{1,2}:\d{2}$/)){
+      var p=row[k].split(':');row[k]=p[0].padStart(2,'0')+':'+p[1];
+    }
+  }
+  return row;
+}
 
 // 追加（不明カラム自動除去リトライ付き）
 async function _add(table,obj){
