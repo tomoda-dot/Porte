@@ -259,6 +259,15 @@ async function gas(fn){
     case 'addComplaint': a1.id=_genId('cmp');a1.createdAt=new Date().toISOString();return _add('苦情相談',a1);
     case 'updateComplaint': a1.updatedAt=new Date().toISOString();return _update('苦情相談',a1);
     case 'deleteComplaint': return _del('苦情相談',a1);
+
+    // ── 研修・委員会 ──
+    case 'getTrainings': return _getAll('研修');
+    case 'addTraining': a1.id=_genId('trn');a1.createdAt=new Date().toISOString();return _add('研修',a1);
+    case 'updateTraining': a1.updatedAt=new Date().toISOString();return _update('研修',a1);
+    case 'deleteTraining': return _del('研修',a1);
+    case 'getTrainingReports': return _getAll('研修報告');
+    case 'addTrainingReport': a1.id=_genId('trr');a1.createdAt=new Date().toISOString();return _add('研修報告',a1);
+    case 'updateTrainingReport': a1.updatedAt=new Date().toISOString();return _update('研修報告',a1);
     case 'addRouteRecord': a1.id=_genId('rt');a1.createdAt=new Date().toISOString();return _add('送迎ルート',a1);
     case 'updateRouteRecord': return _update('送迎ルート',a1);
     case 'deleteRouteRecord': return _del('送迎ルート',a1);
