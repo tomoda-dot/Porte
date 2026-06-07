@@ -4970,9 +4970,20 @@ async function dlCSV(){try{
 }catch(e){await cAlert('CSV失敗');}}
 
 // ═══ スタッフ管理 ═══
+var _staffTab='list',_staffYM=null;
 function renderStaff(c){
-  c.innerHTML='<div class="hd-row"><h2>👔 スタッフ管理</h2><button class="bp" onclick="openSM()">＋ 新規登録</button></div>'+
-    '<div class="card"><table><thead><tr><th>氏名</th><th>役職</th><th>担当利用者数</th><th>操作</th></tr></thead><tbody id="st-tb"></tbody></table></div><div id="st-modal"></div>';
+  if(!_staffYM){var d=new Date();_staffYM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  c.innerHTML='<h2 style="margin-bottom:12px">👔 スタッフ管理</h2>'+
+    '<div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0d6cf">'+
+    '<button id="stab-list" class="'+(_staffTab==='list'?'act':'')+'" onclick="_staffTab=\'list\';renderStaff(document.getElementById(\'content\'))" style="padding:8px 20px;border:none;background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(_staffTab==='list'?'var(--pri)':'#999')+';border-bottom:3px solid '+(_staffTab==='list'?'var(--pri)':'transparent')+'">👥 スタッフ一覧</button>'+
+    '<button id="stab-att" class="'+(_staffTab==='attendance'?'act':'')+'" onclick="_staffTab=\'attendance\';renderStaff(document.getElementById(\'content\'))" style="padding:8px 20px;border:none;background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(_staffTab==='attendance'?'var(--pri)':'#999')+';border-bottom:3px solid '+(_staffTab==='attendance'?'var(--pri)':'transparent')+'">📊 勤怠実績・常勤換算</button>'+
+    '</div><div id="staff-content"></div><div id="st-modal"></div>';
+  if(_staffTab==='list')renderStaffList();
+  else renderStaffAttendance();
+}
+function renderStaffList(){
+  document.getElementById('staff-content').innerHTML='<div style="text-align:right;margin-bottom:8px"><button class="bp" onclick="openSM()">＋ 新規登録</button></div>'+
+    '<div class="card"><table><thead><tr><th>氏名</th><th>役職</th><th>担当利用者数</th><th>操作</th></tr></thead><tbody id="st-tb"></tbody></table></div>';
   renderSTbl();
 }
 function renderSTbl(){
@@ -4981,6 +4992,91 @@ function renderSTbl(){
       return'<tr><td style="font-weight:600">'+esc(s.name)+'</td><td>'+esc(s.role||'')+'</td><td>'+cnt+'名</td>'+
         '<td><button class="bg" onclick=\'openSM('+JSON.stringify(s).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delS(\''+s.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';
     }).join('');
+}
+
+async function renderStaffAttendance(){
+  var el=document.getElementById('staff-content');
+  el.innerHTML='<div class="loading-center"><div class="spin"></div></div>';
+  try{
+    var att=await gas('getStaffAttendance',_staffYM);
+    var ym=_staffYM;var parts=ym.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
+    var dim=new Date(y,m,0).getDate();var dowNames=['日','月','火','水','木','金','土'];
+    var STANDARD_HOURS=160;
+
+    var h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">';
+    h+='<button class="bg" onclick="var p=_staffYM.split(\'-\');var nm=parseInt(p[1])-1;var ny=parseInt(p[0]);if(nm<1){nm=12;ny--}_staffYM=ny+\'-\'+String(nm).padStart(2,\'0\');renderStaffAttendance()" style="padding:4px 10px">◀</button>';
+    h+='<span style="font-size:16px;font-weight:700">'+y+'年'+m+'月</span>';
+    h+='<button class="bg" onclick="var p=_staffYM.split(\'-\');var nm=parseInt(p[1])+1;var ny=parseInt(p[0]);if(nm>12){nm=1;ny++}_staffYM=ny+\'-\'+String(nm).padStart(2,\'0\');renderStaffAttendance()" style="padding:4px 10px">▶</button>';
+    h+='<span style="font-size:12px;color:var(--sub)">常勤所定: '+STANDARD_HOURS+'h/月</span></div>';
+
+    // 常勤換算サマリー
+    h+='<div class="card" style="overflow-x:auto;margin-bottom:16px"><table><thead><tr><th>氏名</th><th>職種</th><th>出勤日数</th><th>総労働時間</th><th>常勤換算</th></tr></thead><tbody>';
+    S.staff.forEach(function(s){
+      var recs=att.filter(function(a){return String(a.staffId)===String(s.id);});
+      var days=0,totalMin=0;
+      recs.forEach(function(r){
+        if(!r.startTime||!r.endTime)return;
+        days++;
+        var sp=String(r.startTime).split(':'),ep=String(r.endTime).split(':');
+        var wMin=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1]);
+        var breakMin=parseInt(r.breakMin)||60;
+        totalMin+=Math.max(0,wMin-breakMin);
+      });
+      var totalH=Math.round(totalMin/60*100)/100;
+      var fte=Math.round(totalH/STANDARD_HOURS*100)/100;
+      var fteColor=fte>=1?'var(--grn)':(fte>=0.5?'#ff9800':'#c62828');
+      h+='<tr><td style="font-weight:600">'+esc(s.name)+'</td><td>'+esc(s.role||'')+'</td>';
+      h+='<td style="text-align:center">'+days+'日</td>';
+      h+='<td style="text-align:center">'+totalH+'h</td>';
+      h+='<td style="text-align:center;font-weight:700;color:'+fteColor+'">'+fte+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+
+    // 日別勤怠表
+    h+='<div class="card" style="overflow-x:auto"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><h4 style="margin:0">📅 日別勤怠</h4>';
+    h+='<button class="bg" onclick="printStaffAtt()" style="font-size:11px">🖨️ 印刷</button></div>';
+    h+='<table style="font-size:11px"><thead><tr><th style="width:40px">日</th><th style="width:30px">曜</th>';
+    S.staff.forEach(function(s){h+='<th style="min-width:80px">'+esc(s.name)+'</th>';});
+    h+='</tr></thead><tbody>';
+    for(var d=1;d<=dim;d++){
+      var ds=ym+'-'+String(d).padStart(2,'0');
+      var dow=new Date(y,m-1,d).getDay();
+      var dowColor=dow===0?'#c62828':(dow===6?'#1565c0':'#333');
+      var rowBg=dow===0||dow===6?'#faf6f2':'';
+      h+='<tr style="background:'+rowBg+'">';
+      h+='<td style="text-align:center">'+d+'</td>';
+      h+='<td style="text-align:center;color:'+dowColor+'">'+dowNames[dow]+'</td>';
+      S.staff.forEach(function(s){
+        var rec=att.find(function(a){return String(a.staffId)===String(s.id)&&a.date===ds;});
+        if(rec&&rec.startTime){
+          var shift=rec.shift||'';
+          var time=rec.startTime+'〜'+(rec.endTime||'');
+          h+='<td style="font-size:10px"><span style="color:'+_shiftColor(shift)+';font-weight:700">'+shift+'</span> '+time+'</td>';
+        }else{
+          h+='<td style="color:#ddd;text-align:center">−</td>';
+        }
+      });
+      h+='</tr>';
+    }
+    h+='</tbody></table></div>';
+    el.innerHTML=h;
+  }catch(e){el.innerHTML='<div class="card" style="color:#c62828">読み込みエラー: '+e+'</div>';}
+}
+
+function _shiftColor(s){return s==='早番'?'#ff9800':(s==='日勤'?'#2e7d32':(s==='遅番'?'#1565c0':'#999'));}
+
+function printStaffAtt(){
+  var content=document.querySelector('#staff-content .card:last-child');
+  if(!content)return;
+  var w=window.open('','_blank');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>スタッフ勤怠実績</title><style>';
+  html+='body{font-family:sans-serif;padding:20px;font-size:11px}h1{font-size:16px;text-align:center;margin-bottom:16px}';
+  html+='table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:4px 6px}th{background:#f5f0ea}';
+  html+='@media print{button{display:none!important}}</style></head><body>';
+  html+='<h1>スタッフ勤怠実績表 '+_staffYM.replace('-','年')+'月</h1>';
+  html+=content.querySelector('table').outerHTML;
+  html+='<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>';
+  w.document.write(html);w.document.close();
 }
 function openSM(s){
   s=s||{name:'',role:'',loginId:'',password:''};var isE=!!s.id;

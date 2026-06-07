@@ -11,6 +11,9 @@ body{font-family:'Noto Sans JP',sans-serif;background:#f5f0ea;color:#333;min-hei
 .header h1{font-size:20px;letter-spacing:2px}
 .header .date{font-size:15px;opacity:0.9}
 .header .clock{font-size:28px;font-weight:900;letter-spacing:1px}
+.tabs{display:flex;gap:0;margin:0;background:#fff;border-bottom:2px solid #e0d6cf}
+.tabs button{flex:1;padding:12px;border:none;background:none;font-size:15px;font-weight:700;cursor:pointer;color:#999;border-bottom:3px solid transparent}
+.tabs button.act{color:#5d4037;border-bottom-color:#5d4037}
 .container{max-width:1200px;margin:0 auto;padding:20px}
 .user-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;padding:10px 0}
 .user-card{background:#fff;border-radius:12px;padding:16px 12px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.06)}
@@ -19,11 +22,13 @@ body{font-family:'Noto Sans JP',sans-serif;background:#f5f0ea;color:#333;min-hei
 .user-card.done-both{border-color:#1565c0;background:#e3f2fd}
 .user-card .name{font-size:18px;font-weight:700;margin-bottom:4px}
 .user-card .furigana{font-size:10px;color:#999;margin-bottom:6px}
+.user-card .role{font-size:10px;color:#8d6e63;margin-bottom:4px}
 .user-card .status{font-size:11px;padding:2px 8px;border-radius:10px;display:inline-block}
 .user-card .status.scheduled{background:#fff3e0;color:#e65100}
 .user-card .status.in{background:#e8f5e9;color:#2e7d32}
 .user-card .status.out{background:#e3f2fd;color:#1565c0}
 .user-card .time-info{font-size:11px;color:#888;margin-top:4px}
+.user-card .shift-badge{font-size:10px;padding:1px 6px;border-radius:8px;display:inline-block;margin-top:4px;font-weight:700}
 .overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:100}
 .modal{background:#fff;border-radius:16px;width:90%;max-width:520px;overflow:hidden;animation:slideUp .3s ease}
 @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
@@ -34,10 +39,6 @@ body{font-family:'Noto Sans JP',sans-serif;background:#f5f0ea;color:#333;min-hei
 .info-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:10px 16px;background:#faf6f2;border-radius:10px}
 .info-row .label{font-size:12px;color:#888}
 .info-row .value{font-size:18px;font-weight:700}
-.badges{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;justify-content:center}
-.badge{font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600}
-.badge.bento{background:#fff3e0;color:#e65100}
-.badge.pickup{background:#e3f2fd;color:#1565c0}
 .sign-area{margin:16px 0}
 .sign-label{font-size:12px;color:#888;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
 .sign-label button{font-size:11px;background:#f5f0ea;border:1px solid #ddd;border-radius:6px;padding:3px 10px;cursor:pointer}
@@ -64,8 +65,12 @@ canvas{border:2px solid #ddd;border-radius:10px;width:100%;height:200px;touch-ac
   <div><h1>⏰ タイムカード</h1><div class="date" id="hd-date"></div></div>
   <div class="clock" id="hd-clock"></div>
 </div>
+<div class="tabs">
+  <button id="tab-user" class="act" onclick="switchMode('user')">👥 利用者</button>
+  <button id="tab-staff" onclick="switchMode('staff')">👔 スタッフ</button>
+</div>
 <div class="container" id="main">
-  <div class="loading-center"><div class="spin"></div><span>利用者を読み込み中...</span></div>
+  <div class="loading-center"><div class="spin"></div><span>読み込み中...</span></div>
 </div>
 <div id="modal-area"></div>
 <div id="success-area"></div>
@@ -74,36 +79,89 @@ canvas{border:2px solid #ddd;border-radius:10px;width:100%;height:200px;touch-ac
 <script src="supabase-config.js"></script>
 <script>
 var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-var TCData=null;
+var TCData=null,STData=null,currentMode='user';
 
 function _today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function _now(){var d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 function _dow(){return['日','月','火','水','木','金','土'][new Date().getDay()];}
 function _genId(p){return p+new Date().getTime()+Math.random().toString(36).substr(2,5);}
 
+function _detectShift(startTime){
+  if(!startTime)return'';
+  var p=startTime.split(':');var h=parseInt(p[0]),m=parseInt(p[1]||0);var min=h*60+m;
+  if(min<=510)return'早番';
+  if(min<=570)return'日勤';
+  return'遅番';
+}
+function _shiftColor(s){return s==='早番'?'#ff9800':(s==='日勤'?'#2e7d32':(s==='遅番'?'#1565c0':'#999'));}
+function _shiftBg(s){return s==='早番'?'#fff3e0':(s==='日勤'?'#e8f5e9':(s==='遅番'?'#e3f2fd':'#f5f5f5'));}
+
+// --- 利用者モード ---
 async function getTimecardUsers(){
-  var r1=await sb.from('利用者').select('*');if(r1.error)throw r1.error;
-  var users=r1.data||[];
+  var r1=await sb.from('利用者').select('*');var users=r1.data||[];
   var today2=_today();var dow2=_dow();
-  var r2=await sb.from('出欠').select('*').eq('date',today2);
-  var att=r2.data||[];
+  var r2=await sb.from('出欠').select('*').eq('date',today2);var att=r2.data||[];
   var result=[];
   users.forEach(function(u){
     if(u.userStatus==='利用終了')return;
     var isScheduled=u.scheduleDays&&u.scheduleDays.indexOf(dow2)>=0;
-    var rec=null;
-    att.forEach(function(a){if(String(a.userId)===String(u.id))rec=a;});
+    var rec=null;att.forEach(function(a){if(String(a.userId)===String(u.id))rec=a;});
     result.push({id:u.id,name:u.name,furigana:u.furigana||'',
       scheduleStart:u.scheduleStart||'10:00',scheduleEnd:u.scheduleEnd||'16:00',
-      bento:u.bento||'なし',pickup:u.pickup||'なし',breakMin:u.breakMin||60,
-      isScheduled:isScheduled,
-      clockedIn:rec&&rec.startTime?true:false,
-      clockedOut:rec&&rec.endTime?true:false,
-      startTime:rec?rec.startTime:'',endTime:rec?rec.endTime:''});
+      bento:u.bento||'なし',pickup:u.pickup||'なし',
+      isScheduled:isScheduled,clockedIn:rec&&rec.startTime?true:false,
+      clockedOut:rec&&rec.endTime?true:false,startTime:rec?rec.startTime:'',endTime:rec?rec.endTime:''});
   });
   return{users:result,date:today2,dow:dow2};
 }
 
+// --- スタッフモード ---
+async function getStaffTimecard(){
+  var r1=await sb.from('スタッフ').select('*');var staff=r1.data||[];
+  var today2=_today();var dow2=_dow();
+  var r2=await sb.from('スタッフ出欠').select('*').eq('date',today2);var att=r2.data||[];
+  var result=[];
+  staff.forEach(function(s){
+    var rec=null;att.forEach(function(a){if(String(a.staffId)===String(s.id))rec=a;});
+    var shift=rec&&rec.startTime?_detectShift(rec.startTime):'';
+    result.push({id:s.id,name:s.name,role:s.role||s.position||'',
+      clockedIn:rec&&rec.startTime?true:false,
+      clockedOut:rec&&rec.endTime?true:false,
+      startTime:rec?rec.startTime:'',endTime:rec?rec.endTime:'',shift:shift});
+  });
+  return{staff:result,date:today2,dow:dow2};
+}
+
+async function staffClockIn(staffId){
+  var today2=_today();var now=_now();
+  var r=await sb.from('スタッフ出欠').select('*').eq('staffId',staffId).eq('date',today2).limit(1);
+  var existing=(r.data&&r.data.length>0)?r.data[0]:null;
+  var shift=_detectShift(now);
+  if(existing){
+    await sb.from('スタッフ出欠').update({startTime:now,shift:shift}).eq('id',existing.id);
+  }else{
+    var rec={id:_genId('sa'),staffId:staffId,date:today2,startTime:now,endTime:null,shift:shift};
+    for(var retry=0;retry<10;retry++){
+      var ir=await sb.from('スタッフ出欠').insert([rec]);
+      if(!ir.error)break;
+      if(ir.error.message&&ir.error.message.indexOf('Could not find the')>=0){
+        var m=ir.error.message.match(/find the '([^']+)'/);if(m){delete rec[m[1]];continue;}
+      }
+      throw ir.error;
+    }
+  }
+  return{success:true,time:now,shift:shift};
+}
+
+async function staffClockOut(staffId){
+  var today2=_today();var now=_now();
+  var r=await sb.from('スタッフ出欠').select('id').eq('staffId',staffId).eq('date',today2).limit(1);
+  if(!r.data||r.data.length===0)throw new Error('出勤記録がありません');
+  await sb.from('スタッフ出欠').update({endTime:now}).eq('id',r.data[0].id);
+  return{success:true,time:now};
+}
+
+// --- 利用者 clockIn/clockOut ---
 async function clockIn(userId,signatureDataUrl){
   var today2=_today();var now=_now();
   var r=await sb.from('出欠').select('*').eq('userId',userId).eq('date',today2).limit(1);
@@ -132,7 +190,6 @@ async function clockIn(userId,signatureDataUrl){
   }
   return{success:true,time:now};
 }
-
 async function clockOut(userId){
   var today2=_today();var now=_now();
   var r=await sb.from('出欠').select('id').eq('userId',userId).eq('date',today2).limit(1);
@@ -141,14 +198,34 @@ async function clockOut(userId){
   return{success:true,time:now};
 }
 
-// 時計
+// --- 時計 ---
 function updateClock(){var d=new Date();document.getElementById('hd-clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');}
 setInterval(updateClock,1000);updateClock();
 
-async function loadUsers(){
-  try{TCData=await getTimecardUsers();document.getElementById('hd-date').textContent=TCData.date.replace(/-/g,'/')+'（'+TCData.dow+'）';renderUserGrid();}
-  catch(e){document.getElementById('main').innerHTML='<div class="msg">読み込みエラー: '+e+'</div>';}
+// --- タブ切替 ---
+function switchMode(mode){
+  currentMode=mode;
+  document.getElementById('tab-user').className=mode==='user'?'act':'';
+  document.getElementById('tab-staff').className=mode==='staff'?'act':'';
+  loadData();
 }
+
+async function loadData(){
+  document.getElementById('main').innerHTML='<div class="loading-center"><div class="spin"></div><span>読み込み中...</span></div>';
+  try{
+    if(currentMode==='user'){
+      TCData=await getTimecardUsers();
+      document.getElementById('hd-date').textContent=TCData.date.replace(/-/g,'/')+'（'+TCData.dow+'）';
+      renderUserGrid();
+    }else{
+      STData=await getStaffTimecard();
+      document.getElementById('hd-date').textContent=STData.date.replace(/-/g,'/')+'（'+STData.dow+'）';
+      renderStaffGrid();
+    }
+  }catch(e){document.getElementById('main').innerHTML='<div class="msg">読み込みエラー: '+e+'</div>';}
+}
+
+// --- 利用者グリッド ---
 function renderUserGrid(){
   var users=TCData.users.filter(function(u){return u.isScheduled||u.clockedIn;});
   if(users.length===0){document.getElementById('main').innerHTML='<div class="msg">本日の予定者がいません</div>';return;}
@@ -162,21 +239,63 @@ function renderUserGrid(){
   });
   html+='</div>';document.getElementById('main').innerHTML=html;
 }
+
+// --- スタッフグリッド ---
+function renderStaffGrid(){
+  var staff=STData.staff;
+  if(staff.length===0){document.getElementById('main').innerHTML='<div class="msg">スタッフが登録されていません</div>';return;}
+  var html='<div class="user-grid">';
+  staff.forEach(function(s){
+    var cls='user-card',statusHtml='';
+    if(s.clockedIn&&s.clockedOut){
+      cls+=' done-both';
+      statusHtml='<div class="status out">✅ 退勤済</div><div class="time-info">'+s.startTime+' 〜 '+s.endTime+'</div>';
+      if(s.shift)statusHtml+='<div class="shift-badge" style="background:'+_shiftBg(s.shift)+';color:'+_shiftColor(s.shift)+'">'+s.shift+'</div>';
+    }else if(s.clockedIn){
+      cls+=' done-in';
+      statusHtml='<div class="status in">🟢 出勤中</div><div class="time-info">'+s.startTime+' 〜</div>';
+      if(s.shift)statusHtml+='<div class="shift-badge" style="background:'+_shiftBg(s.shift)+';color:'+_shiftColor(s.shift)+'">'+s.shift+'</div>';
+    }else{statusHtml='<div class="status scheduled">未出勤</div>';}
+    html+='<div class="'+cls+'" onclick="openStaffClock(\''+s.id+'\')"><div class="name">'+s.name+'</div><div class="role">'+s.role+'</div>'+statusHtml+'</div>';
+  });
+  html+='</div>';document.getElementById('main').innerHTML=html;
+}
+
+// --- 利用者打刻モーダル ---
 function openClock(userId){
   var u=TCData.users.find(function(x){return x.id===userId;});if(!u)return;
   var isOut=u.clockedIn&&!u.clockedOut;var isDone=u.clockedIn&&u.clockedOut;
   var html='<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h2>【'+u.name+'】</h2><button class="close-btn" onclick="closeModal()">✕</button></div><div class="modal-body">';
   html+='<div class="info-row"><div><div class="label">予定時間</div><div class="value">'+u.scheduleStart+' 〜 '+u.scheduleEnd+'</div></div></div>';
-  html+='<div class="badges">';
-  if(u.bento==='あり')html+='<span class="badge bento">🍱 お弁当</span>';
-  if(u.pickup==='あり')html+='<span class="badge pickup">🚐 送迎</span>';
-  html+='</div>';
   if(isDone){html+='<div class="info-row"><div><div class="label">出勤</div><div class="value" style="color:#2e7d32">'+u.startTime+'</div></div><div><div class="label">退勤</div><div class="value" style="color:#1565c0">'+u.endTime+'</div></div></div><div class="msg">本日の打刻は完了しています</div>';}
-  else if(isOut){html+='<div class="info-row"><div><div class="label">出勤時間</div><div class="value" style="color:#2e7d32">'+u.startTime+'</div></div></div><div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">🌆</div><div style="font-size:16px;color:#888;margin-bottom:20px">お疲れさまでした</div></div><button class="btn-clock btn-out" id="btn-submit" onclick="submitClockOut(\''+userId+'\')">退勤打刻</button>';}
-  else{html+='<div class="sign-area"><div class="sign-label"><span>サインエリアにサインしてください</span><button onclick="clearSign()">やり直す</button></div><canvas id="sign-canvas"></canvas></div><button class="btn-clock btn-in" id="btn-submit" onclick="submitClock(\''+userId+'\')">出勤打刻</button>';}
+  else if(isOut){html+='<div class="info-row"><div><div class="label">出勤時間</div><div class="value" style="color:#2e7d32">'+u.startTime+'</div></div></div><div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:8px">🌆</div></div><button class="btn-clock btn-out" id="btn-submit" onclick="submitClockOut(\''+userId+'\')">退勤打刻</button>';}
+  else{html+='<div class="sign-area"><div class="sign-label"><span>サインしてください</span><button onclick="clearSign()">やり直す</button></div><canvas id="sign-canvas"></canvas></div><button class="btn-clock btn-in" id="btn-submit" onclick="submitClock(\''+userId+'\')">出勤打刻</button>';}
   html+='</div></div></div>';document.getElementById('modal-area').innerHTML=html;
   if(!isDone&&!isOut)setTimeout(initCanvas,100);
 }
+
+// --- スタッフ打刻モーダル（サインなし）---
+function openStaffClock(staffId){
+  var s=STData.staff.find(function(x){return x.id===staffId;});if(!s)return;
+  var isOut=s.clockedIn&&!s.clockedOut;var isDone=s.clockedIn&&s.clockedOut;
+  var html='<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h2>👔 '+s.name+'</h2><button class="close-btn" onclick="closeModal()">✕</button></div><div class="modal-body">';
+  if(s.role)html+='<div class="info-row"><div><div class="label">職種</div><div class="value">'+s.role+'</div></div></div>';
+  if(isDone){
+    html+='<div class="info-row"><div><div class="label">出勤</div><div class="value" style="color:#2e7d32">'+s.startTime+'</div></div><div><div class="label">退勤</div><div class="value" style="color:#1565c0">'+s.endTime+'</div></div></div>';
+    if(s.shift)html+='<div style="text-align:center;margin:12px 0"><span class="shift-badge" style="background:'+_shiftBg(s.shift)+';color:'+_shiftColor(s.shift)+';font-size:16px;padding:4px 16px">'+s.shift+'</span></div>';
+    html+='<div class="msg">本日の打刻は完了しています</div>';
+  }else if(isOut){
+    html+='<div class="info-row"><div><div class="label">出勤時間</div><div class="value" style="color:#2e7d32">'+s.startTime+'</div></div></div>';
+    if(s.shift)html+='<div style="text-align:center;margin:8px 0"><span class="shift-badge" style="background:'+_shiftBg(s.shift)+';color:'+_shiftColor(s.shift)+';font-size:14px;padding:3px 12px">'+s.shift+'</span></div>';
+    html+='<div style="text-align:center;padding:16px 0;font-size:48px">🌆</div>';
+    html+='<button class="btn-clock btn-out" id="btn-submit" onclick="submitStaffOut(\''+staffId+'\')">退勤打刻</button>';
+  }else{
+    html+='<div style="text-align:center;padding:24px 0;font-size:48px">🌅</div>';
+    html+='<button class="btn-clock btn-in" id="btn-submit" onclick="submitStaffIn(\''+staffId+'\')">出勤打刻</button>';
+  }
+  html+='</div></div></div>';document.getElementById('modal-area').innerHTML=html;
+}
+
 function closeModal(){document.getElementById('modal-area').innerHTML='';}
 var signCanvas,signCtx,isDrawing=false,hasDrawn=false;
 function initCanvas(){signCanvas=document.getElementById('sign-canvas');if(!signCanvas)return;signCtx=signCanvas.getContext('2d');var rect=signCanvas.getBoundingClientRect();signCanvas.width=rect.width*2;signCanvas.height=rect.height*2;signCtx.scale(2,2);signCtx.lineWidth=3;signCtx.lineCap='round';signCtx.lineJoin='round';signCtx.strokeStyle='#333';hasDrawn=false;
@@ -184,13 +303,19 @@ signCanvas.addEventListener('pointerdown',function(e){isDrawing=true;hasDrawn=tr
 signCanvas.addEventListener('pointermove',function(e){if(!isDrawing)return;var r=signCanvas.getBoundingClientRect();signCtx.lineTo(e.clientX-r.left,e.clientY-r.top);signCtx.stroke();e.preventDefault();});
 signCanvas.addEventListener('pointerup',function(){isDrawing=false;});signCanvas.addEventListener('pointerleave',function(){isDrawing=false;});}
 function clearSign(){if(!signCanvas)return;signCtx.clearRect(0,0,signCanvas.width,signCanvas.height);hasDrawn=false;}
+
 async function submitClock(userId){if(!hasDrawn){alert('サインを書いてください');return;}var btn=document.getElementById('btn-submit');btn.disabled=true;btn.textContent='送信中...';try{var dataUrl=signCanvas.toDataURL('image/png');var result=await clockIn(userId,dataUrl);closeModal();showSuccess(userId,'in',result.time);TCData=await getTimecardUsers();renderUserGrid();}catch(e){alert('エラー: '+e);btn.disabled=false;btn.textContent='出勤打刻';}}
 async function submitClockOut(userId){var btn=document.getElementById('btn-submit');btn.disabled=true;btn.textContent='送信中...';try{var result=await clockOut(userId);closeModal();showSuccess(userId,'out',result.time);TCData=await getTimecardUsers();renderUserGrid();}catch(e){alert('エラー: '+e);btn.disabled=false;btn.textContent='退勤打刻';}}
+
+async function submitStaffIn(staffId){var btn=document.getElementById('btn-submit');btn.disabled=true;btn.textContent='送信中...';try{var result=await staffClockIn(staffId);closeModal();showSuccessStaff(staffId,'in',result.time,result.shift);STData=await getStaffTimecard();renderStaffGrid();}catch(e){alert('エラー: '+e);btn.disabled=false;btn.textContent='出勤打刻';}}
+async function submitStaffOut(staffId){var btn=document.getElementById('btn-submit');btn.disabled=true;btn.textContent='送信中...';try{var result=await staffClockOut(staffId);closeModal();showSuccessStaff(staffId,'out',result.time,'');STData=await getStaffTimecard();renderStaffGrid();}catch(e){alert('エラー: '+e);btn.disabled=false;btn.textContent='退勤打刻';}}
+
 function showSuccess(userId,action,time){var u=TCData.users.find(function(x){return x.id===userId;});var name=u?u.name:'';var label=action==='in'?'出勤しました':'退勤しました';var icon=action==='in'?'🌅':'🌆';document.getElementById('success-area').innerHTML='<div class="success-overlay" onclick="closeSuccess()"><div class="check">'+icon+'</div><div class="msg-big">'+name+' さん</div><div class="msg-time">'+time+'</div><div class="msg-big">'+label+'</div><div class="msg-sub">画面をタップして戻る</div></div>';setTimeout(closeSuccess,5000);}
+function showSuccessStaff(staffId,action,time,shift){var s=STData.staff.find(function(x){return x.id===staffId;});var name=s?s.name:'';var label=action==='in'?'出勤しました':'退勤しました';var icon=action==='in'?'🌅':'🌆';var extra=shift?'<div style="margin-top:8px"><span style="background:'+_shiftBg(shift)+';color:'+_shiftColor(shift)+';padding:4px 16px;border-radius:12px;font-size:16px;font-weight:700">'+shift+'</span></div>':'';document.getElementById('success-area').innerHTML='<div class="success-overlay" onclick="closeSuccess()"><div class="check">'+icon+'</div><div class="msg-big">'+name+'</div><div class="msg-time">'+time+'</div><div class="msg-big">'+label+'</div>'+extra+'<div class="msg-sub">画面をタップして戻る</div></div>';setTimeout(closeSuccess,5000);}
 function closeSuccess(){document.getElementById('success-area').innerHTML='';}
-loadUsers();
-setInterval(function(){getTimecardUsers().then(function(d){TCData=d;renderUserGrid();}).catch(function(){});},300000);
+
+loadData();
+setInterval(function(){loadData();},300000);
 </script>
-<img src="kuma.png" style="position:fixed;bottom:10px;right:10px;width:180px;opacity:0.7;pointer-events:none;z-index:1">
 </body>
 </html>

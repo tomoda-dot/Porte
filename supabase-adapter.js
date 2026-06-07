@@ -268,6 +268,10 @@ async function gas(fn){
     case 'getTrainingReports': return _getAll('研修報告');
     case 'addTrainingReport': a1.id=_genId('trr');a1.createdAt=new Date().toISOString();return _add('研修報告',a1);
     case 'updateTrainingReport': a1.updatedAt=new Date().toISOString();return _update('研修報告',a1);
+
+    // ── スタッフ出欠 ──
+    case 'getStaffAttendance': return a1?_getLike('スタッフ出欠','date',a1):_getAll('スタッフ出欠');
+    case 'getStaffAttendanceByDate': return _getFiltered('スタッフ出欠','date',a1);
     case 'addRouteRecord': a1.id=_genId('rt');a1.createdAt=new Date().toISOString();return _add('送迎ルート',a1);
     case 'updateRouteRecord': return _update('送迎ルート',a1);
     case 'deleteRouteRecord': return _del('送迎ルート',a1);
