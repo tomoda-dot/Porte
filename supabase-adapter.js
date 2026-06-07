@@ -43,7 +43,14 @@ async function _filterCols(table,obj){
 }
 
 // テーブルから全件取得（時刻パディング付き・id順）
-async function _getAll(table){var r=await supabase.from(table).select('*').order('id');if(r.error)_throwErr(r.error);return(r.data||[]).map(_padTimes);}
+async function _getAll(table){
+  var r=await supabase.from(table).select('*').order('id');
+  if(r.error&&r.error.message&&r.error.message.indexOf('id')>=0){
+    r=await supabase.from(table).select('*');
+  }
+  if(r.error)_throwErr(r.error);
+  return(r.data||[]).map(_padTimes);
+}
 
 // テーブルからフィルタ取得
 async function _getFiltered(table,col,val){var r=await supabase.from(table).select('*').eq(col,val);if(r.error)_throwErr(r.error);return(r.data||[]).map(_padTimes);}
