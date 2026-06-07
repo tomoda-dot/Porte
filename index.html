@@ -5017,13 +5017,6 @@ function _staffRow(s,isRetired){
     '<td>'+cnt+'名</td>'+
     '<td><button class="bg" onclick=\'openSM('+JSON.stringify(s).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delS(\''+s.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';
 }
-function renderSTbl(){
-  document.getElementById('st-tb').innerHTML=S.staff.length===0?'<tr><td colspan="4" style="text-align:center;color:var(--sub);padding:28px">スタッフが登録されていません</td></tr>':
-    S.staff.map(function(s){var cnt=S.users.filter(function(u){return u.staffId===s.id;}).length;
-      return'<tr><td style="font-weight:600">'+esc(s.name)+'</td><td>'+esc(s.role||'')+'</td><td>'+cnt+'名</td>'+
-        '<td><button class="bg" onclick=\'openSM('+JSON.stringify(s).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delS(\''+s.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';
-    }).join('');
-}
 
 async function renderStaffAttendance(){
   var el=document.getElementById('staff-content');
