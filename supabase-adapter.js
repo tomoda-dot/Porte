@@ -113,24 +113,20 @@ async function _getSettings(){
   return obj;
 }
 async function _updateSetting(key,value){
-  var r=await supabase.from('設定').select('id').eq('key',key).limit(1);
+  var r=await supabase.from('設定').select('key').eq('key',key).limit(1);
   if(r.error)_throwErr(r.error);
   if(r.data&&r.data.length>0){
     var ur=await supabase.from('設定').update({value:value}).eq('key',key);
     if(ur.error)_throwErr(ur.error);
   }else{
-    var ir=await supabase.from('設定').insert([{id:_genId('st'),key:key,value:value}]);
-    if(ir.error){
-      // カラムフィルタ付きリトライ
-      var safe={id:_genId('st'),key:key,value:value};
-      for(var retry=0;retry<5;retry++){
-        var r2=await supabase.from('設定').insert([safe]);
-        if(!r2.error)break;
-        if(r2.error.message&&r2.error.message.indexOf('Could not find the')>=0){
-          var m=r2.error.message.match(/find the '([^']+)'/);if(m){delete safe[m[1]];continue;}
-        }
-        _throwErr(r2.error);
+    var obj={key:key,value:value};
+    for(var retry=0;retry<5;retry++){
+      var r2=await supabase.from('設定').insert([obj]);
+      if(!r2.error)break;
+      if(r2.error.message&&r2.error.message.indexOf('Could not find the')>=0){
+        var m=r2.error.message.match(/find the '([^']+)'/);if(m){delete obj[m[1]];continue;}
       }
+      _throwErr(r2.error);
     }
   }
   return{success:true};
