@@ -511,7 +511,7 @@ function openTempAddModal(ds){
     (candidates.length===0?'<div style="padding:20px;text-align:center;color:var(--sub)">追加できる利用者はいません</div>':
       candidates.map(function(u){
         return'<div class="temp-m-item" data-id="'+u.id+'" data-name="'+esc(u.name)+'" data-furi="'+esc(u.furigana||'')+'" onclick="toggleTempSelect(\''+u.id+'\',\''+esc(u.name)+'\')" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid #f5f0ea;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background=\'#f5f0ea\'" onmouseout="this.style.background=window._tempSelected[\''+u.id+'\']?\'#fff3e0\':\'\'">'+
-          '<div><span style="font-weight:600;font-size:14px">'+esc(u.name)+'</span><span style="font-size:11px;color:var(--sub);margin-left:8px">'+esc(u.furigana||'')+'</span></div>'+
+          '<div><div style="font-weight:600;font-size:14px">'+esc(u.name)+'</div><div style="font-size:10px;color:var(--sub)">'+esc(u.furigana||'')+'</div></div>'+
           '<span class="temp-check" id="tc-'+u.id+'" style="font-size:16px;color:var(--sub)">☐</span></div>';
       }).join(''))+
     '</div>'+
