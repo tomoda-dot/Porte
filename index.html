@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8"><meta name="google" content="notranslate">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
 :root{--bg:#f5f0eb;--card:#fff;--pri:#3d5a3e;--pri-l:#5a7d5c;--acc:#c07830;--txt:#2c2c2c;--sub:#6b6b6b;--bdr:#e0d8d0;--hov:#f0ebe5;--red:#b33a3a;--grn:#3d7a3d;--shd:0 2px 12px rgba(0,0,0,.06)}
@@ -1742,7 +1742,7 @@ async function printFinalPlanPreview(planId){
     tasks+='</tr>';
   }
 
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>個別支援計画書</title>';
+  var html='<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>個別支援計画書</title>';
   html+='<style>@page{size:A4 landscape;margin:12mm}body{font-family:"Yu Gothic","Hiragino Sans",sans-serif;font-size:11px;margin:0;padding:0;color:#222}';
   html+='table{border-collapse:collapse;width:100%}td,th{border:1px solid #333;padding:6px 8px;vertical-align:top}';
   html+='.title{font-size:18px;font-weight:700;text-align:center;padding:12px 0;letter-spacing:4px}';
@@ -2191,7 +2191,7 @@ async function printPlanPreview(planId){
     tasks+='</tr>';
   }
 
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>個別支援計画書（原案）</title>';
+  var html='<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>個別支援計画書（原案）</title>';
   html+='<style>@page{size:A4 landscape;margin:12mm}body{font-family:"Yu Gothic","Hiragino Sans",sans-serif;font-size:11px;margin:0;padding:0;color:#222}';
   html+='table{border-collapse:collapse;width:100%}td,th{border:1px solid #333;padding:6px 8px;vertical-align:top}';
   html+='.title{font-size:18px;font-weight:700;text-align:center;padding:12px 0;letter-spacing:4px}';
@@ -3607,7 +3607,7 @@ function printSingleRoute(idx){
   var uIds=(r.userIds||'').split(',').filter(function(x){return x;});
   var facilityAddr=S.settings.facilityAddress||'大阪府豊中市小曽根1丁目10-23';
 
-  var h='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'+
+  var h='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="google" content="notranslate"><style>'+
     '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap");'+
     'body{font-family:"Noto Sans JP",sans-serif;font-size:13px;padding:20px;color:#333}'+
     'h1{font-size:18px;border-bottom:2px solid #333;padding-bottom:6px;margin-bottom:6px}'+
@@ -3679,7 +3679,7 @@ async function printRoutesByPattern(pattern){
   var patLabel=pattern==='morning'?'🌅 朝（お迎え）送迎表':'🌆 夕（送り）送迎表';
   var facilityAddr=S.settings.facilityAddress||'大阪府豊中市小曽根1丁目10-23';
 
-  var printHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'+
+  var printHtml='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="google" content="notranslate"><style>'+
     '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap");'+
     'body{font-family:"Noto Sans JP",sans-serif;font-size:13px;padding:20px;color:#333}'+
     'h1{font-size:18px;border-bottom:2px solid #333;padding-bottom:6px;margin-bottom:6px}'+
@@ -4130,7 +4130,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     // ヘッダ: 日付行
     var hdrD='<tr><th rowspan="2" style="min-width:40px">種別</th><th rowspan="2" style="min-width:80px">氏名</th><th rowspan="2">作業</th>';
     for(var dd=1;dd<=dim;dd++) hdrD+='<th style="text-align:center;font-size:10px;padding:1px 3px">'+dd+'</th>';
-    hdrD+='<th style="text-align:right">'+(wsMode==='wage'?'工賃計':'時間計')+'</th><th style="text-align:right">回数</th><th style="text-align:right">平均</th></tr>';
+    hdrD+='<th style="text-align:right">'+(wsMode==='wage'?'工賃計':'時間計')+'</th><th style="text-align:right">日数</th><th style="text-align:right">平均</th></tr>';
     // ヘッダ: 曜日行
     var hdrW='<tr>';
     for(var dd2=0;dd2<dim;dd2++){
@@ -4930,7 +4930,7 @@ async function dlCSV(){try{
     var wsM=window._wsMode||'wage';
     var csv4='種別,氏名,作業,';
     for(var dd=1;dd<=ws2.daysInMonth;dd++) csv4+=dd+'日,';
-    csv4+=(wsM==='wage'?'工賃計':'時間計')+',作業回数,平均\n';
+    csv4+=(wsM==='wage'?'工賃計':'時間計')+',作業日数,平均\n';
     ws2.users.forEach(function(u){
       var wtNs=Object.keys(u.byWt);
       wtNs.forEach(function(wtN){
@@ -5113,7 +5113,7 @@ function printStaffAtt(){
   var content=document.querySelector('#staff-content .card:last-child');
   if(!content)return;
   var w=window.open('','_blank');
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>スタッフ勤怠実績</title><style>';
+  var html='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="google" content="notranslate"><title>スタッフ勤怠実績</title><style>';
   html+='body{font-family:sans-serif;padding:20px;font-size:11px}h1{font-size:16px;text-align:center;margin-bottom:16px}';
   html+='table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:4px 6px}th{background:#f5f0ea}';
   html+='@media print{button{display:none!important}}</style></head><body>';
@@ -5428,7 +5428,7 @@ async function deleteIncident(id){
 function printIncident(id){
   var inc=_incidentData.find(function(x){return x.id===id;});if(!inc)return;
   var w=window.open('','_blank');
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ヒヤリハット報告書</title><style>';
+  var html='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="google" content="notranslate"><title>ヒヤリハット報告書</title><style>';
   html+='body{font-family:sans-serif;padding:30px;font-size:13px}h1{font-size:18px;text-align:center;margin-bottom:20px}';
   html+='table{width:100%;border-collapse:collapse;margin-bottom:20px}th,td{border:1px solid #333;padding:8px}th{background:#f5f0ea;width:120px;text-align:left}';
   html+='@media print{button{display:none!important}}</style></head><body>';
@@ -5569,7 +5569,7 @@ async function deleteComplaint(id){
 function printComplaint(id){
   var cmp=_complaintData.find(function(x){return x.id===id;});if(!cmp)return;
   var w=window.open('','_blank');
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>苦情・相談記録</title><style>';
+  var html='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="google" content="notranslate"><title>苦情・相談記録</title><style>';
   html+='body{font-family:sans-serif;padding:30px;font-size:13px}h1{font-size:18px;text-align:center;margin-bottom:20px}';
   html+='table{width:100%;border-collapse:collapse;margin-bottom:20px}th,td{border:1px solid #333;padding:8px}th{background:#f5f0ea;width:120px;text-align:left}';
   html+='@media print{button{display:none!important}}</style></head><body>';
@@ -5829,7 +5829,7 @@ function printTrainingSummary(id){
   var tr=_trainData.find(function(x){return x.id===id;});if(!tr)return;
   var reports=_trainReports.filter(function(r){return r.trainingId===id;});
   var w=window.open('','_blank');
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>研修報告一覧</title><style>';
+  var html='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="google" content="notranslate"><title>研修報告一覧</title><style>';
   html+='body{font-family:sans-serif;padding:30px;font-size:13px}h1{font-size:18px;text-align:center;margin-bottom:6px}';
   html+='h2{font-size:14px;text-align:center;color:#666;margin-bottom:20px}';
   html+='table{width:100%;border-collapse:collapse;margin-bottom:20px}th,td{border:1px solid #333;padding:8px}th{background:#f5f0ea;text-align:left}';
