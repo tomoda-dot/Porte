@@ -119,9 +119,14 @@ async function getTimecardUsers(){
 async function getStaffTimecard(){
   var r1=await sb.from('スタッフ').select('*');var staff=r1.data||[];
   var today2=_today();var dow2=_dow();
+  var thisYM=today2.substring(0,7);
   var r2=await sb.from('スタッフ出欠').select('*').eq('date',today2);var att=r2.data||[];
   var result=[];
   staff.forEach(function(s){
+    // 入職前チェック
+    if(s.startDate){var sp=s.startDate.split('-');var sYM=parseInt(sp[0])*100+parseInt(sp[1]);var cParts=thisYM.split('-');var cYM=parseInt(cParts[0])*100+parseInt(cParts[1]);if(cYM<sYM)return;}
+    // 退職後チェック
+    if(s.endDate){var ep=s.endDate.split('-');var eYM=parseInt(ep[0])*100+parseInt(ep[1]);var cParts2=thisYM.split('-');var cYM2=parseInt(cParts2[0])*100+parseInt(cParts2[1]);if(cYM2>eYM)return;}
     var rec=null;att.forEach(function(a){if(String(a.staffId)===String(s.id))rec=a;});
     var shift=rec&&rec.startTime?_detectShift(rec.startTime):'';
     result.push({id:s.id,name:s.name,role:s.role||s.position||'',
