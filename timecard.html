@@ -233,6 +233,7 @@ async function loadData(){
 // --- 利用者グリッド ---
 function renderUserGrid(){
   var users=TCData.users.filter(function(u){return u.isScheduled||u.clockedIn;});
+  users.sort(function(a,b){return(a.furigana||a.name).localeCompare(b.furigana||b.name,'ja');});
   if(users.length===0){document.getElementById('main').innerHTML='<div class="msg">本日の予定者がいません</div>';return;}
   var html='<div class="user-grid">';
   users.forEach(function(u){
