@@ -192,7 +192,7 @@ async function loadAll(){
   }catch(e){document.getElementById('app').innerHTML='<div class="loading"><div style="font-size:36px">⚠️</div><div>データ読み込みエラーです</div><div style="font-size:11px;color:#999;margin-top:8px">'+String(e)+'</div><button class="bp" onclick="location.reload()" style="margin-top:12px">再読み込み</button></div>';}
 }
 
-var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['incidents','⚠️','ヒヤリハット'],['complaints','📞','苦情・相談'],['training','📚','研修・委員会'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
+var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
 
 var _shellRendered=false;
 function render(){
@@ -3976,9 +3976,20 @@ async function renderExport(c){
       });
       menuH+='</div>';
     });
+    // 管理記録セクション
+    menuH+='<div style="font-size:12px;color:var(--sub);font-weight:600;margin:40px 0 10px;padding-left:2px">📋 管理記録</div>';
+    menuH+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">';
+    menuH+='<button onclick="eT=\'incidents\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">⚠️ ヒヤリハット</button>';
+    menuH+='<button onclick="eT=\'complaints\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📞 苦情・相談</button>';
+    menuH+='<button onclick="eT=\'training\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📚 研修・委員会</button>';
+    menuH+='</div>';
     c.innerHTML=menuH;
     return;
   }
+  // 管理記録：専用画面に遷移
+  if(eT==='incidents'){renderIncidents(c);return;}
+  if(eT==='complaints'){renderComplaints(c);return;}
+  if(eT==='training'){renderTraining(c);return;}
   // 帳票表示画面（フルページ）
   var headerNav=tabs.map(function(t){
     var sel=eT===t[0];
