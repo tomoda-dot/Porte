@@ -4983,8 +4983,39 @@ function renderStaff(c){
 }
 function renderStaffList(){
   document.getElementById('staff-content').innerHTML='<div style="text-align:right;margin-bottom:8px"><button class="bp" onclick="openSM()">＋ 新規登録</button></div>'+
-    '<div class="card"><table><thead><tr><th>氏名</th><th>役職</th><th>担当利用者数</th><th>操作</th></tr></thead><tbody id="st-tb"></tbody></table></div>';
+    '<div class="card"><table><thead><tr><th>氏名</th><th>役職</th><th>入職日</th><th>退職日</th><th>担当数</th><th>操作</th></tr></thead><tbody id="st-tb"></tbody></table></div>';
   renderSTbl();
+}
+function _isStaffActive(s,ym){
+  if(!s.endDate)return true;
+  var endParts=s.endDate.split('-');var endYM=parseInt(endParts[0])*100+parseInt(endParts[1]);
+  var checkParts=ym?ym.split('-'):[new Date().getFullYear().toString(),(new Date().getMonth()+1).toString()];
+  var checkYM=parseInt(checkParts[0])*100+parseInt(checkParts[1]);
+  return checkYM<=endYM;
+}
+function renderSTbl(){
+  var thisYM=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+  var active=S.staff.filter(function(s){return _isStaffActive(s,thisYM);});
+  var retired=S.staff.filter(function(s){return!_isStaffActive(s,thisYM);});
+  var rows='';
+  if(active.length===0&&retired.length===0){
+    rows='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:28px">スタッフが登録されていません</td></tr>';
+  }
+  active.forEach(function(s){rows+=_staffRow(s);});
+  if(retired.length>0){
+    rows+='<tr><td colspan="6" style="background:#f5f0ea;color:var(--sub);font-size:11px;padding:6px 10px">退職済（'+retired.length+'名）</td></tr>';
+    retired.forEach(function(s){rows+=_staffRow(s,true);});
+  }
+  document.getElementById('st-tb').innerHTML=rows;
+}
+function _staffRow(s,isRetired){
+  var cnt=S.users.filter(function(u){return u.staffId===s.id;}).length;
+  var style=isRetired?'opacity:0.5':'';
+  return'<tr style="'+style+'"><td style="font-weight:600">'+esc(s.name)+'</td><td>'+esc(s.role||'')+'</td>'+
+    '<td style="font-size:11px">'+(s.startDate?fmtDate(s.startDate):'-')+'</td>'+
+    '<td style="font-size:11px">'+(s.endDate?'<span style="color:#c62828">'+fmtDate(s.endDate)+'</span>':'-')+'</td>'+
+    '<td>'+cnt+'名</td>'+
+    '<td><button class="bg" onclick=\'openSM('+JSON.stringify(s).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delS(\''+s.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';
 }
 function renderSTbl(){
   document.getElementById('st-tb').innerHTML=S.staff.length===0?'<tr><td colspan="4" style="text-align:center;color:var(--sub);padding:28px">スタッフが登録されていません</td></tr>':
@@ -5051,9 +5082,9 @@ async function renderStaffAttendance(){
         if(rec&&rec.startTime){
           var shift=rec.shift||'';
           var time=rec.startTime+'〜'+(rec.endTime||'');
-          h+='<td style="font-size:10px"><span style="color:'+_shiftColor(shift)+';font-weight:700">'+shift+'</span> '+time+'</td>';
+          h+='<td style="font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')"><span style="color:'+_shiftColor(shift)+';font-weight:700">'+shift+'</span> '+time+'</td>';
         }else{
-          h+='<td style="color:#ddd;text-align:center">−</td>';
+          h+='<td style="color:#ddd;text-align:center;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">−</td>';
         }
       });
       h+='</tr>';
@@ -5078,11 +5109,52 @@ function printStaffAtt(){
   html+='<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>';
   w.document.write(html);w.document.close();
 }
-function openSM(s){
-  s=s||{name:'',role:'',loginId:'',password:''};var isE=!!s.id;
-  document.getElementById('st-modal').innerHTML='<div class="overlay" onclick="closeModal(\'st-modal\')"><div class="modal" style="width:420px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>スタッフ'+(isE?'編集':'登録')+'</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div><div class="field"><label>氏名</label><input id="sm-n" value="'+esc(s.name)+'" style="width:100%"></div><div class="field"><label>役職</label><input id="sm-r" value="'+esc(s.role||'')+'" style="width:100%" placeholder="例: サービス管理責任者"></div><div class="field"><label>ログインID</label><input id="sm-lid" value="'+esc(s.loginId||'')+'" style="width:100%" placeholder="後日のログイン用"></div><div class="field"><label>パスワード</label><input type="text" id="sm-pwd" value="'+esc(s.password||'')+'" style="width:100%"></div><div class="btns"><button class="bg" onclick="closeModal(\'st-modal\')">取消</button><button class="bp" onclick="saveS(\''+(s.id||'')+'\')">保存</button></div></div></div>';
+function _detectShift(t){if(!t)return'';var p=t.split(':');var min=parseInt(p[0])*60+parseInt(p[1]||0);if(min<=510)return'早番';if(min<=570)return'日勤';return'遅番';}
+
+function editStaffAtt(staffId,staffName,date){
+  var h='<div class="overlay" onclick="closeModal(\'st-modal\')"><div class="modal" style="width:380px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>打刻編集</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>';
+  h+='<div style="padding:8px 0;font-size:13px;font-weight:600;color:var(--pri)">'+staffName+' — '+fmtDate(date)+'</div>';
+  h+='<div style="display:flex;gap:12px;margin:12px 0"><div class="field" style="flex:1"><label>出勤時間</label><input type="time" id="sea-start" style="width:100%"></div>';
+  h+='<div class="field" style="flex:1"><label>退勤時間</label><input type="time" id="sea-end" style="width:100%"></div></div>';
+  h+='<div class="field"><label>休憩（分）</label><input type="number" id="sea-break" value="60" style="width:100px"></div>';
+  h+='<div class="btns"><button class="bg" onclick="deleteStaffAtt(\''+staffId+'\',\''+date+'\')" style="color:#c62828">削除</button>';
+  h+='<button class="bg" onclick="closeModal(\'st-modal\')">取消</button>';
+  h+='<button class="bp" onclick="saveStaffAtt(\''+staffId+'\',\''+date+'\')">保存</button></div></div></div>';
+  document.getElementById('st-modal').innerHTML=h;
+  gas('getStaffAttendanceByDate',date).then(function(att){
+    var rec=att.find(function(a){return String(a.staffId)===staffId;});
+    if(rec){if(rec.startTime)document.getElementById('sea-start').value=rec.startTime;if(rec.endTime)document.getElementById('sea-end').value=rec.endTime;if(rec.breakMin)document.getElementById('sea-break').value=rec.breakMin;}
+  });
 }
-async function saveS(id){if(!lockUI())return;var d={name:document.getElementById('sm-n').value,role:document.getElementById('sm-r').value,loginId:document.getElementById('sm-lid').value,password:document.getElementById('sm-pwd').value};if(!d.name){await cAlert('氏名を入力');return;}try{if(id){d.id=id;await gas('updateStaff',d);}else{await gas('addStaff',d);}S.staff=await gas('getStaff');closeModal('st-modal');renderStaff(document.getElementById('content'));}catch(e){await cAlert('失敗');}finally{unlockUI();}}
+async function saveStaffAtt(staffId,date){
+  var startTime=document.getElementById('sea-start').value;var endTime=document.getElementById('sea-end').value;var breakMin=document.getElementById('sea-break').value;
+  if(!startTime){await cAlert('出勤時間を入力してください');return;}
+  var shift=_detectShift(startTime);
+  if(!lockUI())return;
+  try{
+    var r=await supabase.from('スタッフ出欠').select('id').eq('staffId',staffId).eq('date',date).limit(1);
+    if(r.data&&r.data.length>0){await supabase.from('スタッフ出欠').update({startTime:startTime,endTime:endTime||null,breakMin:breakMin,shift:shift}).eq('id',r.data[0].id);}
+    else{await supabase.from('スタッフ出欠').insert([{id:_genId('sa'),staffId:staffId,date:date,startTime:startTime,endTime:endTime||null,breakMin:breakMin,shift:shift}]);}
+    toast('✅ 保存しました');closeModal('st-modal');renderStaffAttendance();
+  }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+}
+async function deleteStaffAtt(staffId,date){
+  if(!await cConfirm('この打刻を削除しますか？'))return;
+  try{var r=await supabase.from('スタッフ出欠').select('id').eq('staffId',staffId).eq('date',date).limit(1);if(r.data&&r.data.length>0)await supabase.from('スタッフ出欠').delete().eq('id',r.data[0].id);toast('削除しました');closeModal('st-modal');renderStaffAttendance();}
+  catch(e){await cAlert('削除失敗: '+e);}
+}
+function openSM(s){
+  s=s||{name:'',role:'',loginId:'',password:'',startDate:'',endDate:''};var isE=!!s.id;
+  document.getElementById('st-modal').innerHTML='<div class="overlay" onclick="closeModal(\'st-modal\')"><div class="modal" style="width:460px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>スタッフ'+(isE?'編集':'登録')+'</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>'+
+    '<div class="field"><label>氏名</label><input id="sm-n" value="'+esc(s.name)+'" style="width:100%"></div>'+
+    '<div class="field"><label>役職</label><input id="sm-r" value="'+esc(s.role||'')+'" style="width:100%" placeholder="例: サービス管理責任者、生活支援員"></div>'+
+    '<div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>入職日</label><input type="date" id="sm-sd" value="'+(s.startDate||'')+'" style="width:100%"></div>'+
+    '<div class="field" style="flex:1"><label>退職日</label><input type="date" id="sm-ed" value="'+(s.endDate||'')+'" style="width:100%"></div></div>'+
+    '<div class="field"><label>ログインID</label><input id="sm-lid" value="'+esc(s.loginId||'')+'" style="width:100%" placeholder="後日のログイン用"></div>'+
+    '<div class="field"><label>パスワード</label><input type="text" id="sm-pwd" value="'+esc(s.password||'')+'" style="width:100%"></div>'+
+    '<div class="btns"><button class="bg" onclick="closeModal(\'st-modal\')">取消</button><button class="bp" onclick="saveS(\''+(s.id||'')+'\')">保存</button></div></div></div>';
+}
+async function saveS(id){if(!lockUI())return;var d={name:document.getElementById('sm-n').value,role:document.getElementById('sm-r').value,startDate:document.getElementById('sm-sd').value,endDate:document.getElementById('sm-ed').value,loginId:document.getElementById('sm-lid').value,password:document.getElementById('sm-pwd').value};if(!d.name){unlockUI();await cAlert('氏名を入力');return;}try{if(id){d.id=id;await gas('updateStaff',d);}else{await gas('addStaff',d);}S.staff=await gas('getStaff');toast('✅ 保存しました');closeModal('st-modal');renderStaff(document.getElementById('content'));}catch(e){await cAlert('失敗: '+e);}finally{unlockUI();}}
 async function delS(id){if(!await cConfirm('削除しますか？'))return;try{await gas('deleteStaff',id);S.staff=await gas('getStaff');renderStaff(document.getElementById('content'));}catch(e){await cAlert('失敗');}}
 
 // ═══ 設定 ═══
