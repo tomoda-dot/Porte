@@ -4983,15 +4983,23 @@ function renderStaff(c){
 }
 function renderStaffList(){
   document.getElementById('staff-content').innerHTML='<div style="text-align:right;margin-bottom:8px"><button class="bp" onclick="openSM()">＋ 新規登録</button></div>'+
-    '<div class="card"><table><thead><tr><th>氏名</th><th>役職</th><th>入職日</th><th>退職日</th><th>担当数</th><th>操作</th></tr></thead><tbody id="st-tb"></tbody></table></div>';
+    '<div class="card"><table><thead><tr><th>氏名</th><th>役職</th><th>入職日</th><th>退職日</th><th>担当数</th></tr></thead><tbody id="st-tb"></tbody></table></div>';
   renderSTbl();
 }
 function _isStaffActive(s,ym){
+  // 入職前チェック
+  if(s.startDate){
+    var stParts=s.startDate.split('-');var stYM=parseInt(stParts[0])*100+parseInt(stParts[1]);
+    var checkParts=ym?ym.split('-'):[new Date().getFullYear().toString(),(new Date().getMonth()+1).toString()];
+    var checkYM=parseInt(checkParts[0])*100+parseInt(checkParts[1]);
+    if(checkYM<stYM)return false;
+  }
+  // 退職後チェック
   if(!s.endDate)return true;
   var endParts=s.endDate.split('-');var endYM=parseInt(endParts[0])*100+parseInt(endParts[1]);
-  var checkParts=ym?ym.split('-'):[new Date().getFullYear().toString(),(new Date().getMonth()+1).toString()];
-  var checkYM=parseInt(checkParts[0])*100+parseInt(checkParts[1]);
-  return checkYM<=endYM;
+  var checkParts2=ym?ym.split('-'):[new Date().getFullYear().toString(),(new Date().getMonth()+1).toString()];
+  var checkYM2=parseInt(checkParts2[0])*100+parseInt(checkParts2[1]);
+  return checkYM2<=endYM;
 }
 function renderSTbl(){
   var thisYM=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
@@ -4999,11 +5007,11 @@ function renderSTbl(){
   var retired=S.staff.filter(function(s){return!_isStaffActive(s,thisYM);});
   var rows='';
   if(active.length===0&&retired.length===0){
-    rows='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:28px">スタッフが登録されていません</td></tr>';
+    rows='<tr><td colspan="5" style="text-align:center;color:var(--sub);padding:28px">スタッフが登録されていません</td></tr>';
   }
   active.forEach(function(s){rows+=_staffRow(s);});
   if(retired.length>0){
-    rows+='<tr><td colspan="6" style="background:#f5f0ea;color:var(--sub);font-size:11px;padding:6px 10px">退職済（'+retired.length+'名）</td></tr>';
+    rows+='<tr><td colspan="5" style="background:#f5f0ea;color:var(--sub);font-size:11px;padding:6px 10px">入職前・退職済（'+retired.length+'名）</td></tr>';
     retired.forEach(function(s){rows+=_staffRow(s,true);});
   }
   document.getElementById('st-tb').innerHTML=rows;
@@ -5011,11 +5019,11 @@ function renderSTbl(){
 function _staffRow(s,isRetired){
   var cnt=S.users.filter(function(u){return u.staffId===s.id;}).length;
   var style=isRetired?'opacity:0.5':'';
-  return'<tr style="'+style+'"><td style="font-weight:600">'+esc(s.name)+'</td><td>'+esc(s.role||'')+'</td>'+
+  return'<tr style="'+style+';cursor:pointer" onclick=\'openSM('+JSON.stringify(s).replace(/\'/g,"&#39;")+')\'>'+
+    '<td style="font-weight:600">'+esc(s.name)+'</td><td>'+esc(s.role||'')+'</td>'+
     '<td style="font-size:11px">'+(s.startDate?fmtDate(s.startDate):'-')+'</td>'+
     '<td style="font-size:11px">'+(s.endDate?'<span style="color:#c62828">'+fmtDate(s.endDate)+'</span>':'-')+'</td>'+
-    '<td>'+cnt+'名</td>'+
-    '<td><button class="bg" onclick=\'openSM('+JSON.stringify(s).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delS(\''+s.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';
+    '<td>'+cnt+'名</td></tr>';
 }
 
 async function renderStaffAttendance(){
@@ -5139,14 +5147,18 @@ async function deleteStaffAtt(staffId,date){
 }
 function openSM(s){
   s=s||{name:'',role:'',loginId:'',password:'',startDate:'',endDate:''};var isE=!!s.id;
+  var roles=['サービス管理責任者','生活支援員','職業指導員','管理者','その他'];
+  var roleOpts=roles.map(function(r){return'<option'+(s.role===r?' selected':'')+'>'+r+'</option>';}).join('');
   document.getElementById('st-modal').innerHTML='<div class="overlay" onclick="closeModal(\'st-modal\')"><div class="modal" style="width:460px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>スタッフ'+(isE?'編集':'登録')+'</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>'+
     '<div class="field"><label>氏名</label><input id="sm-n" value="'+esc(s.name)+'" style="width:100%"></div>'+
-    '<div class="field"><label>役職</label><input id="sm-r" value="'+esc(s.role||'')+'" style="width:100%" placeholder="例: サービス管理責任者、生活支援員"></div>'+
+    '<div class="field"><label>役職</label><select id="sm-r" style="width:100%"><option value="">-- 選択 --</option>'+roleOpts+'</select></div>'+
     '<div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>入職日</label><input type="date" id="sm-sd" value="'+(s.startDate||'')+'" style="width:100%"></div>'+
     '<div class="field" style="flex:1"><label>退職日</label><input type="date" id="sm-ed" value="'+(s.endDate||'')+'" style="width:100%"></div></div>'+
     '<div class="field"><label>ログインID</label><input id="sm-lid" value="'+esc(s.loginId||'')+'" style="width:100%" placeholder="後日のログイン用"></div>'+
     '<div class="field"><label>パスワード</label><input type="text" id="sm-pwd" value="'+esc(s.password||'')+'" style="width:100%"></div>'+
-    '<div class="btns"><button class="bg" onclick="closeModal(\'st-modal\')">取消</button><button class="bp" onclick="saveS(\''+(s.id||'')+'\')">保存</button></div></div></div>';
+    '<div class="btns" style="border-top:1px solid #eee;padding-top:12px;margin-top:12px">'+
+    (isE?'<button style="background:#c62828;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px" onclick="delS(\''+s.id+'\')">🗑️ 削除</button>':'')+
+    '<button class="bg" onclick="closeModal(\'st-modal\')">取消</button><button class="bp" onclick="saveS(\''+(s.id||'')+'\')">保存</button></div></div></div>';
 }
 async function saveS(id){if(!lockUI())return;var d={name:document.getElementById('sm-n').value,role:document.getElementById('sm-r').value,startDate:document.getElementById('sm-sd').value,endDate:document.getElementById('sm-ed').value,loginId:document.getElementById('sm-lid').value,password:document.getElementById('sm-pwd').value};if(!d.name){unlockUI();await cAlert('氏名を入力');return;}try{if(id){d.id=id;await gas('updateStaff',d);}else{await gas('addStaff',d);}S.staff=await gas('getStaff');toast('✅ 保存しました');closeModal('st-modal');renderStaff(document.getElementById('content'));}catch(e){await cAlert('失敗: '+e);}finally{unlockUI();}}
 async function delS(id){if(!await cConfirm('削除しますか？'))return;try{await gas('deleteStaff',id);S.staff=await gas('getStaff');renderStaff(document.getElementById('content'));}catch(e){await cAlert('失敗');}}
