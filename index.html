@@ -5033,6 +5033,7 @@ async function renderStaffAttendance(){
     var ym=_staffYM;var parts=ym.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
     var dim=new Date(y,m,0).getDate();var dowNames=['日','月','火','水','木','金','土'];
     var STANDARD_HOURS=160;
+    var _activeStaff=S.staff.filter(function(s){return _isStaffActive(s,ym);});
 
     var h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">';
     h+='<button class="bg" onclick="var p=_staffYM.split(\'-\');var nm=parseInt(p[1])-1;var ny=parseInt(p[0]);if(nm<1){nm=12;ny--}_staffYM=ny+\'-\'+String(nm).padStart(2,\'0\');renderStaffAttendance()" style="padding:4px 10px">◀</button>';
@@ -5042,7 +5043,7 @@ async function renderStaffAttendance(){
 
     // 常勤換算サマリー
     h+='<div class="card" style="overflow-x:auto;margin-bottom:16px"><table><thead><tr><th>氏名</th><th>職種</th><th>出勤日数</th><th>総労働時間</th><th>常勤換算</th></tr></thead><tbody>';
-    S.staff.forEach(function(s){
+    _activeStaff.forEach(function(s){
       var recs=att.filter(function(a){return String(a.staffId)===String(s.id);});
       var days=0,totalMin=0;
       recs.forEach(function(r){
@@ -5067,7 +5068,7 @@ async function renderStaffAttendance(){
     h+='<div class="card" style="overflow-x:auto"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><h4 style="margin:0">📅 日別勤怠</h4>';
     h+='<button class="bg" onclick="printStaffAtt()" style="font-size:11px">🖨️ 印刷</button></div>';
     h+='<table style="font-size:11px"><thead><tr><th style="width:40px">日</th><th style="width:30px">曜</th>';
-    S.staff.forEach(function(s){h+='<th style="min-width:80px">'+esc(s.name)+'</th>';});
+    _activeStaff.forEach(function(s){h+='<th style="min-width:80px">'+esc(s.name)+'</th>';});
     h+='</tr></thead><tbody>';
     for(var d=1;d<=dim;d++){
       var ds=ym+'-'+String(d).padStart(2,'0');
@@ -5077,7 +5078,7 @@ async function renderStaffAttendance(){
       h+='<tr style="background:'+rowBg+'">';
       h+='<td style="text-align:center">'+d+'</td>';
       h+='<td style="text-align:center;color:'+dowColor+'">'+dowNames[dow]+'</td>';
-      S.staff.forEach(function(s){
+      _activeStaff.forEach(function(s){
         var rec=att.find(function(a){return String(a.staffId)===String(s.id)&&a.date===ds;});
         if(rec&&rec.startTime){
           var shift=rec.shift||'';
