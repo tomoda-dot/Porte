@@ -3160,8 +3160,10 @@ async function renderAttTbl(){
       var curB=r?(r.bento||u.bento):u.bento;
       var curP=r?(r.pickup||u.pickup):u.pickup;
       var isAb=r?['欠席','体調不良','通院'].indexOf(r.status)>=0:false;
-      if(curB==='あり')bIcon=isAb?'<span style="color:var(--red)">❌</span>':'🍱';
-      if(curP==='あり')pIcon=isAb?'<span style="color:var(--red)">❌</span>':'🚐';
+      if(curB==='あり'){bIcon=isAb?'<span style="color:var(--red)">❌</span>':'🍱';}
+      else if(r&&r.bento==='なし'&&u.bento==='あり'){bIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
+      if(curP==='あり'){pIcon=isAb?'<span style="color:var(--red)">❌</span>':'🚐';}
+      else if(r&&r.pickup==='なし'&&u.pickup==='あり'){pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
       var repContent='-';
       var moodDisp='-';
       if(rep){
