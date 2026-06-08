@@ -114,8 +114,9 @@ function clearCache(prefix){
 }
 // ─── 二重送信防止 ───
 var _processing=false;
-function lockUI(){if(_processing)return false;_processing=true;return true;}
-function unlockUI(){_processing=false;}
+var _processingTimer=null;
+function lockUI(){if(_processing)return false;_processing=true;if(_processingTimer)clearTimeout(_processingTimer);_processingTimer=setTimeout(function(){_processing=false;},15000);return true;}
+function unlockUI(){_processing=false;if(_processingTimer){clearTimeout(_processingTimer);_processingTimer=null;}}
 function toast(msg){var d=document.createElement('div');d.textContent=msg;d.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 28px;border-radius:8px;font-size:14px;z-index:99999;opacity:0;transition:opacity .3s';document.body.appendChild(d);setTimeout(function(){d.style.opacity='1';},10);setTimeout(function(){d.style.opacity='0';setTimeout(function(){d.remove();},300);},2000);}
 // ─── カスタムモーダル（alert/confirm代替） ───
 function _modalBase(msg,type){
