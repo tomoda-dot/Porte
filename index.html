@@ -1480,7 +1480,7 @@ function renderPlanArea(userId){
   h+='<div style="display:flex;gap:8px;align-items:center">';
   var _pSess=getSession()||{};
   if(_pSess.name&&_pSess.name.indexOf('友田')>=0){
-    h+='<a href="https://script.google.com/macros/s/YOUR_GAS_DEPLOY_URL/exec" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:#fff;border:1.5px solid var(--pri);border-radius:7px;color:var(--pri);font-size:12px;font-weight:600;text-decoration:none;transition:all .15s" onmouseover="this.style.background=\'var(--pri)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'var(--pri)\'">🤖 個別支援計画書AI</a>';
+    h+='<a href="https://script.google.com/macros/s/AKfycbwq7MGA-tlpXcwV6Znhov-SdcVF0cCg-WedmSV_EHNYp7wX-WVvQJnvv4rfdGLxnzo3/exec" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:#fff;border:1.5px solid var(--pri);border-radius:7px;color:var(--pri);font-size:12px;font-weight:600;text-decoration:none;transition:all .15s" onmouseover="this.style.background=\'var(--pri)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'var(--pri)\'">🤖 個別支援計画書AI</a>';
   }
   h+='<button class="bp" onclick="openPlanForm(\''+userId+'\')">＋ 新規登録</button>';
   h+='</div></div>';
