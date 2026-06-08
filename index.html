@@ -1869,12 +1869,14 @@ async function printFinalPlanPreview(planId){
   html+='<div style="max-width:1100px;margin:0 auto">';
   html+='<div class="title">個別支援計画書</div>';
   html+='<div style="text-align:right;margin-bottom:4px;font-size:11px">作成日　'+fd(p.finalCreateDate||p.createDate)+'</div>';
+  var facilityNameF=p.facility||S.settings.facilityName||'';
+  var managerNameF=p.manager||'';
   html+='<table style="margin-bottom:2px"><tr class="hdr">';
   html+='<td style="width:120px">利用者氏名</td><td style="width:200px">'+e(p.userName)+'</td>';
   html+='<td style="width:110px">計画適用開始日</td><td>'+fd(p.startDate)+'</td></tr>';
   html+='<tr class="hdr"><td>サービス種別</td><td>'+e(p.serviceType)+'</td>';
-  html+='<td>事業所</td><td>'+e(p.facility)+'</td></tr>';
-  html+='<tr class="hdr"><td>サービス管理責任者</td><td colspan="3">'+e(p.manager)+'</td></tr></table>';
+  html+='<td>事業所</td><td>'+e(facilityNameF)+'</td></tr>';
+  html+='<tr class="hdr"><td>サービス管理責任者</td><td colspan="3">'+e(managerNameF)+'</td></tr></table>';
   html+='<table style="margin-bottom:2px">';
   html+='<tr><td style="width:120px;background:#f9f9f9;font-weight:600">総合的な<br>援助の方針</td><td>'+e(p.policy)+'</td></tr>';
   html+='<tr><td style="background:#f9f9f9;font-weight:600">長期目標</td><td>'+e(p.longGoal)+'</td></tr>';
@@ -2329,12 +2331,14 @@ async function printPlanPreview(planId){
   html+='<div style="text-align:right;margin-bottom:4px;font-size:11px">作成日　'+fd(p.createDate)+'</div>';
 
   // 基本情報テーブル
+  var facilityName=p.facility||S.settings.facilityName||'';
+  var managerName=p.manager||'';
   html+='<table style="margin-bottom:2px"><tr class="hdr">';
   html+='<td style="width:120px">利用者氏名</td><td style="width:200px">'+e(p.userName)+'</td>';
   html+='<td style="width:110px">計画適用開始日</td><td>'+fd(p.startDate)+'</td></tr>';
   html+='<tr class="hdr"><td>サービス種別</td><td>'+e(p.serviceType)+'</td>';
-  html+='<td>事業所</td><td>'+e(p.facility)+'</td></tr>';
-  html+='<tr class="hdr"><td>サービス管理責任者</td><td colspan="3">'+e(p.manager)+'</td></tr></table>';
+  html+='<td>事業所</td><td>'+e(facilityName)+'</td></tr>';
+  html+='<tr class="hdr"><td>サービス管理責任者</td><td colspan="3">'+e(managerName)+'</td></tr></table>';
 
   // 方針・目標テーブル
   html+='<table style="margin-bottom:2px">';
