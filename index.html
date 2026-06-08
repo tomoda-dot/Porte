@@ -3253,7 +3253,9 @@ function renderAttMonthlyTbl(){
       if(['出席','遅刻','早退','予定'].indexOf(status)>=0){
         var sTime=r.startTime||user.scheduleStart||'';
         var eTime=r.endTime||user.scheduleEnd||'';
-        timeDisp=sTime+'〜'+eTime;
+        var brkMin=Number(r.breakMin)||0;
+        var brkMark=brkMin>0?'<span title="休憩'+brkMin+'分" style="font-size:10px;margin-left:3px;opacity:.7">☕</span>':'';
+        timeDisp=sTime+'〜'+eTime+brkMark;
       }
       var isAb=['欠席','体調不良','通院'].indexOf(status)>=0;
       var curB=r.bento||user.bento;
