@@ -277,6 +277,8 @@ async function loadAll(){
       S.dashboard=db;if(S.dashboard)S.dashboard.date=today();
       if(S.tab==='dashboard')renderTab();
     }).catch(function(){});
+    // Phase3: シフト→スタッフ出欠 自動反映（バックグラウンド）
+    autoApplyTodayShift().catch(function(){});
   }catch(e){document.getElementById('app').innerHTML='<div class="loading"><div style="font-size:36px">⚠️</div><div>データ読み込みエラーです</div><div style="font-size:11px;color:#999;margin-top:8px">'+String(e)+'</div><button class="bp" onclick="location.reload()" style="margin-top:12px">再読み込み</button></div>';}
 }
 
@@ -7170,6 +7172,51 @@ async function copyPrevMonthShift(){
     toast('✅ 前月シフトをコピーしました（'+saves.length+'件）');
     renderShiftManagement();
   }catch(e){await cAlert('コピー失敗: '+e);}finally{unlockUI();}
+}
+
+// ─── シフト→スタッフ出欠 自動反映 ───
+async function autoApplyTodayShift(){
+  var td=today();
+  var ym=td.substring(0,7);
+  // セッションがなければスキップ
+  if(!getSession())return;
+  // 設定で無効化されていたらスキップ
+  if(S.settings.shiftAutoApply==='off')return;
+  // 今日のシフトを取得
+  var shifts=await gas('getTodayShifts',td);
+  if(!shifts||shifts.length===0)return;
+  var pats=getShiftPatterns();
+  // 今日のスタッフ出欠を取得
+  var existing=await gas('getStaffAttendanceByDate',td);
+  var applied=0;
+  for(var i=0;i<shifts.length;i++){
+    var sh=shifts[i];
+    if(!sh.pattern||sh.pattern==='休')continue;
+    // パターン情報取得
+    var pat=pats.find(function(p){return p.name===sh.pattern;});
+    if(!pat)continue;
+    // 既に打刻済みならスキップ
+    var ex=existing.find(function(e){return String(e.staffId)===String(sh.staffId);});
+    if(ex&&ex.startTime)continue;
+    // スタッフが在籍中か確認
+    var s=S.staff.find(function(x){return String(x.id)===String(sh.staffId);});
+    if(!s||!_isStaffActive(s,ym))continue;
+    // 反映
+    try{
+      await gas('upsertStaffAttendance',{
+        staffId:sh.staffId,
+        date:td,
+        startTime:pat.startTime||'',
+        endTime:pat.endTime||'',
+        breakMin:pat.breakMin||60,
+        shift:sh.pattern
+      });
+      applied++;
+    }catch(e){}
+  }
+  if(applied>0){
+    console.log('[Porte] シフト自動反映: '+applied+'名分を反映しました');
+  }
 }
 
 
