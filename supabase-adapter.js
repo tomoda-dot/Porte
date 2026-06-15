@@ -284,6 +284,18 @@ async function gas(fn){
     // ── スタッフ出欠 ──
     case 'getStaffAttendance': return a1?_getLike('スタッフ出欠','date',a1):_getAll('スタッフ出欠');
     case 'getStaffAttendanceByDate': return _getFiltered('スタッフ出欠','date',a1);
+
+    // ── シフト ──
+    case 'getShiftData': return a1?_getLike('シフト','date',a1):_getAll('シフト');
+    case 'saveShiftCell':
+      var _ex=await _getAll('シフト');
+      var _found=_ex.find(function(r){return r.staffId===a1.staffId&&r.date===a1.date;});
+      if(a1.pattern===''){
+        if(_found)return _del('シフト',_found.id);
+        return null;
+      }
+      if(_found){a1.id=_found.id;return _update('シフト',a1);}
+      a1.id=_genId('sh');return _add('シフト',a1);
     case 'addRouteRecord': a1.id=_genId('rt');a1.createdAt=new Date().toISOString();return _add('送迎ルート',a1);
     case 'updateRouteRecord': return _update('送迎ルート',a1);
     case 'deleteRouteRecord': return _del('送迎ルート',a1);

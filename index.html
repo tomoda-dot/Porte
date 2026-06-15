@@ -5187,10 +5187,12 @@ function renderStaff(c){
     stBtn('stab-list','list','👥','スタッフ一覧')+
     stBtn('stab-att','attendance','📊','勤怠実績・常勤換算')+
     stBtn('stab-paid','paidLeave','📅','有給管理')+
+    stBtn('stab-shift','shift','📆','シフト管理')+
     '</div><div id="staff-content"></div><div id="st-modal"></div>';
   if(_staffTab==='list')renderStaffList();
   else if(_staffTab==='attendance')renderStaffAttendance();
-  else renderPaidLeave();
+  else if(_staffTab==='paidLeave')renderPaidLeave();
+  else renderShiftManagement();
 }
 function renderStaffList(){
   document.getElementById('staff-content').innerHTML='<div style="text-align:right;margin-bottom:8px"><button class="bp" onclick="openSM()">＋ 新規登録</button></div>'+
@@ -6634,12 +6636,17 @@ function renderSettings(c){
     settingsSection('s-vh','🚗','車両管理',
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openVhModal()" style="font-size:12px">＋ 追加</button></div>'+
       '<p style="font-size:11px;color:var(--sub);margin-bottom:8px">送迎で使用する車両を登録します。</p>'+
-      '<table><thead><tr><th>車両名</th><th>種類</th><th>定員</th><th>備考</th><th>操作</th></tr></thead><tbody id="vh-tb"></tbody></table>',false)+'<div id="vh-modal"></div>';
+      '<table><thead><tr><th>車両名</th><th>種類</th><th>定員</th><th>備考</th><th>操作</th></tr></thead><tbody id="vh-tb"></tbody></table>',false)+'<div id="vh-modal"></div>'+
+    settingsSection('s-shift-pat','📆','勤務パターン管理',
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openShiftPatternModal()" style="font-size:12px">＋ 追加</button></div>'+
+      '<p style="font-size:11px;color:var(--sub);margin-bottom:8px">シフト作成で使用する勤務パターンを登録します。</p>'+
+      '<table><thead><tr><th>パターン名</th><th>始業</th><th>終業</th><th>休憩</th><th>色</th><th>操作</th></tr></thead><tbody id="sp-tb"></tbody></table>',false)+'<div id="sp-modal"></div>';
   // 作業種別テーブル
   document.getElementById('wt-tb').innerHTML=S.workTypes.map(function(w){return'<tr><td>'+esc(w.name)+'</td><td>¥'+Number(w.rate).toLocaleString()+'/h</td><td><button class="bg" onclick=\'openWT('+JSON.stringify(w).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delWT(\''+w.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';}).join('');
   // 車両テーブル
   renderVhTable();
   renderTplList();
+  renderShiftPatternTable();
   loadClosedCal(today().slice(0,7));
 }
 
@@ -6784,6 +6791,319 @@ async function saveVh(id){if(!lockUI())return;
   }catch(e){await cAlert('保存失敗: '+e);}
 }
 async function delVh(id){if(!await cConfirm('この車両を削除しますか？'))return;try{await gas('deleteVehicle',id);S.vehicles=await gas('getVehicles');renderSettings(document.getElementById('content'));}catch(e){await cAlert('失敗');}}
+
+// ═══ 勤務パターン管理 ═══
+function getShiftPatterns(){
+  try{return JSON.parse(S.settings.shiftPatterns||'[]');}catch(e){return[];}
+}
+
+function renderShiftPatternTable(){
+  var el=document.getElementById('sp-tb');if(!el)return;
+  var pats=getShiftPatterns();
+  if(pats.length===0){
+    el.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:16px">パターンが登録されていません<br><small>まず「日勤（9:00〜18:00）」などを追加してください</small></td></tr>';
+    return;
+  }
+  el.innerHTML=pats.map(function(p,i){
+    return'<tr>'+
+      '<td style="font-weight:600"><span style="display:inline-block;background:'+esc(p.color||'#666')+';color:#fff;padding:2px 10px;border-radius:10px;font-size:12px">'+esc(p.name)+'</span></td>'+
+      '<td>'+esc(p.startTime||'')+'</td>'+
+      '<td>'+esc(p.endTime||'')+'</td>'+
+      '<td>'+esc(p.breakMin||60)+'分</td>'+
+      '<td><span style="background:'+esc(p.color||'#666')+';display:inline-block;width:20px;height:20px;border-radius:4px"></span></td>'+
+      '<td><button class="bg" onclick="openShiftPatternModal('+i+')" style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button>'+
+      '<button onclick="deleteShiftPattern('+i+')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:13px">✕</button></td></tr>';
+  }).join('');
+}
+
+function openShiftPatternModal(idx){
+  var pats=getShiftPatterns();
+  var p=idx!==undefined?pats[idx]:{name:'',startTime:'09:00',endTime:'18:00',breakMin:60,color:'#3d5a3e'};
+  var isEdit=idx!==undefined;
+  var colors=['#3d5a3e','#1565c0','#c07830','#c62828','#6a1b9a','#00838f','#558b2f','#4e342e','#546e7a'];
+  var colorBtns=colors.map(function(c){
+    return'<button onclick="document.getElementById(\'sp-color\').value=\''+c+'\';this.parentElement.querySelectorAll(\'button\').forEach(function(b){b.style.border=b.getAttribute(\'data-color\')=== \''+c+'\'?\'3px solid #333\':\'3px solid transparent\';})" data-color="'+c+'" style="width:28px;height:28px;background:'+c+';border:'+(p.color===c?'3px solid #333':'3px solid transparent')+';border-radius:50%;cursor:pointer;padding:0"></button>';
+  }).join('');
+  document.getElementById('sp-modal').innerHTML=
+    '<div class="overlay" onclick="closeModal(\'sp-modal\')">'+
+    '<div class="modal" style="width:440px" onclick="event.stopPropagation()">'+
+    '<div class="modal-hd"><h3>勤務パターン'+(isEdit?'編集':'追加')+'</h3><button class="modal-close" onclick="closeModal(\'sp-modal\')">✕</button></div>'+
+    '<div class="field"><label>パターン名 *</label><input id="sp-name" value="'+esc(p.name)+'" placeholder="例: 日勤、早番、遅番" style="width:100%"></div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>始業時刻</label><input type="time" id="sp-start" value="'+(p.startTime||'09:00')+'" style="width:100%"></div>'+
+      '<div class="field"><label>終業時刻</label><input type="time" id="sp-end" value="'+(p.endTime||'18:00')+'" style="width:100%"></div>'+
+    '</div>'+
+    '<div class="field"><label>休憩時間（分）</label><input type="number" id="sp-break" value="'+(p.breakMin||60)+'" style="width:120px"></div>'+
+    '<div class="field"><label>カラー</label>'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">'+colorBtns+
+      '<input type="color" id="sp-color" value="'+(p.color||'#3d5a3e')+'" style="width:32px;height:28px;border:none;cursor:pointer;border-radius:4px" title="カスタムカラー">'+
+    '</div></div>'+
+    '<div class="btns"><button class="bg" onclick="closeModal(\'sp-modal\')">キャンセル</button>'+
+    '<button class="bp" onclick="saveShiftPattern('+(isEdit?idx:'undefined')+')">保存</button></div>'+
+    '</div></div>';
+}
+
+async function saveShiftPattern(idx){
+  var name=document.getElementById('sp-name').value.trim();
+  if(!name){await cAlert('パターン名を入力してください');return;}
+  var obj={
+    name:name,
+    startTime:document.getElementById('sp-start').value,
+    endTime:document.getElementById('sp-end').value,
+    breakMin:Number(document.getElementById('sp-break').value)||60,
+    color:document.getElementById('sp-color').value||'#3d5a3e'
+  };
+  var pats=getShiftPatterns();
+  if(idx!==undefined){pats[idx]=obj;}else{pats.push(obj);}
+  if(!lockUI())return;
+  try{
+    await gas('saveSetting','shiftPatterns',JSON.stringify(pats));
+    S.settings.shiftPatterns=JSON.stringify(pats);
+    closeModal('sp-modal');
+    renderSettings(document.getElementById('content'));
+  }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+}
+
+async function deleteShiftPattern(idx){
+  if(!await cConfirm('このパターンを削除しますか？'))return;
+  var pats=getShiftPatterns();pats.splice(idx,1);
+  if(!lockUI())return;
+  try{
+    await gas('saveSetting','shiftPatterns',JSON.stringify(pats));
+    S.settings.shiftPatterns=JSON.stringify(pats);
+    renderSettings(document.getElementById('content'));
+  }catch(e){await cAlert('削除失敗: '+e);}finally{unlockUI();}
+}
+
+// ═══ シフト管理 ═══
+var _shiftYM=null;
+var _shiftData={};  // {staffId: {date: patternName}}
+
+async function renderShiftManagement(){
+  var el=document.getElementById('staff-content');
+  if(!_shiftYM){var n=new Date();_shiftYM=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');}
+  var pats=getShiftPatterns();
+  var activeStaff=S.staff.filter(function(s){return _isStaffActive(s,_shiftYM);});
+
+  // シフトデータのロード
+  try{
+    var raw=await gas('getShiftData',_shiftYM);
+    _shiftData={};
+    (raw||[]).forEach(function(r){
+      if(!_shiftData[r.staffId])_shiftData[r.staffId]={};
+      _shiftData[r.staffId][r.date]=r.pattern;
+    });
+  }catch(e){_shiftData={};}
+
+  var parts=_shiftYM.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
+  var dim=new Date(y,m,0).getDate();
+  var dowNames=['日','月','火','水','木','金','土'];
+
+  var h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">';
+  h+='<button class="bg" onclick="shiftPrevMonth()" style="padding:4px 10px">◀</button>';
+  h+='<span style="font-size:16px;font-weight:700">'+y+'年'+m+'月</span>';
+  h+='<button class="bg" onclick="shiftNextMonth()" style="padding:4px 10px">▶</button>';
+  h+='<button class="bg" onclick="shiftGoToday()" style="font-size:12px">今月</button>';
+  if(pats.length===0){
+    h+='<span style="font-size:12px;color:#c62828;margin-left:8px">⚠ まず設定→勤務パターン管理でパターンを追加してください</span>';
+  }
+  h+='<div style="margin-left:auto;display:flex;gap:8px">';
+  h+='<button class="bg" onclick="printShift()" style="font-size:12px">🖨 印刷</button>';
+  h+='<button class="ba" onclick="dlShiftCSV()" style="font-size:12px">📥 CSV</button>';
+  h+='</div></div>';
+
+  // パターン凡例
+  if(pats.length>0){
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center"><span style="font-size:12px;color:var(--sub)">パターン:</span>';
+    h+=pats.map(function(p){
+      return'<span style="background:'+esc(p.color)+';color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer" title="'+esc(p.startTime)+'〜'+esc(p.endTime)+' 休憩'+p.breakMin+'分">'+esc(p.name)+'</span>';
+    }).join('');
+    h+='<span style="background:#f5f5f5;color:#999;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700">休み</span>';
+    h+='</div>';
+  }
+
+  // シフト表
+  h+='<div class="card" style="overflow-x:auto"><table id="shift-table" style="font-size:11px;border-collapse:collapse;width:100%">';
+  // ヘッダ行1: 氏名 + 日付
+  h+='<thead><tr style="background:#f5f0ea">';
+  h+='<th style="padding:6px 10px;border:1px solid var(--bdr);min-width:80px;position:sticky;left:0;background:#f5f0ea;z-index:2">氏名</th>';
+  for(var d=1;d<=dim;d++){
+    var dow=new Date(y,m-1,d).getDay();
+    var dowColor=dow===0?'color:#c62828':dow===6?'color:#1565c0':'';
+    var isToday=(today()===(_shiftYM+'-'+String(d).padStart(2,'0')));
+    h+='<th style="padding:4px 2px;border:1px solid var(--bdr);text-align:center;min-width:52px;'+(isToday?'background:#e8f5e9;':'')+'">'+
+      '<div style="font-size:11px;font-weight:700">'+d+'</div>'+
+      '<div style="font-size:10px;'+dowColor+'">'+dowNames[dow]+'</div></th>';
+  }
+  h+='<th style="padding:6px 4px;border:1px solid var(--bdr);text-align:center;min-width:50px">出勤<br>日数</th>';
+  h+='</tr></thead><tbody>';
+
+  // スタッフ行
+  activeStaff.forEach(function(s){
+    h+='<tr>';
+    h+='<td style="padding:6px 8px;border:1px solid var(--bdr);font-weight:600;position:sticky;left:0;background:#fff;z-index:1">'+esc(s.name)+'</td>';
+    var workDays=0;
+    for(var d2=1;d2<=dim;d2++){
+      var ds=_shiftYM+'-'+String(d2).padStart(2,'0');
+      var dow2=new Date(y,m-1,d2).getDay();
+      var isWeekend=dow2===0||dow2===6;
+      var pat=(_shiftData[s.id]||{})[ds]||'';
+      var patObj=pats.find(function(p){return p.name===pat;});
+      var isToday2=(today()===ds);
+      var cellBg=isToday2?'#f0fff0':isWeekend?'#faf6f2':'';
+      h+='<td style="padding:2px;border:1px solid var(--bdr);text-align:center;background:'+cellBg+';cursor:pointer" onclick="openShiftCell(\''+s.id+'\',\''+ds+'\')">'+
+        (patObj?
+          '<span style="display:inline-block;background:'+esc(patObj.color)+';color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">'+esc(patObj.name)+'</span>':
+          (pat==='休'?'<span style="color:#999;font-size:10px">休</span>':
+          '<span style="color:#ddd;font-size:10px">−</span>'))+
+        '</td>';
+      if(patObj)workDays++;
+    }
+    h+='<td style="padding:4px;border:1px solid var(--bdr);text-align:center;font-weight:700;color:var(--pri)">'+workDays+'日</td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+
+  el.innerHTML=h;
+}
+
+function shiftPrevMonth(){
+  var p=_shiftYM.split('-');var m=parseInt(p[1])-1;var y=parseInt(p[0]);
+  if(m<1){m=12;y--;}_shiftYM=y+'-'+String(m).padStart(2,'0');renderShiftManagement();
+}
+function shiftNextMonth(){
+  var p=_shiftYM.split('-');var m=parseInt(p[1])+1;var y=parseInt(p[0]);
+  if(m>12){m=1;y++;}_shiftYM=y+'-'+String(m).padStart(2,'0');renderShiftManagement();
+}
+function shiftGoToday(){
+  var n=new Date();_shiftYM=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+  renderShiftManagement();
+}
+
+// セルクリックでパターン選択
+function openShiftCell(staffId,date){
+  var pats=getShiftPatterns();
+  var current=(_shiftData[staffId]||{})[date]||'';
+  var s=S.staff.find(function(x){return x.id===staffId;})||{};
+  var dow=['日','月','火','水','木','金','土'][new Date(date).getDay()];
+
+  document.getElementById('st-modal').innerHTML=
+    '<div class="overlay" onclick="closeModal(\'st-modal\')">'+
+    '<div class="modal" style="width:360px" onclick="event.stopPropagation()">'+
+    '<div class="modal-hd"><h3>シフト設定</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>'+
+    '<p style="font-size:14px;font-weight:600;color:var(--pri);margin-bottom:16px">'+esc(s.name)+' — '+fmtDate(date)+'（'+dow+'）</p>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">'+
+    pats.map(function(p){
+      var isCur=current===p.name;
+      return'<button onclick="saveShiftCell(\''+staffId+'\',\''+date+'\',\''+esc(p.name)+'\')" style="padding:12px 8px;border:3px solid '+(isCur?'#333':p.color)+';border-radius:8px;background:'+(isCur?p.color:'#fff')+';color:'+(isCur?'#fff':p.color)+';cursor:pointer;font-weight:700;font-size:13px">'+
+        esc(p.name)+'<br><span style="font-size:10px;font-weight:400">'+esc(p.startTime)+'〜'+esc(p.endTime)+'</span></button>';
+    }).join('')+
+    '<button onclick="saveShiftCell(\''+staffId+'\',\''+date+'\',\'休\')" style="padding:12px 8px;border:3px solid '+( current==='休'?'#333':'#ccc')+';border-radius:8px;background:'+(current==='休'?'#666':'#fff')+';color:'+(current==='休'?'#fff':'#999')+';cursor:pointer;font-weight:700;font-size:13px">休み</button>'+
+    '<button onclick="saveShiftCell(\''+staffId+'\',\''+date+'\',\'\''+')" style="padding:12px 8px;border:3px solid #eee;border-radius:8px;background:#fff;color:#ccc;cursor:pointer;font-size:13px">クリア</button>'+
+    '</div></div></div>';
+}
+
+async function saveShiftCell(staffId,date,pattern){
+  if(!lockUI())return;
+  try{
+    await gas('saveShiftCell',{staffId:staffId,date:date,pattern:pattern});
+    if(!_shiftData[staffId])_shiftData[staffId]={};
+    if(pattern===''){delete _shiftData[staffId][date];}
+    else{_shiftData[staffId][date]=pattern;}
+    closeModal('st-modal');
+    renderShiftManagement();
+  }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+}
+
+// シフト印刷
+function printShift(){
+  var pats=getShiftPatterns();
+  var activeStaff=S.staff.filter(function(s){return _isStaffActive(s,_shiftYM);});
+  var parts=_shiftYM.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
+  var dim=new Date(y,m,0).getDate();
+  var dowNames=['日','月','火','水','木','金','土'];
+  var w=window.open('','_blank');
+  var html='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="google" content="notranslate"><title>シフト表 '+y+'年'+m+'月</title>';
+  html+='<style>body{font-family:"Noto Sans JP",sans-serif;font-size:10px;padding:10px}';
+  html+='h1{font-size:16px;text-align:center;margin-bottom:8px}';
+  html+='table{border-collapse:collapse;width:100%;table-layout:fixed}';
+  html+='th,td{border:1px solid #ccc;padding:3px 2px;text-align:center;overflow:hidden}';
+  html+='.pat{display:inline-block;color:#fff;padding:1px 3px;border-radius:3px;font-size:9px;font-weight:700}';
+  html+='.sun{color:#c62828}.sat{color:#1565c0}';
+  html+='@page{size:A3 landscape;margin:8mm}';
+  html+='@media print{button{display:none!important}}</style></head><body>';
+  html+='<h1>'+y+'年'+m+'月 シフト表</h1>';
+  // 凡例
+  html+='<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">';
+  pats.forEach(function(p){
+    html+='<span style="background:'+p.color+';color:#fff;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700">'+p.name+' '+p.startTime+'〜'+p.endTime+'</span>';
+  });
+  html+='</div>';
+  html+='<table><thead><tr><th style="width:60px">氏名</th>';
+  for(var d=1;d<=dim;d++){
+    var dow=new Date(y,m-1,d).getDay();
+    var cls=dow===0?'sun':dow===6?'sat':'';
+    html+='<th class="'+cls+'" style="font-size:9px"><div>'+d+'</div><div>'+dowNames[dow]+'</div></th>';
+  }
+  html+='<th style="width:30px">日数</th></tr></thead><tbody>';
+  activeStaff.forEach(function(s){
+    html+='<tr><td style="text-align:left;padding:3px 4px;font-weight:600">'+s.name+'</td>';
+    var cnt=0;
+    for(var d2=1;d2<=dim;d2++){
+      var ds=_shiftYM+'-'+String(d2).padStart(2,'0');
+      var dow2=new Date(y,m-1,d2).getDay();
+      var wkBg=dow2===0||dow2===6?'background:#faf6f2;':'';
+      var pat=(_shiftData[s.id]||{})[ds]||'';
+      var patObj=pats.find(function(p){return p.name===pat;});
+      if(patObj)cnt++;
+      html+='<td style="'+wkBg+'">';
+      if(patObj)html+='<span class="pat" style="background:'+patObj.color+'">'+patObj.name+'</span>';
+      else if(pat==='休')html+='<span style="color:#999;font-size:9px">休</span>';
+      html+='</td>';
+    }
+    html+='<td style="font-weight:700">'+cnt+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  html+='<script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script></body></html>';
+  w.document.write(html);w.document.close();
+}
+
+// シフトCSV出力
+function dlShiftCSV(){
+  var pats=getShiftPatterns();
+  var activeStaff=S.staff.filter(function(s){return _isStaffActive(s,_shiftYM);});
+  var parts=_shiftYM.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
+  var dim=new Date(y,m,0).getDate();
+  var dowNames=['日','月','火','水','木','金','土'];
+  var rows=[];
+  var hdr=['氏名'];
+  for(var d=1;d<=dim;d++){
+    var dow=new Date(y,m-1,d).getDay();
+    hdr.push(d+'('+dowNames[dow]+')');
+  }
+  hdr.push('出勤日数');
+  rows.push(hdr);
+  activeStaff.forEach(function(s){
+    var row=[s.name];
+    var cnt=0;
+    for(var d2=1;d2<=dim;d2++){
+      var ds=_shiftYM+'-'+String(d2).padStart(2,'0');
+      var pat=(_shiftData[s.id]||{})[ds]||'';
+      row.push(pat);
+      var patObj=pats.find(function(p){return p.name===pat;});
+      if(patObj)cnt++;
+    }
+    row.push(cnt);
+    rows.push(row);
+  });
+  var csv=rows.map(function(r){return r.join(',');}).join('\n');
+  var b=new Blob(['\uFEFF'+csv],{type:'text/csv'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(b);
+  a.download='シフト表_'+_shiftYM+'.csv';
+  a.click();
+}
+
 function renderTplList(){
   var el=document.getElementById('tpl-list');
   if(!el)return;
