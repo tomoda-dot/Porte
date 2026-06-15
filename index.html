@@ -7182,21 +7182,26 @@ async function autoApplyTodayShift(){
   if(!getSession())return;
   // 設定で無効化されていたらスキップ
   if(S.settings.shiftAutoApply==='off')return;
-  // 今日のシフトを取得
-  var shifts=await gas('getTodayShifts',td);
-  if(!shifts||shifts.length===0)return;
+  // 今月1日〜昨日までのシフトを対象（今日は打刻があるので除く）
   var pats=getShiftPatterns();
-  // 今日のスタッフ出欠を取得
-  var existing=await gas('getStaffAttendanceByDate',td);
   var applied=0;
-  for(var i=0;i<shifts.length;i++){
-    var sh=shifts[i];
+  var parts=ym.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
+  var dim=new Date(y,m,0).getDate();
+  // 今月の全シフトを取得
+  var allShifts=await gas('getShiftData',ym);
+  if(!allShifts||allShifts.length===0)return;
+  // 今月の全スタッフ出欠を取得
+  var allExisting=await gas('getStaffAttendance',ym);
+  for(var i=0;i<allShifts.length;i++){
+    var sh=allShifts[i];
+    // 今日以降はスキップ（今日の打刻を守る）
+    if(sh.date>=td)continue;
     if(!sh.pattern||sh.pattern==='休')continue;
     // パターン情報取得
     var pat=pats.find(function(p){return p.name===sh.pattern;});
     if(!pat)continue;
-    // 既に打刻済みならスキップ
-    var ex=existing.find(function(e){return String(e.staffId)===String(sh.staffId);});
+    // 既に打刻済み（startTimeあり）ならスキップ
+    var ex=allExisting.find(function(e){return String(e.staffId)===String(sh.staffId)&&e.date===sh.date;});
     if(ex&&ex.startTime)continue;
     // スタッフが在籍中か確認
     var s=S.staff.find(function(x){return String(x.id)===String(sh.staffId);});
@@ -7205,7 +7210,7 @@ async function autoApplyTodayShift(){
     try{
       await gas('upsertStaffAttendance',{
         staffId:sh.staffId,
-        date:td,
+        date:sh.date,
         startTime:pat.startTime||'',
         endTime:pat.endTime||'',
         breakMin:pat.breakMin||60,
