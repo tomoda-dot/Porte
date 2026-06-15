@@ -6,7 +6,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
 :root{--bg:#f5f0eb;--card:#fff;--pri:#3d5a3e;--pri-l:#5a7d5c;--acc:#c07830;--txt:#2c2c2c;--sub:#6b6b6b;--bdr:#e0d8d0;--hov:#f0ebe5;--red:#b33a3a;--grn:#3d7a3d;--shd:0 2px 12px rgba(0,0,0,.06)}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--txt);font-size:13px}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--txt);font-size:13px;overflow:hidden;height:100vh}
 input,select,textarea,button{font-family:inherit;font-size:13px}
 input,select,textarea{border:1.5px solid var(--bdr);border-radius:7px;padding:7px 10px;background:#fff;outline:none}
 input:focus,select:focus,textarea:focus{border-color:var(--pri)}
@@ -19,7 +19,7 @@ tr:hover td{background:var(--hov)}
 .bp{background:var(--pri);color:#fff}.ba{background:var(--acc);color:#fff}.br{background:var(--red);color:#fff}
 .bg{background:transparent;color:var(--pri);border:1.5px solid var(--bdr)}
 .badge{display:inline-block;padding:2px 9px;border-radius:11px;font-size:10px;font-weight:600;color:#fff}
-.app{display:flex;min-height:100vh}
+.app{display:flex;height:100vh;overflow:hidden}
 .side{width:200px;background:var(--pri);color:#fff;display:flex;flex-direction:column;flex-shrink:0}
 .side-hd{padding:16px 12px;border-bottom:1px solid rgba(255,255,255,.15);text-align:center;font-size:12px;font-weight:700;line-height:1.6}
 .side nav{flex:1;padding:4px 0}
