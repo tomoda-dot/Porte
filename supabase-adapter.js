@@ -161,6 +161,11 @@ async function gas(fn){
     case 'updateStaff': return _update('スタッフ',a1);
     case 'deleteStaff': return _del('スタッフ',a1);
 
+    // ── 有給取得記録 ──
+    case 'getPaidLeaveUsages': return _getFiltered('有給取得記録','staffId',a1);
+    case 'addPaidLeaveUsage': a1.id=_genId('pl');return _add('有給取得記録',a1);
+    case 'deletePaidLeaveUsage': return _del('有給取得記録',a1);
+
     // ── 作業種別 ──
     case 'getWorkTypes': return _getAll('作業種別');
     case 'addWorkType': a1.id=_genId('w');return _add('作業種別',a1);
