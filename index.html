@@ -5659,7 +5659,7 @@ async function renderPaidLeave(){
     sorted.forEach(function(u){
       h+='<tr><td>'+fmtDate(u.date)+'</td><td>'+u.days+'日</td><td>'+esc(u.reason||'-')+'</td>';
       h+='<td style="font-size:11px;color:var(--sub)">'+fmtDate(u.grantId)+'付与分</td>';
-      h+='<td><button onclick="deletePLUsage(''+u.id+'')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px">✕ 削除</button></td></tr>';
+      h+='<td><button onclick="deletePLUsage(\''+u.id+'\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px">✕ 削除</button></td></tr>';
     });
     h+='</tbody></table>';
   }
