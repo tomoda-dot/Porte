@@ -6907,7 +6907,9 @@ async function renderShiftManagement(){
   if(pats.length===0){
     h+='<span style="font-size:12px;color:#c62828;margin-left:8px">⚠ まず設定→勤務パターン管理でパターンを追加してください</span>';
   }
-  h+='<div style="margin-left:auto;display:flex;gap:8px">';
+  h+='<div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">';
+  h+='<button class="bp" onclick="openBulkShiftModal()" style="font-size:12px">⚡ 一括入力</button>';
+  h+='<button class="bg" onclick="copyPrevMonthShift()" style="font-size:12px">📋 前月コピー</button>';
   h+='<button class="bg" onclick="printShift()" style="font-size:12px">🖨 印刷</button>';
   h+='<button class="ba" onclick="dlShiftCSV()" style="font-size:12px">📥 CSV</button>';
   h+='</div></div>';
@@ -6979,6 +6981,197 @@ function shiftGoToday(){
   var n=new Date();_shiftYM=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
   renderShiftManagement();
 }
+// ─── 一括入力モーダル ───
+function openBulkShiftModal(){
+  var pats=getShiftPatterns();
+  var activeStaff=S.staff.filter(function(s){return _isStaffActive(s,_shiftYM);});
+  var parts=_shiftYM.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
+  var dowNames=['日','月','火','水','木','金','土'];
+
+  if(pats.length===0){cAlert('先に設定→勤務パターン管理でパターンを追加してください');return;}
+
+  var patOpts='<option value="">-- 選択 --</option>'+
+    pats.map(function(p){return'<option value="'+esc(p.name)+'">'+esc(p.name)+'</option>';}).join('')+
+    '<option value="休">休み</option>'+
+    '<option value="">（クリア）</option>';
+
+  var staffOpts='<option value="all">全スタッフ</option>'+
+    activeStaff.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('');
+
+  document.getElementById('st-modal').innerHTML=
+    '<div class="overlay" onclick="closeModal(\'st-modal\')">'+
+    '<div class="modal" style="width:500px;max-height:85vh;overflow-y:auto" onclick="event.stopPropagation()">'+
+    '<div class="modal-hd"><h3>⚡ 一括入力</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>'+
+    '<p style="font-size:12px;color:var(--sub);margin-bottom:16px">'+y+'年'+m+'月のシフトを一括で設定します。</p>'+
+
+    // ── ① 曜日単位 ──
+    '<div style="border:1px solid var(--bdr);border-radius:8px;padding:14px;margin-bottom:12px">'+
+    '<div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--pri)">① 曜日単位で設定</div>'+
+    '<div class="grid2" style="margin-bottom:8px">'+
+      '<div class="field"><label>対象スタッフ</label><select id="bulk-dow-staff" style="width:100%">'+staffOpts+'</select></div>'+
+      '<div class="field"><label>パターン</label><select id="bulk-dow-pat" style="width:100%">'+patOpts+'</select></div>'+
+    '</div>'+
+    '<div class="field"><label>曜日（複数選択可）</label>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'+
+      dowNames.map(function(d,i){
+        var c=i===0?'#c62828':i===6?'#1565c0':'var(--pri)';
+        return'<label style="display:flex;align-items:center;gap:3px;font-size:13px;cursor:pointer">'+
+          '<input type="checkbox" class="bulk-dow-cb" value="'+i+'"'+(i>=1&&i<=5?' checked':'')+'>'+
+          '<span style="color:'+c+';font-weight:600">'+d+'</span></label>';
+      }).join('')+
+      '</div></div>'+
+    '<div style="text-align:right"><button class="bp" onclick="execBulkDow()" style="font-size:12px;padding:6px 18px">適用</button></div>'+
+    '</div>'+
+
+    // ── ② スタッフ単位 ──
+    '<div style="border:1px solid var(--bdr);border-radius:8px;padding:14px;margin-bottom:12px">'+
+    '<div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--pri)">② スタッフ単位で設定</div>'+
+    '<div class="grid2" style="margin-bottom:8px">'+
+      '<div class="field"><label>スタッフ</label><select id="bulk-staff-sel" style="width:100%">'+staffOpts+'</select></div>'+
+      '<div class="field"><label>パターン</label><select id="bulk-staff-pat" style="width:100%">'+patOpts+'</select></div>'+
+    '</div>'+
+    '<div class="field"><label>期間</label>'+
+      '<div style="display:flex;gap:8px;align-items:center">'+
+        '<input type="date" id="bulk-staff-from" value="'+_shiftYM+'-01" style="width:160px">'+
+        '<span>〜</span>'+
+        '<input type="date" id="bulk-staff-to" value="'+_shiftYM+'-'+String(new Date(parseInt(parts[0]),parseInt(parts[1]),0).getDate()).padStart(2,'0')+'" style="width:160px">'+
+      '</div></div>'+
+    '<div class="field">'+
+      '<label><input type="checkbox" id="bulk-staff-skip-holiday" checked> 土日を除く</label>'+
+    '</div>'+
+    '<div style="text-align:right"><button class="bp" onclick="execBulkStaff()" style="font-size:12px;padding:6px 18px">適用</button></div>'+
+    '</div>'+
+
+    '<div class="btns"><button class="bg" onclick="closeModal(\'st-modal\')">閉じる</button></div>'+
+    '</div></div>';
+}
+
+async function execBulkDow(){
+  var patName=document.getElementById('bulk-dow-pat').value;
+  var staffSel=document.getElementById('bulk-dow-staff').value;
+  var dows=[];
+  document.querySelectorAll('.bulk-dow-cb:checked').forEach(function(cb){dows.push(parseInt(cb.value));});
+  if(dows.length===0){await cAlert('曜日を選択してください');return;}
+
+  var parts=_shiftYM.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
+  var dim=new Date(y,m,0).getDate();
+  var activeStaff=S.staff.filter(function(s){return _isStaffActive(s,_shiftYM);});
+  var targets=staffSel==='all'?activeStaff:[S.staff.find(function(s){return s.id===staffSel;})].filter(Boolean);
+
+  if(!lockUI())return;
+  try{
+    var saves=[];
+    targets.forEach(function(s){
+      for(var d=1;d<=dim;d++){
+        var ds=_shiftYM+'-'+String(d).padStart(2,'0');
+        var dow=new Date(y,m-1,d).getDay();
+        if(dows.indexOf(dow)>=0){
+          saves.push({staffId:s.id,date:ds,pattern:patName});
+        }
+      }
+    });
+    for(var i=0;i<saves.length;i++){
+      await gas('saveShiftCell',saves[i]);
+      if(!_shiftData[saves[i].staffId])_shiftData[saves[i].staffId]={};
+      if(saves[i].pattern===''){delete _shiftData[saves[i].staffId][saves[i].date];}
+      else{_shiftData[saves[i].staffId][saves[i].date]=saves[i].pattern;}
+    }
+    toast('✅ '+saves.length+'件を設定しました');
+    closeModal('st-modal');
+    renderShiftManagement();
+  }catch(e){await cAlert('エラー: '+e);}finally{unlockUI();}
+}
+
+async function execBulkStaff(){
+  var patName=document.getElementById('bulk-staff-pat').value;
+  var staffSel=document.getElementById('bulk-staff-sel').value;
+  var from=document.getElementById('bulk-staff-from').value;
+  var to=document.getElementById('bulk-staff-to').value;
+  var skipHoliday=document.getElementById('bulk-staff-skip-holiday').checked;
+  if(!from||!to){await cAlert('期間を入力してください');return;}
+  if(from>to){await cAlert('開始日が終了日より後になっています');return;}
+
+  var activeStaff=S.staff.filter(function(s){return _isStaffActive(s,_shiftYM);});
+  var targets=staffSel==='all'?activeStaff:[S.staff.find(function(s){return s.id===staffSel;})].filter(Boolean);
+
+  if(!lockUI())return;
+  try{
+    var saves=[];
+    var cur=new Date(from);var end=new Date(to);
+    while(cur<=end){
+      var ds=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+      var dow=cur.getDay();
+      if(!skipHoliday||(dow!==0&&dow!==6)){
+        targets.forEach(function(s){
+          saves.push({staffId:s.id,date:ds,pattern:patName});
+        });
+      }
+      cur.setDate(cur.getDate()+1);
+    }
+    for(var i=0;i<saves.length;i++){
+      await gas('saveShiftCell',saves[i]);
+      if(!_shiftData[saves[i].staffId])_shiftData[saves[i].staffId]={};
+      if(saves[i].pattern===''){delete _shiftData[saves[i].staffId][saves[i].date];}
+      else{_shiftData[saves[i].staffId][saves[i].date]=saves[i].pattern;}
+    }
+    toast('✅ '+saves.length+'件を設定しました');
+    closeModal('st-modal');
+    renderShiftManagement();
+  }catch(e){await cAlert('エラー: '+e);}finally{unlockUI();}
+}
+
+// ─── 前月コピー ───
+async function copyPrevMonthShift(){
+  var parts=_shiftYM.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
+  var prevM=m-1,prevY=y;
+  if(prevM<1){prevM=12;prevY--;}
+  var prevYM=prevY+'-'+String(prevM).padStart(2,'0');
+
+  if(!await cConfirm(prevY+'年'+prevM+'月のシフトを'+y+'年'+m+'月にコピーしますか？\n\n※既存のシフトは上書きされます。'))return;
+
+  if(!lockUI())return;
+  try{
+    // 前月シフト取得
+    var prevRaw=await gas('getShiftData',prevYM);
+    if(!prevRaw||prevRaw.length===0){await cAlert('前月のシフトデータがありません');return;}
+
+    var prevDim=new Date(prevY,prevM,0).getDate();
+    var curDim=new Date(y,m,0).getDate();
+
+    // 前月の「日→曜日→パターン」マップを作成
+    var prevDowMap={};// {staffId: {dow: [patterns]}}
+    prevRaw.forEach(function(r){
+      var dow=new Date(r.date).getDay();
+      if(!prevDowMap[r.staffId])prevDowMap[r.staffId]={};
+      if(!prevDowMap[r.staffId][dow])prevDowMap[r.staffId][dow]=[];
+      prevDowMap[r.staffId][dow].push(r.pattern);
+    });
+
+    // 各スタッフの曜日ごとの最頻パターンを取得
+    var saves=[];
+    for(var d=1;d<=curDim;d++){
+      var ds=_shiftYM+'-'+String(d).padStart(2,'0');
+      var dow=new Date(y,m-1,d).getDay();
+      Object.keys(prevDowMap).forEach(function(staffId){
+        var dowPats=prevDowMap[staffId][dow]||[];
+        if(dowPats.length===0)return;
+        // 最頻値を使う
+        var freq={};dowPats.forEach(function(p){freq[p]=(freq[p]||0)+1;});
+        var best=Object.keys(freq).sort(function(a,b){return freq[b]-freq[a];})[0];
+        if(best)saves.push({staffId:staffId,date:ds,pattern:best});
+      });
+    }
+
+    for(var i=0;i<saves.length;i++){
+      await gas('saveShiftCell',saves[i]);
+      if(!_shiftData[saves[i].staffId])_shiftData[saves[i].staffId]={};
+      _shiftData[saves[i].staffId][saves[i].date]=saves[i].pattern;
+    }
+    toast('✅ 前月シフトをコピーしました（'+saves.length+'件）');
+    renderShiftManagement();
+  }catch(e){await cAlert('コピー失敗: '+e);}finally{unlockUI();}
+}
+
 
 // セルクリックでパターン選択
 function openShiftCell(staffId,date){
