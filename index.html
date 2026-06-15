@@ -423,6 +423,40 @@ async function renderDashboard(c){
   });
   qualAlertStaff.sort(function(a,b){return a.expires<b.expires?-1:1;});
 
+  // 有給付与日が近いスタッフ（30日以内）
+  var paidLeaveAlerts=[];
+  var steps=[6,18,30,42,54,66,78];
+  S.staff.forEach(function(s){
+    if(!s.startDate||!_isStaffActive(s,curM))return;
+    var sd=new Date(s.startDate);
+    var dDate=new Date(d);
+    // 次回付与日を探す（過去未来問わず直近のもの）
+    var nextGrant=null,nextDays=0;
+    for(var si=0;si<steps.length;si++){
+      var gd=new Date(sd);gd.setMonth(gd.getMonth()+steps[si]);
+      var diff2=(gd-dDate)/(1000*60*60*24);
+      if(diff2>=0&&diff2<=30){
+        nextGrant=gd.getFullYear()+'-'+String(gd.getMonth()+1).padStart(2,'0')+'-'+String(gd.getDate()).padStart(2,'0');
+        nextDays=calcGrantDays(si,Number(s.weeklyDays)||0);
+        paidLeaveAlerts.push({staffName:s.name,grantDate:nextGrant,days:nextDays,diff:Math.round(diff2)});
+        break;
+      }
+      // 6年6ヶ月以降は毎年
+      if(si===6){
+        for(var j=1;j<=10;j++){
+          var gd2=new Date(gd);gd2.setFullYear(gd2.getFullYear()+j);
+          var diff3=(gd2-dDate)/(1000*60*60*24);
+          if(diff3>=0&&diff3<=30){
+            var ngs2=gd2.getFullYear()+'-'+String(gd2.getMonth()+1).padStart(2,'0')+'-'+String(gd2.getDate()).padStart(2,'0');
+            paidLeaveAlerts.push({staffName:s.name,grantDate:ngs2,days:20,diff:Math.round(diff3)});
+            break;
+          }
+        }
+      }
+    }
+  });
+  paidLeaveAlerts.sort(function(a,b){return a.diff-b.diff;});
+
   // 新規利用者（今月利用開始の人）
   var newUsers=S.users.filter(function(u){return u.enrollDate&&u.enrollDate.indexOf(curM)===0;});
   newUsers.sort(function(a,b){return a.enrollDate<b.enrollDate?-1:1;});
@@ -467,16 +501,20 @@ async function renderDashboard(c){
     '<div class="stat" style="border-color:var(--acc)"><div class="stat-l">🍱本日のお弁当</div><div class="stat-v">'+bc+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div>'+
     '<div class="stat" style="border-color:#1565c0"><div class="stat-l">🚐本日の送迎</div><div class="stat-v">'+pc+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div></div>'+
     '<div class="card"><div class="card-hd"><span class="card-t">本日の予定者</span></div><div id="ds-s">読み込み中...</div></div>'+
-    // スタッフ資格期限アラート（最優先）
+    // スタッフ資格期限アラート（受給者証より優先表示）
     (qualAlertStaff.length>0?'<div class="card" style="margin-bottom:12px;border-left:4px solid #7b1fa2;background:#f3e5f5;cursor:pointer" onclick="var b=this.querySelector(\'.ds-body\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.ds-arrow\').textContent=b.style.display===\'none\'?\'▶\':\'▼\'"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">🎓 スタッフ資格期限アラート <span style="font-size:12px;color:#7b1fa2;font-weight:400">（'+qualAlertStaff.length+'件）</span></h3><span class="ds-arrow" style="font-size:12px;color:var(--sub)">▼</span></div><div class="ds-body" onclick="event.stopPropagation()" style="margin-top:10px"><table style="font-size:12px"><thead><tr><th>スタッフ名</th><th>資格・免許</th><th>有効期限</th><th>状況</th></tr></thead><tbody>'+
       qualAlertStaff.map(function(q){
-        var statusLabel=q.isExpired?
-          '<span style="color:#c62828;font-weight:700">⛔ 期限切れ</span>':
+        var lbl=q.isExpired?'<span style="color:#c62828;font-weight:700">⛔ 期限切れ</span>':
           q.diff<=30?'<span style="color:#c62828;font-weight:700">🔴 残'+q.diff+'日</span>':
           '<span style="color:#e65100;font-weight:700">🟡 残'+q.diff+'日</span>';
-        return'<tr><td style="font-weight:600">'+esc(q.staffName)+'</td><td>'+esc(q.qualName)+'</td><td>'+fmtDate(q.expires)+'</td><td>'+statusLabel+'</td></tr>';
+        return'<tr><td style="font-weight:600">'+esc(q.staffName)+'</td><td>'+esc(q.qualName)+'</td><td>'+fmtDate(q.expires)+'</td><td>'+lbl+'</td></tr>';
       }).join('')+
-      '</tbody></table></div></div>':'');+
+      '</tbody></table></div></div>':'')+
+    // 有給付与が近いスタッフ
+    (paidLeaveAlerts.length>0?'<div class="card" style="margin-bottom:12px;border-left:4px solid #0288d1;background:#e1f5fe;cursor:pointer" onclick="var b=this.querySelector(\'.ds-body\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.ds-arrow\').textContent=b.style.display===\'none\'?\'▶\':\'▼\'"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">📅 有給付与日が近いスタッフ <span style="font-size:12px;color:#0288d1;font-weight:400">（'+paidLeaveAlerts.length+'名・30日以内）</span></h3><span class="ds-arrow" style="font-size:12px;color:var(--sub)">▼</span></div><div class="ds-body" onclick="event.stopPropagation()" style="margin-top:10px"><table style="font-size:12px"><thead><tr><th>スタッフ名</th><th>付与日</th><th>付与日数</th><th>残り</th></tr></thead><tbody>'+
+      paidLeaveAlerts.map(function(p){
+        return'<tr><td style="font-weight:600">'+esc(p.staffName)+'</td><td>'+fmtDate(p.grantDate)+'</td><td>'+p.days+'日</td><td style="font-weight:700;color:#0288d1">'+p.diff+'日後</td></tr>';
+      }).join('')+'</tbody></table></div></div>':'')+
     // 受給者証更新（最優先）
     (certExpireUsers.length>0?'<div class="card" style="margin-bottom:12px;border-left:4px solid #c62828;background:#fce4ec;cursor:pointer" onclick="var b=this.querySelector(\'.ds-body\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.ds-arrow\').textContent=b.style.display===\'none\'?\'▶\':\'▼\'"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">🔔 受給者証更新のお知らせ <span style="font-size:12px;color:#c62828;font-weight:400">（'+certExpireUsers.length+'件）</span></h3><span class="ds-arrow" style="font-size:12px;color:var(--sub)">▼</span></div><div class="ds-body" onclick="event.stopPropagation()" style="margin-top:10px"><table style="font-size:12px"><thead><tr><th>氏名</th><th>満了日</th><th>状況</th></tr></thead><tbody>'+
         certExpireUsers.map(function(ce){return'<tr><td style="font-weight:600">'+esc(ce.name)+'</td><td>'+fmtDate(ce.endDate)+'</td><td style="font-weight:700;color:'+(ce.isThisMonth?'#c62828':'#e65100')+'">'+(ce.isThisMonth?'⚠ 今月満了':'📋 来月満了')+'</td></tr>';}).join('')+
@@ -5141,13 +5179,19 @@ async function dlCSV(){try{
 var _staffTab='list',_staffYM=null;
 function renderStaff(c){
   if(!_staffYM){var d=new Date();_staffYM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  function stBtn(id,tab,icon,label){
+    var sel=_staffTab===tab;
+    return'<button id="'+id+'" onclick="_staffTab=\''+tab+'\';renderStaff(document.getElementById(\'content\'))" style="padding:8px 20px;border:none;background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(sel?'var(--pri)':'#999')+';border-bottom:3px solid '+(sel?'var(--pri)':'transparent')+'">'+icon+' '+label+'</button>';
+  }
   c.innerHTML='<h2 style="margin-bottom:12px">👔 スタッフ管理</h2>'+
     '<div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0d6cf">'+
-    '<button id="stab-list" class="'+(_staffTab==='list'?'act':'')+'" onclick="_staffTab=\'list\';renderStaff(document.getElementById(\'content\'))" style="padding:8px 20px;border:none;background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(_staffTab==='list'?'var(--pri)':'#999')+';border-bottom:3px solid '+(_staffTab==='list'?'var(--pri)':'transparent')+'">👥 スタッフ一覧</button>'+
-    '<button id="stab-att" class="'+(_staffTab==='attendance'?'act':'')+'" onclick="_staffTab=\'attendance\';renderStaff(document.getElementById(\'content\'))" style="padding:8px 20px;border:none;background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(_staffTab==='attendance'?'var(--pri)':'#999')+';border-bottom:3px solid '+(_staffTab==='attendance'?'var(--pri)':'transparent')+'">📊 勤怠実績・常勤換算</button>'+
+    stBtn('stab-list','list','👥','スタッフ一覧')+
+    stBtn('stab-att','attendance','📊','勤怠実績・常勤換算')+
+    stBtn('stab-paid','paidLeave','📅','有給管理')+
     '</div><div id="staff-content"></div><div id="st-modal"></div>';
   if(_staffTab==='list')renderStaffList();
-  else renderStaffAttendance();
+  else if(_staffTab==='attendance')renderStaffAttendance();
+  else renderPaidLeave();
 }
 function renderStaffList(){
   document.getElementById('staff-content').innerHTML='<div style="text-align:right;margin-bottom:8px"><button class="bp" onclick="openSM()">＋ 新規登録</button></div>'+
@@ -5175,37 +5219,33 @@ function renderSTbl(){
   var retired=S.staff.filter(function(s){return!_isStaffActive(s,thisYM);});
   var rows='';
   if(active.length===0&&retired.length===0){
-    rows='<tr><td colspan="5" style="text-align:center;color:var(--sub);padding:28px">スタッフが登録されていません</td></tr>';
+    rows='<tr><td colspan="7" style="text-align:center;color:var(--sub);padding:28px">スタッフが登録されていません</td></tr>';
   }
   active.forEach(function(s){rows+=_staffRow(s);});
   if(retired.length>0){
-    rows+='<tr><td colspan="5" style="background:#f5f0ea;color:var(--sub);font-size:11px;padding:6px 10px">入職前・退職済（'+retired.length+'名）</td></tr>';
+    rows+='<tr><td colspan="7" style="background:#f5f0ea;color:var(--sub);font-size:11px;padding:6px 10px">入職前・退職済（'+retired.length+'名）</td></tr>';
     retired.forEach(function(s){rows+=_staffRow(s,true);});
   }
   document.getElementById('st-tb').innerHTML=rows;
 }
 function _staffRow(s,isRetired){
   var cnt=S.users.filter(function(u){return u.staffId===s.id;}).length;
-  var style=isRetired?'opacity:0.5':'';
-  // 資格期限チェック
+  var st=isRetired?'opacity:0.5':'';
   var quals=[];try{quals=JSON.parse(s.qualifications||'[]');}catch(e){}
   var td=today();
   var qualDisp='<span style="color:#ccc;font-size:11px">なし</span>';
   if(quals.length>0){
     var parts=quals.map(function(q){
-      var exp=q.expires||'';
-      var icon='';var style2='';
-      if(exp){
-        var diff=(new Date(exp)-new Date(td))/(1000*60*60*24);
-        if(diff<0){icon='🔴';style2='color:#c62828;font-weight:700';}
-        else if(diff<=90){icon='🟡';style2='color:#e65100;font-weight:700';}
-        else{icon='🟢';style2='';}
-      }
-      return'<div style="font-size:11px;'+style2+'">'+icon+' '+esc(q.name)+(exp?' ('+fmtDate(exp)+')':'')+'</div>';
+      var exp=q.expires||'';var icon='';var st2='';
+      if(exp){var diff=(new Date(exp)-new Date(td))/(1000*60*60*24);
+        if(diff<0){icon='🔴';st2='color:#c62828;font-weight:700';}
+        else if(diff<=90){icon='🟡';st2='color:#e65100;font-weight:700';}
+        else{icon='🟢';st2='';}}
+      return'<div style="font-size:11px;'+st2+'">'+icon+' '+esc(q.name)+(exp?' ('+fmtDate(exp)+')':'')+'</div>';
     });
     qualDisp=parts.join('');
   }
-  return'<tr style="'+style+';cursor:pointer" onclick=\'openSM('+JSON.stringify(s).replace(/\'/g,"&#39;")+')\'>'+
+  return'<tr style="'+st+';cursor:pointer" onclick=\'openSM('+JSON.stringify(s).replace(/\'/g,"&#39;")+')\'>'+
     '<td style="font-weight:600">'+esc(s.name)+'</td>'+
     '<td>'+esc(s.role||'')+'</td>'+
     '<td style="font-size:11px">'+esc(s.employment||'-')+'</td>'+
@@ -5338,26 +5378,23 @@ function openSM(s){
   s=s||{name:'',role:'',employment:'',loginId:'',password:'',startDate:'',endDate:'',qualifications:''};
   var isE=!!s.id;
   var roles=['サービス管理責任者','生活支援員','職業指導員','管理者','その他'];
-  var employments=['正社員','パート・アルバイト','非常勤','業務委託','その他'];
+  var empls=['正社員','パート・アルバイト','非常勤','業務委託','その他'];
   var roleOpts=roles.map(function(r){return'<option'+(s.role===r?' selected':'')+'>'+r+'</option>';}).join('');
-  var empOpts=employments.map(function(e){return'<option'+(s.employment===e?' selected':'')+'>'+e+'</option>';}).join('');
-  // 資格データのパース
-  var quals=[];try{quals=JSON.parse(s.qualifications||'[]');}catch(e){quals=[];}
-  // 資格行のHTML生成
-  function qualRow(i,q){q=q||{name:'',acquired:'',expires:''};
-    return '<tr id="sq-row-'+i+'">'+
+  var empOpts=empls.map(function(e){return'<option'+(s.employment===e?' selected':'')+'>'+e+'</option>';}).join('');
+  var quals=[];try{quals=JSON.parse(s.qualifications||'[]');}catch(e){}
+  function qRow(i,q){q=q||{name:'',acquired:'',expires:''};
+    return'<tr id="sq-row-'+i+'">'+
       '<td style="padding:3px 4px"><input id="sq-name-'+i+'" value="'+esc(q.name)+'" placeholder="例: 社会福祉士" style="width:100%;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:3px 6px"></td>'+
       '<td style="padding:3px 4px"><input type="date" id="sq-acq-'+i+'" value="'+(q.acquired||'')+'" style="width:100%;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:3px 4px"></td>'+
       '<td style="padding:3px 4px"><input type="date" id="sq-exp-'+i+'" value="'+(q.expires||'')+'" style="width:100%;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:3px 4px"></td>'+
       '<td style="padding:3px 4px;text-align:center"><button onclick="document.getElementById(\'sq-row-'+i+'\').remove()" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:14px">✕</button></td></tr>';
   }
-  var qualRows='';for(var qi=0;qi<Math.max(quals.length,2);qi++){qualRows+=qualRow(qi,quals[qi]);}
+  var qRows='';for(var qi=0;qi<Math.max(quals.length,2);qi++)qRows+=qRow(qi,quals[qi]);
 
   document.getElementById('st-modal').innerHTML=
     '<div class="overlay" onclick="closeModal(\'st-modal\')">'+
     '<div class="modal" style="width:560px;max-height:85vh;overflow-y:auto" onclick="event.stopPropagation()">'+
     '<div class="modal-hd"><h3>スタッフ'+(isE?'編集':'登録')+'</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>'+
-
     '<div class="section-title" style="margin-top:0">基本情報</div>'+
     '<div class="grid2">'+
       '<div class="field"><label>氏名 *</label><input id="sm-n" value="'+esc(s.name)+'" style="width:100%"></div>'+
@@ -5371,32 +5408,30 @@ function openSM(s){
       '<div class="field"><label>入職日</label><input type="date" id="sm-sd" value="'+(s.startDate||'')+'" style="width:100%"></div>'+
       '<div class="field"><label>退職日</label><input type="date" id="sm-ed" value="'+(s.endDate||'')+'" style="width:100%"></div>'+
     '</div>'+
-
+    '<div class="grid2">'+
+      '<div class="field"><label>週所定労働日数 <span style="font-size:10px;color:var(--sub)">（パート比例付与用）</span></label>'+
+        '<select id="sm-wdays" style="width:100%"><option value="">-- 選択（正社員は不要）--</option>'+
+        [1,2,3,4].map(function(n){var sel=(s.weeklyDays&&Number(s.weeklyDays)===n)?' selected':'';return'<option value="'+n+'"'+sel+'>'+n+'日</option>';}).join('')+'</select>'+
+      '</div>'+
+      '<div></div>'+
+    '</div>'+
     '<div class="section-title">資格・免許</div>'+
-    '<div style="overflow-x:auto">'+
-    '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
-    '<thead><tr style="background:#f5f5f5">'+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f5f5">'+
       '<th style="padding:5px 8px;border:1px solid #ddd;text-align:left">資格・免許名</th>'+
       '<th style="padding:5px 8px;border:1px solid #ddd;width:110px">取得日</th>'+
       '<th style="padding:5px 8px;border:1px solid #ddd;width:110px">有効期限</th>'+
       '<th style="padding:5px 8px;border:1px solid #ddd;width:36px"></th>'+
-    '</tr></thead>'+
-    '<tbody id="sq-body">'+qualRows+'</tbody>'+
-    '</table></div>'+
-    '<div style="text-align:right;margin-top:6px">'+
-      '<button onclick="addQualRow()" style="font-size:11px;padding:3px 12px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer">＋ 資格を追加</button>'+
-    '</div>'+
-
+    '</tr></thead><tbody id="sq-body">'+qRows+'</tbody></table></div>'+
+    '<div style="text-align:right;margin-top:6px"><button onclick="addQualRow()" style="font-size:11px;padding:3px 12px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer">＋ 資格を追加</button></div>'+
     '<div class="section-title">ログイン情報</div>'+
     '<div class="grid2">'+
-      '<div class="field"><label>ログインID</label><input id="sm-lid" value="'+esc(s.loginId||'')+'" style="width:100%" placeholder="ログイン用ID"></div>'+
+      '<div class="field"><label>ログインID</label><input id="sm-lid" value="'+esc(s.loginId||'')+'" style="width:100%"></div>'+
       '<div class="field"><label>パスワード</label><input type="text" id="sm-pwd" value="'+esc(s.password||'')+'" style="width:100%"></div>'+
     '</div>'+
-
     '<div class="btns" style="border-top:1px solid #eee;padding-top:12px;margin-top:12px">'+
     (isE?'<button style="background:#c62828;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px" onclick="delS(\''+s.id+'\')">🗑️ 削除</button>':'')+
     '<button class="bg" onclick="closeModal(\'st-modal\')">取消</button>'+
-    '<button class="bp" onclick="saveS(\''+(s.id||'')+'\')">保存</button></div>'+
+    '<button class="bp" onclick="saveS(\''+(s.id||'')+'\')" >保存</button></div>'+
     '</div></div>';
 }
 
@@ -5419,7 +5454,7 @@ function collectQuals(){
     var n=document.getElementById('sq-name-'+i);
     var a=document.getElementById('sq-acq-'+i);
     var e=document.getElementById('sq-exp-'+i);
-    if(n&&n.value){result.push({name:n.value,acquired:a?a.value:'',expires:e?e.value:''});}
+    if(n&&n.value)result.push({name:n.value,acquired:a?a.value:'',expires:e?e.value:''});
   }
   return result;
 }
@@ -5428,6 +5463,7 @@ async function saveS(id){if(!lockUI())return;
     name:document.getElementById('sm-n').value,
     role:document.getElementById('sm-r').value,
     employment:(document.getElementById('sm-emp')?document.getElementById('sm-emp').value:''),
+    weeklyDays:(document.getElementById('sm-wdays')?document.getElementById('sm-wdays').value:''),
     startDate:document.getElementById('sm-sd').value,
     endDate:document.getElementById('sm-ed').value,
     loginId:document.getElementById('sm-lid').value,
@@ -5442,6 +5478,271 @@ async function saveS(id){if(!lockUI())return;
   }catch(e){await cAlert('失敗: '+e);}finally{unlockUI();}
 }
 async function delS(id){if(!await cConfirm('削除しますか？'))return;try{await gas('deleteStaff',id);S.staff=await gas('getStaff');renderStaff(document.getElementById('content'));}catch(e){await cAlert('失敗');}}
+
+// ═══ 有給管理（第17条準拠） ═══
+
+// 付与日数テーブル（正社員・非常勤：週5日以上）
+var PAID_LEAVE_TABLE=[
+  {months:6, days:10},{months:18,days:11},{months:30,days:12},
+  {months:42,days:14},{months:54,days:16},{months:66,days:18},{months:78,days:20}
+];
+
+// 比例付与テーブル（パート：週所定日数別）
+var PAID_LEAVE_PART={
+  4:[7,8,9,10,12,13,15],
+  3:[5,6,6,8,9,10,11],
+  2:[3,4,4,5,6,6,7],
+  1:[1,2,2,2,3,3,3]
+};
+
+// 勤続月数を計算（入職日から指定日まで）
+function calcTenureMonths(startDate, targetDate){
+  var s=new Date(startDate), t=new Date(targetDate);
+  return (t.getFullYear()-s.getFullYear())*12+(t.getMonth()-s.getMonth());
+}
+
+// 付与ステップのインデックスを返す（-1なら未到達）
+function getPaidLeaveStepIndex(tenureMonths){
+  var steps=[6,18,30,42,54,66,78];
+  for(var i=steps.length-1;i>=0;i--){
+    if(tenureMonths>=steps[i])return i;
+  }
+  return -1;
+}
+
+// 付与日数を計算（weeklyDays: 空または5以上→標準、1-4→比例）
+function calcGrantDays(stepIndex, weeklyDays){
+  if(stepIndex<0)return 0;
+  var wd=Number(weeklyDays)||0;
+  if(wd>=1&&wd<=4&&PAID_LEAVE_PART[wd]){
+    return PAID_LEAVE_PART[wd][stepIndex];
+  }
+  return PAID_LEAVE_TABLE[stepIndex].days;
+}
+
+// 入職日から全付与履歴を生成（有効期限2年）
+function generateGrantHistory(s){
+  if(!s.startDate)return[];
+  var result=[];
+  var steps=[6,18,30,42,54,66,78];
+  var sd=new Date(s.startDate);
+  var tdStr=today();
+  var wd=Number(s.weeklyDays)||0;
+
+  for(var i=0;i<steps.length;i++){
+    var grantDate=new Date(sd);
+    grantDate.setMonth(grantDate.getMonth()+steps[i]);
+    var grantStr=grantDate.getFullYear()+'-'+String(grantDate.getMonth()+1).padStart(2,'0')+'-'+String(grantDate.getDate()).padStart(2,'0');
+    // 付与日が今日以降も含めて表示（付与予定として）
+    var days=calcGrantDays(i,wd);
+    var expDate=new Date(grantDate);
+    expDate.setFullYear(expDate.getFullYear()+2);
+    var expStr=expDate.getFullYear()+'-'+String(expDate.getMonth()+1).padStart(2,'0')+'-'+String(expDate.getDate()).padStart(2,'0');
+    var isFuture=grantStr>tdStr;
+    var isExpired=expStr<tdStr;
+    result.push({
+      step:i,months:steps[i],grantDate:grantStr,days:days,
+      expDate:expStr,isFuture:isFuture,isExpired:isExpired
+    });
+    // 6年6ヶ月以降は毎年付与（最大5年分先まで表示）
+    if(i===6){
+      for(var j=1;j<=5;j++){
+        var nextGrant=new Date(grantDate);
+        nextGrant.setFullYear(nextGrant.getFullYear()+j);
+        var ngs=nextGrant.getFullYear()+'-'+String(nextGrant.getMonth()+1).padStart(2,'0')+'-'+String(nextGrant.getDate()).padStart(2,'0');
+        var nge=new Date(nextGrant);nge.setFullYear(nge.getFullYear()+2);
+        var nges=nge.getFullYear()+'-'+String(nge.getMonth()+1).padStart(2,'0')+'-'+String(nge.getDate()).padStart(2,'0');
+        result.push({step:6,months:steps[6]+(j*12),grantDate:ngs,days:20,
+          expDate:nges,isFuture:ngs>tdStr,isExpired:nges<tdStr});
+      }
+      break;
+    }
+  }
+  return result;
+}
+
+// 有効な付与の残日数を計算（取得記録を加味）
+function calcPaidLeaveBalance(grants, usages){
+  var tdStr=today();
+  var balance=0;
+  grants.forEach(function(g){
+    if(g.isFuture)return; // 未付与
+    if(g.isExpired)return; // 期限切れ（残日数0）
+    // この付与分から差し引かれた取得日数を計算
+    var used=0;
+    usages.forEach(function(u){
+      if(u.grantId===g.grantDate){used+=Number(u.days)||0;}
+    });
+    balance+=Math.max(0,g.days-used);
+  });
+  return balance;
+}
+
+// 有給管理画面
+var _plStaffId='';
+var _plUsages={}; // {staffId: [{id,date,days,reason,grantId}]}
+
+async function renderPaidLeave(){
+  var el=document.getElementById('staff-content');
+  var activeStaff=S.staff.filter(function(s){return _isStaffActive(s,today().slice(0,7));});
+
+  if(!_plStaffId&&activeStaff.length>0)_plStaffId=activeStaff[0].id;
+  var s=S.staff.find(function(x){return x.id===_plStaffId;})||activeStaff[0];
+
+  // 取得記録をロード（キャッシュ）
+  if(s&&!_plUsages[s.id]){
+    try{_plUsages[s.id]=await gas('getPaidLeaveUsages',s.id)||[];}catch(e){_plUsages[s.id]=[];}
+  }
+
+  var h='<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">';
+  h+='<select id="pl-staff-sel" onchange="_plStaffId=this.value;renderPaidLeave()" style="width:200px;font-size:13px;padding:6px">';
+  activeStaff.forEach(function(x){
+    h+='<option value="'+x.id+'"'+(x.id===_plStaffId?' selected':'')+'>'+esc(x.name)+'</option>';
+  });
+  h+='</select>';
+  if(s){
+    var grants=generateGrantHistory(s);
+    var usages=_plUsages[s.id]||[];
+    var balance=calcPaidLeaveBalance(grants,usages);
+    h+='<div style="background:var(--pri);color:#fff;padding:6px 20px;border-radius:20px;font-size:15px;font-weight:700">残 '+balance+' 日</div>';
+    h+='<button class="ba" onclick="openPLUsageModal()" style="font-size:12px">＋ 取得を記録</button>';
+    h+='<button class="bg" onclick="dlPaidLeaveCSV()" style="font-size:12px">📥 CSV出力</button>';
+  }
+  h+='</div>';
+
+  if(!s){el.innerHTML=h+'<div class="card" style="padding:20px;color:var(--sub);text-align:center">スタッフを選択してください</div>';return;}
+
+  var grants=generateGrantHistory(s);
+  var usages=_plUsages[s.id]||[];
+  var td=today();
+  var wd=Number(s.weeklyDays)||0;
+
+  // 付与履歴カード
+  h+='<div class="card" style="margin-bottom:16px">';
+  h+='<div class="card-hd"><span class="card-t">📋 付与履歴</span>';
+  h+='<span style="font-size:12px;color:var(--sub)">入職日: '+fmtDate(s.startDate)+' / 雇用形態: '+esc(s.employment||'-')+(wd?' / 週'+wd+'日':'')+' / 有効期限: 付与日から2年</span></div>';
+  h+='<div style="overflow-x:auto"><table style="font-size:12px"><thead><tr>';
+  h+='<th>付与日</th><th style="text-align:right">付与日数</th><th>有効期限</th><th style="text-align:right">取得済</th><th style="text-align:right">残日数</th><th>状態</th></tr></thead><tbody>';
+
+  var totalGranted=0, totalUsed=0;
+  grants.forEach(function(g){
+    var usedThisGrant=0;
+    usages.forEach(function(u){if(u.grantId===g.grantDate)usedThisGrant+=Number(u.days)||0;});
+    var rem=Math.max(0,g.days-usedThisGrant);
+    var status='';var stColor='';
+    if(g.isFuture){status='予定';stColor='color:#999';}
+    else if(g.isExpired){status='期限切れ';stColor='color:#999';}
+    else if(rem===0){status='消化済';stColor='color:var(--grn)';}
+    else{status='有効';stColor='color:var(--pri);font-weight:700';totalGranted+=g.days;totalUsed+=usedThisGrant;}
+    var rowBg=g.isExpired?'background:#fafafa':g.isFuture?'background:#f0f7ff':'';
+    h+='<tr style="'+rowBg+'">';
+    h+='<td>'+fmtDate(g.grantDate)+'</td>';
+    h+='<td style="text-align:right">'+g.days+'日</td>';
+    h+='<td style="font-size:11px;color:'+(g.isExpired?'#c62828':'#666')+'">'+fmtDate(g.expDate)+'</td>';
+    h+='<td style="text-align:right">'+(g.isFuture?'-':usedThisGrant+'日')+'</td>';
+    h+='<td style="text-align:right;font-weight:600">'+(g.isFuture?'-':rem+'日')+'</td>';
+    h+='<td style="'+stColor+'">'+status+'</td></tr>';
+  });
+
+  var balance2=calcPaidLeaveBalance(grants,usages);
+  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--bg)"><td>有効分合計</td><td style="text-align:right">'+totalGranted+'日</td><td></td>';
+  h+='<td style="text-align:right">'+totalUsed+'日</td><td style="text-align:right;color:var(--pri);font-size:14px">'+balance2+'日</td><td></td></tr></tfoot></table></div></div>';
+
+  // 取得記録カード
+  h+='<div class="card">';
+  h+='<div class="card-hd"><span class="card-t">📝 取得記録</span></div>';
+  if(usages.length===0){
+    h+='<p style="color:var(--sub);padding:16px;text-align:center">取得記録がありません</p>';
+  }else{
+    var sorted=usages.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'');});
+    h+='<table style="font-size:12px"><thead><tr><th>取得日</th><th>日数</th><th>理由</th><th>充当付与回</th><th>操作</th></tr></thead><tbody>';
+    sorted.forEach(function(u){
+      h+='<tr><td>'+fmtDate(u.date)+'</td><td>'+u.days+'日</td><td>'+esc(u.reason||'-')+'</td>';
+      h+='<td style="font-size:11px;color:var(--sub)">'+fmtDate(u.grantId)+'付与分</td>';
+      h+='<td><button onclick="deletePLUsage(''+u.id+'')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px">✕ 削除</button></td></tr>';
+    });
+    h+='</tbody></table>';
+  }
+  h+='</div>';
+
+  el.innerHTML=h;
+}
+
+function openPLUsageModal(){
+  var s=S.staff.find(function(x){return x.id===_plStaffId;});
+  if(!s){return;}
+  var grants=generateGrantHistory(s).filter(function(g){return!g.isFuture&&!g.isExpired;});
+  var grantOpts=grants.map(function(g){
+    var used=(_plUsages[s.id]||[]).reduce(function(sum,u){return u.grantId===g.grantDate?sum+(Number(u.days)||0):sum;},0);
+    return'<option value="'+g.grantDate+'">'+fmtDate(g.grantDate)+'付与（残'+(g.days-used)+'日）</option>';
+  }).join('');
+  if(!grantOpts){cAlert('有効な付与残日数がありません');return;}
+  document.getElementById('st-modal').innerHTML=
+    '<div class="overlay" onclick="closeModal(\'st-modal\')">'+
+    '<div class="modal" style="width:460px" onclick="event.stopPropagation()">'+
+    '<div class="modal-hd"><h3>📅 有給取得を記録</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>'+
+    '<div class="field"><label>取得日 *</label><input type="date" id="plu-date" value="'+today()+'" style="width:100%"></div>'+
+    '<div class="field"><label>日数 *</label>'+
+      '<select id="plu-days" style="width:200px">'+
+        '<option value="1">1日（全日）</option>'+
+        '<option value="0.5">0.5日（半日）</option>'+
+      '</select></div>'+
+    '<div class="field"><label>充当する付与回 *</label><select id="plu-grant" style="width:100%">'+grantOpts+'</select></div>'+
+    '<div class="field"><label>理由</label><input id="plu-reason" value="" placeholder="例：私用、病気など" style="width:100%"></div>'+
+    '<div class="btns"><button class="bg" onclick="closeModal(\'st-modal\')">キャンセル</button>'+
+    '<button class="bp" onclick="savePLUsage()">記録する</button></div>'+
+    '</div></div>';
+}
+
+async function savePLUsage(){
+  if(!lockUI())return;
+  var date=document.getElementById('plu-date').value;
+  var days=parseFloat(document.getElementById('plu-days').value);
+  var grantId=document.getElementById('plu-grant').value;
+  var reason=document.getElementById('plu-reason').value;
+  if(!date||!days||!grantId){unlockUI();await cAlert('日付・日数・付与回は必須です');return;}
+  // 残日数チェック
+  var s=S.staff.find(function(x){return x.id===_plStaffId;});
+  var grant=generateGrantHistory(s).find(function(g){return g.grantDate===grantId;});
+  var used=(_plUsages[_plStaffId]||[]).reduce(function(sum,u){return u.grantId===grantId?sum+(Number(u.days)||0):sum;},0);
+  var rem=grant?grant.days-used:0;
+  if(days>rem){unlockUI();await cAlert('取得日数が残日数（'+rem+'日）を超えています');return;}
+  try{
+    await gas('addPaidLeaveUsage',{staffId:_plStaffId,date:date,days:days,reason:reason,grantId:grantId});
+    _plUsages[_plStaffId]=await gas('getPaidLeaveUsages',_plStaffId)||[];
+    toast('✅ 記録しました');closeModal('st-modal');renderPaidLeave();
+  }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+}
+
+async function deletePLUsage(id){
+  if(!await cConfirm('この記録を削除しますか？'))return;
+  try{
+    await gas('deletePaidLeaveUsage',id);
+    _plUsages[_plStaffId]=await gas('getPaidLeaveUsages',_plStaffId)||[];
+    renderPaidLeave();
+  }catch(e){await cAlert('削除失敗: '+e);}
+}
+
+function dlPaidLeaveCSV(){
+  var s=S.staff.find(function(x){return x.id===_plStaffId;});
+  if(!s)return;
+  var grants=generateGrantHistory(s);
+  var usages=_plUsages[s.id]||[];
+  var csv='スタッフ名,入職日,雇用形態,週所定日数,付与日,付与日数,有効期限,取得済,残日数,状態\n';
+  grants.forEach(function(g){
+    var used=usages.reduce(function(sum,u){return u.grantId===g.grantDate?sum+(Number(u.days)||0):sum;},0);
+    var rem=Math.max(0,g.days-used);
+    var status=g.isFuture?'予定':g.isExpired?'期限切れ':rem===0?'消化済':'有効';
+    csv+=esc(s.name)+','+fmtDate(s.startDate)+','+esc(s.employment||'')+','+(s.weeklyDays||'')+','+fmtDate(g.grantDate)+','+g.days+','+fmtDate(g.expDate)+','+used+','+rem+','+status+'\n';
+  });
+  csv+='\n取得記録\n日付,日数,理由,充当付与回\n';
+  var sorted=usages.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+  sorted.forEach(function(u){csv+=fmtDate(u.date)+','+u.days+','+esc(u.reason||'')+','+fmtDate(u.grantId)+'付与分\n';});
+  var b=new Blob(['\uFEFF'+csv],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='有給管理_'+esc(s.name)+'_'+today()+'.csv';a.click();
+}
+
 
 // ═══ 設定 ═══
 // ═══ 手当設定 ═══
