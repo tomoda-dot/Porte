@@ -408,6 +408,21 @@ async function renderDashboard(c){
   });
   certExpireUsers.sort(function(a,b){return a.endDate<b.endDate?-1:1;});
 
+  // スタッフ資格期限チェック（90日以内・期限切れ）
+  var qualAlertStaff=[];
+  S.staff.forEach(function(s){
+    if(!_isStaffActive(s,curM))return;
+    var quals=[];try{quals=JSON.parse(s.qualifications||'[]');}catch(e){}
+    quals.forEach(function(q){
+      if(!q.expires)return;
+      var diff=(new Date(q.expires)-new Date(d))/(1000*60*60*24);
+      if(diff<=90){
+        qualAlertStaff.push({staffName:s.name,qualName:q.name,expires:q.expires,isExpired:diff<0,diff:Math.round(diff)});
+      }
+    });
+  });
+  qualAlertStaff.sort(function(a,b){return a.expires<b.expires?-1:1;});
+
   // 新規利用者（今月利用開始の人）
   var newUsers=S.users.filter(function(u){return u.enrollDate&&u.enrollDate.indexOf(curM)===0;});
   newUsers.sort(function(a,b){return a.enrollDate<b.enrollDate?-1:1;});
@@ -452,6 +467,16 @@ async function renderDashboard(c){
     '<div class="stat" style="border-color:var(--acc)"><div class="stat-l">🍱本日のお弁当</div><div class="stat-v">'+bc+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div>'+
     '<div class="stat" style="border-color:#1565c0"><div class="stat-l">🚐本日の送迎</div><div class="stat-v">'+pc+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div></div>'+
     '<div class="card"><div class="card-hd"><span class="card-t">本日の予定者</span></div><div id="ds-s">読み込み中...</div></div>'+
+    // スタッフ資格期限アラート（最優先）
+    (qualAlertStaff.length>0?'<div class="card" style="margin-bottom:12px;border-left:4px solid #7b1fa2;background:#f3e5f5;cursor:pointer" onclick="var b=this.querySelector(\'.ds-body\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.ds-arrow\').textContent=b.style.display===\'none\'?\'▶\':\'▼\'"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">🎓 スタッフ資格期限アラート <span style="font-size:12px;color:#7b1fa2;font-weight:400">（'+qualAlertStaff.length+'件）</span></h3><span class="ds-arrow" style="font-size:12px;color:var(--sub)">▼</span></div><div class="ds-body" onclick="event.stopPropagation()" style="margin-top:10px"><table style="font-size:12px"><thead><tr><th>スタッフ名</th><th>資格・免許</th><th>有効期限</th><th>状況</th></tr></thead><tbody>'+
+      qualAlertStaff.map(function(q){
+        var statusLabel=q.isExpired?
+          '<span style="color:#c62828;font-weight:700">⛔ 期限切れ</span>':
+          q.diff<=30?'<span style="color:#c62828;font-weight:700">🔴 残'+q.diff+'日</span>':
+          '<span style="color:#e65100;font-weight:700">🟡 残'+q.diff+'日</span>';
+        return'<tr><td style="font-weight:600">'+esc(q.staffName)+'</td><td>'+esc(q.qualName)+'</td><td>'+fmtDate(q.expires)+'</td><td>'+statusLabel+'</td></tr>';
+      }).join('')+
+      '</tbody></table></div></div>':'');+
     // 受給者証更新（最優先）
     (certExpireUsers.length>0?'<div class="card" style="margin-bottom:12px;border-left:4px solid #c62828;background:#fce4ec;cursor:pointer" onclick="var b=this.querySelector(\'.ds-body\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.ds-arrow\').textContent=b.style.display===\'none\'?\'▶\':\'▼\'"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">🔔 受給者証更新のお知らせ <span style="font-size:12px;color:#c62828;font-weight:400">（'+certExpireUsers.length+'件）</span></h3><span class="ds-arrow" style="font-size:12px;color:var(--sub)">▼</span></div><div class="ds-body" onclick="event.stopPropagation()" style="margin-top:10px"><table style="font-size:12px"><thead><tr><th>氏名</th><th>満了日</th><th>状況</th></tr></thead><tbody>'+
         certExpireUsers.map(function(ce){return'<tr><td style="font-weight:600">'+esc(ce.name)+'</td><td>'+fmtDate(ce.endDate)+'</td><td style="font-weight:700;color:'+(ce.isThisMonth?'#c62828':'#e65100')+'">'+(ce.isThisMonth?'⚠ 今月満了':'📋 来月満了')+'</td></tr>';}).join('')+
@@ -5126,7 +5151,7 @@ function renderStaff(c){
 }
 function renderStaffList(){
   document.getElementById('staff-content').innerHTML='<div style="text-align:right;margin-bottom:8px"><button class="bp" onclick="openSM()">＋ 新規登録</button></div>'+
-    '<div class="card"><table><thead><tr><th>氏名</th><th>役職</th><th>入職日</th><th>退職日</th><th>担当数</th></tr></thead><tbody id="st-tb"></tbody></table></div>';
+    '<div class="card"><table><thead><tr><th>氏名</th><th>役職</th><th>雇用形態</th><th>入職日</th><th>退職日</th><th>資格・免許</th><th>担当数</th></tr></thead><tbody id="st-tb"></tbody></table></div>';
   renderSTbl();
 }
 function _isStaffActive(s,ym){
@@ -5162,10 +5187,31 @@ function renderSTbl(){
 function _staffRow(s,isRetired){
   var cnt=S.users.filter(function(u){return u.staffId===s.id;}).length;
   var style=isRetired?'opacity:0.5':'';
+  // 資格期限チェック
+  var quals=[];try{quals=JSON.parse(s.qualifications||'[]');}catch(e){}
+  var td=today();
+  var qualDisp='<span style="color:#ccc;font-size:11px">なし</span>';
+  if(quals.length>0){
+    var parts=quals.map(function(q){
+      var exp=q.expires||'';
+      var icon='';var style2='';
+      if(exp){
+        var diff=(new Date(exp)-new Date(td))/(1000*60*60*24);
+        if(diff<0){icon='🔴';style2='color:#c62828;font-weight:700';}
+        else if(diff<=90){icon='🟡';style2='color:#e65100;font-weight:700';}
+        else{icon='🟢';style2='';}
+      }
+      return'<div style="font-size:11px;'+style2+'">'+icon+' '+esc(q.name)+(exp?' ('+fmtDate(exp)+')':'')+'</div>';
+    });
+    qualDisp=parts.join('');
+  }
   return'<tr style="'+style+';cursor:pointer" onclick=\'openSM('+JSON.stringify(s).replace(/\'/g,"&#39;")+')\'>'+
-    '<td style="font-weight:600">'+esc(s.name)+'</td><td>'+esc(s.role||'')+'</td>'+
+    '<td style="font-weight:600">'+esc(s.name)+'</td>'+
+    '<td>'+esc(s.role||'')+'</td>'+
+    '<td style="font-size:11px">'+esc(s.employment||'-')+'</td>'+
     '<td style="font-size:11px">'+(s.startDate?fmtDate(s.startDate):'-')+'</td>'+
     '<td style="font-size:11px">'+(s.endDate?'<span style="color:#c62828">'+fmtDate(s.endDate)+'</span>':'-')+'</td>'+
+    '<td>'+qualDisp+'</td>'+
     '<td>'+cnt+'名</td></tr>';
 }
 
@@ -5289,21 +5335,112 @@ async function deleteStaffAtt(staffId,date){
   catch(e){await cAlert('削除失敗: '+e);}
 }
 function openSM(s){
-  s=s||{name:'',role:'',loginId:'',password:'',startDate:'',endDate:''};var isE=!!s.id;
+  s=s||{name:'',role:'',employment:'',loginId:'',password:'',startDate:'',endDate:'',qualifications:''};
+  var isE=!!s.id;
   var roles=['サービス管理責任者','生活支援員','職業指導員','管理者','その他'];
+  var employments=['正社員','パート・アルバイト','非常勤','業務委託','その他'];
   var roleOpts=roles.map(function(r){return'<option'+(s.role===r?' selected':'')+'>'+r+'</option>';}).join('');
-  document.getElementById('st-modal').innerHTML='<div class="overlay" onclick="closeModal(\'st-modal\')"><div class="modal" style="width:460px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>スタッフ'+(isE?'編集':'登録')+'</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>'+
-    '<div class="field"><label>氏名</label><input id="sm-n" value="'+esc(s.name)+'" style="width:100%"></div>'+
-    '<div class="field"><label>役職</label><select id="sm-r" style="width:100%"><option value="">-- 選択 --</option>'+roleOpts+'</select></div>'+
-    '<div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>入職日</label><input type="date" id="sm-sd" value="'+(s.startDate||'')+'" style="width:100%"></div>'+
-    '<div class="field" style="flex:1"><label>退職日</label><input type="date" id="sm-ed" value="'+(s.endDate||'')+'" style="width:100%"></div></div>'+
-    '<div class="field"><label>ログインID</label><input id="sm-lid" value="'+esc(s.loginId||'')+'" style="width:100%" placeholder="後日のログイン用"></div>'+
-    '<div class="field"><label>パスワード</label><input type="text" id="sm-pwd" value="'+esc(s.password||'')+'" style="width:100%"></div>'+
+  var empOpts=employments.map(function(e){return'<option'+(s.employment===e?' selected':'')+'>'+e+'</option>';}).join('');
+  // 資格データのパース
+  var quals=[];try{quals=JSON.parse(s.qualifications||'[]');}catch(e){quals=[];}
+  // 資格行のHTML生成
+  function qualRow(i,q){q=q||{name:'',acquired:'',expires:''};
+    return '<tr id="sq-row-'+i+'">'+
+      '<td style="padding:3px 4px"><input id="sq-name-'+i+'" value="'+esc(q.name)+'" placeholder="例: 社会福祉士" style="width:100%;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:3px 6px"></td>'+
+      '<td style="padding:3px 4px"><input type="date" id="sq-acq-'+i+'" value="'+(q.acquired||'')+'" style="width:100%;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:3px 4px"></td>'+
+      '<td style="padding:3px 4px"><input type="date" id="sq-exp-'+i+'" value="'+(q.expires||'')+'" style="width:100%;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:3px 4px"></td>'+
+      '<td style="padding:3px 4px;text-align:center"><button onclick="document.getElementById(\'sq-row-'+i+'\').remove()" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:14px">✕</button></td></tr>';
+  }
+  var qualRows='';for(var qi=0;qi<Math.max(quals.length,2);qi++){qualRows+=qualRow(qi,quals[qi]);}
+
+  document.getElementById('st-modal').innerHTML=
+    '<div class="overlay" onclick="closeModal(\'st-modal\')">'+
+    '<div class="modal" style="width:560px;max-height:85vh;overflow-y:auto" onclick="event.stopPropagation()">'+
+    '<div class="modal-hd"><h3>スタッフ'+(isE?'編集':'登録')+'</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>'+
+
+    '<div class="section-title" style="margin-top:0">基本情報</div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>氏名 *</label><input id="sm-n" value="'+esc(s.name)+'" style="width:100%"></div>'+
+      '<div class="field"><label>役職</label><select id="sm-r" style="width:100%"><option value="">-- 選択 --</option>'+roleOpts+'</select></div>'+
+    '</div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>雇用形態</label><select id="sm-emp" style="width:100%"><option value="">-- 選択 --</option>'+empOpts+'</select></div>'+
+      '<div></div>'+
+    '</div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>入職日</label><input type="date" id="sm-sd" value="'+(s.startDate||'')+'" style="width:100%"></div>'+
+      '<div class="field"><label>退職日</label><input type="date" id="sm-ed" value="'+(s.endDate||'')+'" style="width:100%"></div>'+
+    '</div>'+
+
+    '<div class="section-title">資格・免許</div>'+
+    '<div style="overflow-x:auto">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+    '<thead><tr style="background:#f5f5f5">'+
+      '<th style="padding:5px 8px;border:1px solid #ddd;text-align:left">資格・免許名</th>'+
+      '<th style="padding:5px 8px;border:1px solid #ddd;width:110px">取得日</th>'+
+      '<th style="padding:5px 8px;border:1px solid #ddd;width:110px">有効期限</th>'+
+      '<th style="padding:5px 8px;border:1px solid #ddd;width:36px"></th>'+
+    '</tr></thead>'+
+    '<tbody id="sq-body">'+qualRows+'</tbody>'+
+    '</table></div>'+
+    '<div style="text-align:right;margin-top:6px">'+
+      '<button onclick="addQualRow()" style="font-size:11px;padding:3px 12px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer">＋ 資格を追加</button>'+
+    '</div>'+
+
+    '<div class="section-title">ログイン情報</div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>ログインID</label><input id="sm-lid" value="'+esc(s.loginId||'')+'" style="width:100%" placeholder="ログイン用ID"></div>'+
+      '<div class="field"><label>パスワード</label><input type="text" id="sm-pwd" value="'+esc(s.password||'')+'" style="width:100%"></div>'+
+    '</div>'+
+
     '<div class="btns" style="border-top:1px solid #eee;padding-top:12px;margin-top:12px">'+
     (isE?'<button style="background:#c62828;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px" onclick="delS(\''+s.id+'\')">🗑️ 削除</button>':'')+
-    '<button class="bg" onclick="closeModal(\'st-modal\')">取消</button><button class="bp" onclick="saveS(\''+(s.id||'')+'\')">保存</button></div></div></div>';
+    '<button class="bg" onclick="closeModal(\'st-modal\')">取消</button>'+
+    '<button class="bp" onclick="saveS(\''+(s.id||'')+'\')">保存</button></div>'+
+    '</div></div>';
 }
-async function saveS(id){if(!lockUI())return;var d={name:document.getElementById('sm-n').value,role:document.getElementById('sm-r').value,startDate:document.getElementById('sm-sd').value,endDate:document.getElementById('sm-ed').value,loginId:document.getElementById('sm-lid').value,password:document.getElementById('sm-pwd').value};if(!d.name){unlockUI();await cAlert('氏名を入力');return;}try{if(id){d.id=id;await gas('updateStaff',d);}else{await gas('addStaff',d);}S.staff=await gas('getStaff');toast('✅ 保存しました');closeModal('st-modal');renderStaff(document.getElementById('content'));}catch(e){await cAlert('失敗: '+e);}finally{unlockUI();}}
+
+function addQualRow(){
+  var tb=document.getElementById('sq-body');if(!tb)return;
+  var i=tb.rows.length;
+  var row=document.createElement('tr');row.id='sq-row-'+i;
+  row.innerHTML=
+    '<td style="padding:3px 4px"><input id="sq-name-'+i+'" placeholder="例: 介護福祉士" style="width:100%;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:3px 6px"></td>'+
+    '<td style="padding:3px 4px"><input type="date" id="sq-acq-'+i+'" style="width:100%;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:3px 4px"></td>'+
+    '<td style="padding:3px 4px"><input type="date" id="sq-exp-'+i+'" style="width:100%;font-size:12px;border:1px solid #ddd;border-radius:4px;padding:3px 4px"></td>'+
+    '<td style="padding:3px 4px;text-align:center"><button onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:14px">✕</button></td>';
+  tb.appendChild(row);
+}
+
+function collectQuals(){
+  var tb=document.getElementById('sq-body');if(!tb)return[];
+  var result=[];
+  for(var i=0;i<tb.rows.length;i++){
+    var n=document.getElementById('sq-name-'+i);
+    var a=document.getElementById('sq-acq-'+i);
+    var e=document.getElementById('sq-exp-'+i);
+    if(n&&n.value){result.push({name:n.value,acquired:a?a.value:'',expires:e?e.value:''});}
+  }
+  return result;
+}
+async function saveS(id){if(!lockUI())return;
+  var d={
+    name:document.getElementById('sm-n').value,
+    role:document.getElementById('sm-r').value,
+    employment:(document.getElementById('sm-emp')?document.getElementById('sm-emp').value:''),
+    startDate:document.getElementById('sm-sd').value,
+    endDate:document.getElementById('sm-ed').value,
+    loginId:document.getElementById('sm-lid').value,
+    password:document.getElementById('sm-pwd').value,
+    qualifications:JSON.stringify(collectQuals())
+  };
+  if(!d.name){unlockUI();await cAlert('氏名を入力');return;}
+  try{
+    if(id){d.id=id;await gas('updateStaff',d);}else{await gas('addStaff',d);}
+    S.staff=await gas('getStaff');
+    toast('✅ 保存しました');closeModal('st-modal');renderStaff(document.getElementById('content'));
+  }catch(e){await cAlert('失敗: '+e);}finally{unlockUI();}
+}
 async function delS(id){if(!await cConfirm('削除しますか？'))return;try{await gas('deleteStaff',id);S.staff=await gas('getStaff');renderStaff(document.getElementById('content'));}catch(e){await cAlert('失敗');}}
 
 // ═══ 設定 ═══
