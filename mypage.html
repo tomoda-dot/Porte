@@ -478,10 +478,13 @@ function renderShift(){
         else if(pat==='休'){ patHtml='<span style="color:#aaa;font-size:12px">休</span>'; }
         else { patHtml='<span style="color:#ddd;font-size:12px">−</span>'; }
         var cls=(ds===td?'today':'')+(di===0?' sun':di===6?' sat':'');
-        rows+='<tr class="'+cls+'">'
+        var rowClick='onclick="openShiftCR(''+ds+'',''+pat+'')"';
+        rows+='<tr class="'+cls+'" '+rowClick+' style="cursor:pointer">'
           +'<td style="width:28px;text-align:center;font-weight:700">'+d+'</td>'
           +'<td style="width:24px;text-align:center;font-size:12px">'+dow[di]+'</td>'
-          +'<td>'+patHtml+'</td></tr>';
+          +'<td>'+patHtml+'</td>'
+          +'<td style="width:20px;text-align:center;color:#ccc;font-size:11px">›</td>'
+          +'</tr>';
       }
       el.innerHTML='<div style="font-size:12px;color:var(--sub);margin-bottom:8px">出勤予定: <strong style="color:var(--pri)">'+wdays+'日</strong></div>'
         +'<table class="shift-table"><tbody>'+rows+'</tbody></table>';
@@ -517,9 +520,10 @@ function renderAtt(){
       var dow=['日','月','火','水','木','金','土'];
       recs.forEach(function(rec){
         var di=new Date(rec.date).getDay();
-        rows+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ebe5;font-size:13px">'
+        var recJson=esc(JSON.stringify({date:rec.date,startTime:rec.startTime,endTime:rec.endTime||'',breakMin:rec.breakMin||60}));
+        rows+='<div onclick="openAttCR('+recJson+')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ebe5;font-size:13px;cursor:pointer">'
           +'<span style="color:var(--sub);font-size:12px">'+fmtD(rec.date)+'（'+dow[di]+'）</span>'
-          +'<span style="font-weight:600">'+esc(rec.startTime)+'〜'+esc(rec.endTime||'')+'</span>'
+          +'<span style="display:flex;align-items:center;gap:6px"><span style="font-weight:600">'+esc(rec.startTime)+'〜'+esc(rec.endTime||'')+'</span><span style="color:#ccc;font-size:11px">›</span></span>'
           +'</div>';
       });
       document.getElementById('att-body').innerHTML = rows||'<p style="color:var(--sub);text-align:center;padding:16px">記録がありません</p>';
@@ -623,6 +627,127 @@ function cancelPLR(id){
     .then(function(){ loadPLRList(); })
     .catch(function(e){ alert('失敗: '+e.message); });
 }
+
+// ══════════════════════════════════════
+// 変更申請（シフト・勤怠）
+// ══════════════════════════════════════
+var _crList=[];
+
+function closeCRModal(){
+  document.getElementById('cr-modal').style.display='none';
+}
+
+// シフト変更申請モーダル
+function openShiftCR(date, currentPat){
+  var dow=['日','月','火','水','木','金','土'][new Date(date).getDay()];
+  document.getElementById('cr-modal-title').textContent='シフト変更申請';
+  var patOpts='<option value="">（指定なし・相談）</option>';
+  _pats.forEach(function(p){
+    patOpts+='<option value="'+esc(p.name)+'"'+(p.name===currentPat?' selected':'')+'>'+esc(p.name)+' ('+esc(p.startTime)+'〜'+esc(p.endTime)+')</option>';
+  });
+  patOpts+='<option value="休">休み</option>';
+  document.getElementById('cr-modal-body').innerHTML=
+    '<p style="font-size:13px;color:var(--sub);margin-bottom:14px">'+fmtD(date)+'（'+dow+'）</p>'+
+    '<div style="background:#f5f0ea;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px">'+
+      '現在: <strong>'+(currentPat||'未設定')+'</strong>'+
+    '</div>'+
+    '<div class="field"><label>希望するシフト</label>'+
+      '<select id="cr-shift-pat" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px">'+patOpts+'</select>'+
+    '</div>'+
+    '<div class="field"><label>理由・備考</label>'+
+      '<textarea id="cr-reason" rows="3" placeholder="理由を入力してください" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;resize:none"></textarea>'+
+    '</div>'+
+    '<button onclick="submitShiftCR(''+date+'')" style="width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">申請する</button>';
+  document.getElementById('cr-modal').style.display='flex';
+}
+
+function submitShiftCR(date){
+  var pat=document.getElementById('cr-shift-pat').value;
+  var reason=document.getElementById('cr-reason').value;
+  var btn=event.target;
+  btn.disabled=true; btn.textContent='送信中...';
+  var reqData=JSON.stringify({requestedPattern:pat});
+  sb.from('変更申請').insert({
+    id:'cr'+Date.now(),staffId:ME.id,type:'shift',
+    date:date,requestData:reqData,
+    reason:reason,status:'pending',comment:'',
+    createdAt:new Date().toISOString()
+  }).then(function(r){
+    if(r.error)throw r.error;
+    closeCRModal();
+    alert('✅ シフト変更申請を送信しました');
+    loadCRList();
+  }).catch(function(e){ alert('送信失敗: '+(e.message||e)); })
+  .finally(function(){ btn.disabled=false; btn.textContent='申請する'; });
+}
+
+// 勤怠修正申請モーダル
+function openAttCR(rec){
+  if(typeof rec==='string') rec=JSON.parse(rec);
+  var dow=['日','月','火','水','木','金','土'][new Date(rec.date).getDay()];
+  document.getElementById('cr-modal-title').textContent='勤怠修正申請';
+  document.getElementById('cr-modal-body').innerHTML=
+    '<p style="font-size:13px;color:var(--sub);margin-bottom:14px">'+fmtD(rec.date)+'（'+dow+'）</p>'+
+    '<div style="background:#f5f0ea;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px">'+
+      '現在: <strong>'+esc(rec.startTime)+'〜'+esc(rec.endTime)+'</strong>'+
+      '（休憩'+rec.breakMin+'分）'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'+
+      '<div class="field"><label>出勤時刻</label><input type="time" id="cr-start" value="'+esc(rec.startTime)+'" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px"></div>'+
+      '<div class="field"><label>退勤時刻</label><input type="time" id="cr-end" value="'+esc(rec.endTime)+'" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px"></div>'+
+    '</div>'+
+    '<div class="field"><label>休憩時間（分）</label><input type="number" id="cr-break" value="'+rec.breakMin+'" style="width:120px;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px"></div>'+
+    '<div class="field"><label>修正理由</label>'+
+      '<textarea id="cr-reason" rows="3" placeholder="例: 打刻忘れのため" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;resize:none"></textarea>'+
+    '</div>'+
+    '<button onclick="submitAttCR(''+rec.date+'')" style="width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">申請する</button>';
+  document.getElementById('cr-modal').style.display='flex';
+}
+
+function submitAttCR(date){
+  var start=document.getElementById('cr-start').value;
+  var end=document.getElementById('cr-end').value;
+  var brk=document.getElementById('cr-break').value;
+  var reason=document.getElementById('cr-reason').value;
+  if(!start||!end){ alert('出退勤時刻を入力してください'); return; }
+  if(!reason){ alert('修正理由を入力してください'); return; }
+  var btn=event.target;
+  btn.disabled=true; btn.textContent='送信中...';
+  var reqData=JSON.stringify({startTime:start,endTime:end,breakMin:brk});
+  sb.from('変更申請').insert({
+    id:'cr'+Date.now(),staffId:ME.id,type:'attendance',
+    date:date,requestData:reqData,
+    reason:reason,status:'pending',comment:'',
+    createdAt:new Date().toISOString()
+  }).then(function(r){
+    if(r.error)throw r.error;
+    closeCRModal();
+    alert('✅ 勤怠修正申請を送信しました');
+    loadCRList();
+  }).catch(function(e){ alert('送信失敗: '+(e.message||e)); })
+  .finally(function(){ btn.disabled=false; btn.textContent='申請する'; });
+}
+
+// 申請一覧をロード（有給申請タブと共用）
+function loadCRList(){
+  sb.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false})
+    .then(function(r){ _crList=r.data||[]; });
+}
+
+// モーダル外クリックで閉じる
+document.getElementById('cr-modal').onclick=function(e){
+  if(e.target===this) closeCRModal();
+};
 </script>
+  <!-- 変更申請モーダル -->
+  <div id="cr-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 id="cr-modal-title" style="font-size:16px;font-weight:700"></h3>
+        <button onclick="closeCRModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button>
+      </div>
+      <div id="cr-modal-body"></div>
+    </div>
+  </div>
 </body>
 </html>

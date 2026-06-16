@@ -174,6 +174,14 @@ async function gas(fn){
     case 'rejectPaidLeaveRequest': return _update('有給申請',{id:a1.id,status:'rejected',comment:a1.comment||''});
     case 'deletePaidLeaveRequest': return _del('有給申請',a1);
 
+    // ── 変更申請 ──
+    case 'getChangeRequests': return _getAll('変更申請');
+    case 'getChangeRequestsByStaff': return _getFiltered('変更申請','staffId',a1);
+    case 'addChangeRequest': a1.id=_genId('cr');a1.createdAt=new Date().toISOString();a1.status='pending';return _add('変更申請',a1);
+    case 'approveChangeRequest': return _update('変更申請',{id:a1.id,status:'approved',comment:a1.comment||''});
+    case 'rejectChangeRequest': return _update('変更申請',{id:a1.id,status:'rejected',comment:a1.comment||''});
+    case 'deleteChangeRequest': return _del('変更申請',a1);
+
     // ── 作業種別 ──
     case 'getWorkTypes': return _getAll('作業種別');
     case 'addWorkType': a1.id=_genId('w');return _add('作業種別',a1);
