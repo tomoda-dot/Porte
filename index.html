@@ -549,7 +549,7 @@ async function renderDashboard(c){
               (r.reason?'<div style="font-size:12px;color:var(--sub)">理由: '+esc(r.reason)+'</div>':'')+
             '</div>'+
             '<div style="display:flex;gap:6px">'+
-              '<button onclick="approveCR(\''+r.id+'\',\''+r.staffId+'\',\''+r.type+'\',\''+r.date+'\','+JSON.stringify(r.reqObj).replace(/'/g,"\'")+')" style="background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">承認</button>'+
+              '<button onclick="approveCR(\''+r.id+'\')" style="background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">承認</button>'+
               '<button onclick="rejectCR(\''+r.id+'\')" style="background:#c62828;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">却下</button>'+
             '</div>'+
           '</div>'+
@@ -6970,18 +6970,21 @@ async function rejectPLR(reqId){
 }
 
 // ═══ 変更申請 承認・却下 ═══
-async function approveCR(reqId, staffId, type, date, reqObj){
-  if(typeof reqObj==='string') try{reqObj=JSON.parse(reqObj);}catch(e){reqObj={};}
+async function approveCR(reqId){
+  // Supabaseから申請データを直接取得（HTML埋め込みを避ける）
+  var raw=await gas('getChangeRequests');
+  var req=(raw||[]).find(function(r){return r.id===reqId;});
+  if(!req){await cAlert('申請データが見つかりません');return;}
+  var reqObj={};try{reqObj=JSON.parse(req.requestData||'{}');}catch(e){}
+  var type=req.type,staffId=req.staffId,date=req.date;
   var typeLabel=type==='shift'?'シフト変更':'勤怠修正';
   if(!await cConfirm(typeLabel+'申請を承認しますか？'))return;
   if(!lockUI())return;
   try{
     await gas('approveChangeRequest',{id:reqId,comment:''});
     if(type==='shift'){
-      // シフトに反映
       await gas('saveShiftCell',{staffId:staffId,date:date,pattern:reqObj.requestedPattern||''});
     }else{
-      // スタッフ出欠に反映
       await gas('upsertStaffAttendance',{
         staffId:staffId,date:date,
         startTime:reqObj.startTime||'',

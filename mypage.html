@@ -342,15 +342,16 @@ function startMain(){
   _shiftYM = nowYM();
   _attYM = nowYM();
   // 設定・有給データを並行取得
+  // 各テーブルを個別に取得（1つ失敗しても止まらない）
   Promise.all([
-    sb.from('設定').select('value').eq('key','shiftPatterns').limit(1),
-    sb.from('有給取得記録').select('*').eq('staffId', ME.id),
-    sb.from('有給申請').select('*').eq('staffId', ME.id).order('createdAt',{ascending:false})
+    sb.from('設定').select('value').eq('key','shiftPatterns').limit(1).catch(function(){return{data:[]};}),
+    sb.from('有給取得記録').select('*').eq('staffId',ME.id).catch(function(){return{data:[]};}),
+    sb.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}).catch(function(){return{data:[]};})
   ]).then(function(results){
-    try{ _pats = JSON.parse(results[0].data[0].value); }catch(e){ _pats=[]; }
-    _plUsages = results[1].data||[];
-    _plGrants = buildGrants(ME);
-    window._plrList = results[2].data||[];
+    try{ _pats=JSON.parse((results[0].data&&results[0].data[0]&&results[0].data[0].value)||'[]'); }catch(e){ _pats=[]; }
+    _plUsages=(results[1].data)||[];
+    _plGrants=buildGrants(ME);
+    window._plrList=(results[2].data)||[];
     document.getElementById('loading').style.display='none';
     document.getElementById('main-screen').style.display='block';
     loadTC();
@@ -358,6 +359,8 @@ function startMain(){
   }).catch(function(e){
     document.getElementById('loading').style.display='none';
     document.getElementById('login-screen').style.display='flex';
+    var btn=document.getElementById('btn-login');
+    if(btn){btn.disabled=false;btn.textContent='ログイン';}
     alert('読み込みエラー: '+(e.message||String(e)));
   });
 }
@@ -520,8 +523,10 @@ function renderAtt(){
       var dow=['日','月','火','水','木','金','土'];
       recs.forEach(function(rec){
         var di=new Date(rec.date).getDay();
-        var recJson=esc(JSON.stringify({date:rec.date,startTime:rec.startTime,endTime:rec.endTime||'',breakMin:rec.breakMin||60}));
-        rows+='<div onclick="openAttCR('+recJson+')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ebe5;font-size:13px;cursor:pointer">'
+        var rowId='att-row-'+rec.date;
+        rows+='<div id="'+rowId+'" onclick="openAttCRById(this)" '
+          +'data-date="'+esc(rec.date)+'" data-start="'+esc(rec.startTime)+'" data-end="'+esc(rec.endTime||'')+'" data-break="'+(rec.breakMin||60)+'" '
+          +'style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ebe5;font-size:13px;cursor:pointer">'
           +'<span style="color:var(--sub);font-size:12px">'+fmtD(rec.date)+'（'+dow[di]+'）</span>'
           +'<span style="display:flex;align-items:center;gap:6px"><span style="font-weight:600">'+esc(rec.startTime)+'〜'+esc(rec.endTime||'')+'</span><span style="color:#ccc;font-size:11px">›</span></span>'
           +'</div>';
@@ -679,6 +684,17 @@ function submitShiftCR(date){
     loadCRList();
   }).catch(function(e){ alert('送信失敗: '+(e.message||e)); })
   .finally(function(){ btn.disabled=false; btn.textContent='申請する'; });
+}
+
+// data属性からrecを取得して開く（HTMLインジェクション回避）
+function openAttCRById(el){
+  var rec={
+    date:el.getAttribute('data-date'),
+    startTime:el.getAttribute('data-start'),
+    endTime:el.getAttribute('data-end'),
+    breakMin:parseInt(el.getAttribute('data-break'))||60
+  };
+  openAttCR(rec);
 }
 
 // 勤怠修正申請モーダル
