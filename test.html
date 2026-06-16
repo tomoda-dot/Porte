@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>テスト</title>
+</head>
+<body>
+<p id="msg">ボタンを押してください</p>
+<button onclick="document.getElementById('msg').textContent='ボタンが動きました！'">テスト</button>
+
+<hr>
+<p id="msg2">Supabase読み込み確認中...</p>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"
+  onload="document.getElementById('msg2').textContent='Supabase OK'"
+  onerror="document.getElementById('msg2').textContent='Supabase 読み込み失敗'">
+</script>
+</body>
+</html>
