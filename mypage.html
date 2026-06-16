@@ -9,275 +9,246 @@
 <script src="supabase-config.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-:root{
-  --pri:#3d5a3e;--bg:#f7f4f0;--card:#fff;--bdr:#e0d6cf;--sub:#8a7a6a;--grn:#2e7d32;
-  --paid:#1565c0;--paid-am:#1976d2;--paid-pm:#0288d1;
-}
-body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#333;min-height:100vh;}
-
+:root{--pri:#3d5a3e;--bg:#f7f4f0;--card:#fff;--bdr:#e0d6cf;--sub:#8a7a6a;--grn:#2e7d32;--paid:#1565c0;--paid-am:#1976d2;--paid-pm:#0288d1;}
+body{font-family:sans-serif;background:var(--bg);color:#333;min-height:100vh;font-size:14px;}
 /* ログイン */
-#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
-.login-card{background:var(--card);border-radius:16px;padding:36px 28px;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.1);}
+#pg-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:#fff;border-radius:16px;padding:32px 24px;width:100%;max-width:360px;box-shadow:0 4px 20px rgba(0,0,0,.1);}
 .login-logo{text-align:center;margin-bottom:24px;}
-.login-logo .icon{font-size:44px;display:block;margin-bottom:8px;}
-.login-logo h1{font-size:20px;font-weight:700;color:var(--pri);}
-.login-logo p{font-size:12px;color:var(--sub);margin-top:4px;}
-.field{margin-bottom:14px;}
-.field label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px;}
-.field input{width:100%;padding:12px 14px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px;outline:none;}
-.field input:focus{border-color:var(--pri);}
-#btn-login{width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px;}
-#login-err{color:#c62828;font-size:13px;text-align:center;margin-top:10px;min-height:18px;}
-
+.login-logo .ico{font-size:40px;display:block;}
+.login-logo h1{font-size:18px;font-weight:700;color:var(--pri);margin-top:8px;}
+.f label{display:block;font-size:11px;font-weight:700;color:var(--sub);margin-bottom:4px;margin-top:12px;}
+.f input{width:100%;padding:11px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px;}
+#btn-login{width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;}
+#login-err{color:#c62828;font-size:12px;text-align:center;margin-top:8px;min-height:16px;}
 /* メイン */
-#main-screen{display:none;max-width:700px;margin:0 auto;padding:16px;}
-header{background:var(--pri);color:#fff;padding:14px 18px;border-radius:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
-header .name{font-size:18px;font-weight:700;}
-header .role{font-size:12px;opacity:.8;margin-top:2px;}
-#btn-logout{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;}
-
+#pg-main{display:none;max-width:680px;margin:0 auto;padding:12px;}
+#pg-loading{display:none;text-align:center;padding:60px 20px;color:var(--sub);}
+.spin{width:28px;height:28px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 10px;}
+@keyframes sp{to{transform:rotate(360deg);}}
+header{background:var(--pri);color:#fff;padding:12px 16px;border-radius:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.hd-name{font-size:17px;font-weight:700;}
+.hd-role{font-size:11px;opacity:.8;margin-top:2px;}
+#btn-logout{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:16px;font-size:12px;cursor:pointer;}
+/* カード */
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.05);}
+.ct{font-size:11px;font-weight:700;color:var(--sub);margin-bottom:10px;}
 /* タイムカード */
-.card{background:var(--card);border-radius:12px;padding:18px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.05);}
-.card-title{font-size:12px;font-weight:700;color:var(--sub);margin-bottom:12px;}
-.tc-time{font-size:28px;font-weight:700;text-align:center;padding:10px 0;color:var(--pri);}
-.tc-rec{display:flex;justify-content:space-between;padding:8px 12px;border-radius:8px;margin-bottom:6px;font-size:14px;}
+.tc-rec{display:flex;justify-content:space-between;padding:8px 10px;border-radius:8px;margin-bottom:6px;font-size:14px;}
 .tc-rec.in{background:#e8f5e8;color:var(--grn);}
 .tc-rec.out{background:#fce8e8;color:#c62828;}
-#btn-in{width:100%;padding:16px;background:var(--grn);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:8px;display:none;}
-#btn-out{width:100%;padding:16px;background:#c62828;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;display:none;}
-#tc-done{text-align:center;padding:12px;color:var(--sub);font-size:13px;display:none;}
-
+.tc-btn{width:100%;padding:15px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;color:#fff;margin-bottom:6px;}
+.tc-btn.in{background:var(--grn);}
+.tc-btn.out{background:#c62828;}
 /* タブ */
-.tabs{display:flex;border-bottom:2px solid var(--bdr);margin-bottom:14px;}
-.tab-btn{flex:1;padding:10px 4px;border:none;background:none;font-size:12px;font-weight:700;cursor:pointer;color:#aaa;border-bottom:3px solid transparent;margin-bottom:-2px;}
-.tab-btn.active{color:var(--pri);border-bottom-color:var(--pri);}
-
-/* シフト */
-.shift-table{width:100%;border-collapse:collapse;font-size:13px;}
-.shift-table td{padding:8px 4px;border-bottom:1px solid #f0ebe5;}
-.shift-table tr.today td{background:#f0fff0;}
-.shift-table .sun{color:#c62828;}
-.shift-table .sat{color:#1565c0;}
+.tabs{display:flex;border-bottom:2px solid var(--bdr);margin-bottom:12px;}
+.tb{flex:1;padding:9px 2px;border:none;background:none;font-size:12px;font-weight:700;cursor:pointer;color:#aaa;border-bottom:3px solid transparent;margin-bottom:-2px;}
+.tb.on{color:var(--pri);border-bottom-color:var(--pri);}
+/* テーブル系 */
+.rows .row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f0ebe5;cursor:pointer;}
+.rows .row:last-child{border-bottom:none;}
+.row-l{color:var(--sub);font-size:12px;}
+.row-r{font-weight:600;display:flex;align-items:center;gap:4px;}
+.arr{color:#ccc;font-size:12px;}
+/* パターンバッジ */
 .pat{display:inline-block;padding:2px 8px;border-radius:8px;color:#fff;font-size:11px;font-weight:700;}
-
 /* サマリー */
-.sum-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
-.sum-item{background:var(--bg);border-radius:8px;padding:10px;text-align:center;}
-.sum-item .val{font-size:20px;font-weight:700;color:var(--pri);}
-.sum-item .lbl{font-size:11px;color:var(--sub);margin-top:2px;}
-
+.sum3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+.sum-i{background:var(--bg);border-radius:8px;padding:10px;text-align:center;}
+.sum-i .v{font-size:20px;font-weight:700;color:var(--pri);}
+.sum-i .l{font-size:10px;color:var(--sub);margin-top:2px;}
 /* 有給 */
-.pl-balance{text-align:center;padding:16px 0;}
-.pl-balance .num{font-size:48px;font-weight:700;color:var(--paid);}
-.pl-balance .unit{font-size:16px;color:var(--paid);}
-.pl-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ebe5;font-size:13px;}
-.pl-row:last-child{border-bottom:none;}
-
+.pl-big{text-align:center;padding:12px 0 16px;}
+.pl-big .n{font-size:48px;font-weight:700;color:var(--paid);}
+.pl-big .u{font-size:16px;color:var(--paid);}
 /* 申請 */
-.plr-type-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;}
-.plr-type-btn{padding:10px 4px;border:2px solid var(--bdr);border-radius:8px;background:#fff;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;}
-.plr-type-btn.active{border-color:var(--paid);background:var(--paid);color:#fff;}
-.plr-item{border-left:4px solid var(--bdr);padding:10px 12px;border-radius:0 8px 8px 0;margin-bottom:8px;background:#fafafa;}
-.plr-item.pending{border-color:#e65100;background:#fff8f0;}
-.plr-item.approved{border-color:var(--grn);background:#f0fff0;}
-.plr-item.rejected{border-color:#c62828;background:#fff0f0;}
-.plr-status{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-block;}
-.plr-status.pending{background:#fff3e0;color:#e65100;}
-.plr-status.approved{background:#e8f5e8;color:var(--grn);}
-.plr-status.rejected{background:#fce8e8;color:#c62828;}
-.btn-submit{width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;}
-.btn-cancel-req{background:none;border:1px solid #ccc;border-radius:6px;padding:4px 10px;font-size:11px;color:var(--sub);cursor:pointer;margin-top:6px;}
-
-#loading{display:none;text-align:center;padding:60px 20px;color:var(--sub);}
-.spinner{width:28px;height:28px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px;}
-@keyframes spin{to{transform:rotate(360deg);}}
+.type-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;}
+.type-btn{padding:9px 4px;border:2px solid var(--bdr);border-radius:8px;background:#fff;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;}
+.type-btn.on{border-color:var(--paid);background:var(--paid);color:#fff;}
+.sub-btn{width:100%;padding:13px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+.plr-i{border-left:4px solid var(--bdr);padding:10px 12px;border-radius:0 8px 8px 0;margin-bottom:8px;background:#fafafa;}
+.plr-i.pending{border-color:#e65100;background:#fff8f0;}
+.plr-i.approved{border-color:var(--grn);background:#f0fff0;}
+.plr-i.rejected{border-color:#c62828;background:#fff0f0;}
+.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;display:inline-block;}
+.badge.pending{background:#fff3e0;color:#e65100;}
+.badge.approved{background:#e8f5e8;color:var(--grn);}
+.badge.rejected{background:#fce8e8;color:#c62828;}
+/* モーダル */
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;padding:16px;}
+.modal-box{background:#fff;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;}
+.modal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.modal-hd h3{font-size:16px;font-weight:700;}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;}
+.mf label{display:block;font-size:11px;font-weight:700;color:var(--sub);margin-bottom:4px;margin-top:12px;}
+.mf input,.mf select,.mf textarea{width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;}
+.mf textarea{resize:none;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 </style>
 </head>
 <body>
 
-<div id="loading"><div class="spinner"></div>読み込み中...</div>
+<div id="pg-loading"><div class="spin"></div>読み込み中...</div>
 
-<!-- ログイン -->
-<div id="login-screen">
-  <div class="login-card">
+<div id="pg-login">
+  <div class="login-box">
     <div class="login-logo">
-      <span class="icon">🏢</span>
+      <span class="ico">🏢</span>
       <h1>ひとつぎ マイページ</h1>
-      <p>スタッフ専用</p>
     </div>
-    <div class="field"><label>ログインID</label><input type="text" id="inp-id" autocomplete="username"></div>
-    <div class="field"><label>パスワード</label><input type="password" id="inp-pw" autocomplete="current-password"></div>
+    <div class="f">
+      <label>ログインID</label>
+      <input type="text" id="inp-id" autocomplete="username">
+    </div>
+    <div class="f">
+      <label>パスワード</label>
+      <input type="password" id="inp-pw" autocomplete="current-password">
+    </div>
     <button id="btn-login">ログイン</button>
     <div id="login-err"></div>
   </div>
 </div>
 
-<!-- メイン -->
-<div id="main-screen">
+<div id="pg-main">
   <header>
     <div>
-      <div class="name" id="hd-name"></div>
-      <div class="role" id="hd-role"></div>
+      <div class="hd-name" id="hd-name"></div>
+      <div class="hd-role" id="hd-role"></div>
     </div>
     <button id="btn-logout">ログアウト</button>
   </header>
 
   <!-- タイムカード -->
-  <div class="card">
-    <div class="card-title">🕐 タイムカード — <span id="tc-date"></span></div>
-    <div id="tc-status"></div>
-    <button id="btn-in">🟢 出勤</button>
-    <button id="btn-out">🔴 退勤</button>
-    <div id="tc-done">✅ 本日の打刻は完了しています</div>
+  <div class="card" id="tc-card">
+    <div class="ct">🕐 タイムカード — <span id="tc-date"></span></div>
+    <div id="tc-body"></div>
   </div>
 
   <!-- タブ -->
   <div class="tabs">
-    <button class="tab-btn active" id="tab-btn-shift" onclick="switchTab('shift')">📆 シフト</button>
-    <button class="tab-btn" id="tab-btn-att" onclick="switchTab('att')">📊 出勤</button>
-    <button class="tab-btn" id="tab-btn-paid" onclick="switchTab('paid')">📅 有給</button>
+    <button class="tb on" id="tb-shift" onclick="showTab('shift')">📆 シフト</button>
+    <button class="tb" id="tb-att" onclick="showTab('att')">📊 出勤</button>
+    <button class="tb" id="tb-paid" onclick="showTab('paid')">📅 有給</button>
   </div>
 
-  <!-- シフトタブ -->
   <div id="tab-shift">
     <div class="card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <button onclick="shiftPrev()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer">◀</button>
-        <span id="shift-ym" style="font-size:15px;font-weight:700;flex:1;text-align:center"></span>
-        <button onclick="shiftNext()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer">▶</button>
-        <button onclick="shiftGoToday()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px">今月</button>
+        <button onclick="shiftPrev()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">◀</button>
+        <span id="shift-ym" style="flex:1;text-align:center;font-size:15px;font-weight:700"></span>
+        <button onclick="shiftNext()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">▶</button>
+        <button onclick="shiftNow()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px">今月</button>
       </div>
-      <div id="shift-body"></div>
+      <div id="shift-body" class="rows"></div>
     </div>
   </div>
 
-  <!-- 出勤タブ -->
   <div id="tab-att" style="display:none">
     <div class="card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <button onclick="attPrev()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer">◀</button>
-        <span id="att-ym" style="font-size:15px;font-weight:700;flex:1;text-align:center"></span>
-        <button onclick="attNext()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer">▶</button>
-        <button onclick="attGoToday()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px">今月</button>
+        <button onclick="attPrev()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">◀</button>
+        <span id="att-ym" style="flex:1;text-align:center;font-size:15px;font-weight:700"></span>
+        <button onclick="attNext()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">▶</button>
+        <button onclick="attNow()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px">今月</button>
       </div>
-      <div class="sum-grid" id="att-sum"></div>
-      <div id="att-body"></div>
+      <div class="sum3" id="att-sum"></div>
+      <div id="att-body" class="rows"></div>
     </div>
   </div>
 
-  <!-- 有給タブ -->
   <div id="tab-paid" style="display:none">
     <div class="card">
-      <div class="card-title">📅 有給残日数</div>
-      <div class="pl-balance"><span class="num" id="pl-num">-</span><span class="unit">日</span></div>
+      <div class="ct">📅 有給残日数</div>
+      <div class="pl-big"><span class="n" id="pl-num">-</span><span class="u">日</span></div>
     </div>
     <div class="card">
-      <div class="card-title">📨 有給申請</div>
-      <div class="field"><label>取得日</label><input type="date" id="plr-date" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px"></div>
-      <div class="field"><label>種別</label>
-        <div class="plr-type-btns">
-          <button class="plr-type-btn active" onclick="setPLRType(this,'有給')">全日</button>
-          <button class="plr-type-btn" onclick="setPLRType(this,'午前半休')">午前半休</button>
-          <button class="plr-type-btn" onclick="setPLRType(this,'午後半休')">午後半休</button>
+      <div class="ct">📨 有給申請</div>
+      <div class="f"><label>取得日</label><input type="date" id="plr-date"></div>
+      <div class="f" style="margin-top:10px"><label>種別</label>
+        <div class="type-btns">
+          <button class="type-btn on" onclick="setType(this,'有給')">全日</button>
+          <button class="type-btn" onclick="setType(this,'午前半休')">午前半休</button>
+          <button class="type-btn" onclick="setType(this,'午後半休')">午後半休</button>
         </div>
       </div>
-      <div class="field"><label>理由（任意）</label><input type="text" id="plr-reason" placeholder="例: 私用のため" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px"></div>
-      <button class="btn-submit" id="btn-plr-submit">申請する</button>
+      <div class="f"><label>理由（任意）</label><input type="text" id="plr-reason" placeholder="例: 私用のため"></div>
+      <button class="sub-btn" id="btn-plr">申請する</button>
     </div>
     <div class="card">
-      <div class="card-title">📋 申請状況</div>
+      <div class="ct">📋 申請状況</div>
       <div id="plr-list"></div>
     </div>
     <div class="card">
-      <div class="card-title">📋 付与履歴</div>
+      <div class="ct">📋 付与履歴</div>
       <div id="pl-grants"></div>
     </div>
     <div class="card">
-      <div class="card-title">📝 取得履歴</div>
-      <div id="pl-usages"></div>
+      <div class="ct">📝 取得履歴</div>
+      <div id="pl-used"></div>
     </div>
   </div>
 </div>
 
+<!-- モーダル -->
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <h3 id="modal-title"></h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div id="modal-body" class="mf"></div>
+  </div>
+</div>
+
 <script>
-// ══════════════════════════════════════
-// 初期化
-// ══════════════════════════════════════
-var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-var ME = null;
-var _pats = [];
-var _plUsages = [];
-var _plGrants = [];
-var _plrType = '有給';
-var _shiftYM = '';
-var _attYM = '';
-var _tcRec = null;
+'use strict';
+// ─── 初期化 ─────────────────────────
+var SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var ME = null, PATS = [], PL_USAGES = [], PL_GRANTS = [], PLR_LIST = [];
+var PLR_TYPE = '有給', SHIFT_YM = '', ATT_YM = '', TC_REC = null;
 
-// ══════════════════════════════════════
-// ユーティリティ
-// ══════════════════════════════════════
+// ─── ユーティリティ ──────────────────
 function pad(n){ return String(n).padStart(2,'0'); }
-function today(){
-  var d = new Date();
-  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-}
-function nowYM(){
-  var d = new Date();
-  return d.getFullYear()+'-'+pad(d.getMonth()+1);
-}
-function nowTime(){
-  var d = new Date();
-  return pad(d.getHours())+':'+pad(d.getMinutes());
-}
-function fmtD(s){
-  if(!s)return'-';
-  var p=s.split('-');
-  return p[0]+'/'+p[1]+'/'+p[2];
-}
-function fmtYM(ym){
-  var p=ym.split('-');
-  return p[0]+'年'+parseInt(p[1])+'月';
-}
-function esc(s){
-  return String(s||'')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function today(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function nowYM(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1); }
+function nowTime(){ var d=new Date(); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+function fmtD(s){ if(!s)return'-'; var p=s.split('-'); return p[0]+'/'+p[1]+'/'+p[2]; }
+function fmtYM(ym){ var p=ym.split('-'); return p[0]+'年'+parseInt(p[1])+'月'; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function show(id){ document.getElementById(id).style.display='block'; }
+function hide(id){ document.getElementById(id).style.display='none'; }
+function flex(id){ document.getElementById(id).style.display='flex'; }
+function el(id){ return document.getElementById(id); }
+function qsa(sel){ return document.querySelectorAll(sel); }
+var DOW = ['日','月','火','水','木','金','土'];
+
+// テーブルが存在しない場合も空配列で返す安全クエリ
+async function safeQuery(promise){
+  try{ var r = await promise; return (r && r.data) ? r.data : []; }
+  catch(e){ return []; }
 }
 
-// ══════════════════════════════════════
-// 有給計算
-// ══════════════════════════════════════
-var PL_TABLE=[
-  {m:6,d:10},{m:18,d:11},{m:30,d:12},
-  {m:42,d:14},{m:54,d:16},{m:66,d:18},{m:78,d:20}
-];
-var PL_PART={4:[7,8,9,10,12,13,15],3:[5,6,6,8,9,10,11],2:[3,4,4,5,6,6,7],1:[1,2,2,2,3,3,3]};
+// ─── 有給計算 ────────────────────────
+var PL_TBL=[{m:6,d:10},{m:18,d:11},{m:30,d:12},{m:42,d:14},{m:54,d:16},{m:66,d:18},{m:78,d:20}];
+var PL_PT={4:[7,8,9,10,12,13,15],3:[5,6,6,8,9,10,11],2:[3,4,4,5,6,6,7],1:[1,2,2,2,3,3,3]};
 
-function grantDays(idx, wd){
-  if(idx<0)return 0;
-  var w=Number(wd)||0;
-  if(w>=1&&w<=4&&PL_PART[w])return PL_PART[w][idx];
-  return PL_TABLE[idx].d;
-}
+function grantDays(i,wd){ var w=Number(wd)||0; if(w>=1&&w<=4&&PL_PT[w])return PL_PT[w][i]; return PL_TBL[i].d; }
 
 function buildGrants(s){
-  if(!s.startDate)return[];
-  var res=[], steps=[6,18,30,42,54,66,78];
-  var sd=new Date(s.startDate), td=today(), wd=s.weeklyDays;
+  if(!s||!s.startDate)return[];
+  var res=[],steps=[6,18,30,42,54,66,78],sd=new Date(s.startDate),td=today();
   for(var i=0;i<steps.length;i++){
     var gd=new Date(sd); gd.setMonth(gd.getMonth()+steps[i]);
     var gs=gd.getFullYear()+'-'+pad(gd.getMonth()+1)+'-'+pad(gd.getDate());
-    var days=grantDays(i,wd);
     var ed=new Date(gd); ed.setFullYear(ed.getFullYear()+2);
     var es=ed.getFullYear()+'-'+pad(ed.getMonth()+1)+'-'+pad(ed.getDate());
-    res.push({grantDate:gs,days:days,expDate:es,isFuture:gs>td,isExpired:es<td});
+    res.push({grantDate:gs,days:grantDays(i,s.weeklyDays),expDate:es,isFuture:gs>td,isExpired:es<td});
     if(i===6){
       for(var j=1;j<=5;j++){
         var ng=new Date(gd); ng.setFullYear(ng.getFullYear()+j);
         var ngs=ng.getFullYear()+'-'+pad(ng.getMonth()+1)+'-'+pad(ng.getDate());
         var ne=new Date(ng); ne.setFullYear(ne.getFullYear()+2);
-        var nes=ne.getFullYear()+'-'+pad(ne.getMonth()+1)+'-'+pad(ne.getDate());
-        res.push({grantDate:ngs,days:20,expDate:nes,isFuture:ngs>td,isExpired:nes<td});
+        res.push({grantDate:ngs,days:20,expDate:ne.getFullYear()+'-'+pad(ne.getMonth()+1)+'-'+pad(ne.getDate()),isFuture:ngs>td,isExpired:false});
       }
       break;
     }
@@ -285,497 +256,344 @@ function buildGrants(s){
   return res;
 }
 
-function calcBalance(grants, usages){
-  var bal=0;
+function calcBal(grants,usages){
+  var b=0;
   grants.forEach(function(g){
     if(g.isFuture||g.isExpired)return;
-    var used=usages.reduce(function(s,u){
-      return u.grantId===g.grantDate?s+(Number(u.days)||0):s;
-    },0);
-    bal+=Math.max(0,g.days-used);
+    var u=usages.reduce(function(s,x){return x.grantId===g.grantDate?s+(Number(x.days)||0):s;},0);
+    b+=Math.max(0,g.days-u);
   });
-  return bal;
+  return b;
 }
 
-// ══════════════════════════════════════
-// ログイン
-// ══════════════════════════════════════
-document.getElementById('btn-login').onclick = function(){
-  var id = document.getElementById('inp-id').value.trim();
-  var pw = document.getElementById('inp-pw').value;
-  var err = document.getElementById('login-err');
-  err.textContent = '';
-  if(!id||!pw){ err.textContent='IDとパスワードを入力してください'; return; }
-  var btn = this;
-  btn.disabled = true; btn.textContent = '確認中...';
-  sb.from('スタッフ').select('*').eq('loginId',id).eq('password',pw).limit(1)
-    .then(function(r){
-      if(r.error){ err.textContent='エラー: '+r.error.message; return; }
-      if(!r.data||r.data.length===0){ err.textContent='IDまたはパスワードが違います'; return; }
-      ME = r.data[0];
-      try{ sessionStorage.setItem('mp_me', JSON.stringify(ME)); }catch(e){}
-      startMain();
-    })
-    .catch(function(e){ err.textContent='通信エラー: '+(e.message||String(e)); })
-    .finally(function(){ btn.disabled=false; btn.textContent='ログイン'; });
+// ─── ログイン ────────────────────────
+el('btn-login').onclick = async function(){
+  var id=el('inp-id').value.trim(), pw=el('inp-pw').value;
+  var err=el('login-err'), btn=this;
+  err.textContent='';
+  if(!id||!pw){err.textContent='IDとパスワードを入力してください';return;}
+  btn.disabled=true; btn.textContent='確認中...';
+  try{
+    var r=await SB.from('スタッフ').select('*').eq('loginId',id).eq('password',pw).limit(1);
+    if(r.error)throw r.error;
+    if(!r.data||!r.data.length){err.textContent='IDまたはパスワードが違います';return;}
+    ME=r.data[0];
+    try{sessionStorage.setItem('mp',JSON.stringify(ME));}catch(e){}
+    await boot();
+  }catch(e){
+    err.textContent='エラー: '+(e.message||String(e));
+  }finally{
+    btn.disabled=false; btn.textContent='ログイン';
+  }
 };
 
-document.getElementById('inp-pw').onkeydown = function(e){
-  if(e.key==='Enter') document.getElementById('btn-login').onclick();
-};
+el('inp-pw').onkeydown=function(e){if(e.key==='Enter')el('btn-login').onclick();};
 
-document.getElementById('btn-logout').onclick = function(){
-  try{ sessionStorage.removeItem('mp_me'); }catch(e){}
+el('btn-logout').onclick=function(){
+  try{sessionStorage.removeItem('mp');}catch(e){}
   ME=null;
-  document.getElementById('main-screen').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
+  hide('pg-main'); flex('pg-login');
 };
 
-// ══════════════════════════════════════
-// 起動
-// ══════════════════════════════════════
-function startMain(){
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('loading').style.display='block';
-  document.getElementById('hd-name').textContent = ME.name||'';
-  document.getElementById('hd-role').textContent = ME.role||'';
-  _shiftYM = nowYM();
-  _attYM = nowYM();
-  _pats = [];
-  _plUsages = [];
-  _plGrants = [];
-  window._plrList = [];
-
-  function safe(p){ return p.then(function(r){return r;}).catch(function(){return null;}); }
-
-  safe(sb.from('設定').select('value').eq('key','shiftPatterns').limit(1))
-    .then(function(r){
-      try{ _pats=JSON.parse(((r&&r.data&&r.data[0]&&r.data[0].value)||'[]')); }catch(e){ _pats=[]; }
-      return safe(sb.from('有給取得記録').select('*').eq('staffId',ME.id));
-    })
-    .then(function(r){
-      _plUsages=(r&&r.data)||[];
-      _plGrants=buildGrants(ME);
-      return safe(sb.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
-    })
-    .then(function(r){
-      window._plrList=(r&&r.data)||[];
-      // 全部完了 → メイン画面へ
-      document.getElementById('loading').style.display='none';
-      document.getElementById('main-screen').style.display='block';
-      var btn=document.getElementById('btn-login');
-      if(btn){btn.disabled=false;btn.textContent='ログイン';}
-      loadTC();
-      renderShift();
-    })
-    .catch(function(e){
-      document.getElementById('loading').style.display='none';
-      document.getElementById('login-screen').style.display='flex';
-      var btn=document.getElementById('btn-login');
-      if(btn){btn.disabled=false;btn.textContent='ログイン';}
-      alert('読み込みエラー: '+(e.message||String(e)));
-    });
+// ─── 起動 ────────────────────────────
+async function boot(){
+  hide('pg-login'); hide('pg-main');
+  show('pg-loading');
+  try{
+    // 勤務パターン
+    var r1=await SB.from('設定').select('value').eq('key','shiftPatterns').limit(1);
+    try{PATS=JSON.parse((r1.data&&r1.data[0]&&r1.data[0].value)||'[]');}catch(e){PATS=[];}
+    // 有給取得記録
+    PL_USAGES=await safeQuery(SB.from('有給取得記録').select('*').eq('staffId',ME.id));
+    // 付与履歴
+    PL_GRANTS=buildGrants(ME);
+    // 有給申請
+    PLR_LIST=await safeQuery(SB.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+    // 画面設定
+    el('hd-name').textContent=ME.name||'';
+    el('hd-role').textContent=ME.role||'';
+    SHIFT_YM=nowYM(); ATT_YM=nowYM();
+    hide('pg-loading'); show('pg-main');
+    await loadTC();
+    await renderShift();
+    var di=el('plr-date'); if(di)di.value=today();
+  }catch(e){
+    hide('pg-loading'); flex('pg-login');
+    alert('読み込みエラー: '+(e.message||String(e)));
+  }
 }
 
 // セッション復元
-(function(){
+(async function(){
   try{
-    var s = sessionStorage.getItem('mp_me');
-    if(s){ ME=JSON.parse(s); startMain(); }
-  }catch(e){ /* 無視 */ }
+    var s=sessionStorage.getItem('mp');
+    if(s){ME=JSON.parse(s); await boot();}
+  }catch(e){try{sessionStorage.removeItem('mp');}catch(e2){}}
 })();
 
-// ══════════════════════════════════════
-// タブ
-// ══════════════════════════════════════
-function switchTab(tab){
+// ─── タブ ────────────────────────────
+function showTab(tab){
   ['shift','att','paid'].forEach(function(t){
-    document.getElementById('tab-'+t).style.display = t===tab?'block':'none';
-    document.getElementById('tab-btn-'+t).classList.toggle('active', t===tab);
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('tb-'+t).className='tb'+(t===tab?' on':'');
   });
-  if(tab==='att') renderAtt();
-  if(tab==='paid'){ renderPaid(); loadPLRList(); }
+  if(tab==='att')renderAtt();
+  if(tab==='paid'){renderPaid();renderPLRList();}
 }
 
-// ══════════════════════════════════════
-// タイムカード
-// ══════════════════════════════════════
-function loadTC(){
-  var td = today();
-  var dt = new Date();
-  var dow=['日','月','火','水','木','金','土'][dt.getDay()];
-  document.getElementById('tc-date').textContent =
-    dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日（'+dow+'）';
-  _tcRec = null;
-  sb.from('スタッフ出欠').select('*').eq('staffId',ME.id).eq('date',td).limit(1)
-    .then(function(r){
-      _tcRec = (r.data&&r.data.length>0) ? r.data[0] : null;
-      renderTC();
-    });
+// ─── タイムカード ─────────────────────
+async function loadTC(){
+  var td=today(), dt=new Date();
+  el('tc-date').textContent=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日（'+DOW[dt.getDay()]+'）';
+  var r=await SB.from('スタッフ出欠').select('*').eq('staffId',ME.id).eq('date',td).limit(1);
+  TC_REC=(r.data&&r.data.length)?r.data[0]:null;
+  renderTC();
 }
 
 function renderTC(){
-  var st = document.getElementById('tc-status');
-  var bi = document.getElementById('btn-in');
-  var bo = document.getElementById('btn-out');
-  var dn = document.getElementById('tc-done');
-  bi.style.display='none'; bo.style.display='none'; dn.style.display='none';
-  st.innerHTML='';
-  if(!_tcRec||!_tcRec.startTime){
-    bi.style.display='block';
-    st.innerHTML='<p style="color:var(--sub);font-size:13px;text-align:center;margin-bottom:8px">未出勤</p>';
-  } else if(!_tcRec.endTime){
-    bo.style.display='block';
-    st.innerHTML='<div class="tc-rec in"><span>🟢 出勤</span><span style="font-size:18px;font-weight:700">'+esc(_tcRec.startTime)+'</span></div>';
-  } else {
-    dn.style.display='block';
-    st.innerHTML=
-      '<div class="tc-rec in"><span>🟢 出勤</span><span style="font-size:18px;font-weight:700">'+esc(_tcRec.startTime)+'</span></div>'+
-      '<div class="tc-rec out"><span>🔴 退勤</span><span style="font-size:18px;font-weight:700">'+esc(_tcRec.endTime)+'</span></div>';
+  var b=el('tc-body'); b.innerHTML='';
+  if(!TC_REC||!TC_REC.startTime){
+    b.innerHTML='<p style="color:var(--sub);text-align:center;padding:8px 0 10px">未出勤</p>';
+    b.innerHTML+='<button class="tc-btn in" id="btn-in">🟢 出勤</button>';
+    el('btn-in').onclick=clockIn;
+  }else if(!TC_REC.endTime){
+    b.innerHTML='<div class="tc-rec in"><span>🟢 出勤</span><span style="font-size:18px;font-weight:700">'+esc(TC_REC.startTime)+'</span></div>';
+    b.innerHTML+='<button class="tc-btn out" id="btn-out">🔴 退勤</button>';
+    el('btn-out').onclick=clockOut;
+  }else{
+    b.innerHTML='<div class="tc-rec in"><span>🟢 出勤</span><span style="font-size:18px;font-weight:700">'+esc(TC_REC.startTime)+'</span></div>';
+    b.innerHTML+='<div class="tc-rec out"><span>🔴 退勤</span><span style="font-size:18px;font-weight:700">'+esc(TC_REC.endTime)+'</span></div>';
+    b.innerHTML+='<p style="color:var(--sub);text-align:center;font-size:12px;margin-top:6px">✅ 打刻完了</p>';
   }
 }
 
-document.getElementById('btn-in').onclick = function(){
-  var btn=this; btn.disabled=true; btn.textContent='記録中...';
+async function clockIn(){
+  var btn=el('btn-in'); if(btn)btn.disabled=true;
   var t=nowTime(), td=today();
-  var p = _tcRec
-    ? sb.from('スタッフ出欠').update({startTime:t}).eq('id',_tcRec.id)
-    : sb.from('スタッフ出欠').insert({id:'sa'+Date.now(),staffId:ME.id,date:td,startTime:t});
-  p.then(function(){
-    if(!_tcRec) _tcRec={staffId:ME.id,date:td,startTime:t};
-    else _tcRec.startTime=t;
+  try{
+    if(TC_REC){
+      await SB.from('スタッフ出欠').update({startTime:t}).eq('id',TC_REC.id);
+      TC_REC.startTime=t;
+    }else{
+      var id='sa'+Date.now();
+      await SB.from('スタッフ出欠').insert({id:id,staffId:ME.id,date:td,startTime:t});
+      TC_REC={id:id,staffId:ME.id,date:td,startTime:t,endTime:null};
+    }
     renderTC();
-  }).catch(function(e){ alert('エラー: '+e.message); })
-  .finally(function(){ btn.disabled=false; btn.innerHTML='🟢 出勤'; });
-};
+  }catch(e){alert('エラー: '+e.message);}
+}
 
-document.getElementById('btn-out').onclick = function(){
-  var btn=this; btn.disabled=true; btn.textContent='記録中...';
+async function clockOut(){
+  var btn=el('btn-out'); if(btn)btn.disabled=true;
   var t=nowTime();
-  sb.from('スタッフ出欠').update({endTime:t}).eq('id',_tcRec.id)
-    .then(function(){ _tcRec.endTime=t; renderTC(); })
-    .catch(function(e){ alert('エラー: '+e.message); })
-    .finally(function(){ btn.disabled=false; btn.innerHTML='🔴 退勤'; });
-};
-
-// ══════════════════════════════════════
-// シフト
-// ══════════════════════════════════════
-function shiftPrev(){ var p=_shiftYM.split('-');var m=parseInt(p[1])-1;var y=parseInt(p[0]);if(m<1){m=12;y--;}_shiftYM=y+'-'+pad(m);renderShift(); }
-function shiftNext(){ var p=_shiftYM.split('-');var m=parseInt(p[1])+1;var y=parseInt(p[0]);if(m>12){m=1;y++;}_shiftYM=y+'-'+pad(m);renderShift(); }
-function shiftGoToday(){ _shiftYM=nowYM(); renderShift(); }
-
-function renderShift(){
-  document.getElementById('shift-ym').textContent = fmtYM(_shiftYM);
-  var el = document.getElementById('shift-body');
-  el.textContent='読み込み中...';
-  sb.from('シフト').select('*').eq('staffId',ME.id).like('date',_shiftYM+'%')
-    .then(function(r){
-      var map={};
-      (r.data||[]).forEach(function(row){ map[row.date]=row.pattern; });
-      var p=_shiftYM.split('-');var y=parseInt(p[0]),m=parseInt(p[1]);
-      var dim=new Date(y,m,0).getDate();
-      var dow=['日','月','火','水','木','金','土'];
-      var td=today(); var wdays=0; var rows='';
-      for(var d=1;d<=dim;d++){
-        var ds=_shiftYM+'-'+pad(d);
-        var di=new Date(y,m-1,d).getDay();
-        var pat=map[ds]||'';
-        var patObj=_pats.find(function(x){return x.name===pat;});
-        var patHtml='';
-        if(patObj){
-          patHtml='<span class="pat" style="background:'+esc(patObj.color)+'">'+esc(patObj.name)+'</span>'
-            +' <span style="font-size:11px;color:var(--sub)">'+esc(patObj.startTime)+'〜'+esc(patObj.endTime)+'</span>';
-          wdays++;
-        } else if(pat==='有給'){ patHtml='<span class="pat" style="background:#1565c0">有給</span>'; wdays++; }
-        else if(pat==='有給（午前半休）'){ patHtml='<span class="pat" style="background:#1976d2">AM</span> <span style="font-size:11px;color:var(--sub)">13:00〜18:00</span>'; wdays++; }
-        else if(pat==='有給（午後半休）'){ patHtml='<span class="pat" style="background:#0288d1">PM</span> <span style="font-size:11px;color:var(--sub)">09:00〜13:00</span>'; wdays++; }
-        else if(pat==='休'){ patHtml='<span style="color:#aaa;font-size:12px">休</span>'; }
-        else { patHtml='<span style="color:#ddd;font-size:12px">−</span>'; }
-        var cls=(ds===td?'today':'')+(di===0?' sun':di===6?' sat':'');
-        var rowClick='onclick="openShiftCR(''+ds+'',''+pat+'')"';
-        rows+='<tr class="'+cls+'" '+rowClick+' style="cursor:pointer">'
-          +'<td style="width:28px;text-align:center;font-weight:700">'+d+'</td>'
-          +'<td style="width:24px;text-align:center;font-size:12px">'+dow[di]+'</td>'
-          +'<td>'+patHtml+'</td>'
-          +'<td style="width:20px;text-align:center;color:#ccc;font-size:11px">›</td>'
-          +'</tr>';
-      }
-      el.innerHTML='<div style="font-size:12px;color:var(--sub);margin-bottom:8px">出勤予定: <strong style="color:var(--pri)">'+wdays+'日</strong></div>'
-        +'<table class="shift-table"><tbody>'+rows+'</tbody></table>';
-    });
+  try{
+    await SB.from('スタッフ出欠').update({endTime:t}).eq('id',TC_REC.id);
+    TC_REC.endTime=t; renderTC();
+  }catch(e){alert('エラー: '+e.message);}
 }
 
-// ══════════════════════════════════════
-// 出勤実績
-// ══════════════════════════════════════
-function attPrev(){ var p=_attYM.split('-');var m=parseInt(p[1])-1;var y=parseInt(p[0]);if(m<1){m=12;y--;}_attYM=y+'-'+pad(m);renderAtt(); }
-function attNext(){ var p=_attYM.split('-');var m=parseInt(p[1])+1;var y=parseInt(p[0]);if(m>12){m=1;y++;}_attYM=y+'-'+pad(m);renderAtt(); }
-function attGoToday(){ _attYM=nowYM(); renderAtt(); }
+// ─── シフト ──────────────────────────
+function shiftPrev(){var p=SHIFT_YM.split('-'),m=parseInt(p[1])-1,y=parseInt(p[0]);if(m<1){m=12;y--;}SHIFT_YM=y+'-'+pad(m);renderShift();}
+function shiftNext(){var p=SHIFT_YM.split('-'),m=parseInt(p[1])+1,y=parseInt(p[0]);if(m>12){m=1;y++;}SHIFT_YM=y+'-'+pad(m);renderShift();}
+function shiftNow(){SHIFT_YM=nowYM();renderShift();}
 
-function renderAtt(){
-  document.getElementById('att-ym').textContent = fmtYM(_attYM);
-  sb.from('スタッフ出欠').select('*').eq('staffId',ME.id).like('date',_attYM+'%').order('date',{ascending:true})
-    .then(function(r){
-      var recs=(r.data||[]).filter(function(x){return x.startTime;});
-      var totalMin=0;
-      recs.forEach(function(rec){
-        var sp=rec.startTime.split(':'),ep=(rec.endTime||'').split(':');
-        if(ep.length<2)return;
-        var g=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1]);
-        totalMin+=Math.max(0,g-(parseInt(rec.breakMin)||60));
-      });
-      var plDays=_plUsages.filter(function(u){return(u.date||'').indexOf(_attYM)===0;})
-        .reduce(function(s,u){return s+(Number(u.days)||0);},0);
-      document.getElementById('att-sum').innerHTML=
-        '<div class="sum-item"><div class="val">'+recs.length+'</div><div class="lbl">出勤日数</div></div>'+
-        '<div class="sum-item"><div class="val">'+Math.round(totalMin/60*10)/10+'</div><div class="lbl">実働(h)</div></div>'+
-        '<div class="sum-item"><div class="val">'+plDays+'</div><div class="lbl">有給取得</div></div>';
-      var rows='';
-      var dow=['日','月','火','水','木','金','土'];
-      recs.forEach(function(rec){
-        var di=new Date(rec.date).getDay();
-        var rowId='att-row-'+rec.date;
-        rows+='<div id="'+rowId+'" onclick="openAttCRById(this)" '
-          +'data-date="'+esc(rec.date)+'" data-start="'+esc(rec.startTime)+'" data-end="'+esc(rec.endTime||'')+'" data-break="'+(rec.breakMin||60)+'" '
-          +'style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ebe5;font-size:13px;cursor:pointer">'
-          +'<span style="color:var(--sub);font-size:12px">'+fmtD(rec.date)+'（'+dow[di]+'）</span>'
-          +'<span style="display:flex;align-items:center;gap:6px"><span style="font-weight:600">'+esc(rec.startTime)+'〜'+esc(rec.endTime||'')+'</span><span style="color:#ccc;font-size:11px">›</span></span>'
-          +'</div>';
-      });
-      document.getElementById('att-body').innerHTML = rows||'<p style="color:var(--sub);text-align:center;padding:16px">記録がありません</p>';
-    });
+async function renderShift(){
+  el('shift-ym').textContent=fmtYM(SHIFT_YM);
+  var b=el('shift-body'); b.innerHTML='<p style="color:var(--sub);text-align:center;padding:12px">読み込み中...</p>';
+  var data=await safeQuery(SB.from('シフト').select('*').eq('staffId',ME.id).like('date',SHIFT_YM+'%'));
+  var map={}; data.forEach(function(r){map[r.date]=r.pattern;});
+  var p=SHIFT_YM.split('-'),y=parseInt(p[0]),m=parseInt(p[1]),dim=new Date(y,m,0).getDate(),td=today(),wdays=0,html='';
+  for(var d=1;d<=dim;d++){
+    var ds=SHIFT_YM+'-'+pad(d),di=new Date(y,m-1,d).getDay(),pat=map[ds]||'',isToday=ds===td;
+    var po=PATS.find(function(x){return x.name===pat;});
+    var ph='';
+    if(po){ph='<span class="pat" style="background:'+esc(po.color)+'">'+esc(po.name)+'</span> <span style="color:var(--sub);font-size:11px">'+esc(po.startTime)+'〜'+esc(po.endTime)+'</span>';wdays++;}
+    else if(pat==='有給'){ph='<span class="pat" style="background:#1565c0">有給</span>';wdays++;}
+    else if(pat==='有給（午前半休）'){ph='<span class="pat" style="background:#1976d2">有給AM</span> <span style="color:var(--sub);font-size:11px">13:00〜18:00</span>';wdays++;}
+    else if(pat==='有給（午後半休）'){ph='<span class="pat" style="background:#0288d1">有給PM</span> <span style="color:var(--sub);font-size:11px">09:00〜13:00</span>';wdays++;}
+    else if(pat==='休'){ph='<span style="color:#aaa">休み</span>';}
+    else{ph='<span style="color:#ddd">−</span>';}
+    var bg=isToday?'background:#f0fff0;':'';
+    var dc=di===0?'color:#c62828':di===6?'color:#1565c0':'';
+    // シフト変更申請ボタン（onclick属性にdataを直接埋め込まずidで管理）
+    html+='<div class="row" style="'+bg+'" data-date="'+ds+'" data-pat="'+esc(pat)+'" onclick="openShiftCR(this)">'
+      +'<span class="row-l"><span style="'+dc+';font-weight:700">'+d+'日（'+DOW[di]+'）</span></span>'
+      +'<span class="row-r">'+ph+'<span class="arr">›</span></span></div>';
+  }
+  b.innerHTML='<p style="font-size:12px;color:var(--sub);margin-bottom:8px">出勤予定: <strong style="color:var(--pri)">'+wdays+'日</strong></p>'+html;
 }
 
-// ══════════════════════════════════════
-// 有給
-// ══════════════════════════════════════
-function setPLRType(btn, type){
-  _plrType=type;
-  document.querySelectorAll('.plr-type-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
+// ─── 出勤実績 ────────────────────────
+function attPrev(){var p=ATT_YM.split('-'),m=parseInt(p[1])-1,y=parseInt(p[0]);if(m<1){m=12;y--;}ATT_YM=y+'-'+pad(m);renderAtt();}
+function attNext(){var p=ATT_YM.split('-'),m=parseInt(p[1])+1,y=parseInt(p[0]);if(m>12){m=1;y++;}ATT_YM=y+'-'+pad(m);renderAtt();}
+function attNow(){ATT_YM=nowYM();renderAtt();}
+
+async function renderAtt(){
+  el('att-ym').textContent=fmtYM(ATT_YM);
+  var data=await safeQuery(SB.from('スタッフ出欠').select('*').eq('staffId',ME.id).like('date',ATT_YM+'%').order('date',{ascending:true}));
+  var recs=data.filter(function(r){return r.startTime;});
+  var tmin=0;
+  recs.forEach(function(r){
+    var sp=r.startTime.split(':'),ep=(r.endTime||'').split(':');
+    if(ep.length<2)return;
+    tmin+=Math.max(0,parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1])-(parseInt(r.breakMin)||60));
+  });
+  var plD=PL_USAGES.filter(function(u){return(u.date||'').indexOf(ATT_YM)===0;}).reduce(function(s,u){return s+(Number(u.days)||0);},0);
+  el('att-sum').innerHTML=
+    '<div class="sum-i"><div class="v">'+recs.length+'</div><div class="l">出勤日数</div></div>'+
+    '<div class="sum-i"><div class="v">'+Math.round(tmin/60*10)/10+'</div><div class="l">実働(h)</div></div>'+
+    '<div class="sum-i"><div class="v">'+plD+'</div><div class="l">有給取得</div></div>';
+  var html='';
+  recs.forEach(function(r){
+    var di=new Date(r.date).getDay();
+    var recData=JSON.stringify({date:r.date,startTime:r.startTime,endTime:r.endTime||'',breakMin:r.breakMin||60});
+    html+='<div class="row" data-rec="'+esc(recData)+'" onclick="openAttCR(this)">'
+      +'<span class="row-l">'+fmtD(r.date)+'（'+DOW[di]+'）</span>'
+      +'<span class="row-r">'+esc(r.startTime)+'〜'+esc(r.endTime||'')+' <span class="arr">›</span></span></div>';
+  });
+  el('att-body').innerHTML=html||'<p style="color:var(--sub);text-align:center;padding:16px">記録がありません</p>';
+}
+
+// ─── 有給 ────────────────────────────
+function setType(btn,type){
+  PLR_TYPE=type;
+  qsa('.type-btn').forEach(function(b){b.className='type-btn';});
+  btn.className='type-btn on';
 }
 
 function renderPaid(){
-  var bal=calcBalance(_plGrants,_plUsages);
-  document.getElementById('pl-num').textContent=bal;
+  var bal=calcBal(PL_GRANTS,PL_USAGES);
+  el('pl-num').textContent=bal;
   // 付与履歴
-  var active=_plGrants.filter(function(g){return!g.isFuture;});
-  var gh='';
+  var gh='',active=PL_GRANTS.filter(function(g){return!g.isFuture;});
   active.forEach(function(g){
-    var used=_plUsages.reduce(function(s,u){return u.grantId===g.grantDate?s+(Number(u.days)||0):s;},0);
+    var used=PL_USAGES.reduce(function(s,u){return u.grantId===g.grantDate?s+(Number(u.days)||0):s;},0);
     var rem=Math.max(0,g.days-used);
-    var status=g.isExpired?'期限切れ':rem===0?'消化済':'有効';
+    var st=g.isExpired?'期限切れ':rem===0?'消化済':'有効';
     var c=g.isExpired?'#aaa':rem===0?'var(--grn)':'var(--paid)';
-    gh+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ebe5;font-size:13px">'
-      +'<span><span style="font-weight:700">'+fmtD(g.grantDate)+'</span><br><span style="font-size:11px;color:#aaa">期限 '+fmtD(g.expDate)+'</span></span>'
-      +'<span style="text-align:right"><span style="font-weight:700;color:'+c+'">残'+rem+'日</span><br><span style="font-size:11px;color:var(--sub)">付与'+g.days+'日 / '+status+'</span></span>'
-      +'</div>';
+    gh+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ebe5">'
+      +'<span><b>'+fmtD(g.grantDate)+'</b><br><span style="font-size:10px;color:#aaa">期限 '+fmtD(g.expDate)+'</span></span>'
+      +'<span style="text-align:right"><b style="color:'+c+'">残'+rem+'日</b><br><span style="font-size:10px;color:var(--sub)">付与'+g.days+'日 '+st+'</span></span></div>';
   });
-  document.getElementById('pl-grants').innerHTML=gh||'<p style="color:var(--sub);text-align:center;padding:16px">付与履歴がありません</p>';
+  el('pl-grants').innerHTML=gh||'<p style="color:var(--sub);text-align:center;padding:12px">履歴がありません</p>';
   // 取得履歴
   var uh='';
-  _plUsages.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'');}).forEach(function(u){
-    uh+='<div class="pl-row"><span style="color:var(--sub);font-size:12px">'+fmtD(u.date)+'<br>'+esc(u.reason||'-')+'</span><span style="font-weight:700;color:var(--paid)">'+u.days+'日</span></div>';
+  PL_USAGES.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'');}).forEach(function(u){
+    uh+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ebe5">'
+      +'<span style="color:var(--sub);font-size:12px">'+fmtD(u.date)+'<br>'+esc(u.reason||'-')+'</span>'
+      +'<span style="font-weight:700;color:var(--paid)">'+u.days+'日</span></div>';
   });
-  document.getElementById('pl-usages').innerHTML=uh||'<p style="color:var(--sub);text-align:center;padding:16px">取得履歴がありません</p>';
-  // 申請フォームの日付デフォルト
-  var di=document.getElementById('plr-date');
-  if(di&&!di.value) di.value=today();
+  el('pl-used').innerHTML=uh||'<p style="color:var(--sub);text-align:center;padding:12px">取得履歴がありません</p>';
 }
 
-// 申請
-document.getElementById('btn-plr-submit').onclick = function(){
-  var date=document.getElementById('plr-date').value;
-  var reason=document.getElementById('plr-reason').value;
-  if(!date){ alert('取得日を選択してください'); return; }
-  var days=_plrType==='有給'?1:0.5;
-  if(calcBalance(_plGrants,_plUsages)<days){ alert('有給残日数が不足しています'); return; }
-  var dup=(window._plrList||[]).find(function(r){return r.date===date&&r.status==='pending';});
-  if(dup){ alert('同じ日付で承認待ちの申請があります'); return; }
-  var btn=this; btn.disabled=true; btn.textContent='申請中...';
-  var id='plr'+Date.now();
-  sb.from('有給申請').insert({id:id,staffId:ME.id,date:date,type:_plrType,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()})
-    .then(function(r){
-      if(r.error)throw r.error;
-      document.getElementById('plr-date').value='';
-      document.getElementById('plr-reason').value='';
-      return sb.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false});
-    })
-    .then(function(r){ window._plrList=r.data||[]; loadPLRList(); alert('✅ 申請しました'); })
-    .catch(function(e){ alert('申請失敗: '+(e.message||e)); })
-    .finally(function(){ btn.disabled=false; btn.textContent='申請する'; });
+// 有給申請
+el('btn-plr').onclick=async function(){
+  var date=el('plr-date').value, reason=el('plr-reason').value, btn=this;
+  if(!date){alert('取得日を選択してください');return;}
+  var days=PLR_TYPE==='有給'?1:0.5;
+  if(calcBal(PL_GRANTS,PL_USAGES)<days){alert('有給残日数が不足しています');return;}
+  var dup=PLR_LIST.find(function(r){return r.date===date&&r.status==='pending';});
+  if(dup){alert('同じ日付で承認待ちの申請があります');return;}
+  btn.disabled=true; btn.textContent='申請中...';
+  try{
+    var r=await SB.from('有給申請').insert({id:'plr'+Date.now(),staffId:ME.id,date:date,type:PLR_TYPE,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
+    if(r.error)throw r.error;
+    el('plr-date').value=today(); el('plr-reason').value='';
+    PLR_LIST=await safeQuery(SB.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+    renderPLRList(); alert('✅ 申請しました');
+  }catch(e){alert('申請失敗: '+(e.message||e));}
+  finally{btn.disabled=false;btn.textContent='申請する';}
 };
-
-function loadPLRList(){
-  sb.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false})
-    .then(function(r){
-      window._plrList=r.data||[];
-      renderPLRList();
-    });
-}
 
 function renderPLRList(){
-  var list=window._plrList||[];
-  if(list.length===0){
-    document.getElementById('plr-list').innerHTML='<p style="color:var(--sub);text-align:center;padding:16px">申請履歴がありません</p>';
-    return;
-  }
-  var html='';
-  list.forEach(function(r){
-    var sLabel=r.status==='pending'?'承認待ち':r.status==='approved'?'承認済み':'却下';
-    var tLabel=r.type==='有給'?'全日':r.type==='午前半休'?'午前半休':'午後半休';
-    html+='<div class="plr-item '+r.status+'">'
+  if(!PLR_LIST.length){el('plr-list').innerHTML='<p style="color:var(--sub);text-align:center;padding:12px">申請履歴がありません</p>';return;}
+  var h='';
+  PLR_LIST.forEach(function(r){
+    var sl=r.status==='pending'?'承認待ち':r.status==='approved'?'承認済み':'却下';
+    var tl=r.type==='有給'?'全日':r.type==='午前半休'?'午前半休':'午後半休';
+    h+='<div class="plr-i '+r.status+'">'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
-      +'<span style="font-weight:700">'+fmtD(r.date)+' '+tLabel+'</span>'
-      +'<span class="plr-status '+r.status+'">'+sLabel+'</span>'
-      +'</div>'
-      +(r.reason?'<div style="font-size:12px;color:var(--sub);margin-top:4px">'+esc(r.reason)+'</div>':'')
-      +(r.comment?'<div style="font-size:12px;color:#c62828;margin-top:4px">'+esc(r.comment)+'</div>':'')
-      +(r.status==='pending'?'<div><button class="btn-cancel-req" onclick="cancelPLR(\''+r.id+'\')">申請を取り消す</button></div>':'')
+      +'<b>'+fmtD(r.date)+' '+tl+'</b><span class="badge '+r.status+'">'+sl+'</span></div>'
+      +(r.reason?'<div style="font-size:11px;color:var(--sub);margin-top:4px">'+esc(r.reason)+'</div>':'')
+      +(r.comment?'<div style="font-size:11px;color:#c62828;margin-top:2px">'+esc(r.comment)+'</div>':'')
+      +(r.status==='pending'?'<div style="margin-top:6px"><button onclick="cancelPLR(\''+r.id+'\')" style="background:none;border:1px solid #ccc;border-radius:6px;padding:3px 10px;font-size:11px;color:var(--sub);cursor:pointer">取り消す</button></div>':'')
       +'</div>';
   });
-  document.getElementById('plr-list').innerHTML=html;
+  el('plr-list').innerHTML=h;
 }
 
-function cancelPLR(id){
+async function cancelPLR(id){
   if(!confirm('申請を取り消しますか？'))return;
-  sb.from('有給申請').delete().eq('id',id)
-    .then(function(){ loadPLRList(); })
-    .catch(function(e){ alert('失敗: '+e.message); });
+  try{
+    await SB.from('有給申請').delete().eq('id',id);
+    PLR_LIST=await safeQuery(SB.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+    renderPLRList();
+  }catch(e){alert('失敗: '+e.message);}
 }
 
-// ══════════════════════════════════════
-// 変更申請（シフト・勤怠）
-// ══════════════════════════════════════
-var _crList=[];
+// ─── モーダル ────────────────────────
+el('modal-close').onclick=function(){hide('modal');};
+el('modal').onclick=function(e){if(e.target===this)hide('modal');};
 
-function closeCRModal(){
-  document.getElementById('cr-modal').style.display='none';
+function openModal(title,bodyHtml){
+  el('modal-title').textContent=title;
+  el('modal-body').innerHTML=bodyHtml;
+  flex('modal');
 }
 
-// シフト変更申請モーダル
-function openShiftCR(date, currentPat){
-  var dow=['日','月','火','水','木','金','土'][new Date(date).getDay()];
-  document.getElementById('cr-modal-title').textContent='シフト変更申請';
-  var patOpts='<option value="">（指定なし・相談）</option>';
-  _pats.forEach(function(p){
-    patOpts+='<option value="'+esc(p.name)+'"'+(p.name===currentPat?' selected':'')+'>'+esc(p.name)+' ('+esc(p.startTime)+'〜'+esc(p.endTime)+')</option>';
-  });
-  patOpts+='<option value="休">休み</option>';
-  document.getElementById('cr-modal-body').innerHTML=
-    '<p style="font-size:13px;color:var(--sub);margin-bottom:14px">'+fmtD(date)+'（'+dow+'）</p>'+
-    '<div style="background:#f5f0ea;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px">'+
-      '現在: <strong>'+(currentPat||'未設定')+'</strong>'+
-    '</div>'+
-    '<div class="field"><label>希望するシフト</label>'+
-      '<select id="cr-shift-pat" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px">'+patOpts+'</select>'+
-    '</div>'+
-    '<div class="field"><label>理由・備考</label>'+
-      '<textarea id="cr-reason" rows="3" placeholder="理由を入力してください" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;resize:none"></textarea>'+
-    '</div>'+
-    '<button onclick="submitShiftCR(''+date+'')" style="width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">申請する</button>';
-  document.getElementById('cr-modal').style.display='flex';
-}
-
-function submitShiftCR(date){
-  var pat=document.getElementById('cr-shift-pat').value;
-  var reason=document.getElementById('cr-reason').value;
-  var btn=event.target;
-  btn.disabled=true; btn.textContent='送信中...';
-  var reqData=JSON.stringify({requestedPattern:pat});
-  sb.from('変更申請').insert({
-    id:'cr'+Date.now(),staffId:ME.id,type:'shift',
-    date:date,requestData:reqData,
-    reason:reason,status:'pending',comment:'',
-    createdAt:new Date().toISOString()
-  }).then(function(r){
-    if(r.error)throw r.error;
-    closeCRModal();
-    alert('✅ シフト変更申請を送信しました');
-    loadCRList();
-  }).catch(function(e){ alert('送信失敗: '+(e.message||e)); })
-  .finally(function(){ btn.disabled=false; btn.textContent='申請する'; });
-}
-
-// data属性からrecを取得して開く（HTMLインジェクション回避）
-function openAttCRById(el){
-  var rec={
-    date:el.getAttribute('data-date'),
-    startTime:el.getAttribute('data-start'),
-    endTime:el.getAttribute('data-end'),
-    breakMin:parseInt(el.getAttribute('data-break'))||60
+// シフト変更申請
+function openShiftCR(row){
+  var date=row.getAttribute('data-date');
+  var cur=row.getAttribute('data-pat')||'';
+  var dow=DOW[new Date(date).getDay()];
+  var opts='<option value="">（相談・未定）</option>';
+  PATS.forEach(function(p){opts+='<option value="'+esc(p.name)+'"'+(p.name===cur?' selected':'')+'>'+esc(p.name)+' ('+esc(p.startTime)+'〜'+esc(p.endTime)+')</option>';});
+  opts+='<option value="休"'+(cur==='休'?' selected':'')+'>休み</option>';
+  openModal('シフト変更申請',
+    '<p style="font-size:12px;color:var(--sub);margin-bottom:10px">'+fmtD(date)+'（'+dow+'）</p>'
+    +'<div style="background:#f5f0ea;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px">現在: <b>'+(cur||'未設定')+'</b></div>'
+    +'<label>希望するシフト</label><select id="cr-pat" style="margin-top:4px">'+opts+'</select>'
+    +'<label style="margin-top:10px">理由・備考</label><textarea id="cr-reason" rows="3" placeholder="理由を入力"></textarea>'
+    +'<button class="sub-btn" id="cr-submit" style="margin-top:12px">申請する</button>'
+  );
+  el('cr-submit').onclick=async function(){
+    var pat=el('cr-pat').value, reason=el('cr-reason').value, btn=this;
+    btn.disabled=true; btn.textContent='送信中...';
+    try{
+      var r=await SB.from('変更申請').insert({id:'cr'+Date.now(),staffId:ME.id,type:'shift',date:date,requestData:JSON.stringify({requestedPattern:pat}),reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
+      if(r.error)throw r.error;
+      hide('modal'); alert('✅ シフト変更申請を送信しました');
+    }catch(e){alert('送信失敗: '+(e.message||e));}
+    finally{btn.disabled=false;btn.textContent='申請する';}
   };
-  openAttCR(rec);
 }
 
-// 勤怠修正申請モーダル
-function openAttCR(rec){
-  if(typeof rec==='string') rec=JSON.parse(rec);
-  var dow=['日','月','火','水','木','金','土'][new Date(rec.date).getDay()];
-  document.getElementById('cr-modal-title').textContent='勤怠修正申請';
-  document.getElementById('cr-modal-body').innerHTML=
-    '<p style="font-size:13px;color:var(--sub);margin-bottom:14px">'+fmtD(rec.date)+'（'+dow+'）</p>'+
-    '<div style="background:#f5f0ea;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px">'+
-      '現在: <strong>'+esc(rec.startTime)+'〜'+esc(rec.endTime)+'</strong>'+
-      '（休憩'+rec.breakMin+'分）'+
-    '</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'+
-      '<div class="field"><label>出勤時刻</label><input type="time" id="cr-start" value="'+esc(rec.startTime)+'" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px"></div>'+
-      '<div class="field"><label>退勤時刻</label><input type="time" id="cr-end" value="'+esc(rec.endTime)+'" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px"></div>'+
-    '</div>'+
-    '<div class="field"><label>休憩時間（分）</label><input type="number" id="cr-break" value="'+rec.breakMin+'" style="width:120px;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px"></div>'+
-    '<div class="field"><label>修正理由</label>'+
-      '<textarea id="cr-reason" rows="3" placeholder="例: 打刻忘れのため" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;resize:none"></textarea>'+
-    '</div>'+
-    '<button onclick="submitAttCR(''+rec.date+'')" style="width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">申請する</button>';
-  document.getElementById('cr-modal').style.display='flex';
+// 勤怠修正申請
+function openAttCR(row){
+  var rec=JSON.parse(row.getAttribute('data-rec'));
+  var dow=DOW[new Date(rec.date).getDay()];
+  openModal('勤怠修正申請',
+    '<p style="font-size:12px;color:var(--sub);margin-bottom:10px">'+fmtD(rec.date)+'（'+dow+'）</p>'
+    +'<div style="background:#f5f0ea;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px">現在: <b>'+esc(rec.startTime)+'〜'+esc(rec.endTime)+'</b>（休憩'+rec.breakMin+'分）</div>'
+    +'<div class="grid2"><div><label>出勤時刻</label><input type="time" id="cr-in" value="'+esc(rec.startTime)+'"></div>'
+    +'<div><label>退勤時刻</label><input type="time" id="cr-out" value="'+esc(rec.endTime)+'"></div></div>'
+    +'<label style="margin-top:10px">休憩（分）</label><input type="number" id="cr-brk" value="'+rec.breakMin+'" style="width:100px">'
+    +'<label style="margin-top:10px">修正理由</label><textarea id="cr-reason" rows="3" placeholder="例: 打刻忘れのため"></textarea>'
+    +'<button class="sub-btn" id="cr-submit" style="margin-top:12px">申請する</button>'
+  );
+  el('cr-submit').onclick=async function(){
+    var st=el('cr-in').value,et=el('cr-out').value,brk=el('cr-brk').value,reason=el('cr-reason').value,btn=this;
+    if(!st||!et){alert('出退勤時刻を入力してください');return;}
+    if(!reason){alert('修正理由を入力してください');return;}
+    btn.disabled=true; btn.textContent='送信中...';
+    try{
+      var r=await SB.from('変更申請').insert({id:'cr'+Date.now(),staffId:ME.id,type:'attendance',date:rec.date,requestData:JSON.stringify({startTime:st,endTime:et,breakMin:brk}),reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
+      if(r.error)throw r.error;
+      hide('modal'); alert('✅ 勤怠修正申請を送信しました');
+    }catch(e){alert('送信失敗: '+(e.message||e));}
+    finally{btn.disabled=false;btn.textContent='申請する';}
+  };
 }
-
-function submitAttCR(date){
-  var start=document.getElementById('cr-start').value;
-  var end=document.getElementById('cr-end').value;
-  var brk=document.getElementById('cr-break').value;
-  var reason=document.getElementById('cr-reason').value;
-  if(!start||!end){ alert('出退勤時刻を入力してください'); return; }
-  if(!reason){ alert('修正理由を入力してください'); return; }
-  var btn=event.target;
-  btn.disabled=true; btn.textContent='送信中...';
-  var reqData=JSON.stringify({startTime:start,endTime:end,breakMin:brk});
-  sb.from('変更申請').insert({
-    id:'cr'+Date.now(),staffId:ME.id,type:'attendance',
-    date:date,requestData:reqData,
-    reason:reason,status:'pending',comment:'',
-    createdAt:new Date().toISOString()
-  }).then(function(r){
-    if(r.error)throw r.error;
-    closeCRModal();
-    alert('✅ 勤怠修正申請を送信しました');
-    loadCRList();
-  }).catch(function(e){ alert('送信失敗: '+(e.message||e)); })
-  .finally(function(){ btn.disabled=false; btn.textContent='申請する'; });
-}
-
-// 申請一覧をロード（有給申請タブと共用）
-function loadCRList(){
-  sb.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false})
-    .then(function(r){ _crList=r.data||[]; });
-}
-
-// モーダル外クリックで閉じる
-document.getElementById('cr-modal').onclick=function(e){
-  if(e.target===this) closeCRModal();
-};
 </script>
-  <!-- 変更申請モーダル -->
-  <div id="cr-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
-    <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h3 id="cr-modal-title" style="font-size:16px;font-weight:700"></h3>
-        <button onclick="closeCRModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button>
-      </div>
-      <div id="cr-modal-body"></div>
-    </div>
-  </div>
 </body>
 </html>
