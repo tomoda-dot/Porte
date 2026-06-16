@@ -346,26 +346,20 @@ function startMain(){
   _plGrants = [];
   window._plrList = [];
 
-  // 設定取得
-  sb.from('設定').select('value').eq('key','shiftPatterns').limit(1)
+  function safe(p){ return p.then(function(r){return r;}).catch(function(){return null;}); }
+
+  safe(sb.from('設定').select('value').eq('key','shiftPatterns').limit(1))
     .then(function(r){
-      try{ _pats=JSON.parse((r.data&&r.data[0]&&r.data[0].value)||'[]'); }catch(e){ _pats=[]; }
-    }).catch(function(){ _pats=[]; })
-    .then(function(){
-      // 有給取得記録
-      return sb.from('有給取得記録').select('*').eq('staffId',ME.id);
-    }).then(function(r){
-      _plUsages=(r.data)||[];
+      try{ _pats=JSON.parse(((r&&r.data&&r.data[0]&&r.data[0].value)||'[]')); }catch(e){ _pats=[]; }
+      return safe(sb.from('有給取得記録').select('*').eq('staffId',ME.id));
+    })
+    .then(function(r){
+      _plUsages=(r&&r.data)||[];
       _plGrants=buildGrants(ME);
-    }).catch(function(){ _plUsages=[]; _plGrants=buildGrants(ME); })
-    .then(function(){
-      // 有給申請（テーブルがない場合も続行）
-      return sb.from('有給申請').select('*').eq('staffId',ME.id)
-        .order('createdAt',{ascending:false});
-    }).then(function(r){
-      window._plrList=(r.data)||[];
-    }).catch(function(){ window._plrList=[]; })
-    .then(function(){
+      return safe(sb.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+    })
+    .then(function(r){
+      window._plrList=(r&&r.data)||[];
       // 全部完了 → メイン画面へ
       document.getElementById('loading').style.display='none';
       document.getElementById('main-screen').style.display='block';
@@ -373,7 +367,8 @@ function startMain(){
       if(btn){btn.disabled=false;btn.textContent='ログイン';}
       loadTC();
       renderShift();
-    }).catch(function(e){
+    })
+    .catch(function(e){
       document.getElementById('loading').style.display='none';
       document.getElementById('login-screen').style.display='flex';
       var btn=document.getElementById('btn-login');
