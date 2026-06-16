@@ -6,6 +6,14 @@
 <meta name="google" content="notranslate">
 <title>マイページ | ひとつぎ</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// CDN読み込み失敗時のfallback
+if(typeof supabase==='undefined'){
+  var s=document.createElement('script');
+  s.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+  document.head.appendChild(s);
+}
+</script>
 <script src="supabase-config.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -258,8 +266,26 @@
 </div>
 
 <script>
+// グローバルエラーキャッチ
+window.onerror=function(msg,src,line,col,err){
+  var el=document.getElementById('login-err');
+  if(el)el.textContent='エラー: '+msg+' ('+line+'行)';
+  return false;
+};
+
 // ─── Supabase初期化 ───
-var sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+var sb=null;
+try{
+  if(typeof supabase==='undefined'){
+    throw new Error('Supabaseライブラリが読み込めません');
+  }
+  sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+}catch(e){
+  document.addEventListener('DOMContentLoaded',function(){
+    var el=document.getElementById('login-err');
+    if(el)el.textContent='初期化エラー: '+e.message;
+  });
+}
 
 // ─── 状態 ───
 var ME=null; // ログイン中のスタッフ情報
@@ -340,6 +366,7 @@ function doLogin(){
   var errEl=document.getElementById('login-err');
   var btn=document.getElementById('btn-login');
   errEl.textContent='';
+  if(!sb){errEl.textContent='Supabase未初期化。ページを再読み込みしてください';return;}
   if(!id||!pw){errEl.textContent='IDとパスワードを入力してください';return;}
   btn.disabled=true;btn.textContent='確認中...';
   sb.from('スタッフ').select('*').eq('loginId',id).eq('password',pw).limit(1)
