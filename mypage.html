@@ -152,7 +152,7 @@ if(typeof supabase==='undefined'){
       <label>パスワード</label>
       <input type="password" id="inp-pw" placeholder="パスワードを入力" autocomplete="current-password">
     </div>
-    <button class="btn-login" id="btn-login">ログイン</button>
+    <button class="btn-login" id="btn-login" onclick="doLogin()">ログイン</button>
     <div id="login-err"></div>
   </div>
 </div>
@@ -281,10 +281,14 @@ try{
   }
   sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 }catch(e){
-  document.addEventListener('DOMContentLoaded',function(){
-    var el=document.getElementById('login-err');
-    if(el)el.textContent='初期化エラー: '+e.message;
-  });
+  var el=document.getElementById('login-err');
+  if(el){el.textContent='初期化エラー: '+e.message;}
+  else{
+    document.addEventListener('DOMContentLoaded',function(){
+      var el2=document.getElementById('login-err');
+      if(el2)el2.textContent='初期化エラー: '+e.message;
+    });
+  }
 }
 
 // ─── 状態 ───
@@ -357,8 +361,23 @@ function calcPaidLeaveBalance(grants,usages){
 }
 
 // ─── ログイン・ログアウト ───
-document.getElementById('inp-pw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
-document.getElementById('btn-login').addEventListener('click',function(){doLogin();});
+// ─── DOM準備完了後に初期化 ───
+function _init(){
+  var btnLogin=document.getElementById('btn-login');
+  var inpPw=document.getElementById('inp-pw');
+  if(btnLogin)btnLogin.addEventListener('click',function(){doLogin();});
+  if(inpPw)inpPw.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+  // セッション復元
+  var saved=sessionStorage.getItem('mp_staff');
+  if(saved){
+    try{ME=JSON.parse(saved);showMain();}catch(e){sessionStorage.removeItem('mp_staff');}
+  }
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',_init);
+}else{
+  _init();
+}
 
 function doLogin(){
   var id=document.getElementById('inp-id').value.trim();
@@ -801,13 +820,7 @@ async function clockOut(){
   }
 }
 
-// ─── 起動 ───
-(function(){
-  var saved=sessionStorage.getItem('mp_staff');
-  if(saved){
-    try{ME=JSON.parse(saved);showMain();}catch(e){sessionStorage.removeItem('mp_staff');}
-  }
-})();
+
 </script>
 </body>
 </html>
