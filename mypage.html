@@ -341,28 +341,45 @@ function startMain(){
   document.getElementById('hd-role').textContent = ME.role||'';
   _shiftYM = nowYM();
   _attYM = nowYM();
-  // 設定・有給データを並行取得
-  // 各テーブルを個別に取得（1つ失敗しても止まらない）
-  Promise.all([
-    sb.from('設定').select('value').eq('key','shiftPatterns').limit(1).catch(function(){return{data:[]};}),
-    sb.from('有給取得記録').select('*').eq('staffId',ME.id).catch(function(){return{data:[]};}),
-    sb.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}).catch(function(){return{data:[]};})
-  ]).then(function(results){
-    try{ _pats=JSON.parse((results[0].data&&results[0].data[0]&&results[0].data[0].value)||'[]'); }catch(e){ _pats=[]; }
-    _plUsages=(results[1].data)||[];
-    _plGrants=buildGrants(ME);
-    window._plrList=(results[2].data)||[];
-    document.getElementById('loading').style.display='none';
-    document.getElementById('main-screen').style.display='block';
-    loadTC();
-    renderShift();
-  }).catch(function(e){
-    document.getElementById('loading').style.display='none';
-    document.getElementById('login-screen').style.display='flex';
-    var btn=document.getElementById('btn-login');
-    if(btn){btn.disabled=false;btn.textContent='ログイン';}
-    alert('読み込みエラー: '+(e.message||String(e)));
-  });
+  _pats = [];
+  _plUsages = [];
+  _plGrants = [];
+  window._plrList = [];
+
+  // 設定取得
+  sb.from('設定').select('value').eq('key','shiftPatterns').limit(1)
+    .then(function(r){
+      try{ _pats=JSON.parse((r.data&&r.data[0]&&r.data[0].value)||'[]'); }catch(e){ _pats=[]; }
+    }).catch(function(){ _pats=[]; })
+    .then(function(){
+      // 有給取得記録
+      return sb.from('有給取得記録').select('*').eq('staffId',ME.id);
+    }).then(function(r){
+      _plUsages=(r.data)||[];
+      _plGrants=buildGrants(ME);
+    }).catch(function(){ _plUsages=[]; _plGrants=buildGrants(ME); })
+    .then(function(){
+      // 有給申請（テーブルがない場合も続行）
+      return sb.from('有給申請').select('*').eq('staffId',ME.id)
+        .order('createdAt',{ascending:false});
+    }).then(function(r){
+      window._plrList=(r.data)||[];
+    }).catch(function(){ window._plrList=[]; })
+    .then(function(){
+      // 全部完了 → メイン画面へ
+      document.getElementById('loading').style.display='none';
+      document.getElementById('main-screen').style.display='block';
+      var btn=document.getElementById('btn-login');
+      if(btn){btn.disabled=false;btn.textContent='ログイン';}
+      loadTC();
+      renderShift();
+    }).catch(function(e){
+      document.getElementById('loading').style.display='none';
+      document.getElementById('login-screen').style.display='flex';
+      var btn=document.getElementById('btn-login');
+      if(btn){btn.disabled=false;btn.textContent='ログイン';}
+      alert('読み込みエラー: '+(e.message||String(e)));
+    });
 }
 
 // セッション復元
