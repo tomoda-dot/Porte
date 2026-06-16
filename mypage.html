@@ -144,7 +144,7 @@
       <label>パスワード</label>
       <input type="password" id="inp-pw" placeholder="パスワードを入力" autocomplete="current-password">
     </div>
-    <button class="btn-login" onclick="doLogin()">ログイン</button>
+    <button class="btn-login" id="btn-login">ログイン</button>
     <div id="login-err"></div>
   </div>
 </div>
@@ -332,26 +332,36 @@ function calcPaidLeaveBalance(grants,usages){
 
 // ─── ログイン・ログアウト ───
 document.getElementById('inp-pw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.getElementById('btn-login').addEventListener('click',function(){doLogin();});
 
-async function doLogin(){
+function doLogin(){
   var id=document.getElementById('inp-id').value.trim();
   var pw=document.getElementById('inp-pw').value;
   var errEl=document.getElementById('login-err');
+  var btn=document.getElementById('btn-login');
   errEl.textContent='';
   if(!id||!pw){errEl.textContent='IDとパスワードを入力してください';return;}
-  document.querySelector('.btn-login').textContent='確認中...';
-  try{
-    var r=await sb.from('スタッフ').select('*').eq('loginId',id).eq('password',pw).limit(1);
-    if(r.error)throw r.error;
-    if(!r.data||r.data.length===0){errEl.textContent='IDまたはパスワードが違います';return;}
-    ME=r.data[0];
-    sessionStorage.setItem('mp_staff',JSON.stringify(ME));
-    await showMain();
-  }catch(e){
-    errEl.textContent='ログインに失敗しました: '+e.message;
-  }finally{
-    document.querySelector('.btn-login').textContent='ログイン';
-  }
+  btn.disabled=true;btn.textContent='確認中...';
+  sb.from('スタッフ').select('*').eq('loginId',id).eq('password',pw).limit(1)
+    .then(function(r){
+      if(r.error){
+        errEl.textContent='エラー: '+r.error.message;
+        btn.disabled=false;btn.textContent='ログイン';
+        return;
+      }
+      if(!r.data||r.data.length===0){
+        errEl.textContent='IDまたはパスワードが違います';
+        btn.disabled=false;btn.textContent='ログイン';
+        return;
+      }
+      ME=r.data[0];
+      try{sessionStorage.setItem('mp_staff',JSON.stringify(ME));}catch(e){}
+      showMain();
+    })
+    .catch(function(e){
+      errEl.textContent='通信エラー: '+(e.message||e);
+      btn.disabled=false;btn.textContent='ログイン';
+    });
 }
 
 function doLogout(){
@@ -364,32 +374,38 @@ function doLogout(){
 }
 
 // ─── メイン画面表示 ───
-async function showMain(){
+function showMain(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('loading').style.display='block';
-  try{
-    document.getElementById('hd-name').textContent=ME.name||'スタッフ';
-    _shiftYM=nowYM();
-    _attYM=nowYM();
-    // 勤務パターン取得
-    var sets=await sb.from('設定').select('value').eq('key','shiftPatterns').limit(1);
-    try{_shiftPats=JSON.parse((sets.data&&sets.data[0]&&sets.data[0].value)||'[]');}catch(e){_shiftPats=[];}
-    // 有給データ取得
-    _plUsages=(await sb.from('有給取得記録').select('*').eq('staffId',ME.id)).data||[];
-    _plGrants=generateGrantHistory(ME);
-    document.getElementById('loading').style.display='none';
-    document.getElementById('main-screen').style.display='block';
-    renderShift();
-    renderPaidLeave();
-    loadTimecard();
-    // 有給申請フォームの日付デフォルト
-    var di=document.getElementById('plr-date');
-    if(di)di.value=today();
-  }catch(e){
-    document.getElementById('loading').style.display='none';
-    document.getElementById('login-screen').style.display='flex';
-    alert('データ読み込みに失敗しました: '+e.message);
-  }
+  document.getElementById('hd-name').textContent=ME.name||'スタッフ';
+  _shiftYM=nowYM();
+  _attYM=nowYM();
+  // 勤務パターン取得
+  sb.from('設定').select('value').eq('key','shiftPatterns').limit(1)
+    .then(function(sets){
+      try{_shiftPats=JSON.parse((sets.data&&sets.data[0]&&sets.data[0].value)||'[]');}catch(e){_shiftPats=[];}
+      return sb.from('有給取得記録').select('*').eq('staffId',ME.id);
+    })
+    .then(function(r){
+      _plUsages=(r.data)||[];
+      _plGrants=generateGrantHistory(ME);
+      document.getElementById('loading').style.display='none';
+      document.getElementById('main-screen').style.display='block';
+      var btn=document.getElementById('btn-login');
+      if(btn){btn.disabled=false;btn.textContent='ログイン';}
+      renderShift();
+      renderPaidLeave();
+      loadTimecard();
+      var di=document.getElementById('plr-date');
+      if(di)di.value=today();
+    })
+    .catch(function(e){
+      document.getElementById('loading').style.display='none';
+      document.getElementById('login-screen').style.display='flex';
+      var btn=document.getElementById('btn-login');
+      if(btn){btn.disabled=false;btn.textContent='ログイン';}
+      alert('データ読み込みに失敗しました: '+(e.message||e));
+    });
 }
 
 // ─── タブ切替 ───
