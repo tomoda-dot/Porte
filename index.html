@@ -327,6 +327,8 @@ async function renderDashboard(c){
   var att=S.dashboard.todayAtt, upcoming=S.dashboard.upcoming;
   var todayTemp=S.dashboard.todayTemp||[], upcomingTemp=S.dashboard.upcomingTemp||[];
   var activeUsers=S.users.filter(function(u){return isUserActive(u,d);});
+  // セッション情報（友田判定に使用・全体で共通）
+  var _sess=getSession()||{};
   var abIds=att.filter(function(a){return['欠席','体調不良','通院'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
   var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;});
   
@@ -515,7 +517,6 @@ async function renderDashboard(c){
   });
   birthdayUsers.sort(function(a,b){return a.day-b.day;});
 
-  var _sess=getSession()||{};
   var _sessName=_sess.name||'';
   var _sessRole=_sess.role||'';
   c.innerHTML='<div class="hd-row"><h2>📊 ダッシュボード</h2>'+
