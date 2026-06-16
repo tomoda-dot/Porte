@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google" content="notranslate">
+<title>マイページ | ひとつぎ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-config.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --pri:#3d5a3e;--pri-light:#e8f0e8;
+    --bg:#f7f4f0;--card:#fff;--bdr:#e0d6cf;
+    --sub:#8a7a6a;--grn:#2e7d32;
+    --paid:#1565c0;--paid-am:#1976d2;--paid-pm:#0288d1;
+  }
+  body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#333;min-height:100vh;}
+
+  /* ─── ログイン画面 ─── */
+  #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+  .login-card{background:var(--card);border-radius:16px;padding:40px 32px;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08);}
+  .login-logo{text-align:center;margin-bottom:28px;}
+  .login-logo .icon{font-size:48px;display:block;margin-bottom:8px;}
+  .login-logo h1{font-size:20px;font-weight:700;color:var(--pri);}
+  .login-logo p{font-size:12px;color:var(--sub);margin-top:4px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:6px;}
+  .field input{width:100%;padding:12px 14px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px;outline:none;transition:border .2s;}
+  .field input:focus{border-color:var(--pri);}
+  .btn-login{width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;}
+  .btn-login:hover{opacity:.9;}
+  #login-err{color:#c62828;font-size:13px;text-align:center;margin-top:10px;min-height:20px;}
+
+  /* ─── メイン画面 ─── */
+  #main-screen{display:none;max-width:700px;margin:0 auto;padding:16px;}
+  header{background:var(--pri);color:#fff;padding:14px 20px;border-radius:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+  header .logo{font-size:13px;opacity:.8;}
+  header .name{font-size:18px;font-weight:700;}
+  header .logout{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;}
+
+  /* カード */
+  .card{background:var(--card);border-radius:12px;padding:20px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+  .card-title{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+  .card-title span{font-size:16px;}
+
+  /* 有給残バッジ */
+  .pl-badge{display:inline-flex;align-items:baseline;gap:4px;background:var(--paid);color:#fff;padding:8px 20px;border-radius:24px;}
+  .pl-badge .num{font-size:32px;font-weight:700;line-height:1;}
+  .pl-badge .unit{font-size:14px;}
+
+  /* 月ナビ */
+  .month-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .month-nav button{background:none;border:1.5px solid var(--bdr);border-radius:8px;padding:4px 12px;cursor:pointer;font-size:13px;color:var(--pri);font-weight:700;}
+  .month-nav .ym{font-size:16px;font-weight:700;}
+
+  /* シフト表 */
+  .shift-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .shift-table th{background:var(--bg);padding:8px 6px;text-align:center;border-bottom:2px solid var(--bdr);font-size:12px;}
+  .shift-table td{padding:8px 6px;border-bottom:1px solid #f0ebe5;vertical-align:middle;}
+  .shift-table tr:last-child td{border-bottom:none;}
+  .shift-table .today-row{background:#f0fff0 !important;}
+  .shift-table .weekend td:first-child{color:#c62828;}
+  .shift-table .saturday td:first-child{color:#1565c0;}
+  .pat-badge{display:inline-block;padding:2px 10px;border-radius:10px;color:#fff;font-size:12px;font-weight:700;}
+  .pat-paid{background:var(--paid);}
+  .pat-am{background:var(--paid-am);}
+  .pat-pm{background:var(--paid-pm);}
+  .pat-off{color:#aaa;font-size:12px;}
+  .pat-none{color:#ccc;font-size:12px;}
+
+  /* 出勤実績 */
+  .att-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ebe5;font-size:13px;}
+  .att-row:last-child{border-bottom:none;}
+  .att-date{color:var(--sub);font-size:12px;min-width:90px;}
+  .att-time{font-weight:600;}
+  .att-shift{font-size:11px;color:var(--sub);margin-left:6px;}
+
+  /* 有給リスト */
+  .pl-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ebe5;font-size:13px;}
+  .pl-row:last-child{border-bottom:none;}
+  .pl-date{color:var(--sub);font-size:12px;}
+  .pl-days{font-weight:700;color:var(--paid);}
+
+  /* サマリー数値 */
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .summary-item{text-align:center;padding:12px 8px;background:var(--bg);border-radius:8px;}
+  .summary-item .val{font-size:22px;font-weight:700;color:var(--pri);}
+  .summary-item .lbl{font-size:11px;color:var(--sub);margin-top:4px;}
+
+  /* ローディング */
+  #loading{display:none;text-align:center;padding:60px 20px;color:var(--sub);}
+  .spinner{width:32px;height:32px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* タブ */
+  .tabs{display:flex;gap:0;border-bottom:2px solid var(--bdr);margin-bottom:16px;}
+  .tab-btn{flex:1;padding:10px 4px;border:none;background:none;font-size:13px;font-weight:700;cursor:pointer;color:#aaa;border-bottom:3px solid transparent;margin-bottom:-2px;}
+  .tab-btn.active{color:var(--pri);border-bottom-color:var(--pri);}
+
+  @media(max-width:480px){
+    .summary-grid{grid-template-columns:1fr 1fr;}
+    .login-card{padding:28px 20px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ローディング -->
+<div id="loading"><div class="spinner"></div>読み込み中...</div>
+
+<!-- ログイン画面 -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="icon">🏢</span>
+      <h1>ひとつぎ マイページ</h1>
+      <p>スタッフ専用ページ</p>
+    </div>
+    <div class="field">
+      <label>ログインID</label>
+      <input type="text" id="inp-id" placeholder="ログインIDを入力" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>パスワード</label>
+      <input type="password" id="inp-pw" placeholder="パスワードを入力" autocomplete="current-password">
+    </div>
+    <button class="btn-login" onclick="doLogin()">ログイン</button>
+    <div id="login-err"></div>
+  </div>
+</div>
+
+<!-- メイン画面 -->
+<div id="main-screen">
+  <header>
+    <div>
+      <div class="logo">ひとつぎ マイページ</div>
+      <div class="name" id="hd-name">---</div>
+    </div>
+    <button class="logout" onclick="doLogout()">ログアウト</button>
+  </header>
+
+  <!-- タブ -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('shift')">📆 シフト</button>
+    <button class="tab-btn" onclick="switchTab('att')">📊 出勤実績</button>
+    <button class="tab-btn" onclick="switchTab('paid')">📅 有給</button>
+  </div>
+
+  <!-- シフトタブ -->
+  <div id="tab-shift">
+    <div class="card">
+      <div class="month-nav">
+        <button onclick="shiftPrev()">◀</button>
+        <span class="ym" id="shift-ym"></span>
+        <button onclick="shiftNext()">▶</button>
+        <button onclick="shiftToday()" style="font-size:11px;padding:4px 10px">今月</button>
+      </div>
+      <div id="shift-body">読み込み中...</div>
+    </div>
+  </div>
+
+  <!-- 出勤実績タブ -->
+  <div id="tab-att" style="display:none">
+    <div class="card">
+      <div class="month-nav">
+        <button onclick="attPrev()">◀</button>
+        <span class="ym" id="att-ym"></span>
+        <button onclick="attNext()">▶</button>
+        <button onclick="attToday()" style="font-size:11px;padding:4px 10px">今月</button>
+      </div>
+      <div class="summary-grid" id="att-summary" style="margin-bottom:16px"></div>
+      <div id="att-body">読み込み中...</div>
+    </div>
+  </div>
+
+  <!-- 有給タブ -->
+  <div id="tab-paid" style="display:none">
+    <div class="card" style="text-align:center;padding:24px 20px;">
+      <div class="card-title" style="justify-content:center"><span>📅</span>有給残日数</div>
+      <div class="pl-badge" id="pl-balance-badge">
+        <span class="num" id="pl-balance-num">-</span>
+        <span class="unit">日</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📋</span>付与履歴</div>
+      <div id="pl-grants-body">読み込み中...</div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📝</span>取得履歴</div>
+      <div id="pl-usages-body">読み込み中...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Supabase初期化 ───
+var sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+// ─── 状態 ───
+var ME=null; // ログイン中のスタッフ情報
+var _shiftYM='',_attYM='';
+var _shiftPats=[];
+var _plUsages=[];
+var _plGrants=[];
+var _activeTab='shift';
+
+// ─── ユーティリティ ───
+function today(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function pad(n){return String(n).padStart(2,'0');}
+function fmtDate(s){if(!s)return'-';var p=s.split('-');return p[0]+'/'+p[1]+'/'+p[2];}
+function fmtYM(ym){var p=ym.split('-');return p[0]+'年'+parseInt(p[1])+'月';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function nowYM(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1);}
+
+// ─── 有給計算ロジック ───
+var PAID_LEAVE_TABLE=[
+  {months:6,days:10},{months:18,days:11},{months:30,days:12},
+  {months:42,days:14},{months:54,days:16},{months:66,days:18},{months:78,days:20}
+];
+var PAID_LEAVE_PART={4:[7,8,9,10,12,13,15],3:[5,6,6,8,9,10,11],2:[3,4,4,5,6,6,7],1:[1,2,2,2,3,3,3]};
+
+function calcGrantDays(stepIndex,weeklyDays){
+  if(stepIndex<0)return 0;
+  var wd=Number(weeklyDays)||0;
+  if(wd>=1&&wd<=4&&PAID_LEAVE_PART[wd])return PAID_LEAVE_PART[wd][stepIndex];
+  return PAID_LEAVE_TABLE[stepIndex].days;
+}
+
+function generateGrantHistory(s){
+  if(!s.startDate)return[];
+  var result=[];
+  var steps=[6,18,30,42,54,66,78];
+  var sd=new Date(s.startDate);
+  var tdStr=today();
+  var wd=Number(s.weeklyDays)||0;
+  for(var i=0;i<steps.length;i++){
+    var gd=new Date(sd);gd.setMonth(gd.getMonth()+steps[i]);
+    var gs=gd.getFullYear()+'-'+pad(gd.getMonth()+1)+'-'+pad(gd.getDate());
+    var days=calcGrantDays(i,wd);
+    var ed=new Date(gd);ed.setFullYear(ed.getFullYear()+2);
+    var es=ed.getFullYear()+'-'+pad(ed.getMonth()+1)+'-'+pad(ed.getDate());
+    var isFuture=gs>tdStr,isExpired=es<tdStr;
+    result.push({grantDate:gs,days:days,expDate:es,isFuture:isFuture,isExpired:isExpired});
+    if(i===6){
+      for(var j=1;j<=5;j++){
+        var ng=new Date(gd);ng.setFullYear(ng.getFullYear()+j);
+        var ngs=ng.getFullYear()+'-'+pad(ng.getMonth()+1)+'-'+pad(ng.getDate());
+        var ne=new Date(ng);ne.setFullYear(ne.getFullYear()+2);
+        var nes=ne.getFullYear()+'-'+pad(ne.getMonth()+1)+'-'+pad(ne.getDate());
+        result.push({grantDate:ngs,days:20,expDate:nes,isFuture:ngs>tdStr,isExpired:nes<tdStr});
+      }
+      break;
+    }
+  }
+  return result;
+}
+
+function calcPaidLeaveBalance(grants,usages){
+  var bal=0;
+  grants.forEach(function(g){
+    if(g.isFuture||g.isExpired)return;
+    var used=usages.reduce(function(s,u){return u.grantId===g.grantDate?s+(Number(u.days)||0):s;},0);
+    bal+=Math.max(0,g.days-used);
+  });
+  return bal;
+}
+
+// ─── ログイン・ログアウト ───
+document.getElementById('inp-pw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+
+async function doLogin(){
+  var id=document.getElementById('inp-id').value.trim();
+  var pw=document.getElementById('inp-pw').value;
+  var errEl=document.getElementById('login-err');
+  errEl.textContent='';
+  if(!id||!pw){errEl.textContent='IDとパスワードを入力してください';return;}
+  document.querySelector('.btn-login').textContent='確認中...';
+  try{
+    var r=await sb.from('スタッフ').select('*').eq('loginId',id).eq('password',pw).limit(1);
+    if(r.error)throw r.error;
+    if(!r.data||r.data.length===0){errEl.textContent='IDまたはパスワードが違います';return;}
+    ME=r.data[0];
+    sessionStorage.setItem('mp_staff',JSON.stringify(ME));
+    await showMain();
+  }catch(e){
+    errEl.textContent='ログインに失敗しました: '+e.message;
+  }finally{
+    document.querySelector('.btn-login').textContent='ログイン';
+  }
+}
+
+function doLogout(){
+  sessionStorage.removeItem('mp_staff');
+  ME=null;
+  document.getElementById('main-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('inp-id').value='';
+  document.getElementById('inp-pw').value='';
+}
+
+// ─── メイン画面表示 ───
+async function showMain(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('loading').style.display='block';
+  try{
+    document.getElementById('hd-name').textContent=ME.name||'スタッフ';
+    _shiftYM=nowYM();
+    _attYM=nowYM();
+    // 勤務パターン取得
+    var sets=await sb.from('設定').select('value').eq('key','shiftPatterns').limit(1);
+    try{_shiftPats=JSON.parse((sets.data&&sets.data[0]&&sets.data[0].value)||'[]');}catch(e){_shiftPats=[];}
+    // 有給データ取得
+    _plUsages=(await sb.from('有給取得記録').select('*').eq('staffId',ME.id)).data||[];
+    _plGrants=generateGrantHistory(ME);
+    document.getElementById('loading').style.display='none';
+    document.getElementById('main-screen').style.display='block';
+    renderShift();
+    renderPaidLeave();
+  }catch(e){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('login-screen').style.display='flex';
+    alert('データ読み込みに失敗しました: '+e.message);
+  }
+}
+
+// ─── タブ切替 ───
+function switchTab(tab){
+  _activeTab=tab;
+  ['shift','att','paid'].forEach(function(t){
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+    document.querySelectorAll('.tab-btn').forEach(function(btn,i){
+      btn.classList.toggle('active',['shift','att','paid'][i]===tab);
+    });
+  });
+  if(tab==='att')renderAtt();
+  if(tab==='paid')renderPaidLeave();
+}
+
+// ─── シフト ───
+function shiftPrev(){var p=_shiftYM.split('-');var m=parseInt(p[1])-1;var y=parseInt(p[0]);if(m<1){m=12;y--;}_shiftYM=y+'-'+pad(m);renderShift();}
+function shiftNext(){var p=_shiftYM.split('-');var m=parseInt(p[1])+1;var y=parseInt(p[0]);if(m>12){m=1;y++;}_shiftYM=y+'-'+pad(m);renderShift();}
+function shiftToday(){_shiftYM=nowYM();renderShift();}
+
+async function renderShift(){
+  document.getElementById('shift-ym').textContent=fmtYM(_shiftYM);
+  var el=document.getElementById('shift-body');
+  el.textContent='読み込み中...';
+  var parts=_shiftYM.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
+  var dim=new Date(y,m,0).getDate();
+  var dow=['日','月','火','水','木','金','土'];
+  var td=today();
+  // シフトデータ取得
+  var r=await sb.from('シフト').select('*').eq('staffId',ME.id).like('date',_shiftYM+'%');
+  var shiftMap={};
+  ((r.data)||[]).forEach(function(row){shiftMap[row.date]=row.pattern;});
+
+  var workDays=0;
+  var rows='';
+  for(var d=1;d<=dim;d++){
+    var ds=_shiftYM+'-'+pad(d);
+    var dowIdx=new Date(y,m-1,d).getDay();
+    var isToday=ds===td;
+    var isWeekend=dowIdx===0;
+    var isSat=dowIdx===6;
+    var pat=shiftMap[ds]||'';
+    var patObj=_shiftPats.find(function(p){return p.name===pat;});
+    var patHtml='';
+    if(patObj){
+      patHtml='<span class="pat-badge" style="background:'+esc(patObj.color)+'">'+esc(patObj.name)+'</span>'
+        +'<span style="font-size:11px;color:var(--sub);margin-left:6px">'+esc(patObj.startTime)+'〜'+esc(patObj.endTime)+'</span>';
+      workDays++;
+    }else if(pat==='有給'){
+      patHtml='<span class="pat-badge pat-paid">有給</span><span style="font-size:11px;color:var(--sub);margin-left:6px">全日</span>';
+      workDays++;
+    }else if(pat==='有給（午前半休）'){
+      patHtml='<span class="pat-badge pat-am">有給AM</span><span style="font-size:11px;color:var(--sub);margin-left:6px">13:00〜18:00</span>';
+      workDays++;
+    }else if(pat==='有給（午後半休）'){
+      patHtml='<span class="pat-badge pat-pm">有給PM</span><span style="font-size:11px;color:var(--sub);margin-left:6px">09:00〜13:00</span>';
+      workDays++;
+    }else if(pat==='休'){
+      patHtml='<span class="pat-off">休み</span>';
+    }else{
+      patHtml='<span class="pat-none">−</span>';
+    }
+    var trClass=(isToday?'today-row':isWeekend?'weekend':isSat?'saturday':'');
+    rows+='<tr class="'+trClass+(isToday?' today-row':'')+(isWeekend?' weekend':isSat?' saturday':'')+'">'+
+      '<td style="width:32px;text-align:center;font-weight:700;color:'+(isWeekend?'#c62828':isSat?'#1565c0':'inherit')+'">'+d+'</td>'+
+      '<td style="width:28px;text-align:center;font-size:12px;color:'+(isWeekend?'#c62828':isSat?'#1565c0':'var(--sub)')+'">'+dow[dowIdx]+'</td>'+
+      '<td>'+patHtml+'</td>'+
+    '</tr>';
+  }
+  el.innerHTML='<div style="font-size:12px;color:var(--sub);margin-bottom:10px">出勤予定: <strong style="color:var(--pri);font-size:14px">'+workDays+'日</strong></div>'+
+    '<table class="shift-table"><tbody>'+rows+'</tbody></table>';
+}
+
+// ─── 出勤実績 ───
+function attPrev(){var p=_attYM.split('-');var m=parseInt(p[1])-1;var y=parseInt(p[0]);if(m<1){m=12;y--;}_attYM=y+'-'+pad(m);renderAtt();}
+function attNext(){var p=_attYM.split('-');var m=parseInt(p[1])+1;var y=parseInt(p[0]);if(m>12){m=1;y++;}_attYM=y+'-'+pad(m);renderAtt();}
+function attToday(){_attYM=nowYM();renderAtt();}
+
+async function renderAtt(){
+  document.getElementById('att-ym').textContent=fmtYM(_attYM);
+  var sumEl=document.getElementById('att-summary');
+  var bodyEl=document.getElementById('att-body');
+  bodyEl.textContent='読み込み中...';
+  var r=await sb.from('スタッフ出欠').select('*').eq('staffId',ME.id).like('date',_attYM+'%').order('date',{ascending:true});
+  var recs=(r.data||[]).filter(function(x){return x.startTime;});
+
+  // サマリー計算
+  var days=recs.length;
+  var totalMin=0,breakMin=0;
+  recs.forEach(function(rec){
+    var sp=rec.startTime.split(':'),ep=(rec.endTime||'').split(':');
+    if(ep.length<2)return;
+    var gross=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1]);
+    var bk=parseInt(rec.breakMin)||60;
+    totalMin+=Math.max(0,gross-bk);
+    breakMin+=bk;
+  });
+  var totalH=Math.round(totalMin/60*10)/10;
+  var plDays=_plUsages.filter(function(u){return(u.date||'').indexOf(_attYM)===0;})
+    .reduce(function(s,u){return s+(Number(u.days)||0);},0);
+
+  sumEl.innerHTML=
+    '<div class="summary-item"><div class="val">'+days+'</div><div class="lbl">出勤日数</div></div>'+
+    '<div class="summary-item"><div class="val">'+totalH+'</div><div class="lbl">実働時間(h)</div></div>'+
+    '<div class="summary-item"><div class="val">'+(plDays||0)+'</div><div class="lbl">有給取得(日)</div></div>';
+
+  if(recs.length===0){
+    bodyEl.innerHTML='<p style="text-align:center;color:var(--sub);padding:20px">出勤記録がありません</p>';
+    return;
+  }
+  var html='';
+  recs.forEach(function(rec){
+    var sp=rec.startTime,ep=rec.endTime||'';
+    var shift=rec.shift||'';
+    var shiftHtml=shift?'<span class="att-shift">（'+esc(shift)+'）</span>':'';
+    var dt=new Date(rec.date);
+    var dowStr=['日','月','火','水','木','金','土'][dt.getDay()];
+    html+='<div class="att-row">'+
+      '<span class="att-date">'+fmtDate(rec.date)+'（'+dowStr+'）</span>'+
+      '<span class="att-time">'+esc(sp)+'〜'+esc(ep)+shiftHtml+'</span>'+
+    '</div>';
+  });
+  bodyEl.innerHTML=html;
+}
+
+// ─── 有給 ───
+function renderPaidLeave(){
+  var balance=calcPaidLeaveBalance(_plGrants,_plUsages);
+  document.getElementById('pl-balance-num').textContent=balance;
+
+  // 付与履歴
+  var grantsEl=document.getElementById('pl-grants-body');
+  var activeGrants=_plGrants.filter(function(g){return!g.isFuture;});
+  if(activeGrants.length===0){
+    grantsEl.innerHTML='<p style="text-align:center;color:var(--sub);padding:16px">付与履歴がありません</p>';
+  }else{
+    var gh='<table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:var(--sub)">'+
+      '<th style="text-align:left;padding:4px 0;font-weight:700">付与日</th>'+
+      '<th style="text-align:right;padding:4px 0;font-weight:700">付与日数</th>'+
+      '<th style="text-align:right;padding:4px 0;font-weight:700">残日数</th>'+
+      '<th style="text-align:center;padding:4px 0;font-weight:700">状態</th>'+
+      '</tr></thead><tbody>';
+    activeGrants.forEach(function(g){
+      var used=_plUsages.reduce(function(s,u){return u.grantId===g.grantDate?s+(Number(u.days)||0):s;},0);
+      var rem=Math.max(0,g.days-used);
+      var status=g.isExpired?'期限切れ':(rem===0?'消化済':'有効');
+      var stColor=g.isExpired?'#aaa':(rem===0?'var(--grn)':'var(--paid)');
+      gh+='<tr style="border-bottom:1px solid #f0ebe5">'+
+        '<td style="padding:8px 0;font-size:11px">'+fmtDate(g.grantDate)+'<br><span style="color:#aaa;font-size:10px">期限: '+fmtDate(g.expDate)+'</span></td>'+
+        '<td style="text-align:right;padding:8px 0">'+g.days+'日</td>'+
+        '<td style="text-align:right;padding:8px 0;font-weight:700;color:'+stColor+'">'+rem+'日</td>'+
+        '<td style="text-align:center;padding:8px 0;font-size:11px;color:'+stColor+'">'+status+'</td>'+
+      '</tr>';
+    });
+    gh+='</tbody></table>';
+    grantsEl.innerHTML=gh;
+  }
+
+  // 取得履歴
+  var usagesEl=document.getElementById('pl-usages-body');
+  if(_plUsages.length===0){
+    usagesEl.innerHTML='<p style="text-align:center;color:var(--sub);padding:16px">取得記録がありません</p>';
+  }else{
+    var sorted=_plUsages.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'');});
+    var uh='';
+    sorted.forEach(function(u){
+      var dt=new Date(u.date);
+      var dowStr=['日','月','火','水','木','金','土'][dt.getDay()];
+      uh+='<div class="pl-row">'+
+        '<span class="pl-date">'+fmtDate(u.date)+'（'+dowStr+'）<br><span style="font-size:10px">'+esc(u.reason||'-')+'</span></span>'+
+        '<span class="pl-days">'+u.days+'日</span>'+
+      '</div>';
+    });
+    usagesEl.innerHTML=uh;
+  }
+}
+
+// ─── 起動 ───
+(function(){
+  var saved=sessionStorage.getItem('mp_staff');
+  if(saved){
+    try{ME=JSON.parse(saved);showMain();}catch(e){sessionStorage.removeItem('mp_staff');}
+  }
+})();
+</script>
+</body>
+</html>
