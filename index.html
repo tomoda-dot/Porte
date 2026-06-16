@@ -5417,7 +5417,7 @@ async function renderStaffAttendance(){
   }catch(e){el.innerHTML='<div class="card" style="color:#c62828">読み込みエラー: '+e+'</div>';}
 }
 
-function _shiftColor(s){return s==='早番'?'#ff9800':(s==='日勤'?'#2e7d32':(s==='遅番'?'#1565c0':'#999'));}
+function _shiftColor(s){return s==='早番'?'#ff9800':(s==='日勤'?'#2e7d32':(s==='遅番'?'#1565c0':(s==='有給'?'#1b5e20':(s==='有給（半日）'?'#388e3c':'#999'))));}
 
 // スタッフ勤怠サマリーCSV出力（行政書士用）
 async function dlStaffAttCSV(){
@@ -6974,10 +6974,12 @@ async function renderShiftManagement(){
       h+='<td style="padding:2px;border:1px solid var(--bdr);text-align:center;background:'+cellBg+';cursor:pointer" onclick="openShiftCell(\''+s.id+'\',\''+ds+'\')">'+
         (patObj?
           '<span style="display:inline-block;background:'+esc(patObj.color)+';color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">'+esc(patObj.name)+'</span>':
+          pat==='有給'?'<span style="display:inline-block;background:#1b5e20;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給</span>':
+          pat==='有給（半日）'?'<span style="display:inline-block;background:#388e3c;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給½</span>':
           (pat==='休'?'<span style="color:#999;font-size:10px">休</span>':
-          '<span style="color:#ddd;font-size:10px">−</span>'))+
+          '<span style="color:#ddd;font-size:10px">−</span>'))+ 
         '</td>';
-      if(patObj)workDays++;
+      if(patObj||pat==='有給'||pat==='有給（半日）')workDays++;
     }
     h+='<td style="padding:4px;border:1px solid var(--bdr);text-align:center;font-weight:700;color:var(--pri)">'+workDays+'日</td>';
     h+='</tr>';
@@ -7260,17 +7262,92 @@ function openShiftCell(staffId,date){
         esc(p.name)+'<br><span style="font-size:10px;font-weight:400">'+esc(p.startTime)+'〜'+esc(p.endTime)+'</span></button>';
     }).join('')+
     '<button onclick="saveShiftCell(\''+staffId+'\',\''+date+'\',\'休\')" style="padding:12px 8px;border:3px solid '+( current==='休'?'#333':'#ccc')+';border-radius:8px;background:'+(current==='休'?'#666':'#fff')+';color:'+(current==='休'?'#fff':'#999')+';cursor:pointer;font-weight:700;font-size:13px">休み</button>'+
-    '<button onclick="saveShiftCell(\''+staffId+'\',\''+date+'\',\'\''+')" style="padding:12px 8px;border:3px solid #eee;border-radius:8px;background:#fff;color:#ccc;cursor:pointer;font-size:13px">クリア</button>'+
-    '</div></div></div>';
+    '<button onclick="saveShiftCell(\''+staffId+'\',\''+date+'\',' +'\'\''+')" style="padding:12px 8px;border:3px solid #eee;border-radius:8px;background:#fff;color:#ccc;cursor:pointer;font-size:13px">クリア</button>'+
+    '</div>'+
+    '<div style="border-top:1px solid var(--bdr);margin-top:8px;padding-top:10px">'+
+    '<div style="font-size:11px;color:var(--sub);margin-bottom:6px">📅 有給休暇</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    '<button onclick="saveShiftCellPaid(\''+staffId+'\',\''+date+'\',1)" style="padding:12px 8px;border:3px solid '+(current==='有給'?'#333':'#2e7d32')+';border-radius:8px;background:'+(current==='有給'?'#2e7d32':'#fff')+';color:'+(current==='有給'?'#fff':'#2e7d32')+';cursor:pointer;font-weight:700;font-size:13px">有給<br><span style="font-size:10px;font-weight:400">全日（1日）</span></button>'+
+    '<button onclick="saveShiftCellPaid(\''+staffId+'\',\''+date+'\',0.5)" style="padding:12px 8px;border:3px solid '+(current==='有給（半日）'?'#333':'#66bb6a')+';border-radius:8px;background:'+(current==='有給（半日）'?'#66bb6a':'#fff')+';color:'+(current==='有給（半日）'?'#fff':'#66bb6a')+';cursor:pointer;font-weight:700;font-size:13px">有給<br><span style="font-size:10px;font-weight:400">半日（0.5日）</span></button>'+
+    '</div></div>'+
+    '</div></div>';
 }
 
 async function saveShiftCell(staffId,date,pattern){
   if(!lockUI())return;
   try{
-    await gas('saveShiftCell',{staffId:staffId,date:date,pattern:pattern});
+    // クリアの場合、有給取得記録も削除
+    if(pattern===''||pattern==='クリア'){
+      var cur=(_shiftData[staffId]||{})[date]||'';
+      if(cur==='有給'||cur==='有給（半日）'){
+        // 該当日の有給取得記録を削除
+        var usages=_plUsages[staffId]||[];
+        var target=usages.find(function(u){return u.date===date;});
+        if(target){
+          try{await gas('deletePaidLeaveUsage',target.id);}catch(e){}
+          _plUsages[staffId]=usages.filter(function(u){return u.id!==target.id;});
+        }
+      }
+      await gas('saveShiftCell',{staffId:staffId,date:date,pattern:''});
+      if(!_shiftData[staffId])_shiftData[staffId]={};
+      delete _shiftData[staffId][date];
+    }else{
+      await gas('saveShiftCell',{staffId:staffId,date:date,pattern:pattern});
+      if(!_shiftData[staffId])_shiftData[staffId]={};
+      _shiftData[staffId][date]=pattern;
+    }
+    closeModal('st-modal');
+    renderShiftManagement();
+  }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+}
+
+// 有給シフト設定（有給取得記録も自動登録）
+async function saveShiftCellPaid(staffId,date,days){
+  var s=S.staff.find(function(x){return x.id===staffId;});
+  if(!s){await cAlert('スタッフが見つかりません');return;}
+  // 有給残確認
+  if(!_plUsages[s.id]){
+    try{_plUsages[s.id]=await gas('getPaidLeaveUsages',s.id)||[];}catch(e){_plUsages[s.id]=[];}
+  }
+  var grants=generateGrantHistory(s);
+  var usages=_plUsages[s.id]||[];
+  var balance=calcPaidLeaveBalance(grants,usages);
+  if(balance<days){
+    await cAlert('有給残日数が不足しています（残'+balance+'日）');return;
+  }
+  // 既に有給設定済みの場合は先に削除
+  var cur=(_shiftData[staffId]||{})[date]||'';
+  if(cur==='有給'||cur==='有給（半日）'){
+    var existing=usages.find(function(u){return u.date===date;});
+    if(existing){
+      try{await gas('deletePaidLeaveUsage',existing.id);}catch(e){}
+      _plUsages[s.id]=usages.filter(function(u){return u.id!==existing.id;});
+      usages=_plUsages[s.id];
+    }
+  }
+  // 古い付与回から順に充当するgrantIdを決定
+  var grantId='';
+  var sortedGrants=grants.filter(function(g){return!g.isFuture&&!g.isExpired;});
+  sortedGrants.sort(function(a,b){return a.grantDate<b.grantDate?-1:1;});
+  for(var i=0;i<sortedGrants.length;i++){
+    var g=sortedGrants[i];
+    var usedThis=usages.reduce(function(sum,u){return u.grantId===g.grantDate?sum+(Number(u.days)||0):sum;},0);
+    var rem=g.days-usedThis;
+    if(rem>=days){grantId=g.grantDate;break;}
+  }
+  if(!grantId){await cAlert('充当できる付与回が見つかりません');return;}
+  var patName=days===1?'有給':'有給（半日）';
+  var reasonLabel=days===1?'有給休暇（全日）':'有給休暇（半日）';
+  if(!lockUI())return;
+  try{
+    // 有給取得記録を追加
+    await gas('addPaidLeaveUsage',{staffId:s.id,date:date,days:days,reason:reasonLabel,grantId:grantId});
+    _plUsages[s.id]=await gas('getPaidLeaveUsages',s.id)||[];
+    // シフトに有給パターンを設定
+    await gas('saveShiftCell',{staffId:staffId,date:date,pattern:patName});
     if(!_shiftData[staffId])_shiftData[staffId]={};
-    if(pattern===''){delete _shiftData[staffId][date];}
-    else{_shiftData[staffId][date]=pattern;}
+    _shiftData[staffId][date]=patName;
+    toast('✅ 有給を設定しました（残'+(calcPaidLeaveBalance(generateGrantHistory(s),_plUsages[s.id]))+'日）');
     closeModal('st-modal');
     renderShiftManagement();
   }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
@@ -7319,6 +7396,8 @@ function printShift(){
       if(patObj)cnt++;
       html+='<td style="'+wkBg+'">';
       if(patObj)html+='<span class="pat" style="background:'+patObj.color+'">'+patObj.name+'</span>';
+      else if(pat==='有給')html+='<span class="pat" style="background:#1b5e20">有給</span>';
+      else if(pat==='有給（半日）')html+='<span class="pat" style="background:#388e3c">有給½</span>';
       else if(pat==='休')html+='<span style="color:#999;font-size:9px">休</span>';
       html+='</td>';
     }
