@@ -98,6 +98,25 @@
   .tab-btn{flex:1;padding:10px 4px;border:none;background:none;font-size:13px;font-weight:700;cursor:pointer;color:#aaa;border-bottom:3px solid transparent;margin-bottom:-2px;}
   .tab-btn.active{color:var(--pri);border-bottom-color:var(--pri);}
 
+  /* フォーム */
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:6px;}
+  /* 申請状況 */
+  .plr-item{border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:8px;}
+  .plr-item.pending{border-left:4px solid #e65100;background:#fff8f0;}
+  .plr-item.approved{border-left:4px solid var(--grn);background:#f0fff0;}
+  .plr-item.rejected{border-left:4px solid #c62828;background:#fff0f0;}
+  .plr-status{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;}
+  .plr-status.pending{background:#fff3e0;color:#e65100;}
+  .plr-status.approved{background:#e8f5e8;color:var(--grn);}
+  .plr-status.rejected{background:#fce8e8;color:#c62828;}
+
+  /* タイムカード */
+  #btn-clock-in:active,#btn-clock-out:active{transform:scale(.97);}
+  .tc-rec{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;border-radius:8px;font-size:14px;margin-bottom:6px;}
+  .tc-rec.in{background:#e8f5e8;color:var(--grn);}
+  .tc-rec.out{background:#fce8e8;color:#c62828;}
+
   @media(max-width:480px){
     .summary-grid{grid-template-columns:1fr 1fr;}
     .login-card{padding:28px 20px;}
@@ -139,6 +158,24 @@
     </div>
     <button class="logout" onclick="doLogout()">ログアウト</button>
   </header>
+
+  <!-- タイムカード -->
+  <div class="card" id="timecard-card" style="margin-bottom:14px">
+    <div class="card-title"><span>🕐</span>タイムカード</div>
+    <div id="tc-today" style="font-size:12px;color:var(--sub);margin-bottom:12px"></div>
+    <div id="tc-status" style="margin-bottom:12px"></div>
+    <div style="display:flex;gap:10px">
+      <button id="btn-clock-in" onclick="clockIn()" style="flex:1;padding:16px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;display:none">
+        🟢 出勤
+      </button>
+      <button id="btn-clock-out" onclick="clockOut()" style="flex:1;padding:16px;background:#c62828;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;display:none">
+        🔴 退勤
+      </button>
+    </div>
+    <div id="tc-done" style="text-align:center;padding:12px;color:var(--sub);font-size:13px;display:none">
+      ✅ 本日の打刻は完了しています
+    </div>
+  </div>
 
   <!-- タブ -->
   <div class="tabs">
@@ -182,6 +219,32 @@
         <span class="num" id="pl-balance-num">-</span>
         <span class="unit">日</span>
       </div>
+    </div>
+    <!-- 有給申請フォーム -->
+    <div class="card">
+      <div class="card-title"><span>📨</span>有給申請</div>
+      <div class="field">
+        <label>取得日 *</label>
+        <input type="date" id="plr-date" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px">
+      </div>
+      <div class="field">
+        <label>種別 *</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <button class="plr-type-btn active" data-type="有給" onclick="selectPLRType(this)" style="padding:10px 4px;border:2px solid var(--paid);border-radius:8px;background:var(--paid);color:#fff;font-size:12px;font-weight:700;cursor:pointer">全日</button>
+          <button class="plr-type-btn" data-type="午前半休" onclick="selectPLRType(this)" style="padding:10px 4px;border:2px solid var(--bdr);border-radius:8px;background:#fff;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer">午前半休</button>
+          <button class="plr-type-btn" data-type="午後半休" onclick="selectPLRType(this)" style="padding:10px 4px;border:2px solid var(--bdr);border-radius:8px;background:#fff;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer">午後半休</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>理由（任意）</label>
+        <input type="text" id="plr-reason" placeholder="例: 私用のため" style="width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px">
+      </div>
+      <button onclick="submitPLRequest()" style="width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">申請する</button>
+    </div>
+    <!-- 申請状況 -->
+    <div class="card">
+      <div class="card-title"><span>📋</span>申請状況</div>
+      <div id="plr-list-body">読み込み中...</div>
     </div>
     <div class="card">
       <div class="card-title"><span>📋</span>付与履歴</div>
@@ -318,6 +381,10 @@ async function showMain(){
     document.getElementById('main-screen').style.display='block';
     renderShift();
     renderPaidLeave();
+    loadTimecard();
+    // 有給申請フォームの日付デフォルト
+    var di=document.getElementById('plr-date');
+    if(di)di.value=today();
   }catch(e){
     document.getElementById('loading').style.display='none';
     document.getElementById('login-screen').style.display='flex';
@@ -335,7 +402,7 @@ function switchTab(tab){
     });
   });
   if(tab==='att')renderAtt();
-  if(tab==='paid')renderPaidLeave();
+  if(tab==='paid'){renderPaidLeave();loadPLRequests();}
 }
 
 // ─── シフト ───
@@ -497,6 +564,197 @@ function renderPaidLeave(){
       '</div>';
     });
     usagesEl.innerHTML=uh;
+  }
+}
+
+// ─── 有給申請 ───
+var _plrType='有給'; // 選択中の種別
+var _plRequests=[]; // 自分の申請一覧
+
+function selectPLRType(btn){
+  _plrType=btn.getAttribute('data-type');
+  document.querySelectorAll('.plr-type-btn').forEach(function(b){
+    var isActive=b===btn;
+    b.style.background=isActive?'var(--paid)':'#fff';
+    b.style.color=isActive?'#fff':'var(--sub)';
+    b.style.borderColor=isActive?'var(--paid)':'var(--bdr)';
+  });
+}
+
+async function loadPLRequests(){
+  var r=await sb.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false});
+  _plRequests=(r.data||[]);
+  renderPLRequests();
+}
+
+function renderPLRequests(){
+  var el=document.getElementById('plr-list-body');
+  if(!el)return;
+  if(_plRequests.length===0){
+    el.innerHTML='<p style="text-align:center;color:var(--sub);padding:16px">申請履歴がありません</p>';
+    return;
+  }
+  var html='';
+  _plRequests.forEach(function(r){
+    var statusLabel=r.status==='pending'?'承認待ち':r.status==='approved'?'承認済み':'却下';
+    var typeLabel=r.type==='有給'?'全日':r.type==='午前半休'?'午前半休':'午後半休';
+    html+='<div class="plr-item '+r.status+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+        '<span style="font-weight:700;font-size:14px">'+fmtDate(r.date)+'　'+typeLabel+'</span>'+
+        '<span class="plr-status '+r.status+'">'+statusLabel+'</span>'+
+      '</div>'+
+      (r.reason?'<div style="font-size:12px;color:var(--sub)">理由: '+esc(r.reason)+'</div>':'')+
+      (r.comment?'<div style="font-size:12px;color:#c62828;margin-top:4px">コメント: '+esc(r.comment)+'</div>':'')+
+      (r.status==='pending'?'<div style="text-align:right;margin-top:8px"><button onclick="cancelPLR(''+r.id+'')" style="background:none;border:1px solid #ccc;border-radius:6px;padding:4px 12px;font-size:12px;color:var(--sub);cursor:pointer">申請を取り消す</button></div>':'')+
+    '</div>';
+  });
+  el.innerHTML=html;
+}
+
+async function submitPLRequest(){
+  var date=document.getElementById('plr-date').value;
+  var reason=document.getElementById('plr-reason').value;
+  if(!date){alert('取得日を選択してください');return;}
+  // 残日数確認
+  var days=_plrType==='有給'?1:0.5;
+  var balance=calcPaidLeaveBalance(_plGrants,_plUsages);
+  if(balance<days){alert('有給残日数が不足しています（残'+balance+'日）');return;}
+  // 重複チェック
+  var dup=_plRequests.find(function(r){return r.date===date&&r.status==='pending';});
+  if(dup){alert('同じ日付で承認待ちの申請があります');return;}
+  var btn=event.target;
+  btn.disabled=true;btn.textContent='申請中...';
+  try{
+    var id='plr'+new Date().getTime()+Math.random().toString(36).substr(2,5);
+    var r=await sb.from('有給申請').insert({
+      id:id,staffId:ME.id,date:date,type:_plrType,
+      reason:reason,status:'pending',comment:'',
+      createdAt:new Date().toISOString()
+    });
+    if(r.error)throw r.error;
+    document.getElementById('plr-date').value='';
+    document.getElementById('plr-reason').value='';
+    await loadPLRequests();
+    alert('✅ 申請しました。管理者の承認をお待ちください。');
+  }catch(e){
+    alert('申請に失敗しました: '+e.message);
+  }finally{
+    btn.disabled=false;btn.textContent='申請する';
+  }
+}
+
+async function cancelPLR(id){
+  if(!confirm('この申請を取り消しますか？'))return;
+  try{
+    var r=await sb.from('有給申請').delete().eq('id',id);
+    if(r.error)throw r.error;
+    await loadPLRequests();
+  }catch(e){alert('取り消しに失敗しました: '+e.message);}
+}
+
+// ─── タイムカード ───
+var _tcRec=null; // 今日の打刻レコード
+
+function nowTimeStr(){
+  var d=new Date();
+  return pad(d.getHours())+':'+pad(d.getMinutes());
+}
+
+async function loadTimecard(){
+  var td=today();
+  // 今日の日付表示
+  var dt=new Date();
+  var dowStr=['日','月','火','水','木','金','土'][dt.getDay()];
+  document.getElementById('tc-today').textContent=
+    dt.getFullYear()+'年'+( dt.getMonth()+1)+'月'+dt.getDate()+'日（'+dowStr+'）';
+  // 今日のレコードを取得
+  var r=await sb.from('スタッフ出欠').select('*').eq('staffId',ME.id).eq('date',td).limit(1);
+  _tcRec=(r.data&&r.data.length>0)?r.data[0]:null;
+  renderTimecard();
+}
+
+function renderTimecard(){
+  var statusEl=document.getElementById('tc-status');
+  var btnIn=document.getElementById('btn-clock-in');
+  var btnOut=document.getElementById('btn-clock-out');
+  var doneEl=document.getElementById('tc-done');
+
+  // 全部リセット
+  btnIn.style.display='none';
+  btnOut.style.display='none';
+  doneEl.style.display='none';
+  statusEl.innerHTML='';
+
+  if(!_tcRec||!_tcRec.startTime){
+    // 未出勤 → 出勤ボタン
+    btnIn.style.display='block';
+    statusEl.innerHTML='<p style="color:var(--sub);font-size:13px;text-align:center">まだ出勤していません</p>';
+  }else if(_tcRec.startTime&&!_tcRec.endTime){
+    // 出勤済み・未退勤 → 退勤ボタン
+    btnOut.style.display='block';
+    statusEl.innerHTML=
+      '<div class="tc-rec in">'+
+        '<span>🟢 出勤</span>'+
+        '<span style="font-size:18px;font-weight:700">'+esc(_tcRec.startTime)+'</span>'+
+      '</div>';
+  }else{
+    // 両方打刻済み
+    doneEl.style.display='block';
+    statusEl.innerHTML=
+      '<div class="tc-rec in">'+
+        '<span>🟢 出勤</span>'+
+        '<span style="font-size:18px;font-weight:700">'+esc(_tcRec.startTime)+'</span>'+
+      '</div>'+
+      '<div class="tc-rec out">'+
+        '<span>🔴 退勤</span>'+
+        '<span style="font-size:18px;font-weight:700">'+esc(_tcRec.endTime)+'</span>'+
+      '</div>';
+  }
+}
+
+async function clockIn(){
+  var btn=document.getElementById('btn-clock-in');
+  btn.disabled=true;btn.textContent='記録中...';
+  try{
+    var td=today();
+    var t=nowTimeStr();
+    if(_tcRec){
+      // 既存レコードを更新
+      var r=await sb.from('スタッフ出欠').update({startTime:t}).eq('id',_tcRec.id);
+      if(r.error)throw r.error;
+      _tcRec.startTime=t;
+    }else{
+      // 新規作成
+      var id='sa'+new Date().getTime()+Math.random().toString(36).substr(2,5);
+      var r=await sb.from('スタッフ出欠').insert({id:id,staffId:ME.id,date:td,startTime:t});
+      if(r.error)throw r.error;
+      _tcRec={id:id,staffId:ME.id,date:td,startTime:t,endTime:null};
+    }
+    renderTimecard();
+    // 出勤実績タブも更新
+    if(_activeTab==='att')renderAtt();
+  }catch(e){
+    alert('出勤記録に失敗しました: '+e.message);
+  }finally{
+    btn.disabled=false;btn.innerHTML='🟢 出勤';
+  }
+}
+
+async function clockOut(){
+  var btn=document.getElementById('btn-clock-out');
+  btn.disabled=true;btn.textContent='記録中...';
+  try{
+    var t=nowTimeStr();
+    if(!_tcRec||!_tcRec.id){alert('出勤記録が見つかりません');return;}
+    var r=await sb.from('スタッフ出欠').update({endTime:t}).eq('id',_tcRec.id);
+    if(r.error)throw r.error;
+    _tcRec.endTime=t;
+    renderTimecard();
+    if(_activeTab==='att')renderAtt();
+  }catch(e){
+    alert('退勤記録に失敗しました: '+e.message);
+  }finally{
+    btn.disabled=false;btn.innerHTML='🔴 退勤';
   }
 }
 

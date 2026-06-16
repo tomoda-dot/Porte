@@ -166,6 +166,14 @@ async function gas(fn){
     case 'addPaidLeaveUsage': a1.id=_genId('pl');return _add('有給取得記録',a1);
     case 'deletePaidLeaveUsage': return _del('有給取得記録',a1);
 
+    // ── 有給申請 ──
+    case 'getPaidLeaveRequests': return _getAll('有給申請');
+    case 'getPaidLeaveRequestsByStaff': return _getFiltered('有給申請','staffId',a1);
+    case 'addPaidLeaveRequest': a1.id=_genId('plr');a1.createdAt=new Date().toISOString();a1.status='pending';return _add('有給申請',a1);
+    case 'approvePaidLeaveRequest': return _update('有給申請',{id:a1.id,status:'approved',comment:a1.comment||''});
+    case 'rejectPaidLeaveRequest': return _update('有給申請',{id:a1.id,status:'rejected',comment:a1.comment||''});
+    case 'deletePaidLeaveRequest': return _del('有給申請',a1);
+
     // ── 作業種別 ──
     case 'getWorkTypes': return _getAll('作業種別');
     case 'addWorkType': a1.id=_genId('w');return _add('作業種別',a1);
