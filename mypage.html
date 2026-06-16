@@ -448,9 +448,22 @@ async function renderAtt(){
   recs.forEach(function(r){
     var di=new Date(r.date).getDay();
     var recData=JSON.stringify({date:r.date,startTime:r.startTime,endTime:r.endTime||'',breakMin:r.breakMin||60});
+    var shift=r.shift||'';
+    var timeDisp='';
+    if(shift==='有給'){
+      timeDisp='<span style="display:inline-block;background:#1565c0;color:#fff;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:700">有給</span>';
+    }else if(shift==='有給（午前半休）'){
+      timeDisp='<span style="display:inline-block;background:#1976d2;color:#fff;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:700">有給AM</span>'
+        +' <span style="font-size:11px;color:var(--sub)">13:00〜18:00</span>';
+    }else if(shift==='有給（午後半休）'){
+      timeDisp='<span style="display:inline-block;background:#0288d1;color:#fff;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:700">有給PM</span>'
+        +' <span style="font-size:11px;color:var(--sub)">09:00〜13:00</span>';
+    }else{
+      timeDisp='<span style="font-weight:600">'+esc(r.startTime)+'〜'+esc(r.endTime||'')+'</span>';
+    }
     html+='<div class="row" style="display:flex;align-items:center" data-rec="'+esc(recData)+'" onclick="openAttCR(this)">'
       +'<span style="width:90px;color:var(--sub);font-size:12px">'+fmtD(r.date)+'（'+DOW[di]+'）</span>'
-      +'<span style="flex:1;text-align:center;font-weight:600">'+esc(r.startTime)+'〜'+esc(r.endTime||'')+'</span>'
+      +'<span style="flex:1;text-align:center">'+timeDisp+'</span>'
       +'<span class="arr">›</span></div>';
   });
   el('att-body').innerHTML=html||'<p style="color:var(--sub);text-align:center;padding:16px">記録がありません</p>';

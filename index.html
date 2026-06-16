@@ -5472,7 +5472,22 @@ async function renderStaffAttendance(){
         if(rec&&rec.startTime){
           var shift=rec.shift||'';
           var time=rec.startTime+'〜'+(rec.endTime||'');
-          h+='<td style="font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')"><span style="color:'+_shiftColor(shift)+';font-weight:700">'+shift+'</span> '+time+'</td>';
+          var isPaidFull=shift==='有給';
+          var isPaidAM=shift==='有給（午前半休）';
+          var isPaidPM=shift==='有給（午後半休）';
+          h+='<td style="font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">';
+          if(isPaidFull){
+            h+='<span style="display:inline-block;background:#1565c0;color:#fff;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700">有給</span>';
+          }else if(isPaidAM){
+            h+='<span style="display:inline-block;background:#1976d2;color:#fff;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700">有給AM</span>'
+             +'<span style="color:var(--sub);font-size:9px"> 13:00〜18:00</span>';
+          }else if(isPaidPM){
+            h+='<span style="display:inline-block;background:#0288d1;color:#fff;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700">有給PM</span>'
+             +'<span style="color:var(--sub);font-size:9px"> 09:00〜13:00</span>';
+          }else{
+            h+='<span style="color:'+_shiftColor(shift)+';font-weight:700">'+shift+'</span> '+time;
+          }
+          h+='</td>';
         }else{
           var shiftPlan=(shiftMap[s.id]||{})[ds]||'';
           var planPat=shiftPlan?patsForAtt.find(function(p){return p.name===shiftPlan;}):null;
