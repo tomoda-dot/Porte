@@ -5403,6 +5403,12 @@ async function renderStaffAttendance(){
           var planPat=shiftPlan?patsForAtt.find(function(p){return p.name===shiftPlan;}):null;
           if(planPat){
             h+='<td style="font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')"><span style="color:'+planPat.color+';opacity:0.4;font-weight:700">'+esc(planPat.name)+'</span><span style="color:#bbb;font-size:9px"> '+esc(planPat.startTime)+'〜'+esc(planPat.endTime)+'</span></td>';
+          }else if(shiftPlan==='有給'){
+            h+='<td style="font-size:10px;cursor:pointer;color:#1b5e20;opacity:0.5" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">有給</td>';
+          }else if(shiftPlan==='有給（午前半休）'){
+            h+='<td style="font-size:10px;cursor:pointer;color:#388e3c;opacity:0.5" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">有給AM</td>';
+          }else if(shiftPlan==='有給（午後半休）'){
+            h+='<td style="font-size:10px;cursor:pointer;color:#43a047;opacity:0.5" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">有給PM</td>';
           }else if(shiftPlan==='休'){
             h+='<td style="text-align:center;color:#ccc;font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">休</td>';
           }else{
@@ -5417,7 +5423,7 @@ async function renderStaffAttendance(){
   }catch(e){el.innerHTML='<div class="card" style="color:#c62828">読み込みエラー: '+e+'</div>';}
 }
 
-function _shiftColor(s){return s==='早番'?'#ff9800':(s==='日勤'?'#2e7d32':(s==='遅番'?'#1565c0':(s==='有給'?'#1b5e20':(s==='有給（半日）'?'#388e3c':'#999'))));}
+function _shiftColor(s){return s==='早番'?'#ff9800':(s==='日勤'?'#2e7d32':(s==='遅番'?'#1565c0':(s==='有給'?'#1b5e20':(s==='有給（午前半休）'?'#388e3c':(s==='有給（午後半休）'?'#43a047':'#999')))));}
 
 // スタッフ勤怠サマリーCSV出力（行政書士用）
 async function dlStaffAttCSV(){
@@ -6997,11 +7003,12 @@ async function renderShiftManagement(){
         (patObj?
           '<span style="display:inline-block;background:'+esc(patObj.color)+';color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">'+esc(patObj.name)+'</span>':
           pat==='有給'?'<span style="display:inline-block;background:#1b5e20;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給</span>':
-          pat==='有給（半日）'?'<span style="display:inline-block;background:#388e3c;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給½</span>':
+          pat==='有給（午前半休）'?'<span style="display:inline-block;background:#388e3c;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給AM</span>':
+          pat==='有給（午後半休）'?'<span style="display:inline-block;background:#43a047;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給PM</span>':
           (pat==='休'?'<span style="color:#999;font-size:10px">休</span>':
           '<span style="color:#ddd;font-size:10px">−</span>'))+ 
         '</td>';
-      if(patObj||pat==='有給'||pat==='有給（半日）')workDays++;
+      if(patObj||pat==='有給'||pat==='有給（午前半休）'||pat==='有給（午後半休）')workDays++;
     }
     h+='<td style="padding:4px;border:1px solid var(--bdr);text-align:center;font-weight:700;color:var(--pri)">'+workDays+'日</td>';
     h+='</tr>';
@@ -7237,9 +7244,20 @@ async function autoApplyTodayShift(){
     // 今日以降はスキップ（今日の打刻を守る）
     if(sh.date>=td)continue;
     if(!sh.pattern||sh.pattern==='休')continue;
-    // パターン情報取得
-    var pat=pats.find(function(p){return p.name===sh.pattern;});
-    if(!pat)continue;
+    // パターン情報取得（有給は特殊処理）
+    var startTime2='',endTime2='',breakMin2=60;
+    if(sh.pattern==='有給'){
+      var pat0=pats.find(function(p){return p.name==='日勤';});
+      startTime2=pat0?pat0.startTime:'09:00';endTime2=pat0?pat0.endTime:'18:00';breakMin2=pat0?pat0.breakMin:60;
+    }else if(sh.pattern==='有給（午前半休）'){
+      startTime2='13:00';endTime2='18:00';breakMin2=0;
+    }else if(sh.pattern==='有給（午後半休）'){
+      startTime2='09:00';endTime2='13:00';breakMin2=0;
+    }else{
+      var pat=pats.find(function(p){return p.name===sh.pattern;});
+      if(!pat)continue;
+      startTime2=pat.startTime||'';endTime2=pat.endTime||'';breakMin2=pat.breakMin||60;
+    }
     // 既に打刻済み（startTimeあり）ならスキップ
     var ex=allExisting.find(function(e){return String(e.staffId)===String(sh.staffId)&&e.date===sh.date;});
     if(ex&&ex.startTime)continue;
@@ -7251,9 +7269,9 @@ async function autoApplyTodayShift(){
       await gas('upsertStaffAttendance',{
         staffId:sh.staffId,
         date:sh.date,
-        startTime:pat.startTime||'',
-        endTime:pat.endTime||'',
-        breakMin:pat.breakMin||60,
+        startTime:startTime2,
+        endTime:endTime2,
+        breakMin:breakMin2,
         shift:sh.pattern
       });
       applied++;
@@ -7289,8 +7307,9 @@ function openShiftCell(staffId,date){
     '<div style="border-top:1px solid var(--bdr);margin-top:8px;padding-top:10px">'+
     '<div style="font-size:11px;color:var(--sub);margin-bottom:6px">📅 有給休暇</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-    '<button onclick="saveShiftCellPaid(\''+staffId+'\',\''+date+'\',1)" style="padding:12px 8px;border:3px solid '+(current==='有給'?'#333':'#2e7d32')+';border-radius:8px;background:'+(current==='有給'?'#2e7d32':'#fff')+';color:'+(current==='有給'?'#fff':'#2e7d32')+';cursor:pointer;font-weight:700;font-size:13px">有給<br><span style="font-size:10px;font-weight:400">全日（1日）</span></button>'+
-    '<button onclick="saveShiftCellPaid(\''+staffId+'\',\''+date+'\',0.5)" style="padding:12px 8px;border:3px solid '+(current==='有給（半日）'?'#333':'#66bb6a')+';border-radius:8px;background:'+(current==='有給（半日）'?'#66bb6a':'#fff')+';color:'+(current==='有給（半日）'?'#fff':'#66bb6a')+';cursor:pointer;font-weight:700;font-size:13px">有給<br><span style="font-size:10px;font-weight:400">半日（0.5日）</span></button>'+
+    '<button onclick="saveShiftCellPaid(\''+staffId+'\',\''+date+'\',\'有給\',1)" style="padding:10px 8px;border:3px solid '+(current==='有給'?'#333':'#1b5e20')+';border-radius:8px;background:'+(current==='有給'?'#1b5e20':'#fff')+';color:'+(current==='有給'?'#fff':'#1b5e20')+';cursor:pointer;font-weight:700;font-size:12px">有給（全日）<br><span style="font-size:10px;font-weight:400">1日</span></button>'+
+    '<button onclick="saveShiftCellPaid(\''+staffId+'\',\''+date+'\',\'有給（午前半休）\',0.5)" style="padding:10px 8px;border:3px solid '+(current==='有給（午前半休）'?'#333':'#388e3c')+';border-radius:8px;background:'+(current==='有給（午前半休）'?'#388e3c':'#fff')+';color:'+(current==='有給（午前半休）'?'#fff':'#388e3c')+';cursor:pointer;font-weight:700;font-size:12px">午前半休<br><span style="font-size:10px;font-weight:400">0.5日 13:00〜18:00</span></button>'+
+    '<button onclick="saveShiftCellPaid(\''+staffId+'\',\''+date+'\',\'有給（午後半休）\',0.5)" style="padding:10px 8px;border:3px solid '+(current==='有給（午後半休）'?'#333':'#43a047')+';border-radius:8px;background:'+(current==='有給（午後半休）'?'#43a047':'#fff')+';color:'+(current==='有給（午後半休）'?'#fff':'#43a047')+';cursor:pointer;font-weight:700;font-size:12px">午後半休<br><span style="font-size:10px;font-weight:400">0.5日 09:00〜13:00</span></button>'+
     '</div></div>'+
     '</div></div>';
 }
@@ -7301,7 +7320,7 @@ async function saveShiftCell(staffId,date,pattern){
     // クリアの場合、有給取得記録も削除
     if(pattern===''||pattern==='クリア'){
       var cur=(_shiftData[staffId]||{})[date]||'';
-      if(cur==='有給'||cur==='有給（半日）'){
+      if(cur==='有給'||cur==='有給（午前半休）'||cur==='有給（午後半休）'){
         // 該当日の有給取得記録を削除
         var usages=_plUsages[staffId]||[];
         var target=usages.find(function(u){return u.date===date;});
@@ -7324,7 +7343,7 @@ async function saveShiftCell(staffId,date,pattern){
 }
 
 // 有給シフト設定（有給取得記録も自動登録）
-async function saveShiftCellPaid(staffId,date,days){
+async function saveShiftCellPaid(staffId,date,patName,days){
   var s=S.staff.find(function(x){return x.id===staffId;});
   if(!s){await cAlert('スタッフが見つかりません');return;}
   // 有給残確認
@@ -7339,7 +7358,7 @@ async function saveShiftCellPaid(staffId,date,days){
   }
   // 既に有給設定済みの場合は先に削除
   var cur=(_shiftData[staffId]||{})[date]||'';
-  if(cur==='有給'||cur==='有給（半日）'){
+  if(cur==='有給'||cur==='有給（午前半休）'||cur==='有給（午後半休）'){
     var existing=usages.find(function(u){return u.date===date;});
     if(existing){
       try{await gas('deletePaidLeaveUsage',existing.id);}catch(e){}
@@ -7358,8 +7377,7 @@ async function saveShiftCellPaid(staffId,date,days){
     if(rem>=days){grantId=g.grantDate;break;}
   }
   if(!grantId){await cAlert('充当できる付与回が見つかりません');return;}
-  var patName=days===1?'有給':'有給（半日）';
-  var reasonLabel=days===1?'有給休暇（全日）':'有給休暇（半日）';
+  var reasonLabel=days===1?'有給休暇（全日）':(patName==='有給（午前半休）'?'有給休暇（午前半休）':'有給休暇（午後半休）');
   if(!lockUI())return;
   try{
     // 有給取得記録を追加
@@ -7419,7 +7437,8 @@ function printShift(){
       html+='<td style="'+wkBg+'">';
       if(patObj)html+='<span class="pat" style="background:'+patObj.color+'">'+patObj.name+'</span>';
       else if(pat==='有給')html+='<span class="pat" style="background:#1b5e20">有給</span>';
-      else if(pat==='有給（半日）')html+='<span class="pat" style="background:#388e3c">有給½</span>';
+      else if(pat==='有給（午前半休）')html+='<span class="pat" style="background:#388e3c">有給AM</span>';
+      else if(pat==='有給（午後半休）')html+='<span class="pat" style="background:#43a047">有給PM</span>';
       else if(pat==='休')html+='<span style="color:#999;font-size:9px">休</span>';
       html+='</td>';
     }
