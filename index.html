@@ -5823,9 +5823,10 @@ async function renderPaidLeave(){
   h+='<th>付与日</th><th style="text-align:right">付与日数</th><th>有効期限</th><th style="text-align:right">取得済</th><th style="text-align:right">残日数</th><th>状態</th></tr></thead><tbody>';
 
   var totalGranted=0, totalUsed=0;
-  grants.forEach(function(g){
+  grants.forEach(function(g,gi){
     var usedThisGrant=0;
-    usages.forEach(function(u){if(u.grantId===g.grantDate)usedThisGrant+=Number(u.days)||0;});
+    var thisUsages=[];
+    usages.forEach(function(u){if(u.grantId===g.grantDate){usedThisGrant+=Number(u.days)||0;thisUsages.push(u);}});
     var rem=Math.max(0,g.days-usedThisGrant);
     var status='';var stColor='';
     if(g.isFuture){status='予定';stColor='color:#999';}
@@ -5833,13 +5834,34 @@ async function renderPaidLeave(){
     else if(rem===0){status='消化済';stColor='color:var(--grn)';}
     else{status='有効';stColor='color:var(--pri);font-weight:700';totalGranted+=g.days;totalUsed+=usedThisGrant;}
     var rowBg=g.isExpired?'background:#fafafa':g.isFuture?'background:#f0f7ff':'';
-    h+='<tr style="'+rowBg+'">';
-    h+='<td>'+fmtDate(g.grantDate)+'</td>';
+    // クリック可能にするのは取得済みのみ
+    var hasUsage=!g.isFuture&&thisUsages.length>0;
+    var rowId='pl-grant-row-'+gi;
+    var detailId='pl-grant-detail-'+gi;
+    var cursor=hasUsage?'cursor:pointer':'';
+    var onclick=hasUsage?'onclick="var el=document.getElementById(\''+detailId+'\');el.style.display=el.style.display===\'none\'?\'table-row\':\'none\'"':'';
+    h+='<tr id="'+rowId+'" style="'+rowBg+';'+cursor+'" '+onclick+'>';
+    h+='<td>'+fmtDate(g.grantDate)+(hasUsage?'<span style="font-size:10px;color:var(--sub);margin-left:4px">▶</span>':'')+'</td>';
     h+='<td style="text-align:right">'+g.days+'日</td>';
     h+='<td style="font-size:11px;color:'+(g.isExpired?'#c62828':'#666')+'">'+fmtDate(g.expDate)+'</td>';
     h+='<td style="text-align:right">'+(g.isFuture?'-':usedThisGrant+'日')+'</td>';
     h+='<td style="text-align:right;font-weight:600">'+(g.isFuture?'-':rem+'日')+'</td>';
     h+='<td style="'+stColor+'">'+status+'</td></tr>';
+    // 取得記録の展開行（初期非表示）
+    if(hasUsage){
+      var detailRows=thisUsages.map(function(u){
+        return'<tr style="background:#f9f6f2">'+
+          '<td colspan="2" style="padding:4px 8px 4px 20px;font-size:11px;color:var(--sub)">　└ '+fmtDate(u.date)+'</td>'+
+          '<td style="font-size:11px;color:var(--sub)">'+esc(u.reason||'-')+'</td>'+
+          '<td style="text-align:right;font-size:11px">'+u.days+'日</td>'+
+          '<td></td>'+
+          '<td style="text-align:right"><button onclick="deletePLUsage(\''+u.id+'\');event.stopPropagation()" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:11px">✕</button></td>'+
+        '</tr>';
+      }).join('');
+      h+='<tr id="'+detailId+'" style="display:none"><td colspan="6" style="padding:0"><table style="width:100%;font-size:12px;border-top:1px dashed #ddd">'+
+        '<thead><tr style="background:#f5f0ea"><th colspan="2" style="padding:4px 8px;text-align:left;font-size:11px">取得日</th><th style="padding:4px 8px;text-align:left;font-size:11px">理由</th><th style="padding:4px 8px;text-align:right;font-size:11px">日数</th><th></th><th style="padding:4px 8px;text-align:right;font-size:11px">操作</th></tr></thead>'+
+        '<tbody>'+detailRows+'</tbody></table></td></tr>';
+    }
   });
 
   var balance2=calcPaidLeaveBalance(grants,usages);
