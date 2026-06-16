@@ -5263,6 +5263,14 @@ async function renderStaffAttendance(){
   el.innerHTML='<div class="loading-center"><div class="spin"></div></div>';
   try{
     var att=await gas('getStaffAttendance',_staffYM);
+    // シフトデータも取得（勤怠欄に予定表示用）
+    var shiftRaw=await gas('getShiftData',_staffYM).catch(function(){return[];});
+    var shiftMap={};
+    (shiftRaw||[]).forEach(function(r){
+      if(!shiftMap[r.staffId])shiftMap[r.staffId]={};
+      shiftMap[r.staffId][r.date]=r.pattern;
+    });
+    var patsForAtt=getShiftPatterns();
     var ym=_staffYM;var parts=ym.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
     var dim=new Date(y,m,0).getDate();var dowNames=['日','月','火','水','木','金','土'];
     var STANDARD_HOURS=160;
@@ -5391,7 +5399,15 @@ async function renderStaffAttendance(){
           var time=rec.startTime+'〜'+(rec.endTime||'');
           h+='<td style="font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')"><span style="color:'+_shiftColor(shift)+';font-weight:700">'+shift+'</span> '+time+'</td>';
         }else{
-          h+='<td style="color:#ddd;text-align:center;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">−</td>';
+          var shiftPlan=(shiftMap[s.id]||{})[ds]||'';
+          var planPat=shiftPlan?patsForAtt.find(function(p){return p.name===shiftPlan;}):null;
+          if(planPat){
+            h+='<td style="font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')"><span style="color:'+planPat.color+';opacity:0.4;font-weight:700">'+esc(planPat.name)+'</span><span style="color:#bbb;font-size:9px"> '+esc(planPat.startTime)+'〜'+esc(planPat.endTime)+'</span></td>';
+          }else if(shiftPlan==='休'){
+            h+='<td style="text-align:center;color:#ccc;font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">休</td>';
+          }else{
+            h+='<td style="color:#ddd;text-align:center;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">−</td>';
+          }
         }
       });
       h+='</tr>';
