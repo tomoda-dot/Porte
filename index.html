@@ -2513,9 +2513,17 @@ async function printPlanPreview(planId){
   html+='<div style="text-align:center;margin-top:24px"><button onclick="window.print()" style="font-size:14px;padding:10px 40px;border-radius:8px;border:2px solid #5d4037;background:#f5f0ea;cursor:pointer;font-weight:700;color:#5d4037">🖨 印刷する</button></div>';
   html+='</div></body></html>';
 
-  var w=window.open('','_blank','width=1200,height=800');
-  w.document.write(html);
-  w.document.close();
+  // Blob URL方式（ポップアップブロック・白紙問題を回避）
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.target='_blank';
+  a.rel='noopener';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);},10000);
 }
 
 // ═══ 予定表 ═══
@@ -7179,13 +7187,6 @@ async function renderShiftManagement(){
     });
   }catch(e){_shiftData={};}
 
-  // 閉所日のロード（開所日カレンダーと連動）
-  var closedDays=_closedDaysCache[_shiftYM];
-  if(!closedDays){
-    try{closedDays=await gas('getClosedDays',_shiftYM)||[];}catch(e){closedDays=[];}
-    _closedDaysCache[_shiftYM]=closedDays;
-  }
-
   var parts=_shiftYM.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
   var dim=new Date(y,m,0).getDate();
   var dowNames=['日','月','火','水','木','金','土'];
@@ -7222,14 +7223,11 @@ async function renderShiftManagement(){
   h+='<th style="padding:6px 10px;border:1px solid var(--bdr);min-width:80px;position:sticky;left:0;background:#f5f0ea;z-index:2">氏名</th>';
   for(var d=1;d<=dim;d++){
     var dow=new Date(y,m-1,d).getDay();
-    var ds0=_shiftYM+'-'+String(d).padStart(2,'0');
-    var isClosed0=closedDays.indexOf(ds0)>=0;
     var dowColor=dow===0?'color:#c62828':dow===6?'color:#1565c0':'';
-    var isToday=(today()===ds0);
-    var hdrBg=isClosed0?'background:#eee;':isToday?'background:#e8f5e9;':'';
-    h+='<th style="padding:4px 2px;border:1px solid var(--bdr);text-align:center;min-width:52px;'+hdrBg+'">'+
-      '<div style="font-size:11px;font-weight:700;'+(isClosed0?'color:#bbb':'')+'">'+d+'</div>'+
-      '<div style="font-size:10px;'+(isClosed0?'color:#bbb':dowColor)+'">'+dowNames[dow]+'</div></th>';
+    var isToday=(today()===(_shiftYM+'-'+String(d).padStart(2,'0')));
+    h+='<th style="padding:4px 2px;border:1px solid var(--bdr);text-align:center;min-width:52px;'+(isToday?'background:#e8f5e9;':'')+'">'+
+      '<div style="font-size:11px;font-weight:700">'+d+'</div>'+
+      '<div style="font-size:10px;'+dowColor+'">'+dowNames[dow]+'</div></th>';
   }
   h+='<th style="padding:6px 4px;border:1px solid var(--bdr);text-align:center;min-width:50px">出勤<br>日数</th>';
   h+='</tr></thead><tbody>';
@@ -7243,26 +7241,20 @@ async function renderShiftManagement(){
       var ds=_shiftYM+'-'+String(d2).padStart(2,'0');
       var dow2=new Date(y,m-1,d2).getDay();
       var isWeekend=dow2===0||dow2===6;
-      var isClosed=closedDays.indexOf(ds)>=0;
       var pat=(_shiftData[s.id]||{})[ds]||'';
       var patObj=pats.find(function(p){return p.name===pat;});
       var isToday2=(today()===ds);
-      var cellBg=isClosed?'#f0f0f0':isToday2?'#f0fff0':isWeekend?'#faf6f2':'';
-      if(isClosed){
-        h+='<td style="padding:2px;border:1px solid var(--bdr);text-align:center;background:'+cellBg+'">'+
-          '<span style="color:#bbb;font-size:10px">休所</span></td>';
-      }else{
-        h+='<td style="padding:2px;border:1px solid var(--bdr);text-align:center;background:'+cellBg+';cursor:pointer" onclick="openShiftCell(\''+s.id+'\',\''+ds+'\')">'+
-          (patObj?
-            '<span style="display:inline-block;background:'+esc(patObj.color)+';color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">'+esc(patObj.name)+'</span>':
-            pat==='有給'?'<span style="display:inline-block;background:#1565c0;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給</span>':
-            pat==='有給（午前半休）'?'<span style="display:inline-block;background:#1976d2;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給AM</span>':
-            pat==='有給（午後半休）'?'<span style="display:inline-block;background:#0288d1;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給PM</span>':
-            (pat==='休'?'<span style="color:#999;font-size:10px">休</span>':
-            '<span style="color:#ddd;font-size:10px">−</span>'))+ 
-          '</td>';
-      }
-      if(!isClosed&&(patObj||pat==='有給'||pat==='有給（午前半休）'||pat==='有給（午後半休）'))workDays++;
+      var cellBg=isToday2?'#f0fff0':isWeekend?'#faf6f2':'';
+      h+='<td style="padding:2px;border:1px solid var(--bdr);text-align:center;background:'+cellBg+';cursor:pointer" onclick="openShiftCell(\''+s.id+'\',\''+ds+'\')">'+
+        (patObj?
+          '<span style="display:inline-block;background:'+esc(patObj.color)+';color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">'+esc(patObj.name)+'</span>':
+          pat==='有給'?'<span style="display:inline-block;background:#1565c0;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給</span>':
+          pat==='有給（午前半休）'?'<span style="display:inline-block;background:#1976d2;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給AM</span>':
+          pat==='有給（午後半休）'?'<span style="display:inline-block;background:#0288d1;color:#fff;padding:1px 4px;border-radius:4px;font-size:10px;font-weight:700">有給PM</span>':
+          (pat==='休'?'<span style="color:#999;font-size:10px">休</span>':
+          '<span style="color:#ddd;font-size:10px">−</span>'))+ 
+        '</td>';
+      if(patObj||pat==='有給'||pat==='有給（午前半休）'||pat==='有給（午後半休）')workDays++;
     }
     h+='<td style="padding:4px;border:1px solid var(--bdr);text-align:center;font-weight:700;color:var(--pri)">'+workDays+'日</td>';
     h+='</tr>';
@@ -7363,18 +7355,11 @@ async function execBulkDow(){
 
   if(!lockUI())return;
   try{
-    // 閉所日を取得
-    var closedDays0=_closedDaysCache[_shiftYM];
-    if(!closedDays0){
-      try{closedDays0=await gas('getClosedDays',_shiftYM)||[];}catch(e){closedDays0=[];}
-      _closedDaysCache[_shiftYM]=closedDays0;
-    }
     var saves=[];
     targets.forEach(function(s){
       for(var d=1;d<=dim;d++){
         var ds=_shiftYM+'-'+String(d).padStart(2,'0');
         var dow=new Date(y,m-1,d).getDay();
-        if(closedDays0.indexOf(ds)>=0)continue; // 閉所日はスキップ
         if(dows.indexOf(dow)>=0){
           saves.push({staffId:s.id,date:ds,pattern:patName});
         }
@@ -7386,7 +7371,7 @@ async function execBulkDow(){
       if(saves[i].pattern===''){delete _shiftData[saves[i].staffId][saves[i].date];}
       else{_shiftData[saves[i].staffId][saves[i].date]=saves[i].pattern;}
     }
-    toast('✅ '+saves.length+'件を設定しました（閉所日は除く）');
+    toast('✅ '+saves.length+'件を設定しました');
     closeModal('st-modal');
     renderShiftManagement();
   }catch(e){await cAlert('エラー: '+e);}finally{unlockUI();}
@@ -7408,20 +7393,10 @@ async function execBulkStaff(){
   try{
     var saves=[];
     var cur=new Date(from);var end=new Date(to);
-    var closedCache2={};
     while(cur<=end){
       var ds=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
-      var ym2=ds.slice(0,7);
       var dow=cur.getDay();
-      if(!closedCache2[ym2]){
-        closedCache2[ym2]=_closedDaysCache[ym2];
-        if(!closedCache2[ym2]){
-          try{closedCache2[ym2]=await gas('getClosedDays',ym2)||[];}catch(e){closedCache2[ym2]=[];}
-          _closedDaysCache[ym2]=closedCache2[ym2];
-        }
-      }
-      var isClosedDay=closedCache2[ym2].indexOf(ds)>=0;
-      if(!isClosedDay&&(!skipHoliday||(dow!==0&&dow!==6))){
+      if(!skipHoliday||(dow!==0&&dow!==6)){
         targets.forEach(function(s){
           saves.push({staffId:s.id,date:ds,pattern:patName});
         });
@@ -7434,7 +7409,7 @@ async function execBulkStaff(){
       if(saves[i].pattern===''){delete _shiftData[saves[i].staffId][saves[i].date];}
       else{_shiftData[saves[i].staffId][saves[i].date]=saves[i].pattern;}
     }
-    toast('✅ '+saves.length+'件を設定しました（閉所日は除く）');
+    toast('✅ '+saves.length+'件を設定しました');
     closeModal('st-modal');
     renderShiftManagement();
   }catch(e){await cAlert('エラー: '+e);}finally{unlockUI();}
