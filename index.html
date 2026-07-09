@@ -1405,7 +1405,8 @@ function openUserModal(u){
   html+='<thead><tr style="background:#f5f5f5"><th style="padding:6px 8px;border:1px solid #ddd;text-align:left">サービス</th>';
   html+='<th style="padding:6px 8px;border:1px solid #ddd;text-align:left">事業所名</th>';
   html+='<th style="padding:6px 8px;border:1px solid #ddd;text-align:left">メール</th>';
-  html+='<th style="padding:6px 8px;border:1px solid #ddd;text-align:left">担当者／連絡先</th>';
+  html+='<th style="padding:6px 8px;border:1px solid #ddd;text-align:left">担当者</th>';
+  html+='<th style="padding:6px 8px;border:1px solid #ddd;text-align:left">連絡先</th>';
   html+='<th style="padding:6px 8px;border:1px solid #ddd;width:50px"></th></tr></thead>';
   html+='<tbody id="rel-org-body">';
   relOrgs.forEach(function(ro,idx){
@@ -1875,7 +1876,8 @@ function relOrgRow(idx,ro){
   r+='<td style="padding:4px;border:1px solid #ddd"><input id="ro-svc-'+idx+'" value="'+esc(ro.service||'')+'" placeholder="相談支援等" style="width:100%;font-size:12px;border:1px solid #eee;padding:3px"></td>';
   r+='<td style="padding:4px;border:1px solid #ddd"><input id="ro-name-'+idx+'" value="'+esc(ro.name||'')+'" style="width:100%;font-size:12px;border:1px solid #eee;padding:3px"></td>';
   r+='<td style="padding:4px;border:1px solid #ddd"><input id="ro-email-'+idx+'" value="'+esc(ro.email||'')+'" type="email" placeholder="example@gmail.com" style="width:100%;font-size:12px;border:1px solid #eee;padding:3px"></td>';
-  r+='<td style="padding:4px;border:1px solid #ddd"><input id="ro-contact-'+idx+'" value="'+esc(ro.contact||'')+'" placeholder="担当者名 / 電話番号" style="width:100%;font-size:12px;border:1px solid #eee;padding:3px"></td>';
+  r+='<td style="padding:4px;border:1px solid #ddd"><input id="ro-contact-'+idx+'" value="'+esc(ro.contact||'')+'" placeholder="担当者名" style="width:100%;font-size:12px;border:1px solid #eee;padding:3px"></td>';
+  r+='<td style="padding:4px;border:1px solid #ddd"><input id="ro-phone-'+idx+'" value="'+esc(ro.phone||'')+'" placeholder="電話番号等" style="width:100%;font-size:12px;border:1px solid #eee;padding:3px"></td>';
   r+='<td style="padding:4px;border:1px solid #ddd;text-align:center"><button onclick="document.getElementById(\'rel-org-'+idx+'\').remove()" style="background:none;border:none;cursor:pointer;font-size:14px;color:#c62828" title="削除">✕</button></td></tr>';
   return r;
 }
@@ -1890,8 +1892,8 @@ function collectRelOrgs(){
   for(var i=0;i<tb.rows.length;i++){
     var inp=tb.rows[i].querySelectorAll('input');
     if(inp.length>=4){
-      var ro={service:inp[0].value,name:inp[1].value,email:inp[2].value,contact:inp[3].value};
-      if(ro.service||ro.name||ro.email||ro.contact)result.push(ro);
+      var ro={service:inp[0].value,name:inp[1].value,email:inp[2].value,contact:inp[3].value,phone:inp[4]?inp[4].value:''};
+      if(ro.service||ro.name||ro.email||ro.contact||ro.phone)result.push(ro);
     }
   }
   return result;
