@@ -5159,13 +5159,28 @@ function clearSRSign(){
   srHasDrawn=false;
 }
 
+// サインをStorage にアップロードしてURLを返す
+async function uploadSignatureToStorage(userId, dateStr, dataUrl){
+  var parts=dataUrl.split(',');
+  var byteStr=atob(parts[1]);
+  var arr=new Uint8Array(byteStr.length);
+  for(var i=0;i<byteStr.length;i++)arr[i]=byteStr.charCodeAt(i);
+  var blob=new Blob([arr],{type:'image/jpeg'});
+  var path=userId+'/'+dateStr+'.jpg';
+  var r=await supabase.storage.from('signatures').upload(path,blob,{upsert:true,contentType:'image/jpeg'});
+  if(r.error)throw r.error;
+  var urlData=supabase.storage.from('signatures').getPublicUrl(path);
+  return urlData.data.publicUrl;
+}
+
 async function saveSRSign(userId,dateStr){
   if(!srHasDrawn){await cAlert('サインを書いてください');return;}
   var btn=document.getElementById('sr-sign-btn');
   btn.disabled=true;btn.textContent='保存中...';
   try{
-    var dataUrl=srSignCanvas.toDataURL('image/png');
-    await gas('saveSignatureForDate',userId,dateStr,dataUrl);
+    var dataUrl=srSignCanvas.toDataURL('image/jpeg',0.6);
+    var signUrl=await uploadSignatureToStorage(userId,dateStr,dataUrl);
+    await gas('saveSignatureForDate',userId,dateStr,signUrl);
     closeSignModal();
     // 実績記録票を再読み込み
     showLoading('e-c','データを更新中...');

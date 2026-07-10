@@ -310,7 +310,43 @@ signCanvas.addEventListener('pointermove',function(e){if(!isDrawing)return;var r
 signCanvas.addEventListener('pointerup',function(){isDrawing=false;});signCanvas.addEventListener('pointerleave',function(){isDrawing=false;});}
 function clearSign(){if(!signCanvas)return;signCtx.clearRect(0,0,signCanvas.width,signCanvas.height);hasDrawn=false;}
 
-async function submitClock(userId){if(!hasDrawn){alert('サインを書いてください');return;}var btn=document.getElementById('btn-submit');btn.disabled=true;btn.textContent='送信中...';try{var dataUrl=signCanvas.toDataURL('image/png');var result=await clockIn(userId,dataUrl);closeModal();showSuccess(userId,'in',result.time);TCData=await getTimecardUsers();renderUserGrid();}catch(e){alert('エラー: '+e);btn.disabled=false;btn.textContent='出勤打刻';}}
+// Base64をSupabase StorageにアップロードしてパブリックURLを返す
+async function uploadSignature(userId, dataUrl){
+  // Base64をBlobに変換
+  var parts=dataUrl.split(',');
+  var byteStr=atob(parts[1]);
+  var arr=new Uint8Array(byteStr.length);
+  for(var i=0;i<byteStr.length;i++)arr[i]=byteStr.charCodeAt(i);
+  var blob=new Blob([arr],{type:'image/jpeg'});
+  // ファイル名: userId/YYYY-MM-DD.jpg
+  var today2=_today();
+  var path=userId+'/'+today2+'.jpg';
+  // アップロード（既存ファイルがあれば上書き）
+  var r=await sb.storage.from('signatures').upload(path,blob,{upsert:true,contentType:'image/jpeg'});
+  if(r.error)throw r.error;
+  // パブリックURLを取得
+  var urlData=sb.storage.from('signatures').getPublicUrl(path);
+  return urlData.data.publicUrl;
+}
+
+async function submitClock(userId){
+  if(!hasDrawn){alert('サインを書いてください');return;}
+  var btn=document.getElementById('btn-submit');
+  btn.disabled=true;btn.textContent='送信中...';
+  try{
+    // JPEGで圧縮（サイズ削減）
+    var dataUrl=signCanvas.toDataURL('image/jpeg',0.6);
+    // StorageにアップロードしてURLを取得
+    var signUrl=await uploadSignature(userId,dataUrl);
+    // DBにはURLのみ保存
+    var result=await clockIn(userId,signUrl);
+    closeModal();showSuccess(userId,'in',result.time);
+    TCData=await getTimecardUsers();renderUserGrid();
+  }catch(e){
+    alert('エラー: '+e);
+    btn.disabled=false;btn.textContent='出勤打刻';
+  }
+}
 async function submitClockOut(userId){var btn=document.getElementById('btn-submit');btn.disabled=true;btn.textContent='送信中...';try{var result=await clockOut(userId);closeModal();showSuccess(userId,'out',result.time);TCData=await getTimecardUsers();renderUserGrid();}catch(e){alert('エラー: '+e);btn.disabled=false;btn.textContent='退勤打刻';}}
 
 async function submitStaffIn(staffId){var btn=document.getElementById('btn-submit');btn.disabled=true;btn.textContent='送信中...';try{var result=await staffClockIn(staffId);closeModal();showSuccessStaff(staffId,'in',result.time,result.shift);STData=await getStaffTimecard();renderStaffGrid();}catch(e){alert('エラー: '+e);btn.disabled=false;btn.textContent='出勤打刻';}}
