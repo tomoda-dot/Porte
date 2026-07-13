@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google" content="notranslate">
+<title>日報入力 | ひとつぎ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-config.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--pri:#3d5a3e;--bg:#f7f4f0;--card:#fff;--bdr:#e0d6cf;--sub:#8a7a6a;--grn:#2e7d32;--acc:#c07830;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#333;min-height:100vh;font-size:15px;}
+
+/* ログイン */
+#pg-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:#fff;border-radius:16px;padding:36px 28px;width:100%;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,.1);}
+.login-logo{text-align:center;margin-bottom:24px;}
+.login-logo .ico{font-size:44px;display:block;}
+.login-logo h1{font-size:20px;font-weight:700;color:var(--pri);margin-top:8px;}
+.f label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px;margin-top:14px;}
+.f input,.f select{width:100%;padding:12px 14px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px;background:#fff;}
+.f input:focus,.f select:focus{outline:none;border-color:var(--pri);}
+#btn-login{width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;margin-top:18px;}
+#login-err{color:#c62828;font-size:13px;text-align:center;margin-top:8px;min-height:16px;}
+
+/* メイン */
+#pg-main{display:none;min-height:100vh;}
+#pg-loading{display:none;text-align:center;padding:80px 20px;color:var(--sub);}
+.spin{width:32px;height:32px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 12px;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+/* ヘッダー */
+header{background:var(--pri);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.hd-title{font-size:18px;font-weight:700;}
+.hd-staff{font-size:13px;opacity:.8;}
+#btn-logout{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 14px;border-radius:16px;font-size:13px;cursor:pointer;}
+
+/* メインコンテンツ */
+.main-inner{max-width:900px;margin:0 auto;padding:20px 16px;}
+
+/* セレクター行 */
+.selector-row{display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;}
+.selector-row .f{flex:1;min-width:160px;margin:0;}
+.selector-row label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px;}
+.selector-row select,.selector-row input{width:100%;padding:10px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;background:#fff;}
+
+/* カード */
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.card-title{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:16px;display:flex;align-items:center;gap:6px;}
+
+/* グリッド */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* フォーム */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;background:#fff;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--pri);}
+.field textarea{resize:vertical;min-height:90px;}
+.field .hint{font-size:11px;color:var(--sub);margin-top:4px;}
+
+/* 実働時間 */
+.work-time-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--pri);}
+
+/* 保存ボタン */
+.save-bar{position:sticky;bottom:0;background:rgba(247,244,240,.95);backdrop-filter:blur(8px);padding:14px 20px;display:flex;gap:12px;justify-content:flex-end;border-top:1px solid var(--bdr);}
+#btn-save{padding:14px 40px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;}
+#btn-save:disabled{opacity:.6;cursor:not-allowed;}
+#btn-cancel{padding:14px 24px;background:#fff;color:var(--sub);border:1.5px solid var(--bdr);border-radius:10px;font-size:15px;cursor:pointer;}
+
+/* 状態バッジ */
+.status-opts{display:flex;gap:8px;flex-wrap:wrap;}
+.status-opt{flex:1;min-width:80px;padding:10px 4px;border:2px solid var(--bdr);border-radius:8px;background:#fff;color:var(--sub);font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
+.status-opt.on{border-color:var(--pri);background:var(--pri);color:#fff;}
+.status-opt.on.absent{border-color:#c62828;background:#c62828;}
+.status-opt.on.other{border-color:var(--acc);background:var(--acc);}
+
+/* 完了メッセージ */
+#pg-done{display:none;text-align:center;padding:60px 20px;}
+.done-ico{font-size:64px;display:block;margin-bottom:16px;}
+#btn-next{padding:14px 40px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:20px;}
+
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr;}
+  .selector-row{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<div id="pg-loading"><div class="spin"></div>読み込み中...</div>
+
+<!-- ログイン -->
+<div id="pg-login">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="ico">📋</span>
+      <h1>日報入力</h1>
+      <p style="font-size:12px;color:var(--sub);margin-top:4px">ひとつぎ豊中小曽根</p>
+    </div>
+    <div class="f"><label>スタッフID</label><input type="text" id="inp-id" autocomplete="username" placeholder="ログインIDを入力"></div>
+    <div class="f"><label>パスワード</label><input type="password" id="inp-pw" autocomplete="current-password" placeholder="パスワードを入力"></div>
+    <button id="btn-login">ログイン</button>
+    <div id="login-err"></div>
+  </div>
+</div>
+
+<!-- メイン -->
+<div id="pg-main">
+  <header>
+    <div>
+      <div class="hd-title">📋 日報入力</div>
+      <div class="hd-staff" id="hd-staff"></div>
+    </div>
+    <button id="btn-logout">ログアウト</button>
+  </header>
+
+  <div class="main-inner">
+    <!-- 利用者・日付選択 -->
+    <div class="selector-row">
+      <div class="f">
+        <label>利用者</label>
+        <select id="sel-user"><option value="">-- 選択してください --</option></select>
+      </div>
+      <div class="f">
+        <label>日付</label>
+        <input type="date" id="sel-date">
+      </div>
+      <div>
+        <button id="btn-load" style="padding:10px 20px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">読み込む</button>
+      </div>
+    </div>
+
+    <!-- 入力フォーム -->
+    <div id="form-area" style="display:none">
+      <div id="user-date-label" style="font-size:16px;font-weight:700;color:var(--pri);margin-bottom:16px"></div>
+
+      <!-- 出欠・送迎設定 -->
+      <div class="card">
+        <div class="card-title">🕐 出欠・送迎設定</div>
+        <div class="field">
+          <label>状態</label>
+          <div class="status-opts">
+            <button class="status-opt on" data-val="出席" onclick="setStatus(this)">出席</button>
+            <button class="status-opt absent" data-val="欠席" onclick="setStatus(this)">欠席</button>
+            <button class="status-opt other" data-val="体調不良" onclick="setStatus(this)">体調不良</button>
+            <button class="status-opt other" data-val="早退" onclick="setStatus(this)">早退</button>
+            <button class="status-opt other" data-val="遅刻" onclick="setStatus(this)">遅刻</button>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>出勤時間</label>
+            <input type="time" id="f-start">
+          </div>
+          <div class="field">
+            <label>退勤時間</label>
+            <input type="time" id="f-end">
+          </div>
+        </div>
+        <div class="grid3">
+          <div class="field">
+            <label>休憩時間</label>
+            <select id="f-break">
+              <option value="0">なし</option>
+              <option value="30">30分</option>
+              <option value="60" selected>60分（標準）</option>
+              <option value="90">90分</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>お弁当</label>
+            <select id="f-bento">
+              <option value="なし">なし</option>
+              <option value="あり">あり</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>送迎</label>
+            <select id="f-transport">
+              <option value="なし">なし</option>
+              <option value="往復">往復</option>
+              <option value="往路">往路のみ</option>
+              <option value="復路">復路のみ</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>出欠備考（欠席理由など）</label>
+          <textarea id="f-att-notes" placeholder="欠席理由や連絡事項を記入..."></textarea>
+        </div>
+      </div>
+
+      <!-- 日報・作業記録 -->
+      <div class="card">
+        <div class="card-title" style="justify-content:space-between">
+          <span>📝 日報・作業記録</span>
+          <span class="work-time-badge" id="work-time-badge">実働: 0.0時間</span>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>作業(AM)</label>
+            <select id="f-work-am"><option value="">-- 選択 --</option></select>
+          </div>
+          <div class="field">
+            <label>作業(PM)</label>
+            <select id="f-work-pm"><option value="">-- 選択 --</option></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>作業内容</label>
+          <div style="display:flex;gap:8px;margin-bottom:6px">
+            <select id="f-template" style="flex:1;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;font-size:13px">
+              <option value="">📋 テンプレートから入力...</option>
+            </select>
+            <button onclick="applyTemplate()" style="padding:8px 14px;background:var(--bg);border:1.5px solid var(--bdr);border-radius:8px;font-size:13px;cursor:pointer">適用</button>
+          </div>
+          <textarea id="f-content" placeholder="本日の作業実績や様子を記入..." style="min-height:120px"></textarea>
+        </div>
+        <div class="field">
+          <label>体調</label>
+          <select id="f-condition">
+            <option value="普通">普通</option>
+            <option value="良好">良好</option>
+            <option value="不良">不良</option>
+            <option value="要観察">要観察</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 保存バー -->
+      <div class="save-bar">
+        <button id="btn-cancel">キャンセル</button>
+        <button id="btn-save">💾 出欠・日報を保存</button>
+      </div>
+    </div>
+
+    <!-- 完了メッセージ -->
+    <div id="pg-done">
+      <span class="done-ico">✅</span>
+      <div style="font-size:20px;font-weight:700;color:var(--pri)" id="done-msg"></div>
+      <div style="font-size:14px;color:var(--sub);margin-top:8px">データが保存されました</div>
+      <button id="btn-next">次の利用者を入力する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+var SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var ME = null;
+var USERS = [], WORK_TYPES = [], TEMPLATES = [], SETTINGS = {};
+var CURRENT_STATUS = '出席';
+
+// ─── ユーティリティ ─────────────────────
+function pad(n){ return String(n).padStart(2,'0'); }
+function today(){
+  var d=new Date();
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+function fmtDateJP(s){
+  if(!s)return '';
+  var p=s.split('-');
+  var dow=['日','月','火','水','木','金','土'][new Date(s).getDay()];
+  return p[0]+'年'+parseInt(p[1])+'月'+parseInt(p[2])+'日（'+dow+'）';
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function el(id){ return document.getElementById(id); }
+function show(id){ el(id).style.display='block'; }
+function hide(id){ el(id).style.display='none'; }
+
+function calcWorkTime(){
+  var s=el('f-start').value, e=el('f-end').value, b=parseInt(el('f-break').value)||0;
+  if(!s||!e)return 0;
+  var sp=s.split(':'), ep=e.split(':');
+  var mins=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1])-b;
+  return Math.max(0,Math.round(mins/60*100)/100);
+}
+
+function updateWorkTimeBadge(){
+  var h=calcWorkTime();
+  el('work-time-badge').textContent='実働: '+h+'時間';
+}
+
+// ─── ログイン ─────────────────────────
+el('btn-login').onclick = async function(){
+  var id=el('inp-id').value.trim(), pw=el('inp-pw').value;
+  var err=el('login-err'), btn=this;
+  err.textContent='';
+  if(!id||!pw){err.textContent='IDとパスワードを入力してください';return;}
+  btn.disabled=true; btn.textContent='確認中...';
+  try{
+    var r=await SB.from('スタッフ').select('*').eq('loginId',id).eq('password',pw).limit(1);
+    if(r.error)throw r.error;
+    if(!r.data||!r.data.length){err.textContent='IDまたはパスワードが違います';return;}
+    ME=r.data[0];
+    try{sessionStorage.setItem('tb_me',JSON.stringify(ME));}catch(e){}
+    await boot();
+  }catch(e){ err.textContent='エラー: '+(e.message||String(e)); }
+  finally{ btn.disabled=false; btn.textContent='ログイン'; }
+};
+el('inp-pw').onkeydown=function(e){if(e.key==='Enter')el('btn-login').onclick();};
+
+el('btn-logout').onclick=function(){
+  try{sessionStorage.removeItem('tb_me');}catch(e){}
+  ME=null;
+  hide('pg-main'); el('pg-login').style.display='flex';
+};
+
+// ─── 起動 ────────────────────────────
+async function boot(){
+  el('pg-login').style.display='none';
+  hide('pg-main'); show('pg-loading');
+  try{
+    // 並行データ取得
+    var results=await Promise.all([
+      SB.from('利用者').select('*').order('kana'),
+      SB.from('作業種別').select('*'),
+      SB.from('日報テンプレート').select('*'),
+      SB.from('設定').select('key,value')
+    ]);
+    USERS=(results[0].data||[]).filter(function(u){
+      // 利用終了者を除外
+      if(u.status==='利用終了')return false;
+      return true;
+    });
+    WORK_TYPES=results[1].data||[];
+    TEMPLATES=results[2].data||[];
+    results[3].data&&results[3].data.forEach(function(r){SETTINGS[r.key]=r.value;});
+
+    // UI構築
+    el('hd-staff').textContent=ME.name||'';
+    buildUserSelect();
+    buildWorkTypeSelect();
+    buildTemplateSelect();
+    el('sel-date').value=today();
+    el('sel-date').max=today();
+
+    show('pg-main');
+    hide('pg-loading');
+  }catch(e){
+    hide('pg-loading');
+    el('pg-login').style.display='flex';
+    alert('読み込みエラー: '+(e.message||String(e)));
+  }
+}
+
+// セッション復元
+(async function(){
+  try{
+    var s=sessionStorage.getItem('tb_me');
+    if(s){ME=JSON.parse(s); await boot();}
+  }catch(e){try{sessionStorage.removeItem('tb_me');}catch(e2){}}
+})();
+
+// ─── UI構築 ──────────────────────────
+function buildUserSelect(){
+  var sel=el('sel-user');
+  sel.innerHTML='<option value="">-- 利用者を選択 --</option>';
+  USERS.forEach(function(u){
+    var opt=document.createElement('option');
+    opt.value=u.id;
+    opt.textContent=u.name+(u.kana?' ('+u.kana+')':'');
+    sel.appendChild(opt);
+  });
+}
+
+function buildWorkTypeSelect(){
+  var opts='<option value="">-- 選択 --</option>';
+  WORK_TYPES.forEach(function(w){
+    opts+='<option value="'+esc(w.name)+'">'+esc(w.name)+'</option>';
+  });
+  el('f-work-am').innerHTML=opts;
+  el('f-work-pm').innerHTML=opts;
+}
+
+function buildTemplateSelect(){
+  var sel=el('f-template');
+  sel.innerHTML='<option value="">📋 テンプレートから入力...</option>';
+  TEMPLATES.forEach(function(t){
+    var opt=document.createElement('option');
+    opt.value=t.content||'';
+    opt.textContent=t.name||'';
+    sel.appendChild(opt);
+  });
+}
+
+// ─── 状態選択 ────────────────────────
+function setStatus(btn){
+  CURRENT_STATUS=btn.getAttribute('data-val');
+  document.querySelectorAll('.status-opt').forEach(function(b){
+    b.classList.remove('on');
+  });
+  btn.classList.add('on');
+}
+
+// ─── テンプレート適用 ──────────────────
+function applyTemplate(){
+  var val=el('f-template').value;
+  if(!val)return;
+  var cur=el('f-content').value;
+  el('f-content').value=cur?(cur+'\n'+val):val;
+  el('f-template').value='';
+}
+
+// ─── 読み込みボタン ───────────────────
+el('btn-load').onclick = async function(){
+  var userId=el('sel-user').value;
+  var date=el('sel-date').value;
+  if(!userId){alert('利用者を選択してください');return;}
+  if(!date){alert('日付を選択してください');return;}
+  var user=USERS.find(function(u){return u.id===userId;});
+  if(!user)return;
+
+  var btn=this;btn.disabled=true;btn.textContent='読み込み中...';
+  try{
+    // 既存データを取得
+    var attR=await SB.from('出欠').select('*').eq('userId',userId).eq('date',date).limit(1);
+    var repR=await SB.from('日報').select('*').eq('userId',userId).eq('date',date).limit(1);
+    var att=attR.data&&attR.data.length?attR.data[0]:null;
+    var rep=repR.data&&repR.data.length?repR.data[0]:null;
+
+    // フォームに反映
+    CURRENT_STATUS=att?att.status||'出席':'出席';
+    document.querySelectorAll('.status-opt').forEach(function(b){
+      b.classList.remove('on');
+      if(b.getAttribute('data-val')===CURRENT_STATUS)b.classList.add('on');
+    });
+    el('f-start').value=att?att.startTime||'':'';
+    el('f-end').value=att?att.endTime||'':'';
+    el('f-break').value=att?String(att.breakMin||60):'60';
+    el('f-bento').value=att?(att.meal?'あり':'なし'):'なし';
+    el('f-transport').value=att?(att.pickup&&att.dropoff?'往復':att.pickup?'往路':att.dropoff?'復路':'なし'):'なし';
+    el('f-att-notes').value=att?att.notes||'':'';
+
+    // 日報
+    el('f-work-am').value=rep?rep.workAM||'':'';
+    el('f-work-pm').value=rep?rep.workPM||'':'';
+    el('f-content').value=rep?rep.content||'':'';
+    el('f-condition').value=rep?rep.condition||'普通':'普通';
+
+    // ラベル更新
+    el('user-date-label').textContent=esc(user.name)+' — '+fmtDateJP(date);
+    hide('pg-done');
+    show('form-area');
+    updateWorkTimeBadge();
+
+    // 実働時間の自動更新
+    el('f-start').oninput=updateWorkTimeBadge;
+    el('f-end').oninput=updateWorkTimeBadge;
+    el('f-break').onchange=updateWorkTimeBadge;
+
+    window.scrollTo(0,0);
+  }catch(e){
+    alert('データ読み込みエラー: '+(e.message||String(e)));
+  }finally{
+    btn.disabled=false;btn.textContent='読み込む';
+  }
+};
+
+// ─── キャンセル ──────────────────────
+el('btn-cancel').onclick=function(){
+  hide('form-area');
+  el('sel-user').value='';
+  window.scrollTo(0,0);
+};
+
+// ─── 保存 ────────────────────────────
+el('btn-save').onclick = async function(){
+  var userId=el('sel-user').value;
+  var date=el('sel-date').value;
+  if(!userId||!date)return;
+  var btn=this;btn.disabled=true;btn.textContent='保存中...';
+
+  try{
+    var transport=el('f-transport').value;
+    // 出欠データ
+    var attData={
+      userId:userId, date:date,
+      status:CURRENT_STATUS,
+      startTime:el('f-start').value,
+      endTime:el('f-end').value,
+      breakMin:parseInt(el('f-break').value)||60,
+      meal:el('f-bento').value==='あり',
+      pickup:transport==='往復'||transport==='往路',
+      dropoff:transport==='往復'||transport==='復路',
+      notes:el('f-att-notes').value
+    };
+    // upsert（既存があれば更新、なければ追加）
+    var attEx=await SB.from('出欠').select('id').eq('userId',userId).eq('date',date).limit(1);
+    if(attEx.data&&attEx.data.length){
+      attData.id=attEx.data[0].id;
+      await SB.from('出欠').update(attData).eq('id',attData.id);
+    }else{
+      attData.id='a'+Date.now()+Math.random().toString(36).substr(2,4);
+      await SB.from('出欠').insert(attData);
+    }
+
+    // 日報データ
+    var repData={
+      userId:userId, date:date,
+      workAM:el('f-work-am').value,
+      workPM:el('f-work-pm').value,
+      content:el('f-content').value,
+      condition:el('f-condition').value,
+      staffId:ME.id, staffName:ME.name
+    };
+    var repEx=await SB.from('日報').select('id').eq('userId',userId).eq('date',date).limit(1);
+    if(repEx.data&&repEx.data.length){
+      repData.id=repEx.data[0].id;
+      await SB.from('日報').update(repData).eq('id',repData.id);
+    }else{
+      repData.id='d'+Date.now()+Math.random().toString(36).substr(2,4);
+      await SB.from('日報').insert(repData);
+    }
+
+    // 完了表示
+    var user=USERS.find(function(u){return u.id===userId;});
+    el('done-msg').textContent=(user?user.name:'')+' の日報を保存しました';
+    hide('form-area');
+    show('pg-done');
+    window.scrollTo(0,0);
+  }catch(e){
+    alert('保存エラー: '+(e.message||String(e)));
+  }finally{
+    btn.disabled=false;btn.textContent='💾 出欠・日報を保存';
+  }
+};
+
+// ─── 次の利用者 ──────────────────────
+el('btn-next').onclick=function(){
+  hide('pg-done');
+  el('sel-user').value='';
+  el('f-start').value='';
+  el('f-end').value='';
+  el('f-content').value='';
+  el('f-att-notes').value='';
+  CURRENT_STATUS='出席';
+  document.querySelectorAll('.status-opt').forEach(function(b){
+    b.classList.remove('on');
+    if(b.getAttribute('data-val')==='出席')b.classList.add('on');
+  });
+  window.scrollTo(0,0);
+};
+</script>
+</body>
+</html>
