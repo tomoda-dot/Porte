@@ -353,13 +353,9 @@ async function boot(){
       SB.from('日報テンプレート').select('*'),
       SB.from('設定').select('key,value')
     ]);
-    // 利用終了・退所以外の利用者を表示
-    USERS=(results[0].data||[]).filter(function(u){
-      var s=u.status||'';
-      return s!=='利用終了'&&s!=='退所'&&s!=='退所済';
-    });
-    // フィルタ後に誰もいない場合は全員表示
-    if(USERS.length===0) USERS=results[0].data||[];
+    // 全利用者をそのまま使用（フィルタなし）
+    USERS=results[0].data||[];
+    console.log('[tablet] 利用者数:', USERS.length, USERS.map(function(u){return u.name;}));
     WORK_TYPES=results[1].data||[];
     TEMPLATES=results[2].data||[];
     results[3].data&&results[3].data.forEach(function(r){SETTINGS[r.key]=r.value;});
@@ -410,6 +406,7 @@ function buildUserSelect(){
 var SAVED_DATES={};
 
 function renderUserList(){
+  console.log('[tablet] renderUserList USERS:', USERS.length);
   var kw=el('search-box').value.trim();
   var list=USERS.filter(function(u){
     if(!kw)return true;
