@@ -353,11 +353,13 @@ async function boot(){
       SB.from('日報テンプレート').select('*'),
       SB.from('設定').select('key,value')
     ]);
+    // 利用終了・退所以外の利用者を表示
     USERS=(results[0].data||[]).filter(function(u){
-      // 利用終了者を除外
-      if(u.status==='利用終了')return false;
-      return true;
+      var s=u.status||'';
+      return s!=='利用終了'&&s!=='退所'&&s!=='退所済';
     });
+    // フィルタ後に誰もいない場合は全員表示
+    if(USERS.length===0) USERS=results[0].data||[];
     WORK_TYPES=results[1].data||[];
     TEMPLATES=results[2].data||[];
     results[3].data&&results[3].data.forEach(function(r){SETTINGS[r.key]=r.value;});
