@@ -348,7 +348,7 @@ async function boot(){
   try{
     // 並行データ取得
     var results=await Promise.all([
-      SB.from('利用者').select('*').order('kana'),
+      SB.from('利用者').select('*'),
       SB.from('作業種別').select('*'),
       SB.from('日報テンプレート').select('*'),
       SB.from('設定').select('key,value')
