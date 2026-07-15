@@ -1269,7 +1269,7 @@ function renderUsers(c){
     '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'+
       '<span style="font-size:12px;color:var(--sub)">検索:</span><input id="u-search" placeholder="氏名・ふりがなで検索..." value="'+esc(uSearch)+'" oninput="uSearch=this.value;filterU()" style="width:200px">'+
       '<span style="font-size:12px;color:var(--sub);margin-left:10px">担当:</span><select id="u-staff" onchange="uStaff=this.value;filterU()" style="width:140px"><option value="">すべて</option>'+
-      S.staff.map(function(s){return'<option value="'+s.id+'"'+(uStaff===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select>'+
+      S.staff.filter(function(s){return _isStaffActive(s,today().slice(0,7));}).map(function(s){return'<option value="'+s.id+'"'+(uStaff===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select>'+
     '</div>'+
     // テーブル
     '<div class="tbl-wrap"><table><thead><tr><th>ID(受給者証番号)</th><th>種類</th><th>氏名</th><th>担当</th><th>利用開始日</th><th>受給者証満了日</th><th>利用終了日</th><th>状態</th></tr></thead><tbody id="u-tbody"></tbody></table></div>'+
@@ -1408,7 +1408,7 @@ function openUserModal(u){
     '<div class="field"><label>性別</label><select id="uf-gender" style="width:100%"><option'+(d.gender==='男性'?' selected':'')+'>男性</option><option'+(d.gender==='女性'?' selected':'')+'>女性</option><option'+(d.gender==='その他'?' selected':'')+'>その他</option></select></div>'+
     '<div class="field"><label>障害種別</label><select id="uf-dis" style="width:100%"><option value="">選択</option>'+disOptions.map(function(o){return'<option'+(d.disability===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select></div></div>'+
     '<div class="grid3">'+
-    '<div class="field"><label>担当スタッフ</label><select id="uf-staff" style="width:100%"><option value="">未設定</option>'+S.staff.map(function(s){return'<option value="'+s.id+'"'+(d.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
+    '<div class="field"><label>担当スタッフ</label><select id="uf-staff" style="width:100%"><option value="">未設定</option>'+S.staff.filter(function(s){return _isStaffActive(s,today().slice(0,7))||s.id===d.staffId;}).map(function(s){return'<option value="'+s.id+'"'+(d.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
     '<div></div><div></div></div></div>';
   
   // 住所
@@ -1820,7 +1820,7 @@ function openFinalPlanFormEmpty(userId,planId){
 function _buildFinalForm(userId,planId,d){
   var u=S.users.find(function(x){return x.id===userId;})||{};
   var el=document.getElementById('plan-area');if(!el)return;
-  var mgrs=S.staff.filter(function(s){return(s.role||'').indexOf('管理責任者')>=0;});
+  var mgrs=S.staff.filter(function(s){return(s.role||'').indexOf('管理責任者')>=0&&_isStaffActive(s,today().slice(0,7));});
 
   var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
   h+='<h3 style="margin:0">📋 個別支援計画（本）</h3>';
@@ -2463,7 +2463,7 @@ function openPlanForm(userId,planId){
   var p=planId?_planData.find(function(x){return x.id===planId;}):null;
   var d=p||{userId:userId,createDate:today(),startDate:today(),facility:S.settings.facilityName||'',serviceType:u.serviceType||'就労Ｂ型',manager:''};
   var isEdit=!!d.id;
-  var mgrs=S.staff.filter(function(s){return(s.role||'').indexOf('管理責任者')>=0;});
+  var mgrs=S.staff.filter(function(s){return(s.role||'').indexOf('管理責任者')>=0&&_isStaffActive(s,today().slice(0,7));});
   var mgrDefault=d.manager||(mgrs.length>0?mgrs[0].name:'');
 
   var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="margin:0">'+(isEdit?'📋 個別支援計画（案）編集':'📋 新規 個別支援計画（案）')+'</h3><div style="display:flex;gap:8px">';
@@ -2476,7 +2476,7 @@ function openPlanForm(userId,planId){
   h+='<div class="field"><label>利用者氏名</label><input id="pl-userName" value="'+esc(d.userName||u.name||'')+'" style="width:100%;background:#f5f5f5" readonly></div></div>';
   h+='<div class="grid3"><div class="field"><label>サービス種別</label><input id="pl-serviceType" value="'+esc(d.serviceType||u.serviceType||'就労Ｂ型')+'" style="width:100%"></div>';
   h+='<div class="field"><label>事業所</label><input id="pl-facility" value="'+esc(d.facility||S.settings.facilityName||'')+'" style="width:100%"></div>';
-  h+='<div class="field"><label>サービス管理責任者</label><input id="pl-manager" value="'+esc(mgrDefault)+'" style="width:100%" list="pl-mgr-list"><datalist id="pl-mgr-list">'+S.staff.map(function(s){return'<option value="'+esc(s.name)+'">';}).join('')+'</datalist></div></div>';
+  h+='<div class="field"><label>サービス管理責任者</label><input id="pl-manager" value="'+esc(mgrDefault)+'" style="width:100%" list="pl-mgr-list"><datalist id="pl-mgr-list">'+S.staff.filter(function(s){return _isStaffActive(s,today().slice(0,7));}).map(function(s){return'<option value="'+esc(s.name)+'">';}).join('')+'</datalist></div></div>';
 
   h+='<div class="section-title">方針・目標</div>';
   h+='<div class="field"><label>総合的な援助の方針</label><textarea id="pl-policy" rows="3" style="width:100%">'+esc(d.policy||'')+'</textarea></div>';
@@ -3721,10 +3721,10 @@ function openNewRoute(){
     '</div>'+
     '<div class="grid2">'+
       '<div class="field"><label>運転スタッフ</label><select id="nr-st" style="width:100%"><option value="">選択</option>'+
-        S.staff.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('')+
+        S.staff.filter(function(s){return _isStaffActive(s,today().slice(0,7));}).map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('')+
       '</select></div>'+
       '<div class="field"><label>添乗スタッフ</label><select id="nr-at" style="width:100%"><option value="">なし</option>'+
-        S.staff.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('')+
+        S.staff.filter(function(s){return _isStaffActive(s,today().slice(0,7));}).map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('')+
       '</select></div>'+
     '</div>'+
 
@@ -3837,8 +3837,8 @@ function editRoute(idx){
         '<label style="cursor:pointer"><input type="radio" name="er-pat" value="evening"'+(r.pattern!=='morning'?' checked':'')+'> 🌆 夕</label></div></div>'+
       '<div class="field"><label>車両</label><select id="er-vh" style="width:100%"><option value="">選択</option>'+S.vehicles.map(function(v){return'<option value="'+v.id+'"'+(r.vehicleId===v.id?' selected':'')+'>'+esc(v.name)+'</option>';}).join('')+'</select></div></div>'+
     '<div class="grid2">'+
-      '<div class="field"><label>運転スタッフ</label><select id="er-st" style="width:100%"><option value="">選択</option>'+S.staff.map(function(s){return'<option value="'+s.id+'"'+(r.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
-      '<div class="field"><label>添乗スタッフ</label><select id="er-at" style="width:100%"><option value="">なし</option>'+S.staff.map(function(s){return'<option value="'+s.id+'"'+(r.attendant===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div></div>'+
+      '<div class="field"><label>運転スタッフ</label><select id="er-st" style="width:100%"><option value="">選択</option>'+S.staff.filter(function(s){return _isStaffActive(s,today().slice(0,7))||s.id===r.staffId;}).map(function(s){return'<option value="'+s.id+'"'+(r.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
+      '<div class="field"><label>添乗スタッフ</label><select id="er-at" style="width:100%"><option value="">なし</option>'+S.staff.filter(function(s){return _isStaffActive(s,today().slice(0,7))||s.id===r.attendant;}).map(function(s){return'<option value="'+s.id+'"'+(r.attendant===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div></div>'+
     '<div class="field"><label>乗車順（ドラッグで並び替え）</label>'+
       '<div id="er-sortable" style="background:var(--bg);border-radius:8px;padding:6px;min-height:40px">'+
       selIds.map(function(id,i){
