@@ -2033,9 +2033,15 @@ async function printFinalPlanPreview(planId){
   if(p.consentDate){
     var cd=String(p.consentDate).substring(0,10).split('-');
     html+='<div style="margin-top:16px;font-size:12px">'+parseInt(cd[0])+'年 '+parseInt(cd[1])+'月 '+parseInt(cd[2])+'日　　説明を受けた上で同意致します。</div>';
+  }else{
+    html+='<div style="margin-top:16px;font-size:12px">　　　年　　月　　日　　説明を受けた上で同意致します。</div>';
   }
   if(p.signatureUrl&&p.signatureUrl.indexOf('data:image')===0){
-    html+='<div style="margin-top:10px"><img src="'+p.signatureUrl+'" style="max-height:80px;border:1px solid #ddd;border-radius:6px"></div>';
+    html+='<div style="display:flex;justify-content:flex-end;margin-top:10px;font-size:12px;align-items:center;gap:8px">確認欄：<img src="'+p.signatureUrl+'" style="max-height:80px;border:1px solid #ddd;border-radius:6px"></div>';
+  }else{
+    html+='<div style="display:flex;justify-content:flex-end;margin-top:20px;font-size:12px">';
+    html+='<div style="display:flex;align-items:center;gap:8px">確認欄：<div style="border-bottom:1px solid #333;width:200px;height:24px"></div></div>';
+    html+='</div>';
   }
   html+='<div style="text-align:center;margin-top:24px"><button onclick="window.print()" style="font-size:14px;padding:10px 40px;border-radius:8px;border:2px solid #5d4037;background:#f5f0ea;cursor:pointer;font-weight:700;color:#5d4037">🖨 印刷する</button></div>';
   html+='</div></body></html>';
