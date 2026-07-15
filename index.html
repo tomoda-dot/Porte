@@ -917,8 +917,10 @@ async function openCalAttM(uid, ds){
     var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',content:'',mood:'普通',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
     if(u){
-      if(!att.startTime)att.startTime=u.scheduleStart||'10:00';
-      if(!att.endTime)att.endTime=u.scheduleEnd||'16:00';
+      if(!att.id){
+        if(!att.startTime)att.startTime=u.scheduleStart||'10:00';
+        if(!att.endTime)att.endTime=u.scheduleEnd||'16:00';
+      }
       if(!att.bento)att.bento=u.bento||'なし';
       if(!att.pickup)att.pickup=u.pickup||'なし';
     }
@@ -939,7 +941,8 @@ async function openCalAttM(uid, ds){
       '<div style="display:none"><select id="adm-brk"><option value="'+(att.breakMin||60)+'"></option></select><select id="adm-wt"><option value="'+(dWt?dWt.id:'')+'"></option></select><select id="adm-wtp"><option value="'+(dWt?dWt.id:'')+'"></option></select><textarea id="adm-content">'+esc(rep.content||'')+'</textarea><select id="adm-m"><option>'+esc(rep.mood||'普通')+'</option></select><textarea id="adm-dn">'+esc(rep.notes||'')+'</textarea></div>'+
       '<div style="font-size:11px;color:var(--sub);text-align:right;margin-top:4px" id="adm-h-calc"></div>'+
       '<div class="btns" style="margin-top:14px;border-top:1px solid var(--bdr);padding-top:14px">'+
-      (isTemp?'<button onclick="removeCalTemp(\''+tmpRec.id+'\',\''+ds+'\')" style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;text-decoration:underline">予定削除</button>':'')+
+      (isTemp?'<button onclick="removeCalTemp(\''+tmpRec.id+'\',\''+ds+'\')" style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;text-decoration:underline;margin-right:10px">予定削除</button>':'')+
+      '<button class="bg" onclick="deleteAttDaily(\''+uid+'\',\''+ds+'\')" style="color:#c62828">削除</button>'+
       '<button class="bg" onclick="closeModal(\'common-modal\')">キャンセル</button>'+
       '<button class="bp" onclick="saveCalAtt(\''+uid+'\',\''+ds+'\')">保存</button></div>'+
       '</div></div>';
@@ -1011,8 +1014,10 @@ async function openAttDailyM(uid, ds){
     var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',content:'',mood:'普通',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
     if(u){
-      if(!att.startTime)att.startTime=u.scheduleStart||'10:00';
-      if(!att.endTime)att.endTime=u.scheduleEnd||'16:00';
+      if(!att.id){
+        if(!att.startTime)att.startTime=u.scheduleStart||'10:00';
+        if(!att.endTime)att.endTime=u.scheduleEnd||'16:00';
+      }
       if(!att.bento)att.bento=u.bento||'なし';
       if(!att.pickup)att.pickup=u.pickup||'なし';
     }
@@ -1134,6 +1139,7 @@ async function openAttDailyM(uid, ds){
       '  </div>'+
       '</div>'+
       '<div class="btns" style="margin-top:20px;border-top:1px solid var(--bdr);padding-top:14px">'+
+      '  <button class="bg" onclick="deleteAttDaily(\''+uid+'\',\''+ds+'\')" style="color:#c62828">削除</button>'+
       '  <button class="bg" onclick="renderAttendance(document.getElementById(\'content\'))">キャンセル</button>'+
       '  <button class="bp" onclick="saveAttDaily(\''+uid+'\',\''+ds+'\')">出欠・日報を保存</button>'+
       '</div>';
@@ -1204,6 +1210,30 @@ async function saveAttDaily(uid, ds){
       }
     }
   }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+}
+
+async function deleteAttDaily(uid, ds){
+  if(!await cConfirm('この出欠・日報記録を完全に削除しますか？\n（打刻済みの場合はタイムカードの記録も消去されます）'))return;
+  if(!lockUI())return;
+  try{
+    await supabase.from('出欠').delete().eq('userId',uid).eq('date',ds);
+    await supabase.from('日報').delete().eq('userId',uid).eq('date',ds);
+    toast('✅ 削除しました');
+    S.dashboard=null;
+    clearCache('getAttendance');clearCache('getDaily');clearCache('getAttendanceByDate');clearCache('getDailyByDate');
+    var modal=document.getElementById('common-modal');
+    if(modal&&modal.innerHTML!==''){
+      closeModal('common-modal');
+      if(S.tab==='calendar'){
+        S.calAtt=await cachedGas('getAttendance',calY+'-'+String(calM).padStart(2,'0'));
+        await renderCalendar(document.getElementById('content'));
+        showDD(ds);
+      }
+    }else if(S.tab==='attendance'){
+      if(S.attSubTab==='monthly') loadAttMonthly();
+      else renderAttendance(document.getElementById('content'));
+    }
+  }catch(e){await cAlert('削除失敗: '+e);}finally{unlockUI();}
 }
 
 // テンプレート適用
