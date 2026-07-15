@@ -405,26 +405,42 @@ function buildUserSelect(){
 // 保存済みキャッシュ（{userId: true}）
 var SAVED_DATES={};
 
+function isScheduledToday(user, date){
+  if(!date)return false;
+  var sd=(user.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+  if(sd.length===0)return false;
+  var dow=['日','月','火','水','木','金','土'][new Date(date).getDay()];
+  return sd.indexOf(dow)>=0;
+}
+
 function renderUserList(){
-  console.log('[tablet] renderUserList USERS:', USERS.length);
   var kw=el('search-box').value.trim();
+  var date=el('sel-date').value;
+  var curId=el('sel-user').value;
   var list=USERS.filter(function(u){
     if(!kw)return true;
     return(u.name||'').indexOf(kw)>=0||(u.kana||'').indexOf(kw)>=0;
   });
-  var date=el('sel-date').value;
-  var curId=el('sel-user').value;
-  var html='';
-  list.forEach(function(u){
+  var scheduled=list.filter(function(u){return isScheduledToday(u,date);});
+  var others=list.filter(function(u){return !isScheduledToday(u,date);});
+  function makeItem(u){
     var isActive=u.id===curId;
-    var savedKey=u.id+'_'+date;
-    var isSaved=SAVED_DATES[savedKey];
-    html+='<div class="user-item'+(isActive?' active':'')+'" data-uid="'+u.id+'" onclick="selectUser(this.getAttribute(&quot;data-uid&quot;))">'  
+    var isSaved=SAVED_DATES[u.id+'_'+date];
+    return '<div class="user-item'+(isActive?' active':'')+
+      '" data-uid="'+u.id+'" onclick="selectUser(this.getAttribute(\'data-uid\'))">'  
       +'<span class="u-name">'+esc(u.name)+'</span>'
-      +'<span class="u-kana">'+esc(u.kana||'')+'</span>'
       +(isSaved?'<span class="u-badge saved">✅ 入力済</span>':'')
       +'</div>';
-  });
+  }
+  var html='';
+  if(scheduled.length>0){
+    html+='<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:var(--pri);background:#f0f7f0;border-bottom:1px solid #d4e8d4">📅 本日の予定者</div>';
+    scheduled.forEach(function(u){html+=makeItem(u);});
+  }
+  if(others.length>0){
+    html+='<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:var(--sub);background:var(--bg);border-bottom:1px solid var(--bdr)">その他の利用者</div>';
+    others.forEach(function(u){html+=makeItem(u);});
+  }
   el('user-list').innerHTML=html||'<p style="padding:16px;color:var(--sub);font-size:12px">該当者なし</p>';
 }
 
