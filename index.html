@@ -4171,10 +4171,19 @@ function checkKaikin(u, allAtt, ym){
 var KAIKIN_BONUS=Number(S.settings.kaikinBonus)||0; // 旧互換用、手当設定に移行
 
 // 工賃計算: (退勤-出勤-休憩)×時給。午前午後で時給が違う場合は半分ずつ分割
-function calcWage(r){
-  if(!r.startTime||!r.endTime)return{h:0,wage:0,items:[]};
-  var sp=String(r.startTime).split(':').map(Number),ep=String(r.endTime).split(':').map(Number);
-  var totalMin=ep[0]*60+ep[1]-sp[0]*60-sp[1]-(Number(r.breakMin)||0);
+function calcWage(r,user){
+  // 予定時間(scheduleStart/End)を基本とし、実打刻が長い場合は実打刻を優先
+  var sRec=r.startTime?String(r.startTime):'';
+  var eRec=r.endTime?String(r.endTime):'';
+  var sSch=(user&&user.scheduleStart)?String(user.scheduleStart):'';
+  var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):'';
+  var sUse=sSch||sRec;
+  var eUse=eSch||eRec;
+  if(!sUse||!eUse)return{h:0,wage:0,items:[]};
+  function toMin(t){var p=t.split(':').map(Number);return p[0]*60+p[1];}
+  var schedMin=(sSch&&eSch)?Math.max(0,toMin(eSch)-toMin(sSch)):0;
+  var actualMin=(sRec&&eRec)?Math.max(0,toMin(eRec)-toMin(sRec)-(Number(r.breakMin)||0)):0;
+  var totalMin=schedMin>0?(actualMin>schedMin?actualMin:schedMin):actualMin;
   var totalH=Math.max(0,totalMin/60);
   var amId=r.workTypeId||'';
   var pmId=(r.workTypeIdPm&&r.workTypeIdPm!=='')?r.workTypeIdPm:amId;
@@ -4204,7 +4213,7 @@ async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var att=
   var recs=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
   var tH=0,tW=0,bt={},bc=0;
   recs.forEach(function(r){
-    var w=calcWage(r);
+    var w=calcWage(r,u);
     tH+=w.h; tW+=w.wage;
     w.items.forEach(function(item){
       if(!bt[item.name])bt[item.name]={h:0,w:0,r:item.rate};
@@ -4612,7 +4621,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     var recs=att.filter(function(a){return String(a.userId)===uid&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
     var tW=0,tH=0,bc=0;
-    recs.forEach(function(r){var cw=calcWage(r);tH+=cw.h;tW+=cw.wage;if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;});
+    recs.forEach(function(r){var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;});
     var kk=checkKaikin(u,att,eM);
     var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
     var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
@@ -4756,7 +4765,7 @@ async function printAllIRP(){
     var recs=att.filter(function(a){return String(a.userId)===u.id&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
     if(recs.length===0)return;
     var tW=0,tH=0,bc=0;
-    recs.forEach(function(r){var cw=calcWage(r);tH+=cw.h;tW+=cw.wage;if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;});
+    recs.forEach(function(r){var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;});
     var kk=checkKaikin(u,att,eM);
     var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
     var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
