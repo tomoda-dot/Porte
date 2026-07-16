@@ -4405,7 +4405,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
   if(eT==='monthly'){
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     showLoading('e-c','月次明細を集計中...');
-    var att=await cachedGas('getAttendance',eM);var d=S.users.map(function(u){var r=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});var h=0,w=0,bc=0;r.forEach(function(a){var cw=calcWage(a);h+=cw.h;w+=cw.wage;if(a.bento&&String(a.bento)!=='0'&&String(a.bento)!=='false'&&String(a.bento)!==''&&String(a.bento)!=='なし')bc++;});var kk=checkKaikin(u,att,eM);var bonus=kk.kaikin?KAIKIN_BONUS:0;var bd=bc*bentoPrice;return{n:u.name,d:r.length,h:h,w:w,kk:kk.kaikin,bonus:bonus,bc:bc,bd:bd,total:w+bonus-bd};}).filter(function(x){return x.d>0;});
+    var att=await cachedGas('getAttendance',eM);var d=S.users.map(function(u){var r=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});var h=0,w=0,bc=0;r.forEach(function(a){var cw=calcWage(a,u);h+=cw.h;w+=cw.wage;if(a.bento&&String(a.bento)!=='0'&&String(a.bento)!=='false'&&String(a.bento)!==''&&String(a.bento)!=='なし')bc++;});var kk=checkKaikin(u,att,eM);var bonus=kk.kaikin?KAIKIN_BONUS:0;var bd=bc*bentoPrice;return{n:u.name,d:r.length,h:h,w:w,kk:kk.kaikin,bonus:bonus,bc:bc,bd:bd,total:w+bonus-bd};}).filter(function(x){return x.d>0;});
     var grandWage=d.reduce(function(s,x){return s+Math.round(x.w);},0);
     var grandBonus=d.reduce(function(s,x){return s+x.bonus;},0);
     var grandBento=d.reduce(function(s,x){return s+x.bd;},0);
