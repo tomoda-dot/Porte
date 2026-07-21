@@ -4177,6 +4177,7 @@ function calcWage(r,user){
   var eRec=r.endTime?String(r.endTime):'';
   var sSch=(user&&user.scheduleStart)?String(user.scheduleStart):'';
   var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):'';
+  console.log('[calcWage]',user&&user.name,'schedSt='+sSch,'schedEd='+eSch,'recSt='+sRec,'recEd='+eRec);
   var sUse=sSch||sRec;
   var eUse=eSch||eRec;
   if(!sUse||!eUse)return{h:0,wage:0,items:[]};
