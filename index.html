@@ -4182,9 +4182,19 @@ function calcWage(r,user){
   var eUse=eSch||eRec;
   if(!sUse||!eUse)return{h:0,wage:0,items:[]};
   function toMin(t){var p=t.split(':').map(Number);return p[0]*60+p[1];}
+  // 予定時間（休憩を差し引かない純粋な予定内時間）
   var schedMin=(sSch&&eSch)?Math.max(0,toMin(eSch)-toMin(sSch)):0;
+  // 実打刻時間（休憩を差し引いた実働時間）
   var actualMin=(sRec&&eRec)?Math.max(0,toMin(eRec)-toMin(sRec)-(Number(r.breakMin)||0)):0;
-  var totalMin=schedMin>0?(actualMin>schedMin?actualMin:schedMin):actualMin;
+  // 予定時間があれば予定を基本とする。実打刻が予定より長い場合のみ実打刻を使用
+  // ただし予定時間との比較も休憩考慮後の実打刻で行う
+  var totalMin;
+  if(schedMin>0){
+    // 実打刻が予定より30分以上長い場合のみ実打刻を採用
+    totalMin=(actualMin>schedMin+30)?actualMin:schedMin;
+  }else{
+    totalMin=actualMin;
+  }
   var totalH=Math.max(0,totalMin/60);
   var amId=r.workTypeId||'';
   var pmId=(r.workTypeIdPm&&r.workTypeIdPm!=='')?r.workTypeIdPm:amId;
