@@ -4182,14 +4182,15 @@ function calcWage(r,user){
   var eUse=eSch||eRec;
   if(!sUse||!eUse)return{h:0,wage:0,items:[]};
   function toMin(t){var p=t.split(':').map(Number);return p[0]*60+p[1];}
-  // 実打刻時間（休憩を差し引いた実働時間）
-  var actualMin=(sRec&&eRec)?Math.max(0,toMin(eRec)-toMin(sRec)-(Number(r.breakMin)||0)):0;
+  // 実打刻時間（休憩を差し引き、30分単位で切り捨て）
+  var actualMinRaw=(sRec&&eRec)?Math.max(0,toMin(eRec)-toMin(sRec)-(Number(r.breakMin)||0)):0;
+  var actualMin=Math.floor(actualMinRaw/30)*30; // 30分単位切り捨て
   // 予定時間（休憩なし）
   var schedMin=(sSch&&eSch)?Math.max(0,toMin(eSch)-toMin(sSch)):0;
   // 打刻がある日は打刻時間を優先、打刻がない日は予定時間を使用
   var totalMin;
   if(sRec&&eRec){
-    totalMin=actualMin; // 打刻あり → 打刻時間で計算
+    totalMin=actualMin; // 打刻あり → 打刻時間（30分単位）で計算
   }else if(schedMin>0){
     totalMin=schedMin; // 打刻なし → 予定時間で計算
   }else{
