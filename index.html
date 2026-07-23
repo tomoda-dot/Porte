@@ -1764,6 +1764,8 @@ function initPsSign(){
   _psSignCtx=_psSignCanvas.getContext('2d');var rect=_psSignCanvas.getBoundingClientRect();
   if(rect.width===0||rect.height===0)return;
   _psSignCanvas.width=rect.width*2;_psSignCanvas.height=rect.height*2;
+  _psSignCtx.fillStyle='#fff';
+  _psSignCtx.fillRect(0,0,_psSignCanvas.width,_psSignCanvas.height);
   _psSignCtx.scale(2,2);_psSignCtx.lineWidth=3;_psSignCtx.lineCap='round';_psSignCtx.lineJoin='round';_psSignCtx.strokeStyle='#333';
   _psSignDrawn=false;window._psSignCleared=false;
   _psSignCanvas.onpointerdown=function(e){e.preventDefault();_psSignDrawing=true;var r=_psSignCanvas.getBoundingClientRect();_psSignCtx.beginPath();_psSignCtx.moveTo(e.clientX-r.left,e.clientY-r.top);};
@@ -1771,7 +1773,7 @@ function initPsSign(){
   _psSignCanvas.onpointerup=function(){_psSignDrawing=false;};
   _psSignCanvas.onpointerleave=function(){_psSignDrawing=false;};
 }
-function clearPsSign(){if(!_psSignCanvas)return;_psSignCtx.clearRect(0,0,_psSignCanvas.width,_psSignCanvas.height);_psSignDrawn=false;}
+function clearPsSign(){if(!_psSignCanvas)return;_psSignCtx.fillStyle='#fff';_psSignCtx.fillRect(0,0,_psSignCanvas.width,_psSignCanvas.height);_psSignDrawn=false;}
 async function savePlanSub(userId,planId,type){
   if(!lockUI())return;
   var obj={id:planId};
@@ -5243,6 +5245,8 @@ function initSRCanvas(){
   var rect=srSignCanvas.getBoundingClientRect();
   srSignCanvas.width=rect.width*2;
   srSignCanvas.height=rect.height*2;
+  srSignCtx.fillStyle='#fff';
+  srSignCtx.fillRect(0,0,srSignCanvas.width,srSignCanvas.height);
   srSignCtx.scale(2,2);
   srSignCtx.lineWidth=3;
   srSignCtx.lineCap='round';
@@ -5269,7 +5273,8 @@ function initSRCanvas(){
 
 function clearSRSign(){
   if(!srSignCanvas)return;
-  srSignCtx.clearRect(0,0,srSignCanvas.width,srSignCanvas.height);
+  srSignCtx.fillStyle='#fff';
+  srSignCtx.fillRect(0,0,srSignCanvas.width,srSignCanvas.height);
   srHasDrawn=false;
 }
 

@@ -304,11 +304,11 @@ function openStaffClock(staffId){
 
 function closeModal(){document.getElementById('modal-area').innerHTML='';}
 var signCanvas,signCtx,isDrawing=false,hasDrawn=false;
-function initCanvas(){signCanvas=document.getElementById('sign-canvas');if(!signCanvas)return;signCtx=signCanvas.getContext('2d');var rect=signCanvas.getBoundingClientRect();signCanvas.width=rect.width*2;signCanvas.height=rect.height*2;signCtx.scale(2,2);signCtx.lineWidth=3;signCtx.lineCap='round';signCtx.lineJoin='round';signCtx.strokeStyle='#333';hasDrawn=false;
+function initCanvas(){signCanvas=document.getElementById('sign-canvas');if(!signCanvas)return;signCtx=signCanvas.getContext('2d');var rect=signCanvas.getBoundingClientRect();signCanvas.width=rect.width*2;signCanvas.height=rect.height*2;signCtx.fillStyle='#fff';signCtx.fillRect(0,0,signCanvas.width,signCanvas.height);signCtx.scale(2,2);signCtx.lineWidth=3;signCtx.lineCap='round';signCtx.lineJoin='round';signCtx.strokeStyle='#333';hasDrawn=false;
 signCanvas.addEventListener('pointerdown',function(e){isDrawing=true;hasDrawn=true;var r=signCanvas.getBoundingClientRect();signCtx.beginPath();signCtx.moveTo(e.clientX-r.left,e.clientY-r.top);e.preventDefault();});
 signCanvas.addEventListener('pointermove',function(e){if(!isDrawing)return;var r=signCanvas.getBoundingClientRect();signCtx.lineTo(e.clientX-r.left,e.clientY-r.top);signCtx.stroke();e.preventDefault();});
 signCanvas.addEventListener('pointerup',function(){isDrawing=false;});signCanvas.addEventListener('pointerleave',function(){isDrawing=false;});}
-function clearSign(){if(!signCanvas)return;signCtx.clearRect(0,0,signCanvas.width,signCanvas.height);hasDrawn=false;}
+function clearSign(){if(!signCanvas)return;signCtx.fillStyle='#fff';signCtx.fillRect(0,0,signCanvas.width,signCanvas.height);hasDrawn=false;}
 
 // Base64をSupabase StorageにアップロードしてパブリックURLを返す
 async function uploadSignature(userId, dataUrl){
