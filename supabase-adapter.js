@@ -70,6 +70,15 @@ function _padTimes(row){
       var p=row[k].split(':');row[k]=p[0].padStart(2,'0')+':'+p[1];
     }
   }
+  var phoneFields=['contact','contact2','contact3','emergencyPhone'];
+  for(var j=0;j<phoneFields.length;j++){
+    var pk=phoneFields[j];
+    if(row[pk]!==undefined&&row[pk]!==null&&row[pk]!==''){
+      var s=String(row[pk]).trim();
+      if(/^\d{9,10}$/.test(s)&&s.charAt(0)!=='0') row[pk]='0'+s;
+      else row[pk]=s;
+    }
+  }
   return row;
 }
 

@@ -35,10 +35,11 @@ tr:hover td{background:var(--hov)}
 .stat-l{font-size:11px;color:var(--sub);margin-bottom:3px}
 .stat-v{font-size:22px;font-weight:700;color:var(--pri)}
 .stat-s{font-size:10px;color:var(--sub);margin-top:2px}
-.field{margin-bottom:12px}
-.field label{display:block;font-size:11px;font-weight:600;color:var(--sub);margin-bottom:3px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 14px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;margin-bottom:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 16px;margin-bottom:14px}
+.grid2:last-child,.grid3:last-child{margin-bottom:0}
 .hd-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px}
 .hd-row h2{font-size:19px;font-weight:700}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1000}
@@ -49,7 +50,7 @@ tr:hover td{background:var(--hov)}
 .btns{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 .loading{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;color:var(--sub)}
 .tbl-wrap{overflow-x:auto}
-.section-title{font-size:13px;font-weight:600;color:var(--pri);margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--bdr)}
+.section-title{font-size:13px;font-weight:700;color:var(--pri);margin:16px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--bdr)}
 .day-check{display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-size:12px}
 .day-check input{width:16px;height:16px}
 
@@ -1005,7 +1006,7 @@ async function removeCalTemp(tmpId,ds){
 async function saveCalAtt(uid,ds){
   if(!lockUI())return;
   var st=document.getElementById('adm-st').value;
-  var isAbs=['欠席','体調不良','通院'].indexOf(st)>=0;
+  var isAbs=['欠席','体調不良','通院','調整休'].indexOf(st)>=0;
   var attObj={userId:uid,date:ds,status:st,
     startTime:isAbs?'':document.getElementById('adm-s').value,
     endTime:isAbs?'':document.getElementById('adm-e').value,
@@ -1015,6 +1016,9 @@ async function saveCalAtt(uid,ds){
     notes:document.getElementById('adm-an').value};
   try{
     await gas('upsertAttendance',attObj);
+    if(st==='調整休'){
+      await gas('deleteDailyReport',{userId:uid,date:ds}).catch(function(){});
+    }
     S.dashboard=null;
     clearCache('getAttendance');clearCache('getDaily');clearCache('getAttendanceByDate');clearCache('getDailyByDate');
     closeModal('common-modal');
@@ -1025,7 +1029,7 @@ async function saveCalAtt(uid,ds){
 }
 function updateAdmAH(){
   var st=document.getElementById('adm-st').value;
-  var isAbs=['欠席','体調不良','通院'].indexOf(st)>=0;
+  var isAbs=['欠席','体調不良','通院','調整休'].indexOf(st)>=0;
   document.getElementById('adm-s').disabled=isAbs;
   document.getElementById('adm-e').disabled=isAbs;
   document.getElementById('adm-brk').disabled=isAbs;
@@ -1033,6 +1037,10 @@ function updateAdmAH(){
   document.getElementById('adm-wtp').disabled=isAbs;
   document.getElementById('adm-content').disabled=isAbs;
   document.getElementById('adm-m').disabled=isAbs;
+  if(isAbs){
+    document.getElementById('adm-s').value='';
+    document.getElementById('adm-e').value='';
+  }
   var sTime=document.getElementById('adm-s').value;
   var eTime=document.getElementById('adm-e').value;
   var brk=Number(document.getElementById('adm-brk').value)||0;
@@ -1205,47 +1213,57 @@ async function saveAttDaily(uid, ds){
   if(!lockUI())return;
   var st=document.getElementById('adm-st').value;
   var isAbs=['欠席','体調不良','通院'].indexOf(st)>=0;
+  var isAdj=st==='調整休';
+  var isNoWork=isAbs||isAdj;
   var attObj={
     userId:uid,
     date:ds,
     status:st,
-    startTime:isAbs?'':document.getElementById('adm-s').value,
-    endTime:isAbs?'':document.getElementById('adm-e').value,
-    breakMin:isAbs?0:Number(document.getElementById('adm-brk').value)||0,
-    workTypeId:isAbs?'':(document.getElementById('adm-wt')?document.getElementById('adm-wt').value:''),
-    workTypeIdPm:isAbs?'':(document.getElementById('adm-wtp')?document.getElementById('adm-wtp').value:''),
+    startTime:isNoWork?'':document.getElementById('adm-s').value,
+    endTime:isNoWork?'':document.getElementById('adm-e').value,
+    breakMin:isNoWork?0:Number(document.getElementById('adm-brk').value)||0,
+    workTypeId:isNoWork?'':(document.getElementById('adm-wt')?document.getElementById('adm-wt').value:''),
+    workTypeIdPm:isNoWork?'':(document.getElementById('adm-wtp')?document.getElementById('adm-wtp').value:''),
     bento:document.getElementById('adm-b').value,
     pickup:document.getElementById('adm-p').value,
     notes:document.getElementById('adm-an').value
   };
-  var dailyObj=null;
-  if(!isAbs){
-    dailyObj={
-      userId:uid,
-      date:ds,
-      workTypeId:document.getElementById('adm-wt').value,
-      workTypeIdPm:document.getElementById('adm-wtp').value,
-      content:document.getElementById('adm-content').value,
-      mood:document.getElementById('adm-m').value,
-      notes:document.getElementById('adm-dn').value
-    };
-  }else{
-    var absReason=document.getElementById('adm-an').value||st;
-    dailyObj={
-      userId:uid,
-      date:ds,
-      workTypeId:'',
-      workTypeIdPm:'',
-      content:'欠席 ('+absReason+')',
-      mood:'',
-      notes:''
-    };
-  }
   try{
-    await Promise.all([
-      gas('upsertAttendance',attObj),
-      gas('upsertDailyReport',dailyObj)
-    ]);
+    if(isAdj){
+      await Promise.all([
+        gas('upsertAttendance',attObj),
+        gas('deleteDailyReport',{userId:uid,date:ds}).catch(function(){})
+      ]);
+    }else if(!isAbs){
+      var dailyObj={
+        userId:uid,
+        date:ds,
+        workTypeId:document.getElementById('adm-wt').value,
+        workTypeIdPm:document.getElementById('adm-wtp').value,
+        content:document.getElementById('adm-content').value,
+        mood:document.getElementById('adm-m').value,
+        notes:document.getElementById('adm-dn').value
+      };
+      await Promise.all([
+        gas('upsertAttendance',attObj),
+        gas('upsertDailyReport',dailyObj)
+      ]);
+    }else{
+      var absReason=document.getElementById('adm-an').value||st;
+      var dailyObj={
+        userId:uid,
+        date:ds,
+        workTypeId:'',
+        workTypeIdPm:'',
+        content:'欠席 ('+absReason+')',
+        mood:'',
+        notes:''
+      };
+      await Promise.all([
+        gas('upsertAttendance',attObj),
+        gas('upsertDailyReport',dailyObj)
+      ]);
+    }
     toast('✅ 保存しました');
     S.dashboard=null;
     clearCache('getAttendance');clearCache('getDaily');clearCache('getAttendanceByDate');clearCache('getDailyByDate');
@@ -1368,6 +1386,14 @@ function guardNav(fn){
   cConfirm('変更が保存されていません。\n保存せずに移動しますか？').then(function(ok){if(ok)fn();});
 }
 
+function _fixPhone(v){
+  if(v===null||v===undefined)return'';
+  var s=String(v).trim();
+  if(!s)return'';
+  if(/^\d{9,10}$/.test(s)&&s.charAt(0)!=='0') return '0'+s;
+  return s;
+}
+
 function openUserModal(u){
   var d=u||{name:'',furigana:'',birthdate:'',gender:'男性',disability:'',serviceType:'就労B型',staffId:'',
     prefecture:'大阪府',city:'',address:'',contact:'',contact2:'',contact3:'',emergencyContact:'',emergencyPhone:'',
@@ -1377,6 +1403,12 @@ function openUserModal(u){
     disabilityName:'',handicapBook:'',handicapGrade:'',jiritsuMedical:'',severeDisMedical:'',
     income:'',incomeNote:'',disPension:'',disPensionNote:'',welfare:'',welfareNote:'',otherIncome:'',otherIncomeNote:'',
     medicalHistory:'',educationHistory:'',workHistory:'',otherHistory:'',afterCarePlan:'',afterCareOrg:''};
+  if(d){
+    if(d.contact)d.contact=_fixPhone(d.contact);
+    if(d.contact2)d.contact2=_fixPhone(d.contact2);
+    if(d.contact3)d.contact3=_fixPhone(d.contact3);
+    if(d.emergencyPhone)d.emergencyPhone=_fixPhone(d.emergencyPhone);
+  }
   var isEdit=!!d.id;var schDays=(d.scheduleDays||'').split(',');
   var ueTab=window._ueTab||'basic';
 
@@ -2945,8 +2977,8 @@ async function saveUser(id){
     disability:gv('uf-dis',gv('uf-dis2',existing.disability||'')),
     staffId:gv('uf-staff',existing.staffId||''),userStatus:gv('uf-ustatus',existing.userStatus||'利用中'),
     prefecture:gv('uf-pref',existing.prefecture||''),city:gv('uf-city',existing.city||''),address:gv('uf-addr',existing.address||''),
-    contact:gv('uf-contact',existing.contact||''),contact2:gv('uf-contact2',existing.contact2||''),contact3:gv('uf-contact3',existing.contact3||''),
-    emergencyContact:gv('uf-ec',existing.emergencyContact||''),emergencyPhone:gv('uf-ep',existing.emergencyPhone||''),
+    contact:_fixPhone(gv('uf-contact',existing.contact||'')),contact2:_fixPhone(gv('uf-contact2',existing.contact2||'')),contact3:_fixPhone(gv('uf-contact3',existing.contact3||'')),
+    emergencyContact:gv('uf-ec',existing.emergencyContact||''),emergencyPhone:_fixPhone(gv('uf-ep',existing.emergencyPhone||'')),
     recipientNumber:gv('uf-rcpt',existing.recipientNumber||''),supportDays:gv('uf-sdays',existing.supportDays||''),
     supportStartDate:gv('uf-sstart',existing.supportStartDate||''),supportEndDate:gv('uf-send',existing.supportEndDate||''),
     enrollDate:gv('uf-enroll',existing.enrollDate||''),endDate:gv('uf-edate',existing.endDate||''),
@@ -3489,7 +3521,7 @@ function renderAttMonthlyTbl(){
     var repContent='-';
     var moodDisp='-';
     var isAbLine=['欠席','体調不良','通院'].indexOf(status)>=0;
-    if(rep){
+    if(rep && status!=='調整休'){
       wtDispAm=wtName(rep.workTypeId);
       var pmId=(rep.workTypeIdPm&&rep.workTypeIdPm!=='')?rep.workTypeIdPm:rep.workTypeId;
       wtDispPm=wtName(pmId);
