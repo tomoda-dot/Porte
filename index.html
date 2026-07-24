@@ -958,10 +958,12 @@ async function openCalAttM(uid, ds){
       '<div class="field"><label>備考（変更理由）</label><textarea id="adm-an" rows="2" style="width:100%" placeholder="変更理由や連絡事項を記入...">'+esc(att.notes||'')+'</textarea></div>'+
       '<div style="display:none"><select id="adm-brk"><option value="'+(att.breakMin||60)+'"></option></select><select id="adm-wt"><option value="'+(dWt?dWt.id:'')+'"></option></select><select id="adm-wtp"><option value="'+(dWt?dWt.id:'')+'"></option></select><textarea id="adm-content">'+esc(rep.content||'')+'</textarea><select id="adm-m"><option>'+esc(rep.mood||'普通')+'</option></select><textarea id="adm-dn">'+esc(rep.notes||'')+'</textarea></div>'+
       '<div style="font-size:11px;color:var(--sub);text-align:right;margin-top:4px" id="adm-h-calc"></div>'+
-      '<div class="btns" style="margin-top:14px;border-top:1px solid var(--bdr);padding-top:14px">'+
-      (isTemp?'<button onclick="removeCalTemp(\''+tmpRec.id+'\',\''+ds+'\')" style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;text-decoration:underline">予定削除</button>':'')+
-      '<button class="bg" onclick="closeModal(\'common-modal\')">キャンセル</button>'+
-      '<button class="bp" onclick="saveCalAtt(\''+uid+'\',\''+ds+'\')">保存</button></div>'+
+      '<div class="btns" style="margin-top:14px;border-top:1px solid var(--bdr);padding-top:14px;display:flex;justify-content:space-between;align-items:center">'+
+      '  <button style="background:#c62828;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer" onclick="deleteCalAtt(\''+uid+'\',\''+ds+'\')">🗑️ 削除</button>'+
+      '  <div style="display:flex;gap:6px;align-items:center">'+
+      (isTemp?'<button onclick="removeCalTemp(\''+tmpRec.id+'\',\''+ds+'\')" style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;text-decoration:underline">臨時削除</button>':'')+
+      '  <button class="bg" onclick="closeModal(\'common-modal\')">キャンセル</button>'+
+      '  <button class="bp" onclick="saveCalAtt(\''+uid+'\',\''+ds+'\')">保存</button></div></div>'+
       '</div></div>';
     document.getElementById('common-modal').innerHTML=html;
     updateAdmAH();
@@ -969,6 +971,23 @@ async function openCalAttM(uid, ds){
     document.getElementById('common-modal').innerHTML='';
     await cAlert('読み込み失敗: '+e);
   }
+}
+
+async function deleteCalAtt(uid,ds){
+  if(!await cConfirm('この日の出欠・変更記録を削除しますか？\n（出欠および日報の記録が取り消されます）'))return;
+  if(!lockUI())return;
+  try{
+    await Promise.all([
+      gas('deleteAttendance',{userId:uid,date:ds}),
+      gas('deleteDailyReport',{userId:uid,date:ds})
+    ]);
+    S.dashboard=null;
+    clearCache('getAttendance');clearCache('getDaily');clearCache('getAttendanceByDate');clearCache('getDailyByDate');
+    closeModal('common-modal');
+    S.calAtt=await cachedGas('getAttendance',calY+'-'+String(calM).padStart(2,'0'));
+    await renderCalendar(document.getElementById('content'));
+    showDD(ds);
+  }catch(e){await cAlert('削除失敗: '+e);}finally{unlockUI();}
 }
 
 async function removeCalTemp(tmpId,ds){
@@ -1153,9 +1172,12 @@ async function openAttDailyM(uid, ds){
       '    </div>'+
       '  </div>'+
       '</div>'+
-      '<div class="btns" style="margin-top:20px;border-top:1px solid var(--bdr);padding-top:14px">'+
-      '  <button class="bg" onclick="renderAttendance(document.getElementById(\'content\'))">キャンセル</button>'+
-      '  <button class="bp" onclick="saveAttDaily(\''+uid+'\',\''+ds+'\')">出欠・日報を保存</button>'+
+      '<div class="btns" style="margin-top:20px;border-top:1px solid var(--bdr);padding-top:14px;display:flex;justify-content:space-between;align-items:center">'+
+      '  <button style="background:#c62828;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-weight:700;cursor:pointer" onclick="deleteAttDaily(\''+uid+'\',\''+ds+'\')">🗑️ 記録を削除</button>'+
+      '  <div style="display:flex;gap:8px">'+
+      '    <button class="bg" onclick="renderAttendance(document.getElementById(\'content\'))">キャンセル</button>'+
+      '    <button class="bp" onclick="saveAttDaily(\''+uid+'\',\''+ds+'\')">出欠・日報を保存</button>'+
+      '  </div>'+
       '</div>';
     html+='</div></div>';
     document.getElementById('content').innerHTML=html;
@@ -1164,6 +1186,21 @@ async function openAttDailyM(uid, ds){
     document.getElementById('content').innerHTML='<div style="padding:30px;text-align:center"><div>⚠️ 読み込み失敗: '+e+'</div><button class="bp" style="margin-top:10px" onclick="renderAttendance(document.getElementById(\'content\'))">戻る</button></div>';
   }
 }
+
+async function deleteAttDaily(uid,ds){
+  if(!await cConfirm('この日の出欠・日報記録を削除しますか？\n（記録が取り消され、初期状態に戻ります）'))return;
+  if(!lockUI())return;
+  try{
+    await Promise.all([
+      gas('deleteAttendance',{userId:uid,date:ds}),
+      gas('deleteDailyReport',{userId:uid,date:ds})
+    ]);
+    S.dashboard=null;
+    clearCache('getAttendance');clearCache('getDaily');clearCache('getAttendanceByDate');clearCache('getDailyByDate');
+    await renderAttendance(document.getElementById('content'));
+  }catch(e){await cAlert('削除失敗: '+e);}finally{unlockUI();}
+}
+
 async function saveAttDaily(uid, ds){
   if(!lockUI())return;
   var st=document.getElementById('adm-st').value;
@@ -1259,7 +1296,7 @@ function renderUsers(c){
     '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'+
       '<span style="font-size:12px;color:var(--sub)">検索:</span><input id="u-search" placeholder="氏名・ふりがなで検索..." value="'+esc(uSearch)+'" oninput="uSearch=this.value;filterU()" style="width:200px">'+
       '<span style="font-size:12px;color:var(--sub);margin-left:10px">担当:</span><select id="u-staff" onchange="uStaff=this.value;filterU()" style="width:140px"><option value="">すべて</option>'+
-      S.staff.map(function(s){return'<option value="'+s.id+'"'+(uStaff===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select>'+
+      S.staff.filter(function(s){return _isStaffActive(s);}).map(function(s){return'<option value="'+s.id+'"'+(uStaff===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select>'+
     '</div>'+
     // テーブル
     '<div class="tbl-wrap"><table><thead><tr><th>ID(受給者証番号)</th><th>種類</th><th>氏名</th><th>担当</th><th>利用開始日</th><th>受給者証満了日</th><th>利用終了日</th><th>状態</th></tr></thead><tbody id="u-tbody"></tbody></table></div>'+
@@ -1398,7 +1435,7 @@ function openUserModal(u){
     '<div class="field"><label>性別</label><select id="uf-gender" style="width:100%"><option'+(d.gender==='男性'?' selected':'')+'>男性</option><option'+(d.gender==='女性'?' selected':'')+'>女性</option><option'+(d.gender==='その他'?' selected':'')+'>その他</option></select></div>'+
     '<div class="field"><label>障害種別</label><select id="uf-dis" style="width:100%"><option value="">選択</option>'+disOptions.map(function(o){return'<option'+(d.disability===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select></div></div>'+
     '<div class="grid3">'+
-    '<div class="field"><label>担当スタッフ</label><select id="uf-staff" style="width:100%"><option value="">未設定</option>'+S.staff.map(function(s){return'<option value="'+s.id+'"'+(d.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
+    '<div class="field"><label>担当スタッフ</label><select id="uf-staff" style="width:100%"><option value="">未設定</option>'+S.staff.filter(function(s){return _isStaffActive(s)||(d.staffId&&d.staffId===s.id);}).map(function(s){return'<option value="'+s.id+'"'+(d.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
     '<div></div><div></div></div></div>';
   
   // 住所
@@ -3762,8 +3799,8 @@ function editRoute(idx){
         '<label style="cursor:pointer"><input type="radio" name="er-pat" value="evening"'+(r.pattern!=='morning'?' checked':'')+'> 🌆 夕</label></div></div>'+
       '<div class="field"><label>車両</label><select id="er-vh" style="width:100%"><option value="">選択</option>'+S.vehicles.map(function(v){return'<option value="'+v.id+'"'+(r.vehicleId===v.id?' selected':'')+'>'+esc(v.name)+'</option>';}).join('')+'</select></div></div>'+
     '<div class="grid2">'+
-      '<div class="field"><label>運転スタッフ</label><select id="er-st" style="width:100%"><option value="">選択</option>'+S.staff.map(function(s){return'<option value="'+s.id+'"'+(r.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
-      '<div class="field"><label>添乗スタッフ</label><select id="er-at" style="width:100%"><option value="">なし</option>'+S.staff.map(function(s){return'<option value="'+s.id+'"'+(r.attendant===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div></div>'+
+      '<div class="field"><label>運転スタッフ</label><select id="er-st" style="width:100%"><option value="">選択</option>'+S.staff.filter(function(s){return _isStaffActive(s)||(r.staffId&&r.staffId===s.id);}).map(function(s){return'<option value="'+s.id+'"'+(r.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
+      '<div class="field"><label>添乗スタッフ</label><select id="er-at" style="width:100%"><option value="">なし</option>'+S.staff.filter(function(s){return _isStaffActive(s)||(r.attendant&&r.attendant===s.id);}).map(function(s){return'<option value="'+s.id+'"'+(r.attendant===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div></div>'+
     '<div class="field"><label>乗車順（ドラッグで並び替え）</label>'+
       '<div id="er-sortable" style="background:var(--bg);border-radius:8px;padding:6px;min-height:40px">'+
       selIds.map(function(id,i){

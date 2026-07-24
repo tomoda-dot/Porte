@@ -104,6 +104,8 @@ async function getTimecardUsers(){
   var result=[];
   users.forEach(function(u){
     if(u.userStatus==='利用終了')return;
+    if(u.enrollDate&&u.enrollDate>today2)return;
+    if(u.endDate&&u.endDate<today2)return;
     var isScheduled=u.scheduleDays&&u.scheduleDays.indexOf(dow2)>=0;
     var rec=null;att.forEach(function(a){if(String(a.userId)===String(u.id))rec=a;});
     result.push({id:u.id,name:u.name,furigana:u.furigana||'',
@@ -123,10 +125,8 @@ async function getStaffTimecard(){
   var r2=await sb.from('スタッフ出欠').select('*').eq('date',today2);var att=r2.data||[];
   var result=[];
   staff.forEach(function(s){
-    // 入職前チェック
-    if(s.startDate){var sp=s.startDate.split('-');var sYM=parseInt(sp[0])*100+parseInt(sp[1]);var cParts=thisYM.split('-');var cYM=parseInt(cParts[0])*100+parseInt(cParts[1]);if(cYM<sYM)return;}
-    // 退職後チェック
-    if(s.endDate){var ep=s.endDate.split('-');var eYM=parseInt(ep[0])*100+parseInt(ep[1]);var cParts2=thisYM.split('-');var cYM2=parseInt(cParts2[0])*100+parseInt(cParts2[1]);if(cYM2>eYM)return;}
+    if(s.startDate&&s.startDate>today2)return;
+    if(s.endDate&&s.endDate<today2)return;
     var rec=null;att.forEach(function(a){if(String(a.staffId)===String(s.id))rec=a;});
     var shift=rec&&rec.startTime?_detectShift(rec.startTime):'';
     result.push({id:s.id,name:s.name,role:s.role||s.position||'',
@@ -304,49 +304,13 @@ function openStaffClock(staffId){
 
 function closeModal(){document.getElementById('modal-area').innerHTML='';}
 var signCanvas,signCtx,isDrawing=false,hasDrawn=false;
-function initCanvas(){signCanvas=document.getElementById('sign-canvas');if(!signCanvas)return;signCtx=signCanvas.getContext('2d');var rect=signCanvas.getBoundingClientRect();signCanvas.width=rect.width*2;signCanvas.height=rect.height*2;signCtx.fillStyle='#fff';signCtx.fillRect(0,0,signCanvas.width,signCanvas.height);signCtx.scale(2,2);signCtx.lineWidth=3;signCtx.lineCap='round';signCtx.lineJoin='round';signCtx.strokeStyle='#333';hasDrawn=false;
+function initCanvas(){signCanvas=document.getElementById('sign-canvas');if(!signCanvas)return;signCtx=signCanvas.getContext('2d');var rect=signCanvas.getBoundingClientRect();signCanvas.width=rect.width*2;signCanvas.height=rect.height*2;signCtx.scale(2,2);signCtx.lineWidth=3;signCtx.lineCap='round';signCtx.lineJoin='round';signCtx.strokeStyle='#333';hasDrawn=false;
 signCanvas.addEventListener('pointerdown',function(e){isDrawing=true;hasDrawn=true;var r=signCanvas.getBoundingClientRect();signCtx.beginPath();signCtx.moveTo(e.clientX-r.left,e.clientY-r.top);e.preventDefault();});
 signCanvas.addEventListener('pointermove',function(e){if(!isDrawing)return;var r=signCanvas.getBoundingClientRect();signCtx.lineTo(e.clientX-r.left,e.clientY-r.top);signCtx.stroke();e.preventDefault();});
 signCanvas.addEventListener('pointerup',function(){isDrawing=false;});signCanvas.addEventListener('pointerleave',function(){isDrawing=false;});}
-function clearSign(){if(!signCanvas)return;signCtx.fillStyle='#fff';signCtx.fillRect(0,0,signCanvas.width,signCanvas.height);hasDrawn=false;}
+function clearSign(){if(!signCanvas)return;signCtx.clearRect(0,0,signCanvas.width,signCanvas.height);hasDrawn=false;}
 
-// Base64をSupabase StorageにアップロードしてパブリックURLを返す
-async function uploadSignature(userId, dataUrl){
-  // Base64をBlobに変換
-  var parts=dataUrl.split(',');
-  var byteStr=atob(parts[1]);
-  var arr=new Uint8Array(byteStr.length);
-  for(var i=0;i<byteStr.length;i++)arr[i]=byteStr.charCodeAt(i);
-  var blob=new Blob([arr],{type:'image/jpeg'});
-  // ファイル名: userId/YYYY-MM-DD.jpg
-  var today2=_today();
-  var path=userId+'/'+today2+'.jpg';
-  // アップロード（既存ファイルがあれば上書き）
-  var r=await sb.storage.from('signatures').upload(path,blob,{upsert:true,contentType:'image/jpeg'});
-  if(r.error)throw r.error;
-  // パブリックURLを取得
-  var urlData=sb.storage.from('signatures').getPublicUrl(path);
-  return urlData.data.publicUrl;
-}
-
-async function submitClock(userId){
-  if(!hasDrawn){alert('サインを書いてください');return;}
-  var btn=document.getElementById('btn-submit');
-  btn.disabled=true;btn.textContent='送信中...';
-  try{
-    // JPEGで圧縮（サイズ削減）
-    var dataUrl=signCanvas.toDataURL('image/jpeg',0.6);
-    // StorageにアップロードしてURLを取得
-    var signUrl=await uploadSignature(userId,dataUrl);
-    // DBにはURLのみ保存
-    var result=await clockIn(userId,signUrl);
-    closeModal();showSuccess(userId,'in',result.time);
-    TCData=await getTimecardUsers();renderUserGrid();
-  }catch(e){
-    alert('エラー: '+e);
-    btn.disabled=false;btn.textContent='出勤打刻';
-  }
-}
+async function submitClock(userId){if(!hasDrawn){alert('サインを書いてください');return;}var btn=document.getElementById('btn-submit');btn.disabled=true;btn.textContent='送信中...';try{var dataUrl=signCanvas.toDataURL('image/png');var result=await clockIn(userId,dataUrl);closeModal();showSuccess(userId,'in',result.time);TCData=await getTimecardUsers();renderUserGrid();}catch(e){alert('エラー: '+e);btn.disabled=false;btn.textContent='出勤打刻';}}
 async function submitClockOut(userId){var btn=document.getElementById('btn-submit');btn.disabled=true;btn.textContent='送信中...';try{var result=await clockOut(userId);closeModal();showSuccess(userId,'out',result.time);TCData=await getTimecardUsers();renderUserGrid();}catch(e){alert('エラー: '+e);btn.disabled=false;btn.textContent='退勤打刻';}}
 
 async function submitStaffIn(staffId){var btn=document.getElementById('btn-submit');btn.disabled=true;btn.textContent='送信中...';try{var result=await staffClockIn(staffId);closeModal();showSuccessStaff(staffId,'in',result.time,result.shift);STData=await getStaffTimecard();renderStaffGrid();}catch(e){alert('エラー: '+e);btn.disabled=false;btn.textContent='出勤打刻';}}

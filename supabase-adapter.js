@@ -113,6 +113,13 @@ async function _upsertByUserDate(table,obj,idPrefix){
   else{obj.id=_genId(idPrefix);return _add(table,obj);}
 }
 
+// 日付+ユーザー指定削除
+async function _delByUserDate(table,userId,date){
+  var r=await supabase.from(table).delete().eq('userId',userId).eq('date',date);
+  if(r.error)_throwErr(r.error);
+  return true;
+}
+
 // ═══ 設定（key-value形式）═══
 async function _getSettings(){
   var rows=await _getAll('設定');
@@ -194,6 +201,7 @@ async function gas(fn){
     case 'addAttendance': a1.id=_genId('a');return _add('出欠',a1);
     case 'updateAttendance': return _update('出欠',a1);
     case 'upsertAttendance': return _upsertByUserDate('出欠',a1,'a');
+    case 'deleteAttendance': return _delByUserDate('出欠',a1.userId,a1.date);
     case 'bulkAddAttendance':
       var results=[];for(var i=0;i<a1.length;i++)results.push(await _upsertByUserDate('出欠',a1[i],'a'));return results;
 
@@ -201,6 +209,7 @@ async function gas(fn){
     case 'getDaily': return a1?_getLike('日報','date',a1):_getAll('日報');
     case 'getDailyByDate': return _getFiltered('日報','date',a1);
     case 'upsertDailyReport': return _upsertByUserDate('日報',a1,'d');
+    case 'deleteDailyReport': return _delByUserDate('日報',a1.userId,a1.date);
 
     // ── 送迎 ──
     case 'getTransportByDate': return _getFiltered('送迎','date',a1);
