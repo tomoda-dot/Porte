@@ -5,8 +5,8 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
 :root{--bg:#f5f0eb;--card:#fff;--pri:#3d5a3e;--pri-l:#5a7d5c;--acc:#c07830;--txt:#2c2c2c;--sub:#6b6b6b;--bdr:#e0d8d0;--hov:#f0ebe5;--red:#b33a3a;--grn:#3d7a3d;--shd:0 2px 12px rgba(0,0,0,.06)}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--txt);font-size:13px;overflow:hidden;height:100vh}
+html,body{margin:0;padding:0;height:100%;overflow:hidden}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--txt);font-size:13px}
 input,select,textarea,button{font-family:inherit;font-size:13px}
 input,select,textarea{border:1.5px solid var(--bdr);border-radius:7px;padding:7px 10px;background:#fff;outline:none}
 input:focus,select:focus,textarea:focus{border-color:var(--pri)}
@@ -14,7 +14,7 @@ button{cursor:pointer;border:none;border-radius:7px;padding:7px 15px;font-weight
 button:hover{opacity:.85}
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--bdr);font-size:12px}
-th{background:var(--bg);font-weight:600;position:sticky;top:0;z-index:1}
+th{background:var(--card);font-weight:600;position:sticky;top:0;z-index:1}
 tr:hover td{background:var(--hov)}
 .bp{background:var(--pri);color:#fff}.ba{background:var(--acc);color:#fff}.br{background:var(--red);color:#fff}
 .bg{background:transparent;color:var(--pri);border:1.5px solid var(--bdr)}
@@ -26,7 +26,7 @@ tr:hover td{background:var(--hov)}
 .side nav button{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:transparent;color:#fff;border-radius:0;font-size:12px;text-align:left;border-left:3px solid transparent}
 .side nav button:hover{background:rgba(255,255,255,.08)}
 .side nav button.act{background:rgba(255,255,255,.15);border-left-color:#fff}
-.main{flex:1;padding:20px 24px;overflow-y:auto;max-height:100vh}
+.main{flex:1;padding:20px 24px;overflow-y:auto;height:100vh}
 .card{background:var(--card);border-radius:13px;box-shadow:var(--shd);padding:16px 20px;margin-bottom:16px}
 .card-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .card-t{font-size:14px;font-weight:600;color:var(--pri)}
@@ -48,7 +48,7 @@ tr:hover td{background:var(--hov)}
 .modal-close{background:none;font-size:18px;color:var(--sub)}
 .btns{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 .loading{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;color:var(--sub)}
-.tbl-wrap{overflow:auto;max-height:460px}
+.tbl-wrap{overflow-x:auto}
 .section-title{font-size:13px;font-weight:600;color:var(--pri);margin:16px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--bdr)}
 .day-check{display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-size:12px}
 .day-check input{width:16px;height:16px}
@@ -170,7 +170,7 @@ var fmtMonth=function(m){var p=m.split('-');return p[0]+'年'+parseInt(p[1])+'�
 var weekday=function(d){var p=String(d).split('-');return['日','月','火','水','木','金','土'][new Date(Number(p[0]),Number(p[1])-1,Number(p[2])).getDay()];};
 var calcH=function(s,e,b){if(!s||!e)return 0;var sm=Number(s.split(':')[0])*60+Number(s.split(':')[1]),em=Number(e.split(':')[0])*60+Number(e.split(':')[1]);return Math.max(0,em-sm-(Number(b)||0))/60;};
 var esc=function(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;};
-var statusColor={'出席':'#2e7d32','欠席':'#c62828','遅刻':'#e65100','早退':'#f9a825','体調不良':'#6a1b9a','通院':'#1565c0'};
+var statusColor={'出席':'#2e7d32','欠席':'#c62828','遅刻':'#e65100','早退':'#f9a825','体調不良':'#6a1b9a','通院':'#1565c0','予定':'#c07830','予定休み':'#757575'};
 var userName=function(id){return(S.users.find(function(u){return u.id===id;})||{}).name||'?';};
 var wtName=function(id){return(S.workTypes.find(function(w){return w.id===id;})||{}).name||'-';};
 var wtRate=function(id){return Number((S.workTypes.find(function(w){return w.id===id;})||{}).rate)||0;};
@@ -376,23 +376,34 @@ async function renderDashboard(c){
   var allChanges=tempChanges.concat(attChanges);
   allChanges.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});
 
-  // 支給日数超過チェック（当月の予定日数 vs 支給日数）
+  // 支給日数超過チェック（当月の予定日数・出席・欠席 vs 支給日数）
   var curM=d.slice(0,7);
   var cmParts=curM.split('-');
   var cmYr=parseInt(cmParts[0]),cmMo=parseInt(cmParts[1]);
   var cmDays=new Date(cmYr,cmMo,0).getDate();
   var overUsers=[];
+  var monthAtt=[]; try{monthAtt=await cachedGas('getAttendance',curM);}catch(e){}
+  var monthClosed=[]; try{monthClosed=await cachedGas('getClosedDays',curM);}catch(e){}
   activeUsers.forEach(function(u){
     var supportDays=Number(u.supportDays)||0;
     if(supportDays<=0)return;
-    var scheduledDays=0;
+    var plannedDays=0;
     for(var dd=1;dd<=cmDays;dd++){
+      var ds2=curM+'-'+String(dd).padStart(2,'0');
+      if(!isUserActive(u,ds2)) continue;
+      if(monthClosed.indexOf(ds2)>=0) continue;
       var ddw=new Date(cmYr,cmMo-1,dd).getDay();
       var ddwj=['日','月','火','水','木','金','土'][ddw];
-      if(u.scheduleDays&&u.scheduleDays.indexOf(ddwj)>=0) scheduledDays++;
+      if(u.scheduleDays&&u.scheduleDays.indexOf(ddwj)>=0){
+        var rCheck=monthAtt.find(function(a){return String(a.userId)===String(u.id)&&String(a.date)===ds2;});
+        // 予定休み以外の全ての予定・出席・通常欠席は受給者証上限カウントに含める
+        if(!rCheck||rCheck.status!=='予定休み'){
+          plannedDays++;
+        }
+      }
     }
     var tempCount=(upcomingTemp||[]).filter(function(t){return String(t.userId)===String(u.id)&&String(t.date).indexOf(curM)===0;}).length;
-    var totalPlanned=scheduledDays+tempCount;
+    var totalPlanned=plannedDays+tempCount;
     if(totalPlanned>supportDays){
       overUsers.push({name:u.name,supportDays:supportDays,planned:totalPlanned,over:totalPlanned-supportDays});
     }
@@ -929,7 +940,7 @@ async function openCalAttM(uid, ds){
       '<div class="modal-hd"><h3>📅 スケジュールの変更</h3><button class="modal-close" onclick="closeModal(\'common-modal\')">✕</button></div>'+
       '<p style="font-size:14px;font-weight:600;margin-bottom:15px;color:var(--pri)">'+esc(u?u.name:'?')+' 様 ─ '+fmtDate(ds)+'（'+weekday(ds)+'）'+(isTemp?'<span style="font-size:11px;color:var(--acc);margin-left:6px">★臨時</span>':'')+'</p>'+
       '<div class="field"><label>状態</label><select id="adm-st" style="width:100%" onchange="updateAdmAH()">'+
-        ['予定','欠席','遅刻','早退','体調不良','通院'].map(function(s){return'<option'+(att.status===s?' selected':'')+'>'+s+'</option>';}).join('')+
+        ['予定','出席','欠席','遅刻','早退','体調不良','通院','予定休み'].map(function(s){return'<option'+(att.status===s?' selected':'')+'>'+s+'</option>';}).join('')+
       '</select></div>'+
       '<div class="grid2"><div class="field"><label>出勤時間</label><input type="time" id="adm-s" value="'+att.startTime+'" style="width:100%" onchange="updateAdmAH()"></div>'+
       '<div class="field"><label>退勤時間</label><input type="time" id="adm-e" value="'+att.endTime+'" style="width:100%" onchange="updateAdmAH()"></div></div>'+
@@ -1055,7 +1066,7 @@ async function openAttDailyM(uid, ds){
       '    <div class="field">'+
       '      <label>状態</label>'+
       '      <select id="adm-st" style="width:100%" onchange="updateAdmAH()">'+
-               ['予定','出席','欠席','遅刻','早退','体調不良','通院'].map(function(s){
+               ['予定','出席','欠席','遅刻','早退','体調不良','通院','予定休み'].map(function(s){
                  return'<option'+(att.status===s?' selected':'')+'>'+s+'</option>';
                }).join('')+
       '      </select>'+
@@ -3472,7 +3483,7 @@ function renderAttMonthlyTbl(){
   }
   var attendTotal=statCounts['出席']+statCounts['遅刻']+statCounts['早退'];
   var absentTotal=statCounts['欠席']+statCounts['体調不良']+statCounts['通院'];
-  // 予定日数=当月の来館予定日（スケジュール曜日に該当する日）のうち、欠席・休所日を除いた総数
+  // 予定日数=当月の来館予定日（スケジュール曜日に該当する日）のうち、「予定休み」と「休所日」を除いた総数
   var scheduledTotal=0;
   var todayCheck=today();
   var unedited=0;
@@ -3484,7 +3495,7 @@ function renderAttMonthlyTbl(){
     var isActive2=isUserActive(user,ds2);
     if(isScheduled2&&isActive2&&attMonthlyClosedDays.indexOf(ds2)<0){
       var rCheck=userAtts.find(function(a){return String(a.date)===ds2;});
-      if(!rCheck||['欠席','体調不良','通院'].indexOf(rCheck.status)<0){
+      if(!rCheck||rCheck.status!=='予定休み'){
         scheduledTotal++;
       }
     }
@@ -4064,11 +4075,15 @@ function checkKaikin(u, allAtt, ym, closedDays){
 
     var rec=allAtt.find(function(a){return String(a.userId)===String(u.id)&&String(a.date)===ds;});
     
-    // 欠席（欠席・体調不良・通院など）がある場合は予定数(expected)にカウントしない
+    // 予定休みの場合は予定数(expected)にカウントしない（利用除外扱い）
+    if(rec && rec.status==='予定休み'){
+      continue;
+    }
+
+    // 欠席（欠席・体調不良・通院など）がある場合はNG日数として記録
     if(rec && ['欠席','体調不良','通院'].indexOf(rec.status)>=0){
       ngDays++;
       if(!ngReason) ngReason=ds+' '+rec.status;
-      continue;
     }
 
     expected++;
