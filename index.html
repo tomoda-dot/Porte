@@ -171,6 +171,7 @@ var weekday=function(d){var p=String(d).split('-');return['日','月','火','水
 var calcH=function(s,e,b){if(!s||!e)return 0;var sm=Number(s.split(':')[0])*60+Number(s.split(':')[1]),em=Number(e.split(':')[0])*60+Number(e.split(':')[1]);return Math.max(0,em-sm-(Number(b)||0))/60;};
 var esc=function(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;};
 var statusColor={'出席':'#2e7d32','欠席':'#c62828','遅刻':'#e65100','早退':'#f9a825','体調不良':'#6a1b9a','通院':'#1565c0','予定':'#c07830','調整休':'#757575'};
+var hasTimeDiff15=function(t1,t2){if(!t1||!t2)return false;var p1=t1.split(':'),p2=t2.split(':');if(p1.length<2||p2.length<2)return false;var m1=parseInt(p1[0])*60+parseInt(p1[1]),m2=parseInt(p2[0])*60+parseInt(p2[1]);return Math.abs(m1-m2)>=15;};
 var userName=function(id){return(S.users.find(function(u){return u.id===id;})||{}).name||'?';};
 var wtName=function(id){return(S.workTypes.find(function(w){return w.id===id;})||{}).name||'-';};
 var wtRate=function(id){return Number((S.workTypes.find(function(w){return w.id===id;})||{}).rate)||0;};
@@ -348,8 +349,9 @@ async function renderDashboard(c){
 
   // スケジュール変更（出欠記録ベース）
   var changes=upcoming.filter(function(a){
+    if(a.status==='調整休') return false;
     var u=S.users.find(function(x){return x.id===a.userId;});if(!u)return false;
-    var tDiff=(a.startTime&&a.startTime!==u.scheduleStart)||(a.endTime&&a.endTime!==u.scheduleEnd);
+    var tDiff=(a.startTime&&hasTimeDiff15(a.startTime,u.scheduleStart))||(a.endTime&&hasTimeDiff15(a.endTime,u.scheduleEnd));
     var bDiff=(a.bento&&a.bento!==u.bento);
     var pDiff=(a.pickup&&a.pickup!==u.pickup);
     return (a.status!=='出席'&&a.status!=='予定')||tDiff||bDiff||pDiff;
@@ -365,8 +367,8 @@ async function renderDashboard(c){
   var attChanges=changes.map(function(a){
     var u=S.users.find(function(x){return x.id===a.userId;});if(!u)return null;
     var desc=[]; if(a.status!=='出席'&&a.status!=='予定')desc.push('【'+a.status+'】');
-    if(a.startTime&&a.startTime!==u.scheduleStart)desc.push('出勤:'+a.startTime);
-    if(a.endTime&&a.endTime!==u.scheduleEnd)desc.push('退勤:'+a.endTime);
+    if(a.startTime&&hasTimeDiff15(a.startTime,u.scheduleStart))desc.push('出勤:'+a.startTime);
+    if(a.endTime&&hasTimeDiff15(a.endTime,u.scheduleEnd))desc.push('退勤:'+a.endTime);
     if(a.bento&&a.bento!==u.bento)desc.push('弁当:'+a.bento);
     if(a.pickup&&a.pickup!==u.pickup)desc.push('送迎:'+a.pickup);
     return{date:a.date,userId:a.userId,userName:u.name,type:'change',desc:desc.join(' / '),notes:a.notes||''};
@@ -901,7 +903,9 @@ function renderDD(ds){
     var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
     var sTime=(r&&r.startTime)?r.startTime:(isTmp?'':u.scheduleStart||'');
     var eTime=(r&&r.endTime)?r.endTime:(isTmp?'':u.scheduleEnd||'');
-    var timeDiff=r&&(r.startTime||r.endTime)&&(r.startTime!==u.scheduleStart||r.endTime!==u.scheduleEnd);
+    var sDiff=r&&r.startTime&&hasTimeDiff15(r.startTime,u.scheduleStart);
+    var eDiff=r&&r.endTime&&hasTimeDiff15(r.endTime,u.scheduleEnd);
+    var timeDiff=sDiff||eDiff;
     var timeDisp='<span style="'+(timeDiff?'color:var(--red);font-weight:700':'')+'">'+sTime+'～'+eTime+'</span>';
     var curB=(r&&r.bento)?r.bento:u.bento,curP=(r&&r.pickup)?r.pickup:u.pickup;
     var bIcon='−',pIcon='−';
