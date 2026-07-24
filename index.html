@@ -685,8 +685,10 @@ async function renderCalendar(c){
     var da=att.filter(function(a){return String(a.date)===ds;});
     var dayTemp=(tempRecs||[]).filter(function(t){return String(t.date)===ds;});
     var abIds=da.filter(function(a){return ['欠席','体調不良','通院'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
+    var offIds=da.filter(function(a){return a.status==='予定休み';}).map(function(a){return a.userId;});
     var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;});
-    var allDayIds=Array.from(new Set(sch.map(function(u){return u.id;}).concat(da.map(function(a){return a.userId;})).concat(dayTemp.map(function(t){return t.userId;}))));
+    var rawDayIds=Array.from(new Set(sch.map(function(u){return u.id;}).concat(da.map(function(a){return a.userId;})).concat(dayTemp.map(function(t){return t.userId;}))));
+    var allDayIds=rawDayIds.filter(function(uid){return offIds.indexOf(uid)<0;});
     var bc=0,pc=0;
     allDayIds.forEach(function(uid){
       if(abIds.indexOf(uid)>=0)return;
@@ -697,14 +699,14 @@ async function renderCalendar(c){
       if(curB==='あり')bc++;
       if(curP==='あり')pc++;
     });
-    var ab=abIds.length;
+    var ab=abIds.length+offIds.length;
     var pr=da.filter(function(a){return a.status==='出席'||a.status==='遅刻'||a.status==='早退';}).length;
     var cls=(ds===ts?' today':'')+(dw===0?' sun':'')+(dw===6?' sat':'');
     html+='<td class="'+cls+'" onclick="showDD(\''+ds+'\')"><div class="day-num">'+d+'</div><div class="day-info">';
     if(allDayIds.length>0 || da.length>0){
       var totalSch = allDayIds.length;
       var tmpCount = dayTemp.filter(function(t){return allDayIds.indexOf(t.userId)<0?false:!sch.find(function(u){return u.id===t.userId;})&&!da.find(function(a){return a.userId===t.userId;});}).length;
-      html+='<div class="user-count" style="margin-bottom:2px">予定:'+totalSch+'名'+(dayTemp.length>0?'<span style="color:var(--acc);font-size:9px">（臨時'+dayTemp.length+'）</span>':'')+'</div>';
+      if(totalSch>0)html+='<div class="user-count" style="margin-bottom:2px">予定:'+totalSch+'名'+(dayTemp.length>0?'<span style="color:var(--acc);font-size:9px">（臨時'+dayTemp.length+'）</span>':'')+'</div>';
       if(bc>0)html+='<span class="day-badge" style="background:var(--acc)">🍱'+bc+'</span> ';
       if(pc>0)html+='<span class="day-badge" style="background:#1565c0">🚐'+pc+'</span> ';
       if(ab>0)html+='<span class="day-badge" style="background:var(--red)">休:'+ab+'</span> ';
@@ -868,10 +870,11 @@ function renderDD(ds){
   var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;});
   var da=(S.calAtt||[]).filter(function(a){return String(a.date)===ds;});
   var abIds=da.filter(function(a){return ['欠席','体調不良','通院'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
+  var offIds=da.filter(function(a){return a.status==='予定休み';}).map(function(a){return a.userId;});
   var allIds=Array.from(new Set(sch.map(function(u){return u.id;}).concat(da.map(function(a){return a.userId;})).concat(calExtraIds)));
   var bc=0,pc=0;
   allIds.forEach(function(uid){
-    if(abIds.indexOf(uid)>=0)return;
+    if(abIds.indexOf(uid)>=0 || offIds.indexOf(uid)>=0)return;
     var u=S.users.find(function(u){return u.id===uid;});if(!u)return;
     var r=da.find(function(a){return a.userId===uid;});
     var curB=(r&&r.bento)?r.bento:u.bento;
@@ -879,7 +882,8 @@ function renderDD(ds){
     if(curB==='あり')bc++;
     if(curP==='あり')pc++;
   });
-  var ab=abIds.length;
+  var plannedCount=allIds.filter(function(uid){return offIds.indexOf(uid)<0 && abIds.indexOf(uid)<0;}).length;
+  var ab=abIds.length + offIds.length;
   var tempCandidates=activeUsers.filter(function(u){return allIds.indexOf(u.id)<0;});
   var hd='<div class="card-hd"><span class="card-t">'+fmtDate(ds)+'（'+weekday(ds)+'）</span>'+
     '<div style="display:flex;align-items:center;gap:6px">'+
@@ -893,7 +897,7 @@ function renderDD(ds){
     var tmpRec=(S.calTemp||[]).find(function(t){return t.userId===uid&&String(t.date)===ds;});
     var hasAttRecord=!!r;
     var stLabel=r?'<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>':(isTmp?'<span style="color:var(--acc);font-size:11px;font-weight:700">臨時</span>':'<span style="color:var(--sub)">-</span>');
-    var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
+    var isAb=r&&( ['欠席','体調不良','通院','予定休み'].indexOf(r.status)>=0 );
     var sTime=(r&&r.startTime)?r.startTime:(isTmp?'':u.scheduleStart||'');
     var eTime=(r&&r.endTime)?r.endTime:(isTmp?'':u.scheduleEnd||'');
     var timeDiff=r&&(r.startTime||r.endTime)&&(r.startTime!==u.scheduleStart||r.endTime!==u.scheduleEnd);
@@ -910,7 +914,7 @@ function renderDD(ds){
       '</tr>';
   }).join('');
   document.getElementById('cal-d').innerHTML='<div class="card" style="margin-top:14px">'+hd+
-    '<div class="stats" style="margin-bottom:12px"><div class="stat"><div class="stat-l">予定者</div><div class="stat-v">'+allIds.length+'</div></div>'+
+    '<div class="stats" style="margin-bottom:12px"><div class="stat"><div class="stat-l">予定者</div><div class="stat-v">'+plannedCount+'</div></div>'+
     '<div class="stat" style="border-color:var(--acc)"><div class="stat-l">🍱弁当</div><div class="stat-v">'+bc+'</div></div>'+
     '<div class="stat" style="border-color:#1565c0"><div class="stat-l">🚐送迎</div><div class="stat-v">'+pc+'</div></div>'+
     '<div class="stat" style="border-color:var(--red)"><div class="stat-l">お休み</div><div class="stat-v">'+ab+'</div></div></div>'+
