@@ -332,7 +332,7 @@ async function renderDashboard(c){
   var activeUsers=S.users.filter(function(u){return isUserActive(u,d);});
   // セッション情報（友田判定に使用・全体で共通）
   var _sess=getSession()||{};
-  var abIds=att.filter(function(a){return['欠席','体調不良','通院'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
+  var abIds=att.filter(function(a){return['欠席','体調不良','通院','調整休'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
   var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;});
   
   var bc=0,pc=0;
@@ -651,12 +651,14 @@ async function renderDashboard(c){
       var s=u.scheduleStart||'', e=u.scheduleEnd||'';
       var b=(r&&r.bento)?r.bento:u.bento, p=(r&&r.pickup)?r.pickup:u.pickup;
       var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
+      var isAdj=r&&r.status==='調整休';
       var bIcon='−',pIcon='−';
       if(isAb){bIcon=b==='あり'?'<span style="color:var(--red)">❌</span>':'−';pIcon=p==='あり'?'<span style="color:var(--red)">❌</span>':'−';}
+      else if(isAdj){bIcon='−';pIcon='−';}
       else{bIcon=b==='あり'?'🍱':'−';pIcon=p==='あり'?'🚐':'−';}
       var stLabel = r ? '<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>' : (isTmp?'<span style="color:var(--acc);font-weight:700;font-size:11px">★臨時</span>':'<span style="color:var(--sub)">-</span>');
       var actual = (r && r.startTime) ? r.startTime+'〜'+(r.endTime||'--:--') : '-';
-      return'<tr'+(isTmp?' style="background:#fffbf0"':(isAb?' style="opacity:.6"':''))+'>'+
+      return'<tr'+(isTmp?' style="background:#fffbf0"':((isAb||isAdj)?' style="opacity:.6"':''))+'>'+
         '<td>'+esc(u.name)+(isTmp?'<span style="font-size:10px;color:var(--acc);margin-left:4px">★臨時</span>':'')+'</td>'+
         '<td>'+s+'〜'+e+'</td><td>'+bIcon+'</td><td>'+pIcon+'</td><td>'+stLabel+'</td><td style="font-size:12px;color:var(--pri)">'+actual+'</td></tr>';
     }).join('')+'</tbody></table>';
@@ -3390,10 +3392,17 @@ async function renderAttTbl(){
       var curB=r?(r.bento||u.bento):u.bento;
       var curP=r?(r.pickup||u.pickup):u.pickup;
       var isAb=r?['欠席','体調不良','通院'].indexOf(r.status)>=0:false;
-      if(curB==='あり'){bIcon=isAb?'<span style="color:var(--red)">❌</span>':'🍱';}
-      else if(r&&r.bento==='なし'&&u.bento==='あり'){bIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
-      if(curP==='あり'){pIcon=isAb?'<span style="color:var(--red)">❌</span>':'🚐';}
-      else if(r&&r.pickup==='なし'&&u.pickup==='あり'){pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
+      var isAdj=r?r.status==='調整休':false;
+      var isNoWork=isAb||isAdj;
+      if(isAdj){
+        bIcon='−';
+        pIcon='−';
+      }else{
+        if(curB==='あり'){bIcon=isAb?'<span style="color:var(--red)">❌</span>':'🍱';}
+        else if(r&&r.bento==='なし'&&u.bento==='あり'){bIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
+        if(curP==='あり'){pIcon=isAb?'<span style="color:var(--red)">❌</span>':'🚐';}
+        else if(r&&r.pickup==='なし'&&u.pickup==='あり'){pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
+      }
       var repContent='-';
       var moodDisp='-';
       if(rep){
@@ -3402,6 +3411,7 @@ async function renderAttTbl(){
       }else{
         if(r){
           if(isAb)repContent='<span style="color:var(--sub);font-style:italic">お休み ('+esc(r.notes||'')+')</span>';
+          else if(isAdj)repContent='<span style="color:var(--sub)">-</span>';
           else repContent='<span style="color:var(--sub)">未記入</span>';
         }
       }
@@ -3410,7 +3420,7 @@ async function renderAttTbl(){
         var moodColor={'良好':'var(--grn)','普通':'var(--txt)','やや不調':'var(--acc)','不調':'var(--red)'}[moodDisp]||'var(--sub)';
         moodLabel=(moodDisp==='-'||moodDisp==='')?'-':'<span style="color:'+moodColor+';font-weight:600">'+esc(moodDisp)+'</span>';
       }
-      return'<tr style="cursor:pointer" onclick=\'openAttDailyM("'+u.id+'","'+attDate+'")\' onmouseover="this.style.background=\'#f5f0ea\'" onmouseout="this.style.background=\'\'"><td style="font-weight:600;color:var(--pri)">'+nameLabel+'</td><td>'+stLabel+'</td><td>'+(r&&!isAb?r.startTime||'-':'-')+'</td><td>'+(r&&!isAb?r.endTime||'-':'-')+'</td><td style="text-align:center">'+bIcon+'</td><td style="text-align:center">'+pIcon+'</td><td style="font-size:11px">'+wtDispAm+'</td><td style="font-size:11px">'+wtDispPm+'</td><td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(repContent)+'">'+repContent+'</td><td>'+moodLabel+'</td></tr>';
+      return'<tr style="cursor:pointer" onclick=\'openAttDailyM("'+u.id+'","'+attDate+'")\' onmouseover="this.style.background=\'#f5f0ea\'" onmouseout="this.style.background=\'\'"><td style="font-weight:600;color:var(--pri)">'+nameLabel+'</td><td>'+stLabel+'</td><td>'+(r&&!isNoWork?r.startTime||'-':'-')+'</td><td>'+(r&&!isNoWork?r.endTime||'-':'-')+'</td><td style="text-align:center">'+bIcon+'</td><td style="text-align:center">'+pIcon+'</td><td style="font-size:11px">'+wtDispAm+'</td><td style="font-size:11px">'+wtDispPm+'</td><td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(repContent)+'">'+repContent+'</td><td>'+moodLabel+'</td></tr>';
     }).join('')+'</tbody></table>';
 }
 var attMonthlyData=[];
@@ -3489,7 +3499,7 @@ function renderAttMonthlyTbl(){
         var brkMark=brkMin>0?'<span title="休憩'+brkMin+'分" style="font-size:10px;margin-left:3px;opacity:.7">☕</span>':'';
         timeDisp=sTime+'〜'+eTime+brkMark;
       }
-      var isAb=['欠席','体調不良','通院'].indexOf(status)>=0;
+      var isAb=['欠席','体調不良','通院','調整休'].indexOf(status)>=0;
       var curB=r.bento||user.bento;
       var curP=r.pickup||user.pickup;
       if(curB==='あり'){
@@ -3530,7 +3540,7 @@ function renderAttMonthlyTbl(){
     }else{
       if(status!=='-'){
         if(isAbLine)repContent='<span style="color:var(--sub);font-style:italic">お休み ('+esc(notes)+')</span>';
-        else if(status==='予定')repContent='<span style="color:var(--sub)">-</span>';
+        else if(status==='予定'||status==='調整休')repContent='<span style="color:var(--sub)">-</span>';
         else repContent='<span style="color:var(--sub)">未記入</span>';
       }
     }
@@ -3547,7 +3557,7 @@ function renderAttMonthlyTbl(){
     if(status==='調整休'){
       bIcon='−'; pIcon='−'; timeDisp='-';
     }
-    var stLabel=(status!=='-'&&status!=='調整休')?'<span class="badge" style="background:'+(statusColor[status]||'#888')+'">'+esc(status)+'</span>':'<span style="color:var(--sub)">-</span>';
+    var stLabel=(status!=='-')?'<span class="badge" style="background:'+(statusColor[status]||'#888')+'">'+esc(status)+'</span>':'<span style="color:var(--sub)">-</span>';
     rowsHtml+='<tr style="'+rowBg+'cursor:pointer" onclick="openAttDailyM(\''+user.id+'\',\''+ds+'\')" onmouseover="this.style.background=\'#f5f0ea\'" onmouseout="this.style.background=\''+( ds===todayStr?'#e8f5e9':'')+'\'">'+
       '<td style="'+dateStyle+'">'+mo+'/'+d+'</td>'+
       '<td style="'+dateStyle+'">'+dwj+'</td>'+
@@ -4181,10 +4191,24 @@ function checkKaikin(u, allAtt, ym, closedDays){
 var KAIKIN_BONUS=Number(S.settings.kaikinBonus)||0; // 旧互換用、手当設定に移行
 
 // 工賃計算: (退勤-出勤-休憩)×時給。午前午後で時給が違う場合は半分ずつ分割
-function calcWage(r){
-  if(!r.startTime||!r.endTime)return{h:0,wage:0,items:[]};
-  var sp=String(r.startTime).split(':').map(Number),ep=String(r.endTime).split(':').map(Number);
-  var totalMin=ep[0]*60+ep[1]-sp[0]*60-sp[1]-(Number(r.breakMin)||0);
+function calcWage(r,user){
+  // 時刻を分に変換
+  function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
+  var sRec=r.startTime?String(r.startTime):'';
+  var eRec=r.endTime?String(r.endTime):'';
+  var sSch=(user&&user.scheduleStart)?String(user.scheduleStart):'';
+  var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):'';
+  var totalMin;
+  if(sRec&&eRec){
+    // 打刻あり → 打刻時間（休憩差し引き）を30分単位で切り捨て
+    var rawMin=Math.max(0,toMin(eRec)-toMin(sRec)-(Number(r.breakMin)||0));
+    totalMin=Math.floor(rawMin/30)*30;
+  }else if(sSch&&eSch){
+    // 打刻なし → 予定時間をそのまま使用
+    totalMin=Math.max(0,toMin(eSch)-toMin(sSch));
+  }else{
+    return{h:0,wage:0,items:[]};
+  }
   var totalH=Math.max(0,totalMin/60);
   var amId=r.workTypeId||'';
   var pmId=(r.workTypeIdPm&&r.workTypeIdPm!=='')?r.workTypeIdPm:amId;
@@ -4214,7 +4238,7 @@ async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var attR
   var recs=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
   var tH=0,tW=0,bt={},bc=0;
   recs.forEach(function(r){
-    var w=calcWage(r);
+    var w=calcWage(r,u);
     tH+=w.h; tW+=w.wage;
     w.items.forEach(function(item){
       if(!bt[item.name])bt[item.name]={h:0,w:0,r:item.rate};
@@ -4622,7 +4646,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     var recs=att.filter(function(a){return String(a.userId)===uid&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
     var tW=0,tH=0,bc=0;
-    recs.forEach(function(r){var cw=calcWage(r);tH+=cw.h;tW+=cw.wage;if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;});
+    recs.forEach(function(r){var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;});
     var kk=checkKaikin(u,att,eM);
     var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
     var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
@@ -4766,7 +4790,7 @@ async function printAllIRP(){
     var recs=att.filter(function(a){return String(a.userId)===u.id&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
     if(recs.length===0)return;
     var tW=0,tH=0,bc=0;
-    recs.forEach(function(r){var cw=calcWage(r);tH+=cw.h;tW+=cw.wage;if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;});
+    recs.forEach(function(r){var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;});
     var kk=checkKaikin(u,att,eM);
     var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
     var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
