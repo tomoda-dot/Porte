@@ -656,7 +656,7 @@ async function renderDashboard(c){
       if(isAb){bIcon=b==='あり'?'<span style="color:var(--red)">❌</span>':'−';pIcon=p==='あり'?'<span style="color:var(--red)">❌</span>':'−';}
       else if(isAdj){bIcon='−';pIcon='−';}
       else{bIcon=b==='あり'?'🍱':'−';pIcon=p==='あり'?'🚐':'−';}
-      var stLabel = r ? '<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>' : (isTmp?'<span style="color:var(--acc);font-weight:700;font-size:11px">★臨時</span>':'<span style="color:var(--sub)">-</span>');
+      var stLabel = (r && r.status !== '調整休') ? '<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>' : (isTmp?'<span style="color:var(--acc);font-weight:700;font-size:11px">★臨時</span>':'<span style="color:var(--sub)">-</span>');
       var actual = (r && r.startTime) ? r.startTime+'〜'+(r.endTime||'--:--') : '-';
       return'<tr'+(isTmp?' style="background:#fffbf0"':((isAb||isAdj)?' style="opacity:.6"':''))+'>'+
         '<td>'+esc(u.name)+(isTmp?'<span style="font-size:10px;color:var(--acc);margin-left:4px">★臨時</span>':'')+'</td>'+
@@ -3383,7 +3383,7 @@ async function renderAttTbl(){
       var h=r?calcH(r.startTime,r.endTime):0;
       var status=r?r.status:'未記録';
       var isTemp=tempUids.indexOf(u.id)>=0&&!(u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0);
-      var stLabel=r?'<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>':'<span style="color:var(--sub);font-size:11px">未記録</span>';
+      var stLabel=(r && r.status !== '調整休')?'<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>':'<span style="color:var(--sub);font-size:11px">-</span>';
       var nameLabel=esc(u.name)+(isTemp?' <span style="font-size:9px;color:var(--acc)">★臨時</span>':'');
       var wtDispAm=r?esc(wtName(r.workTypeId)):'-';
       var pmId=r?((r.workTypeIdPm&&r.workTypeIdPm!=='')?r.workTypeIdPm:r.workTypeId):'';
@@ -3557,7 +3557,7 @@ function renderAttMonthlyTbl(){
     if(status==='調整休'){
       bIcon='−'; pIcon='−'; timeDisp='-';
     }
-    var stLabel=(status!=='-')?'<span class="badge" style="background:'+(statusColor[status]||'#888')+'">'+esc(status)+'</span>':'<span style="color:var(--sub)">-</span>';
+    var stLabel=(status!=='-'&&status!=='調整休')?'<span class="badge" style="background:'+(statusColor[status]||'#888')+'">'+esc(status)+'</span>':'<span style="color:var(--sub)">-</span>';
     rowsHtml+='<tr style="'+rowBg+'cursor:pointer" onclick="openAttDailyM(\''+user.id+'\',\''+ds+'\')" onmouseover="this.style.background=\'#f5f0ea\'" onmouseout="this.style.background=\''+( ds===todayStr?'#e8f5e9':'')+'\'">'+
       '<td style="'+dateStyle+'">'+mo+'/'+d+'</td>'+
       '<td style="'+dateStyle+'">'+dwj+'</td>'+
