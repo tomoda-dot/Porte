@@ -535,16 +535,18 @@ async function _calcAttendanceList(ym){
   us.forEach(function(user){
     var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
     if(recs.length===0)return;
-    var tWM=0,tBM=0,tW=0,bc=0;
+    var tServiceMin=0,tWM=0,tBM=0,tW=0,bc=0;
     recs.forEach(function(rec){
       if(!rec.startTime||!rec.endTime)return;
+      var netH=_calcNetH(rec);
+      var sMin=Math.round(netH*60);
       var sp=String(rec.startTime).split(':'),ep=String(rec.endTime).split(':');
       var wm=Number(ep[0])*60+Number(ep[1])-Number(sp[0])*60-Number(sp[1]);var brk=Number(rec.breakMin)||0;
-      tWM+=wm;tBM+=brk;tW+=_calcRecWage(rec,wts).wage;
+      tServiceMin+=sMin;tWM+=wm;tBM+=brk;tW+=_calcRecWage(rec,wts).wage;
       if(_isBento(rec))bc++;
     });
     var net=Math.max(0,tWM-tBM);var kk=_checkKaikin(user,att,ym);var bonus=kk.kaikin?KAIKIN_BONUS:0;
-    result.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',days:recs.length,workMin:tWM,breakMin:tBM,netMin:net,avgNetMin:recs.length>0?Math.round(net/recs.length):0,bonus:bonus,wage:Math.round(tW),bentoCount:bc,bentoDed:bc*bentoPrice,total:Math.round(tW)+bonus-bc*bentoPrice});
+    result.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',days:recs.length,workMin:tServiceMin,breakMin:tBM,netMin:net,avgNetMin:recs.length>0?Math.round(tServiceMin/recs.length):0,bonus:bonus,wage:Math.round(tW),bentoCount:bc,bentoDed:bc*bentoPrice,total:Math.round(tW)+bonus-bc*bentoPrice});
   });
   return{users:result,bentoPrice:bentoPrice};
 }

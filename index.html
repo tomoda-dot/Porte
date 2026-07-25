@@ -4507,7 +4507,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">勤怠状況一覧（'+fmtMonth(eM)+'）</span></div>'+
       '<p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'　　弁当代: ¥'+aBentoPrice.toLocaleString()+'/食</p>'+
       '<div style="overflow:auto"><table style="font-size:12px;white-space:nowrap"><thead><tr>'+
-      '<th>対象月</th><th>種別</th><th>氏名</th><th style="text-align:right">算定日数</th><th style="text-align:right">勤務時間</th><th style="text-align:right">休憩時間</th><th style="text-align:right">実稼働時間</th><th style="text-align:right">平均/日</th><th style="text-align:right">手当</th><th style="text-align:right">弁当代</th><th style="text-align:right">賃金計</th>'+
+      '<th>対象月</th><th>種別</th><th>氏名</th><th style="text-align:right">算定日数</th><th style="text-align:right">サービス提供時間</th><th style="text-align:right">休憩時間</th><th style="text-align:right">実稼働時間</th><th style="text-align:right">平均/日</th><th style="text-align:right">手当</th><th style="text-align:right">弁当代</th><th style="text-align:right">賃金計</th>'+
       '</tr></thead><tbody>'+
       aList.map(function(x){
         return'<tr><td>'+fmtMonth(eM)+'</td><td>'+esc(x.serviceType)+'</td><td style="font-weight:600">'+esc(x.name)+'</td>'+
@@ -5333,7 +5333,7 @@ async function dlCSV(){try{
     var aData2=await gas('getAttendanceList',eM);
     var aList2=aData2.users;
     function minToHM2(m){var h=Math.floor(m/60);var mm2=m%60;return h+':'+String(mm2).padStart(2,'0');}
-    var csv3='対象月,種別,氏名,算定日数,勤務時間,休憩時間,実稼働時間,平均/日,手当,弁当代,賃金計\n';
+    var csv3='対象月,種別,氏名,算定日数,サービス提供時間,休憩時間,実稼働時間,平均/日,手当,弁当代,賃金計\n';
     aList2.forEach(function(x){
       csv3+=fmtMonth(eM)+','+x.serviceType+','+x.name+','+x.days+','+minToHM2(x.workMin)+','+minToHM2(x.breakMin)+','+minToHM2(x.netMin)+','+minToHM2(x.avgNetMin)+','+x.bonus+','+-x.bentoDed+','+x.total+'\n';
     });
