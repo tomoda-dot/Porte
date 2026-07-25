@@ -4981,7 +4981,7 @@ function renderWageDetail(wd,fn){
     h+='<table style="width:100%;border-collapse:collapse;margin-bottom:4px">';
     h+='<thead><tr style="background:#f5f0ea;-webkit-print-color-adjust:exact;print-color-adjust:exact">';
     h+='<th style="'+B+'padding:6px 8px;text-align:left;width:40%">作業</th>';
-    h+='<th style="'+B+'padding:6px 8px;text-align:right;width:15%">稼働時間</th>';
+    h+='<th style="'+B+'padding:6px 8px;text-align:right;width:15%">勤務時間</th>';
     h+='<th style="'+B+'padding:6px 8px;text-align:right;width:10%">数量</th>';
     h+='<th style="'+B+'padding:6px 8px;text-align:right;width:15%">単価</th>';
     h+='<th style="'+B+'padding:6px 8px;text-align:right;width:20%">金額</th>';
@@ -4993,7 +4993,7 @@ function renderWageDetail(wd,fn){
       h+='<td style="'+B+'padding:5px 8px;text-align:right">¥'+it.rate.toLocaleString()+'</td>';
       h+='<td style="'+B+'padding:5px 8px;text-align:right">¥'+it.wage.toLocaleString()+'</td></tr>';
     });
-    // 空行で12行に揃える
+    // 空行で8行に揃える
     var emptyRows=Math.max(0,8-u.items.length);
     for(var ei=0;ei<emptyRows;ei++){
       h+='<tr><td style="'+B+'padding:5px 8px;height:22px"></td><td style="'+B+'padding:5px 8px"></td><td style="'+B+'padding:5px 8px"></td><td style="'+B+'padding:5px 8px"></td><td style="'+B+'padding:5px 8px"></td></tr>';
@@ -5008,14 +5008,16 @@ function renderWageDetail(wd,fn){
     h+='<th style="'+B+'padding:6px 8px;text-align:right;width:15%">単価</th>';
     h+='<th style="'+B+'padding:6px 8px;text-align:right;width:20%">金額</th>';
     h+='</tr></thead><tbody>';
-    if(u.kaikin){
-      h+='<tr><td style="'+B+'padding:5px 8px">皆勤手当</td><td style="'+B+'padding:5px 8px;text-align:right"></td><td style="'+B+'padding:5px 8px;text-align:right"></td><td style="'+B+'padding:5px 8px;text-align:right">¥'+u.bonus.toLocaleString()+'</td></tr>';
-    }
+    var allowanceList = u.allowances || (u.kaikin ? [{ name: '皆勤手当', amount: u.bonus }] : []);
+    var adjRows = allowanceList.length;
+    allowanceList.forEach(function(al){
+      h+='<tr><td style="'+B+'padding:5px 8px">'+esc(al.name)+'</td><td style="'+B+'padding:5px 8px;text-align:right"></td><td style="'+B+'padding:5px 8px;text-align:right"></td><td style="'+B+'padding:5px 8px;text-align:right">¥'+Number(al.amount).toLocaleString()+'</td></tr>';
+    });
     if(u.bentoCount>0){
+      adjRows++;
       h+='<tr><td style="'+B+'padding:5px 8px">弁当代</td><td style="'+B+'padding:5px 8px;text-align:right">'+u.bentoCount+'</td><td style="'+B+'padding:5px 8px;text-align:right">¥'+u.bentoPrice.toLocaleString()+'</td><td style="'+B+'padding:5px 8px;text-align:right;color:#c00">-¥'+u.bentoDed.toLocaleString()+'</td></tr>';
     }
     // 空行
-    var adjRows=0;if(u.kaikin)adjRows++;if(u.bentoCount>0)adjRows++;
     var emptyAdj=Math.max(0,5-adjRows);
     for(var ei2=0;ei2<emptyAdj;ei2++){
       h+='<tr><td style="'+B+'padding:5px 8px;height:22px"></td><td style="'+B+'padding:5px 8px"></td><td style="'+B+'padding:5px 8px"></td><td style="'+B+'padding:5px 8px"></td></tr>';
@@ -5368,7 +5370,7 @@ async function dlCSV(){try{
   } else if(eT==='wageDetail'){
     // 工賃明細書CSV
     var wd2=await gas('getWageDetailPerUser',eM);
-    var csv5='氏名,稼働日数,作業名,稼働時間,単価,金額,皆勤手当,合計\n';
+    var csv5='氏名,稼働日数,作業名,勤務時間,単価,金額,手当,合計\n';
     wd2.users.forEach(function(u){
       u.items.forEach(function(it,ii){
         csv5+=u.name+','+u.days+','+it.name+','+it.hours.toFixed(2)+','+it.rate+','+it.wage+','+(ii===0?u.bonus:'')+','+(ii===0?u.total:'')+'\n';
