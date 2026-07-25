@@ -729,7 +729,9 @@ async function renderCalendar(c){
     var da2=att.filter(function(a){return String(a.date)===ds2;});
     var dt2=(tempRecs||[]).filter(function(t){return String(t.date)===ds2;});
     var abIds2=da2.filter(function(a){return ['欠席','体調不良','通院'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
-    var effectiveSchIds = Array.from(new Set(sc.map(function(u){return u.id;}).concat(da2.map(function(a){return a.userId;})).concat(dt2.map(function(t){return t.userId;}))));
+    var offIds2=da2.filter(function(a){return a.status==='調整休';}).map(function(a){return a.userId;});
+    var rawSchIds = Array.from(new Set(sc.map(function(u){return u.id;}).concat(da2.map(function(a){return a.userId;})).concat(dt2.map(function(t){return t.userId;}))));
+    var effectiveSchIds = rawSchIds.filter(function(uid){return offIds2.indexOf(uid)<0;});
     tS+=effectiveSchIds.length;
     effectiveSchIds.forEach(function(uid){
       if(abIds2.indexOf(uid)>=0) return;
