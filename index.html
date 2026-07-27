@@ -3266,6 +3266,16 @@ function _psRenderFromData(c){
 }
 
 // ═══ 見学・体験 ═══
+function _formatTimeHHMM(timeStr){
+  if(!timeStr) return '';
+  var match = String(timeStr).match(/(\d{1,2}:\d{2})/);
+  if(match){
+    var p = match[1].split(':');
+    return p[0].padStart(2, '0') + ':' + p[1];
+  }
+  return '';
+}
+
 function _parseScheduleRows(scheduleStr){
   if(!scheduleStr) return [];
   var str = String(scheduleStr).trim();
@@ -3305,14 +3315,62 @@ function _parseScheduleRows(scheduleStr){
   });
 }
 
+function _enableScheduleTableDrag(tbody){
+  if(!tbody || tbody._dragEnabled) return;
+  tbody._dragEnabled = true;
+  var draggedRow = null;
+
+  tbody.addEventListener('dragstart', function(e){
+    if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'){
+      e.preventDefault();
+      return;
+    }
+    var tr = e.target.closest('tr');
+    if(!tr) return;
+    draggedRow = tr;
+    tr.style.opacity = '0.4';
+    tr.style.background = '#e8f5e9';
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+  });
+
+  tbody.addEventListener('dragend', function(e){
+    var tr = e.target.closest('tr');
+    if(tr){
+      tr.style.opacity = '1';
+      tr.style.background = '';
+    }
+    if(draggedRow){
+      draggedRow.style.opacity = '1';
+      draggedRow.style.background = '';
+    }
+    draggedRow = null;
+  });
+
+  tbody.addEventListener('dragover', function(e){
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    var targetTr = e.target.closest('tr');
+    if(targetTr && targetTr !== draggedRow && targetTr.parentNode === tbody){
+      var rect = targetTr.getBoundingClientRect();
+      var next = (e.clientY - rect.top) > (rect.height / 2);
+      tbody.insertBefore(draggedRow, next ? targetTr.nextSibling : targetTr);
+    }
+  });
+}
+
 function addTrialScheduleRow(row){
   var r = row || { time: '', item: '', detail: '' };
   var tbody = document.getElementById('tr-schedule-tbody');
   if(!tbody) return;
+  var formattedTime = _formatTimeHHMM(r.time);
   var tr = document.createElement('tr');
-  tr.innerHTML = '<td style="padding:4px 6px;border:1px solid var(--bdr);vertical-align:top">'+
-    '<input class="tr-sched-time" value="'+esc(r.time||'')+'" style="width:100%;box-sizing:border-box" placeholder="09:10 - 09:40"></td>'+
-    '<td style="padding:4px 6px;border:1px solid var(--bdr);vertical-align:top">'+
+  tr.draggable = true;
+  tr.style.cursor = 'move';
+  tr.innerHTML = '<td style="padding:4px 6px;border:1px solid var(--bdr);text-align:center;vertical-align:middle;cursor:grab;color:#888;font-weight:700;font-size:14px;user-select:none" title="ドラッグして並べ替え">⣿</td>'+
+    '<td style="padding:4px 6px;border:1px solid var(--bdr);vertical-align:top;width:110px">'+
+    '<input type="time" class="tr-sched-time" value="'+esc(formattedTime)+'" style="width:100%;box-sizing:border-box;font-size:13px;padding:4px 6px"></td>'+
+    '<td style="padding:4px 6px;border:1px solid var(--bdr);vertical-align:top;width:170px">'+
     '<input class="tr-sched-item" value="'+esc(r.item||'')+'" style="width:100%;box-sizing:border-box" placeholder="迎車・来所"></td>'+
     '<td style="padding:4px 6px;border:1px solid var(--bdr);vertical-align:top">'+
     '<textarea class="tr-sched-detail" rows="2" style="width:100%;box-sizing:border-box;font-size:12px;line-height:1.4" placeholder="ご様子・支援経過を入力">'+esc(r.detail||'')+'</textarea></td>'+
@@ -3405,15 +3463,16 @@ function openTrialModal(t){
     '<!-- ② 当日の経過・タイムスケジュール -->'+
     '<div style="background:#f8f9fa;border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;margin-bottom:14px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1.5px solid var(--bdr);padding-bottom:6px">'+
-        '<div style="font-weight:700;color:var(--pri);font-size:13px">🕒 当日の経過・タイムスケジュール</div>'+
+        '<div style="font-weight:700;color:var(--pri);font-size:13px">🕒 当日の経過・タイムスケジュール <span style="font-size:11px;font-weight:400;color:var(--sub)">（左端の「⣿」をドラッグして上下に移動できます）</span></div>'+
         '<button class="bg" type="button" onclick="addTrialScheduleRow()" style="font-size:11px;padding:4px 12px;background:#fff;font-weight:600">+ 行を追加</button>'+
       '</div>'+
       '<div class="tbl-wrap">'+
         '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
           '<thead>'+
             '<tr style="background:#eef2ee">'+
-              '<th style="width:130px;padding:6px;border:1px solid var(--bdr);text-align:center">時間</th>'+
-              '<th style="width:160px;padding:6px;border:1px solid var(--bdr);text-align:center">区分 / 項目</th>'+
+              '<th style="width:34px;padding:6px;border:1px solid var(--bdr);text-align:center">移動</th>'+
+              '<th style="width:110px;padding:6px;border:1px solid var(--bdr);text-align:center">開始時間</th>'+
+              '<th style="width:170px;padding:6px;border:1px solid var(--bdr);text-align:center">区分 / 項目</th>'+
               '<th style="padding:6px;border:1px solid var(--bdr);text-align:center">ご様子・支援経過（対外用文面）</th>'+
               '<th style="width:40px;padding:6px;border:1px solid var(--bdr);text-align:center">削除</th>'+
             '</tr>'+
@@ -3517,15 +3576,17 @@ function openTrialModal(t){
   var schedRows = _parseScheduleRows(rep.schedule);
   if(schedRows.length === 0){
     schedRows = [
-      { time: '09:10 - 09:40', item: '迎車・来所', detail: '' },
-      { time: '09:40 - 12:00', item: '午前作業（ビーズ製作）', detail: '' },
-      { time: '12:00 - 13:00', item: '昼食・休憩', detail: '' },
-      { time: '13:00 - 13:30', item: '午後作業①（ビーズ製作）', detail: '' },
-      { time: '13:30 - 14:30', item: '午後作業②（シール貼り）', detail: '' },
-      { time: '14:30 -', item: '迎車・退所', detail: '' }
+      { time: '09:10', item: '迎車・来所', detail: '' },
+      { time: '09:40', item: '午前作業（ビーズ製作）', detail: '' },
+      { time: '12:00', item: '昼食・休憩', detail: '' },
+      { time: '13:00', item: '午後作業①（ビーズ製作）', detail: '' },
+      { time: '13:30', item: '午後作業②（シール貼り）', detail: '' },
+      { time: '14:30', item: '迎車・退所', detail: '' }
     ];
   }
   schedRows.forEach(function(r){ addTrialScheduleRow(r); });
+  var tbody = document.getElementById('tr-schedule-tbody');
+  if(tbody) _enableScheduleTableDrag(tbody);
 }
 
 function updateTrialOpts(){
@@ -3550,8 +3611,10 @@ function openTrialReportModal(t){
   var scheduleRowsHtml = '';
   if(schedRows.length > 0){
     scheduleRowsHtml = schedRows.map(function(r){
-      return '<tr><td style="width:130px;font-weight:600;padding:6px 8px;border:1px solid #777;text-align:center">'+esc(r.time || '-')+'</td>'+
-        '<td style="width:150px;font-weight:600;padding:6px 8px;border:1px solid #777;text-align:center">'+esc(r.item || '-')+'</td>'+
+      var rawTime = _formatTimeHHMM(r.time) || r.time || '';
+      var displayTime = rawTime ? (rawTime.indexOf('-') >= 0 ? rawTime : rawTime + ' -') : '-';
+      return '<tr><td style="width:120px;font-weight:600;padding:6px 8px;border:1px solid #777;text-align:center">'+esc(displayTime)+'</td>'+
+        '<td style="width:160px;font-weight:600;padding:6px 8px;border:1px solid #777;text-align:center">'+esc(r.item || '-')+'</td>'+
         '<td style="padding:6px 8px;border:1px solid #777;white-space:pre-wrap">'+esc(r.detail || '−')+'</td></tr>';
     }).join('');
   } else {
