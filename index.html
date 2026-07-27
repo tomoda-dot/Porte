@@ -3480,8 +3480,7 @@ function openTrialModal(t){
           '<tbody id="tr-schedule-tbody"></tbody>'+
         '</table>'+
       '</div>'+
-      '<div style="display:flex;justify-content:flex-end;align-items:center;margin-top:10px;gap:10px">'+
-        '<button type="button" class="bg" onclick="setGeminiApiKey()" style="font-size:11px;padding:6px 10px;color:var(--sub)" title="Gemini APIキーを設定・変更">⚙️ APIキー設定</button>'+
+      '<div style="display:flex;justify-content:flex-end;align-items:center;margin-top:10px">'+
         '<button type="button" id="tr-ai-btn" class="bp" onclick="generateTrialReportWithAI()" style="background:linear-gradient(135deg, #1b5e20, #2e7d32);color:#fff;padding:8px 18px;font-size:12px;font-weight:700;border-radius:6px;box-shadow:0 2px 6px rgba(46,125,50,0.3);border:none;cursor:pointer;display:flex;align-items:center;gap:6px">'+
           '🤖 AIで評価・総合所見を自動生成'+
         '</button>'+
@@ -7642,7 +7641,20 @@ function renderSettings(c){
     settingsSection('s-shift-pat','📆','勤務パターン管理',
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openShiftPatternModal()" style="font-size:12px">＋ 追加</button></div>'+
       '<p style="font-size:11px;color:var(--sub);margin-bottom:8px">シフト作成で使用する勤務パターンを登録します。</p>'+
-      '<table><thead><tr><th>パターン名</th><th>始業</th><th>終業</th><th>休憩</th><th>色</th><th>操作</th></tr></thead><tbody id="sp-tb"></tbody></table>',false)+'<div id="sp-modal"></div>';
+      '<table><thead><tr><th>パターン名</th><th>始業</th><th>終業</th><th>休憩</th><th>色</th><th>操作</th></tr></thead><tbody id="sp-tb"></tbody></table>',false)+'<div id="sp-modal"></div>'+
+    settingsSection('s-ai-key','🤖','AI機能・Gemini APIキー設定',
+      '<p style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.5">'+
+        '体験利用報告書などのAI自動文章生成で使用するGoogle Gemini APIキーを設定します。<br>'+
+        '※APIキーが未設定の場合でも、組み込みのスマートAIエンジンが自動使用されます。'+
+      '</p>'+
+      '<div class="field" style="max-width:460px;margin-bottom:10px">'+
+        '<label style="font-weight:600">Google Gemini API Key</label>'+
+        '<input type="password" id="s-gemini-key" value="'+esc(localStorage.getItem('porte_gemini_api_key')||'')+'" placeholder="AIzaSy..." style="width:100%;font-family:monospace">'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;align-items:center">'+
+        '<button class="bp" onclick="saveGeminiApiKeyInSettings()">APIキーを保存</button>'+
+        '<button class="bg" onclick="clearGeminiApiKeyInSettings()">消去</button>'+
+      '</div>',false);
   // 作業種別テーブル
   document.getElementById('wt-tb').innerHTML=S.workTypes.map(function(w){return'<tr><td>'+esc(w.name)+'</td><td>¥'+Number(w.rate).toLocaleString()+'/h</td><td><button class="bg" onclick=\'openWT('+JSON.stringify(w).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delWT(\''+w.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';}).join('');
   // 車両テーブル
@@ -7650,6 +7662,25 @@ function renderSettings(c){
   renderTplList();
   renderShiftPatternTable();
   loadClosedCal(today().slice(0,7));
+}
+
+function saveGeminiApiKeyInSettings(){
+  var keyEl = document.getElementById('s-gemini-key');
+  if(!keyEl) return;
+  var key = keyEl.value.trim();
+  localStorage.setItem('porte_gemini_api_key', key);
+  if(key){
+    alert('✨ Gemini APIキーを保存しました。AI自動生成時にGemini Live APIを使用します。');
+  } else {
+    alert('APIキーを空にして保存しました。組み込みスマートAIエンジンを使用します。');
+  }
+}
+
+function clearGeminiApiKeyInSettings(){
+  var keyEl = document.getElementById('s-gemini-key');
+  if(keyEl) keyEl.value = '';
+  localStorage.removeItem('porte_gemini_api_key');
+  alert('Gemini APIキーを消去しました。組み込みスマートAIエンジンを使用します。');
 }
 
 // ─── 開所日カレンダー ───
