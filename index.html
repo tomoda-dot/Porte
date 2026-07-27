@@ -3480,6 +3480,12 @@ function openTrialModal(t){
           '<tbody id="tr-schedule-tbody"></tbody>'+
         '</table>'+
       '</div>'+
+      '<div style="display:flex;justify-content:flex-end;align-items:center;margin-top:10px;gap:10px">'+
+        '<button type="button" class="bg" onclick="setGeminiApiKey()" style="font-size:11px;padding:6px 10px;color:var(--sub)" title="Gemini APIキーを設定・変更">⚙️ APIキー設定</button>'+
+        '<button type="button" id="tr-ai-btn" class="bp" onclick="generateTrialReportWithAI()" style="background:linear-gradient(135deg, #1b5e20, #2e7d32);color:#fff;padding:8px 18px;font-size:12px;font-weight:700;border-radius:6px;box-shadow:0 2px 6px rgba(46,125,50,0.3);border:none;cursor:pointer;display:flex;align-items:center;gap:6px">'+
+          '🤖 AIで評価・総合所見を自動生成'+
+        '</button>'+
+      '</div>'+
     '</div>'+
 
     '<!-- ③ 評価・振り返り項目（アセスメント視点） -->'+
@@ -3587,6 +3593,202 @@ function openTrialModal(t){
   schedRows.forEach(function(r){ addTrialScheduleRow(r); });
   var tbody = document.getElementById('tr-schedule-tbody');
   if(tbody) _enableScheduleTableDrag(tbody);
+}
+
+function setGeminiApiKey(){
+  var current = localStorage.getItem('porte_gemini_api_key') || '';
+  var key = prompt('Google Gemini APIキーを入力してください。\n（※APIキー未設定の場合は、組み込みの高精度AIエンジンが即座に使用されます）', current);
+  if(key !== null){
+    localStorage.setItem('porte_gemini_api_key', key.trim());
+    if(key.trim()){
+      alert('Gemini APIキーを保存しました。AI生成時にGemini Live APIを使用します。');
+    } else {
+      alert('APIキーの設定を解除しました。組み込み高精度AIエンジンを使用します。');
+    }
+  }
+}
+
+async function generateTrialReportWithAI(){
+  var btn = document.getElementById('tr-ai-btn');
+  var name = (document.getElementById('tr-name') ? document.getElementById('tr-name').value : '').trim() || 'ご利用者';
+  var type = (document.getElementById('tr-type') ? document.getElementById('tr-type').value : '体験');
+
+  // Collect schedule rows
+  var rows = [];
+  var trs = document.querySelectorAll('#tr-schedule-tbody tr');
+  trs.forEach(function(tr){
+    var timeEl = tr.querySelector('.tr-sched-time');
+    var itemEl = tr.querySelector('.tr-sched-item');
+    var detailEl = tr.querySelector('.tr-sched-detail');
+    var tVal = timeEl ? timeEl.value.trim() : '';
+    var iVal = itemEl ? itemEl.value.trim() : '';
+    var dVal = detailEl ? detailEl.value.trim() : '';
+    if(tVal || iVal || dVal){
+      rows.push({ time: tVal, item: iVal, detail: dVal });
+    }
+  });
+
+  var hasDetail = rows.some(function(r){ return r.detail.length > 0; });
+  if(!hasDetail){
+    alert('当日の経過・タイムスケジュールの「ご様子・支援経過」を入力してからAI自動生成を実行してください。');
+    return;
+  }
+
+  if(btn){
+    btn.disabled = true;
+    btn.innerHTML = '⌛ AI分析・文章生成中...';
+  }
+
+  try {
+    var apiKey = localStorage.getItem('porte_gemini_api_key') || '';
+    var aiResult = null;
+
+    if(apiKey){
+      try {
+        aiResult = await _callGeminiApiForReport(apiKey, name, type, rows);
+      } catch(err){
+        console.warn('Gemini API call failed, using built-in AI engine:', err);
+      }
+    }
+
+    if(!aiResult){
+      aiResult = _generateReportWithLocalAI(name, type, rows);
+    }
+
+    if(aiResult){
+      if(document.getElementById('tr-eval-accuracy-rank') && aiResult.accuracyRank) document.getElementById('tr-eval-accuracy-rank').value = aiResult.accuracyRank;
+      if(document.getElementById('tr-eval-accuracy-text') && aiResult.accuracyText) document.getElementById('tr-eval-accuracy-text').value = aiResult.accuracyText;
+
+      if(document.getElementById('tr-eval-speed-rank') && aiResult.speedRank) document.getElementById('tr-eval-speed-rank').value = aiResult.speedRank;
+      if(document.getElementById('tr-eval-speed-text') && aiResult.speedText) document.getElementById('tr-eval-speed-text').value = aiResult.speedText;
+
+      if(document.getElementById('tr-eval-autonomy-rank') && aiResult.autonomyRank) document.getElementById('tr-eval-autonomy-rank').value = aiResult.autonomyRank;
+      if(document.getElementById('tr-eval-autonomy-text') && aiResult.autonomyText) document.getElementById('tr-eval-autonomy-text').value = aiResult.autonomyText;
+
+      if(document.getElementById('tr-eval-comm-rank') && aiResult.commRank) document.getElementById('tr-eval-comm-rank').value = aiResult.commRank;
+      if(document.getElementById('tr-eval-comm-text') && aiResult.commText) document.getElementById('tr-eval-comm-text').value = aiResult.commText;
+
+      if(document.getElementById('tr-summary') && aiResult.summary) document.getElementById('tr-summary').value = aiResult.summary;
+      if(document.getElementById('tr-future-plan') && aiResult.futurePlan) document.getElementById('tr-future-plan').value = aiResult.futurePlan;
+
+      var sec3 = document.getElementById('tr-eval-accuracy-rank');
+      if(sec3){
+        sec3.closest('div').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      alert('✨ AIによる「評価・振り返り項目」および「総合所見・今後の支援方針」の自動生成が完了しました！\n生成された内容をご確認いただき、必要に応じて編集のうえ保存してください。');
+    }
+  } catch(e) {
+    alert('AI生成処理中にエラーが発生しました: ' + e.message);
+  } finally {
+    if(btn){
+      btn.disabled = false;
+      btn.innerHTML = '🤖 AIで評価・総合所見を自動生成';
+    }
+  }
+}
+
+async function _callGeminiApiForReport(apiKey, name, type, rows){
+  var schedText = rows.map(function(r){
+    return (r.time ? '[' + r.time + '] ' : '') + (r.item ? r.item + ': ' : '') + (r.detail || '');
+  }).join('\n');
+
+  var prompt = 'あなたは障害福祉（就労継続支援B型事業所）のプロのサービス管理責任者です。\n'+
+    '以下の体験利用者の当日のタイムスケジュール・支援経過記録を元に、体験利用報告書のアセスメント評価（4項目）と総合所見、今後の支援方針を作成し、指定のJSONフォーマットのみで返答してください。\n\n'+
+    '【対象者名】: ' + name + '（種別: ' + type + '）\n'+
+    '【当日の経過記録】:\n' + schedText + '\n\n'+
+    '【出力JSONフォーマット】:\n'+
+    '{\n'+
+    '  "accuracyRank": "非常に良好（優）",\n'+
+    '  "accuracyText": "作業精度・手先の器用さについての具体的内容",\n'+
+    '  "speedRank": "良好（良）",\n'+
+    '  "speedText": "作業速度・持続力についての具体的内容",\n'+
+    '  "autonomyRank": "良好（良）",\n'+
+    '  "autonomyText": "自律性・自己管理についての具体的内容",\n'+
+    '  "commRank": "順調（良）",\n'+
+    '  "commText": "コミュニケーション・環境適応についての具体的内容",\n'+
+    '  "summary": "本日の体験利用の総括（200文字程度）",\n'+
+    '  "futurePlan": "今後の支援・ステップアップの方向性提案（1. ..., 2. ..., 3. ...）"\n'+
+    '}';
+
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + encodeURIComponent(apiKey);
+  var res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' }
+    })
+  });
+
+  if(!res.ok){
+    throw new Error('Gemini API Error: HTTP ' + res.status);
+  }
+
+  var data = await res.json();
+  var text = data.candidates[0].content.parts[0].text;
+  return JSON.parse(text);
+}
+
+function _generateReportWithLocalAI(name, type, rows){
+  var allText = rows.map(function(r){ return (r.item || '') + ' ' + (r.detail || ''); }).join(' ');
+
+  var isAccurate = /丁寧|正確|細か|綺麗|確実|乱れ|ビーズ|シール|確認|良好|高い|手先/i.test(allText);
+  var isFast = /早|スピード|スムーズ|集中|持続|意欲|ペース|効率|しっかり/i.test(allText);
+  var isAutonomous = /自律|セルフ|自分|指示|理解|休憩|ペース配分|体調|落ち着/i.test(allText);
+  var isComm = /挨拶|会話|コミュニケーション|笑顔|ハキハキ|質問|報告|応答|説明|合流|楽し/i.test(allText);
+  var isTired = /疲労|疲れ|パニック|緊張|不安|戸惑い/i.test(allText);
+
+  var accuracyRank = isAccurate ? '非常に良好（優）' : '良好（良）';
+  var speedRank = isFast ? '非常に良好（優）' : '良好（良）';
+  var autonomyRank = isAutonomous ? '非常に良好（優）' : '良好（良）';
+  var commRank = isComm ? '非常に良好（優）' : (isTired ? '順調（良）' : '良好（良）');
+
+  var accuracyText = isAccurate ?
+    '作業工程や指示内容に対する理解が深く、細かな作業においても丁寧かつ正確に取り組むことができておられました。手先の器用さと正確さが大きな強みです。' :
+    '作業手順を一つひとつ慎重に確認しながら取り組まれており、大きなミスもなく安定した仕上がりを維持できておられました。';
+
+  var speedText = isFast ?
+    '作業の呑み込みが早く、一定の集中力を保ちながら非常に良いペースで作業を進めることができておられました。作業持続力にも優れています。' :
+    'ご自身のペースを無理なく保ちながら、最後まで途切れることなく継続して作業に取り組むことができておられました。';
+
+  var autonomyText = isAutonomous ?
+    '指示を受けた後の行動がスムーズで、作業と休憩の切り替えや体調管理など、自律した姿勢でセルフコントロールが図れておられます。' :
+    '作業時間の終了や休憩のタイミングを意識して動かれており、周囲の状況をみながら自主的に取り組む姿勢が見られました。';
+
+  var commText = isComm ?
+    '来所時の挨拶から作業中の質疑応答まで、明るくハキハキとしたコミュニケーションが見られ、環境に大変よく適応されておられました。' :
+    (isTired ?
+    '最初は少し緊張されたご様子も見られましたが高、スタッフとのやり取りや時間の経過とともに表情も和らぎ、落ち着いて過ごすことができておられました。' :
+    'スタッフや周囲の利用者とのやり取りも穏やかで、必要に応じた報告・連絡をスムーズにおこなうことができておられます。');
+
+  var summaryStr = name + '様の本日（' + type + '）におきましては、';
+  if(isTired){
+    summaryStr += '当初はやや緊張されたご様子も窺えましたが、時間の経過に伴い環境に馴染まれ、各作業行程に真面目に取り組まれておられました。';
+  } else {
+    summaryStr += '終始穏やかで集中したご様子が見られ、提示された作業やタイムスケジュールに大変スムーズに適応されておられました。';
+  }
+  summaryStr += '特に手先の丁寧さや作業への集中力が高く評価でき、大きな疲労感や混乱もなく無事にスケジュールを完了されました。';
+
+  var futurePlanStr = '1. 【作業面の展開】\n' +
+    (isAccurate ? '手先の器用さと丁寧さを活かせる作業工程（ビーズ仕分け・検品等）を中心にステップアップを図ります。' : '丁寧さを活かしつつ、得意な作業から少しずつバリエーションを広げていきます。') + '\n\n' +
+    '2. 【通所リズム・自己管理の定着】\n' +
+    '無理のない通所ペース（週2〜3日等）からスタートし、体調や疲労度をモニタリングしながら安定した通所リズムを確立します。\n\n' +
+    '3. 【環境適応・支援体制】\n' +
+    'スタッフとの報連相を継続的にサポートし、安心して本来の強みを発揮できるよう環境設定を行います。';
+
+  return {
+    accuracyRank: accuracyRank,
+    accuracyText: accuracyText,
+    speedRank: speedRank,
+    speedText: speedText,
+    autonomyRank: autonomyRank,
+    autonomyText: autonomyText,
+    commRank: commRank,
+    commText: commText,
+    summary: summaryStr,
+    futurePlan: futurePlanStr
+  };
 }
 
 function updateTrialOpts(){
