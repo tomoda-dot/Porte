@@ -87,7 +87,7 @@ tr:hover td{background:var(--hov)}
 .cal-nav button{background:var(--pri);color:#fff;padding:6px 14px;font-size:13px}
 .cal-nav .cal-month{font-size:18px;font-weight:700;min-width:160px;text-align:center}
 
-@media print{.no-print{display:none!important}body{background:#fff;margin:0;padding:0}#pr-form input[type=number]{-moz-appearance:textfield;appearance:textfield;border:none!important;background:transparent!important;box-shadow:none!important;outline:none!important}#pr-form input[type=number]::-webkit-outer-spin-button,#pr-form input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}.sr-page{page-break-after:always;page-break-inside:avoid;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.sr-page:last-child{page-break-after:auto;break-after:auto}.sr-page table{width:100%!important;table-layout:fixed}.irp-page{page-break-after:always;break-after:page}.irp-page:last-child{page-break-after:auto;break-after:auto}.wd-page{page-break-after:always;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.side,.hd-row{display:none!important}.main{padding:0!important;margin:0!important;overflow:visible!important}#content,.card{overflow:visible!important;max-height:none!important;height:auto!important}.wd-screen{display:none!important}.wd-print{display:block!important}@page{margin:5mm}}
+@media print{.no-print{display:none!important}.overlay{position:static!important;background:none!important;display:block!important}.modal{box-shadow:none!important;border:none!important;width:100%!important;max-width:100%!important;padding:0!important;max-height:none!important;overflow:visible!important}body{background:#fff;margin:0;padding:0}#pr-form input[type=number]{-moz-appearance:textfield;appearance:textfield;border:none!important;background:transparent!important;box-shadow:none!important;outline:none!important}#pr-form input[type=number]::-webkit-outer-spin-button,#pr-form input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}.sr-page{page-break-after:always;page-break-inside:avoid;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.sr-page:last-child{page-break-after:auto;break-after:auto}.sr-page table{width:100%!important;table-layout:fixed}.irp-page{page-break-after:always;break-after:page}.irp-page:last-child{page-break-after:auto;break-after:auto}.wd-page{page-break-after:always;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.side,.hd-row{display:none!important}.main{padding:0!important;margin:0!important;overflow:visible!important}#content,.card{overflow:visible!important;max-height:none!important;height:auto!important}.wd-screen{display:none!important}.wd-print{display:block!important}@page{margin:5mm}}
 .spin{width:20px;height:20px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:sp .6s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
 .login-box{background:#fff;border-radius:16px;box-shadow:0 4px 32px rgba(0,0,0,.12);padding:40px 36px;width:360px;max-width:90vw}
@@ -3266,6 +3266,37 @@ function _psRenderFromData(c){
 }
 
 // ═══ 見学・体験 ═══
+function _getTrialReportData(t){
+  t = t || {};
+  var extra = {};
+  var displayNotes = t.notes || '';
+  if(displayNotes.indexOf('---REPORT_DATA---') >= 0){
+    try {
+      var parts = displayNotes.split('---REPORT_DATA---');
+      displayNotes = parts[0].trim();
+      extra = JSON.parse(parts[1]);
+    } catch(e){}
+  }
+  var sess = typeof getSession === 'function' ? getSession() : null;
+  var defCreator = sess && sess.name ? '担当：' + sess.name : '担当：友田';
+
+  return {
+    creator: t.creator || extra.creator || defCreator,
+    schedule: t.schedule || extra.schedule || '',
+    evalAccuracyRank: t.evalAccuracyRank || extra.evalAccuracyRank || '非常に良好（優）',
+    evalAccuracyText: t.evalAccuracyText || extra.evalAccuracyText || '',
+    evalSpeedRank: t.evalSpeedRank || extra.evalSpeedRank || '良好（良）',
+    evalSpeedText: t.evalSpeedText || extra.evalSpeedText || '',
+    evalAutonomyRank: t.evalAutonomyRank || extra.evalAutonomyRank || '良好（良）',
+    evalAutonomyText: t.evalAutonomyText || extra.evalAutonomyText || '',
+    evalCommRank: t.evalCommRank || extra.evalCommRank || '順調（良）',
+    evalCommText: t.evalCommText || extra.evalCommText || '',
+    summary: t.summary || extra.summary || '',
+    futurePlan: t.futurePlan || extra.futurePlan || '',
+    notes: displayNotes
+  };
+}
+
 function renderTrials(c){
   var list=S.trials.slice();
   list.sort(function(a,b){return a.date>b.date?-1:1;});
@@ -3273,43 +3304,351 @@ function renderTrials(c){
     '<div class="card"><div class="tbl-wrap"><table><thead><tr><th>日付</th><th>時間</th><th>氏名</th><th>種別</th><th>弁当</th><th>送迎</th><th>連絡先</th><th>状態</th><th>備考</th><th>操作</th></tr></thead><tbody>'+
     (list.length===0?'<tr><td colspan="10" style="text-align:center;color:var(--sub);padding:28px">見学・体験予定がありません</td></tr>':
     list.map(function(t){
+      var rep = _getTrialReportData(t);
       return '<tr><td style="font-weight:700">'+fmtDate(t.date)+'</td><td>'+esc(t.time||'')+'</td><td style="font-weight:600;color:var(--pri)">'+esc(t.name)+'</td>'+
       '<td><span class="badge" style="background:'+(t.type==='体験'?'var(--acc)':'#1565c0')+'">'+esc(t.type||'見学')+'</span></td>'+
       '<td>'+(t.bento==='あり'?'🍱':'−')+'</td><td>'+(t.pickup==='あり'?'🚐':'−')+'</td><td>'+esc(t.contact||'')+'</td>'+
-      '<td>'+esc(t.status||'予定')+'</td><td style="font-size:11px">'+esc(t.notes||'')+'</td>'+
-      '<td><button class="bg" onclick=\'openTrialModal('+JSON.stringify(t).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delTrial(\''+t.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';
+      '<td>'+esc(t.status||'予定')+'</td><td style="font-size:11px">'+esc(rep.notes||'')+'</td>'+
+      '<td>'+
+      '<button class="bg" onclick=\'openTrialReportModal('+JSON.stringify(t).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 8px;margin-right:4px;color:var(--pri);border-color:var(--pri)">📄 報告書</button>'+
+      '<button class="bg" onclick=\'openTrialModal('+JSON.stringify(t).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 8px;margin-right:4px">編集</button>'+
+      '<button class="br" onclick="delTrial(\''+t.id+'\')" style="font-size:11px;padding:3px 8px">削除</button>'+
+      '</td></tr>';
     }).join(''))+'</tbody></table></div></div><div id="tr-modal"></div>';
 }
+
 function openTrialModal(t){
   var d=t||{name:'',type:'見学',date:'',time:'',contact:'',bento:'なし',pickup:'なし',notes:'',status:'予定'};
+  var rep=_getTrialReportData(d);
   var isEdit=!!d.id;
-  var html='<div class="overlay" onclick="closeModal(\'tr-modal\')"><div class="modal" style="width:500px" onclick="event.stopPropagation()">'+
-    '<div class="modal-hd"><h3>'+(isEdit?'予定の編集':'予定の追加')+'</h3><button class="modal-close" onclick="closeModal(\'tr-modal\')">✕</button></div>'+
-    '<div class="grid2"><div class="field"><label>氏名 *</label><input id="tr-name" value="'+esc(d.name)+'" style="width:100%"></div>'+
-    '<div class="field"><label>種別</label><select id="tr-type" style="width:100%" onchange="updateTrialOpts()"><option'+(d.type==='見学'?' selected':'')+'>見学</option><option'+(d.type==='体験'?' selected':'')+'>体験</option></select></div></div>'+
-    '<div class="grid2"><div class="field"><label>予定日 *</label><input type="date" id="tr-date" value="'+(d.date||'')+'" style="width:100%"></div>'+
-    '<div class="field"><label>時間</label><input type="time" id="tr-time" value="'+(d.time||'')+'" style="width:100%"></div></div>'+
-    '<div class="grid2"><div class="field"><label>お弁当</label><select id="tr-bento" style="width:100%"><option'+(d.bento==='あり'?' selected':'')+'>あり</option><option'+(d.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
-    '<div class="field"><label>送迎</label><select id="tr-pickup" style="width:100%"><option'+(d.pickup==='あり'?' selected':'')+'>あり</option><option'+(d.pickup!=='あり'?' selected':'')+'>なし</option></select></div></div>'+
-    '<div class="grid2"><div class="field"><label>連絡先</label><input id="tr-contact" value="'+esc(d.contact||'')+'" style="width:100%"></div>'+
-    '<div class="field"><label>状態</label><select id="tr-status" style="width:100%"><option'+(d.status==='予定'?' selected':'')+'>予定</option><option'+(d.status==='完了'?' selected':'')+'>完了</option><option'+(d.status==='キャンセル'?' selected':'')+'>キャンセル</option></select></div></div>'+
-    '<div class="field"><label>備考</label><textarea id="tr-notes" rows="2" style="width:100%">'+esc(d.notes||'')+'</textarea></div>'+
-    '<div class="btns"><button class="bg" onclick="closeModal(\'tr-modal\')">キャンセル</button><button class="bp" onclick="saveTrial(\''+(d.id||'')+'\')">保存</button></div></div></div>';
+  
+  var html='<div class="overlay" onclick="closeModal(\'tr-modal\')">'+
+    '<div class="modal" style="width:780px;max-width:95vw;max-height:88vh;overflow-y:auto" onclick="event.stopPropagation()">'+
+    '<div class="modal-hd"><h3>'+(isEdit?'体験・見学予定と報告書の編集':'体験・見学予定の追加')+'</h3>'+
+    '<button class="modal-close" onclick="closeModal(\'tr-modal\')">✕</button></div>'+
+
+    '<!-- ① 基本情報 -->'+
+    '<div style="background:#f8f9fa;border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;margin-bottom:14px">'+
+      '<div style="font-weight:700;color:var(--pri);margin-bottom:10px;font-size:13px;border-bottom:1.5px solid var(--bdr);padding-bottom:4px">📋 基本情報</div>'+
+      '<div class="grid3">'+
+        '<div class="field"><label>ご利用者名 *</label><input id="tr-name" value="'+esc(d.name)+'" style="width:100%"></div>'+
+        '<div class="field"><label>種別</label><select id="tr-type" style="width:100%" onchange="updateTrialOpts()"><option'+(d.type==='見学'?' selected':'')+'>見学</option><option'+(d.type==='体験'?' selected':'')+'>体験</option></select></div>'+
+        '<div class="field"><label>状態</label><select id="tr-status" style="width:100%"><option'+(d.status==='予定'?' selected':'')+'>予定</option><option'+(d.status==='完了'?' selected':'')+'>完了</option><option'+(d.status==='キャンセル'?' selected':'')+'>キャンセル</option></select></div>'+
+      '</div>'+
+      '<div class="grid3">'+
+        '<div class="field"><label>予定日 / 利用日 *</label><input type="date" id="tr-date" value="'+(d.date||'')+'" style="width:100%"></div>'+
+        '<div class="field"><label>時間</label><input type="time" id="tr-time" value="'+(d.time||'')+'" style="width:100%"></div>'+
+        '<div class="field"><label>記録作成者（担当）</label><input id="tr-creator" value="'+esc(rep.creator)+'" style="width:100%" placeholder="担当：友田"></div>'+
+      '</div>'+
+      '<div class="grid3">'+
+        '<div class="field"><label>お弁当</label><select id="tr-bento" style="width:100%"><option'+(d.bento==='あり'?' selected':'')+'>あり</option><option'+(d.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
+        '<div class="field"><label>送迎</label><select id="tr-pickup" style="width:100%"><option'+(d.pickup==='あり'?' selected':'')+'>あり</option><option'+(d.pickup!=='あり'?' selected':'')+'>なし</option></select></div>'+
+        '<div class="field"><label>連絡先</label><input id="tr-contact" value="'+esc(d.contact||'')+'" style="width:100%"></div>'+
+      '</div>'+
+    '</div>'+
+
+    '<!-- ② 当日の経過・タイムスケジュール -->'+
+    '<div style="background:#f8f9fa;border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;margin-bottom:14px">'+
+      '<div style="font-weight:700;color:var(--pri);margin-bottom:10px;font-size:13px;border-bottom:1.5px solid var(--bdr);padding-bottom:4px">🕒 当日の経過・タイムスケジュール</div>'+
+      '<div class="field" style="margin-bottom:0">'+
+        '<label>経過・タイムスケジュール（時間・項目・内容）</label>'+
+        '<textarea id="tr-schedule" rows="5" style="width:100%;font-size:12px;line-height:1.5" placeholder="09:10 - 09:40 迎車・来所：ファミリーマートにて合流し、送迎車にて移動&#10;09:40 - 12:00 午前作業（ビーズ製作）：集中して熱心に多数のブレスレットを作成&#10;12:00 - 13:00 昼食・休憩：全量完食。和やかに会話&#10;13:00 - 13:30 午後作業①（ビーズ製作）：自発的に作業再開&#10;13:30 - 14:30 午後作業②（シール貼り）：正確かつスピーディー&#10;14:30 - 迎車・退所：帰路につかれる">'+esc(rep.schedule)+'</textarea>'+
+      '</div>'+
+    '</div>'+
+
+    '<!-- ③ 評価・振り返り項目（アセスメント視点） -->'+
+    '<div style="background:#f8f9fa;border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;margin-bottom:14px">'+
+      '<div style="font-weight:700;color:var(--pri);margin-bottom:10px;font-size:13px;border-bottom:1.5px solid var(--bdr);padding-bottom:4px">📊 評価・振り返り項目（アセスメント視点）</div>'+
+      
+      '<div style="margin-bottom:10px;background:#fff;padding:10px;border-radius:6px;border:1px solid var(--bdr)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+          '<strong>作業精度・手先の器用さ</strong>'+
+          '<div><span style="font-size:12px;color:var(--sub);margin-right:6px">評価:</span>'+
+            '<select id="tr-eval-accuracy-rank" style="font-size:12px;padding:4px 8px">'+
+              '<option'+(rep.evalAccuracyRank==='非常に良好（優）'?' selected':'')+'>非常に良好（優）</option>'+
+              '<option'+(rep.evalAccuracyRank==='良好（良）'?' selected':'')+'>良好（良）</option>'+
+              '<option'+(rep.evalAccuracyRank==='順調（良）'?' selected':'')+'>順調（良）</option>'+
+              '<option'+(rep.evalAccuracyRank==='課題あり'?' selected':'')+'>課題あり</option>'+
+            '</select></div>'+
+        '</div>'+
+        '<textarea id="tr-eval-accuracy-text" rows="2" style="width:100%;font-size:12px" placeholder="具体的なご様子・ストレングス（指先の細かな動作が非常に安定しており大変正確です）">'+esc(rep.evalAccuracyText)+'</textarea>'+
+      '</div>'+
+
+      '<div style="margin-bottom:10px;background:#fff;padding:10px;border-radius:6px;border:1px solid var(--bdr)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+          '<strong>作業速度・持続力</strong>'+
+          '<div><span style="font-size:12px;color:var(--sub);margin-right:6px">評価:</span>'+
+            '<select id="tr-eval-speed-rank" style="font-size:12px;padding:4px 8px">'+
+              '<option'+(rep.evalSpeedRank==='非常に良好（優）'?' selected':'')+'>非常に良好（優）</option>'+
+              '<option'+(rep.evalSpeedRank==='良好（良）'?' selected':'')+'>良好（良）</option>'+
+              '<option'+(rep.evalSpeedRank==='順調（良）'?' selected':'')+'>順調（良）</option>'+
+              '<option'+(rep.evalSpeedRank==='課題あり'?' selected':'')+'>課題あり</option>'+
+            '</select></div>'+
+        '</div>'+
+        '<textarea id="tr-eval-speed-text" rows="2" style="width:100%;font-size:12px" placeholder="具体的なご様子・ストレングス（慣れない作業内容であっても理解が早くスピード感があります）">'+esc(rep.evalSpeedText)+'</textarea>'+
+      '</div>'+
+
+      '<div style="margin-bottom:10px;background:#fff;padding:10px;border-radius:6px;border:1px solid var(--bdr)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+          '<strong>自律性・自己管理</strong>'+
+          '<div><span style="font-size:12px;color:var(--sub);margin-right:6px">評価:</span>'+
+            '<select id="tr-eval-autonomy-rank" style="font-size:12px;padding:4px 8px">'+
+              '<option'+(rep.evalAutonomyRank==='非常に良好（優）'?' selected':'')+'>非常に良好（優）</option>'+
+              '<option'+(rep.evalAutonomyRank==='良好（良）'?' selected':'')+'>良好（良）</option>'+
+              '<option'+(rep.evalAutonomyRank==='順調（良）'?' selected':'')+'>順調（良）</option>'+
+              '<option'+(rep.evalAutonomyRank==='課題あり'?' selected':'')+'>課題あり</option>'+
+            '</select></div>'+
+        '</div>'+
+        '<textarea id="tr-eval-autonomy-text" rows="2" style="width:100%;font-size:12px" placeholder="具体的なご様子・ストレングス（休憩のタイミングをご自身で判断・実施できるセルフコントロール能力があります）">'+esc(rep.evalAutonomyText)+'</textarea>'+
+      '</div>'+
+
+      '<div style="margin-bottom:0;background:#fff;padding:10px;border-radius:6px;border:1px solid var(--bdr)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+          '<strong>コミュニケーション・環境適応</strong>'+
+          '<div><span style="font-size:12px;color:var(--sub);margin-right:6px">評価:</span>'+
+            '<select id="tr-eval-comm-rank" style="font-size:12px;padding:4px 8px">'+
+              '<option'+(rep.evalCommRank==='非常に良好（優）'?' selected':'')+'>非常に良好（優）</option>'+
+              '<option'+(rep.evalCommRank==='良好（良）'?' selected':'')+'>良好（良）</option>'+
+              '<option'+(rep.evalCommRank==='順調（良）'?' selected':'')+'>順調（良）</option>'+
+              '<option'+(rep.evalCommRank==='課題あり'?' selected':'')+'>課題あり</option>'+
+            '</select></div>'+
+        '</div>'+
+        '<textarea id="tr-eval-comm-text" rows="2" style="width:100%;font-size:12px" placeholder="具体的なご様子・ストレングス（当初は緊張が見られましたが、会話を通じて徐々にリラックスされました）">'+esc(rep.evalCommText)+'</textarea>'+
+      '</div>'+
+    '</div>'+
+
+    '<!-- ④ 総合所見および今後の支援方針・提案 -->'+
+    '<div style="background:#f8f9fa;border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;margin-bottom:14px">'+
+      '<div style="font-weight:700;color:var(--pri);margin-bottom:10px;font-size:13px;border-bottom:1.5px solid var(--bdr);padding-bottom:4px">📝 総合所見および今後の支援方針・提案</div>'+
+      
+      '<div class="field">'+
+        '<label>【本日の体験利用の総括】</label>'+
+        '<textarea id="tr-summary" rows="3" style="width:100%;font-size:12px" placeholder="大きな混乱や過度な疲労感も見られず、終始穏やかに過ごすことができておられました。手先の正確さ、作業スピードの速さが素晴らしい強みです。">'+esc(rep.summary)+'</textarea>'+
+      '</div>'+
+
+      '<div class="field">'+
+        '<label>【今後の支援・ステップアップの方向性提案】</label>'+
+        '<textarea id="tr-future-plan" rows="3" style="width:100%;font-size:12px" placeholder="1. 手作業精度を活かした作業工程の展開&#10;2. 慣れに応じたコミュニケーションの継続&#10;3. 継続利用・定期通所に向けたペース配分支援">'+esc(rep.futurePlan)+'</textarea>'+
+      '</div>'+
+
+      '<div class="field" style="margin-bottom:0">'+
+        '<label>備考・特記事項</label>'+
+        '<textarea id="tr-notes" rows="2" style="width:100%;font-size:12px" placeholder="補足メモや連絡事項など">'+esc(rep.notes)+'</textarea>'+
+      '</div>'+
+    '</div>'+
+
+    '<div class="btns">'+
+      (isEdit?'<button class="bg" onclick=\'openTrialReportModal('+JSON.stringify(d).replace(/\'/g,"&#39;")+')\' style="margin-right:auto;color:var(--pri);border-color:var(--pri)">📄 報告書プレビュー・印刷</button>':'')+
+      '<button class="bg" onclick="closeModal(\'tr-modal\')">キャンセル</button>'+
+      '<button class="bp" onclick="saveTrial(\''+(d.id||'')+'\')">保存</button>'+
+    '</div></div></div>';
+    
   document.getElementById('tr-modal').innerHTML=html;
   updateTrialOpts();
 }
+
 function updateTrialOpts(){
   var t=document.getElementById('tr-type').value;
   var b=document.getElementById('tr-bento');
   if(t==='見学'){ b.value='なし'; b.disabled=true; } else { b.disabled=false; }
 }
+
+function openTrialReportModal(t){
+  var rep = _getTrialReportData(t);
+  var fName = (S.settings && S.settings.facilityName) || '就労継続支援 B 型事業所 ひとつぎ豊中小曽根';
+  
+  var scheduleLines = rep.schedule ? rep.schedule.split('\n').filter(Boolean) : [];
+  var scheduleRowsHtml = '';
+  if(scheduleLines.length > 0){
+    scheduleRowsHtml = scheduleLines.map(function(line){
+      var timePart = '';
+      var itemTitle = '';
+      var itemDetail = line;
+
+      var matchTime = line.match(/^(\d{1,2}:\d{2}\s*[-~～]\s*\d{1,2}:\d{2}|\d{1,2}:\d{2}\s*[-~～]?)/);
+      if(matchTime){
+        timePart = matchTime[1];
+        var rest = line.substring(timePart.length).trim();
+        var itemParts = rest.split('：');
+        if(itemParts.length > 1){
+          itemTitle = itemParts[0];
+          itemDetail = itemParts.slice(1).join('：');
+        } else {
+          itemTitle = '項目';
+          itemDetail = rest;
+        }
+      } else {
+        var itemParts2 = line.split('：');
+        if(itemParts2.length > 1){
+          itemTitle = itemParts2[0];
+          itemDetail = itemParts2.slice(1).join('：');
+        }
+      }
+
+      return '<tr><td style="width:130px;font-weight:600;padding:6px 8px;border:1px solid #777;text-align:center">'+esc(timePart || '-')+'</td>'+
+        '<td style="width:150px;font-weight:600;padding:6px 8px;border:1px solid #777;text-align:center">'+esc(itemTitle || '-')+'</td>'+
+        '<td style="padding:6px 8px;border:1px solid #777;white-space:pre-wrap">'+esc(itemDetail)+'</td></tr>';
+    }).join('');
+  } else {
+    scheduleRowsHtml = '<tr><td colspan="3" style="text-align:center;color:#888;padding:12px;border:1px solid #777">当日の経過・タイムスケジュールの記載はありません</td></tr>';
+  }
+
+  var html = '<div class="overlay" onclick="closeModal(\'tr-modal\')">'+
+    '<div class="modal" style="width:850px;max-width:96vw;max-height:90vh;overflow-y:auto;background:#fff;padding:28px" onclick="event.stopPropagation()">'+
+    '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--pri)">'+
+      '<h3 style="margin:0;color:var(--pri)">📄 体験利用報告書 プレビュー</h3>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button class="bp" onclick="window.print()" style="padding:8px 18px">🖨️ 印刷</button>'+
+        '<button class="bg" onclick="closeModal(\'tr-modal\')">閉じる</button>'+
+      '</div>'+
+    '</div>'+
+    
+    '<div class="trial-report-paper" style="font-family:\'Noto Sans JP\',sans-serif;color:#111;line-height:1.6">'+
+      '<h2 style="text-align:center;font-size:20px;font-weight:800;letter-spacing:2px;margin-bottom:20px;border-bottom:2px solid #333;padding-bottom:8px">体験利用報告書</h2>'+
+      
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px">'+
+        '<tr>'+
+          '<th style="background:#f0f4f0;border:1px solid #777;padding:6px 10px;width:15%;text-align:center">ご 利 用 者 名</th>'+
+          '<td style="border:1px solid #777;padding:6px 10px;width:35%;font-weight:700;font-size:14px">'+esc(t.name || '')+' 様</td>'+
+          '<th style="background:#f0f4f0;border:1px solid #777;padding:6px 10px;width:15%;text-align:center">体 験 利 用 日</th>'+
+          '<td style="border:1px solid #777;padding:6px 10px;width:35%">'+fmtDate(t.date)+(t.time ? ' (' + esc(t.time) + ')' : '')+'</td>'+
+        '</tr>'+
+        '<tr>'+
+          '<th style="background:#f0f4f0;border:1px solid #777;padding:6px 10px;text-align:center">送 迎 利 用</th>'+
+          '<td style="border:1px solid #777;padding:6px 10px">'+(t.pickup === 'あり' ? 'あり' : 'なし')+'</td>'+
+          '<th style="background:#f0f4f0;border:1px solid #777;padding:6px 10px;text-align:center">食 事 利 用</th>'+
+          '<td style="border:1px solid #777;padding:6px 10px">'+(t.bento === 'あり' ? 'あり' : 'なし')+'</td>'+
+        '</tr>'+
+        '<tr>'+
+          '<th style="background:#f0f4f0;border:1px solid #777;padding:6px 10px;text-align:center">作 成 事 業 所</th>'+
+          '<td style="border:1px solid #777;padding:6px 10px">'+esc(fName)+'</td>'+
+          '<th style="background:#f0f4f0;border:1px solid #777;padding:6px 10px;text-align:center">記 録 作 成 者</th>'+
+          '<td style="border:1px solid #777;padding:6px 10px">'+esc(rep.creator)+'</td>'+
+        '</tr>'+
+      '</table>'+
+
+      '<div style="font-weight:700;font-size:14px;margin-bottom:6px">■ 当日の経過・タイムスケジュール</div>'+
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">'+
+        '<thead><tr style="background:#f0f4f0">'+
+          '<th style="border:1px solid #777;padding:6px;width:130px;text-align:center">時間</th>'+
+          '<th style="border:1px solid #777;padding:6px;width:150px;text-align:center">区分 / 項目</th>'+
+          '<th style="border:1px solid #777;padding:6px;text-align:center">ご様子・支援経過（対外用文面）</th>'+
+        '</tr></thead>'+
+        '<tbody>'+scheduleRowsHtml+'</tbody>'+
+      '</table>'+
+
+      '<div style="font-weight:700;font-size:14px;margin-bottom:6px">■ 評価・振り返り項目（アセスメント視点）</div>'+
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">'+
+        '<thead><tr style="background:#f0f4f0">'+
+          '<th style="border:1px solid #777;padding:6px;width:180px;text-align:center">評価項目</th>'+
+          '<th style="border:1px solid #777;padding:6px;width:130px;text-align:center">評価・所見</th>'+
+          '<th style="border:1px solid #777;padding:6px;text-align:center">具体的なご様子・ストレングス（強み）</th>'+
+        '</tr></thead>'+
+        '<tbody>'+
+          '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">作業精度・手先の器用さ</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalAccuracyRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalAccuracyText || '−')+'</td></tr>'+
+          '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">作業速度・持続力</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalSpeedRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalSpeedText || '−')+'</td></tr>'+
+          '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">自律性・自己管理</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalAutonomyRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalAutonomyText || '−')+'</td></tr>'+
+          '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">コミュニケーション・環境適応</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalCommRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalCommText || '−')+'</td></tr>'+
+        '</tbody>'+
+      '</table>'+
+
+      '<div style="font-weight:700;font-size:14px;margin-bottom:6px">■ 総合所見および今後の支援方針・提案</div>'+
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">'+
+        '<tr><td style="border:1px solid #777;padding:10px;white-space:pre-wrap">'+
+          '<div style="font-weight:700;margin-bottom:4px">【本日の体験利用の総括】</div>'+
+          esc(rep.summary || '（記載なし）')+'\n\n'+
+          '<div style="font-weight:700;margin-bottom:4px;margin-top:10px">【今後の支援・ステップアップの方向性提案】</div>'+
+          esc(rep.futurePlan || '（記載なし）')+
+        '</td></tr>'+
+      '</table>'+
+      (rep.notes ? '<div style="font-size:11px;color:#555;margin-top:6px"><strong>備考：</strong> ' + esc(rep.notes) + '</div>' : '')+
+    '</div>'+
+  '</div></div>';
+
+  document.getElementById('tr-modal').innerHTML = html;
+}
+
 async function saveTrial(id){
   if(!lockUI())return;
-  var data={name:document.getElementById('tr-name').value,type:document.getElementById('tr-type').value,date:document.getElementById('tr-date').value,time:document.getElementById('tr-time').value,contact:document.getElementById('tr-contact').value,bento:document.getElementById('tr-bento').value,pickup:document.getElementById('tr-pickup').value,notes:document.getElementById('tr-notes').value,status:document.getElementById('tr-status').value};
-  if(!data.name||!data.date){await cAlert('氏名と予定日は必須です');return;}
-  try{if(id){data.id=id;await gas('updateTrial',data);}else{await gas('addTrial',data);}S.trials=await gas('getTrials');closeModal('tr-modal');if(S.tab==='trials')renderTrials(document.getElementById('content'));}
-  catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
+  var name=document.getElementById('tr-name').value;
+  var type=document.getElementById('tr-type').value;
+  var date=document.getElementById('tr-date').value;
+  var time=document.getElementById('tr-time').value;
+  var bento=document.getElementById('tr-bento').value;
+  var pickup=document.getElementById('tr-pickup').value;
+  var contact=document.getElementById('tr-contact').value;
+  var status=document.getElementById('tr-status').value;
+  
+  var creator=document.getElementById('tr-creator').value;
+  var schedule=document.getElementById('tr-schedule').value;
+  var evalAccuracyRank=document.getElementById('tr-eval-accuracy-rank').value;
+  var evalAccuracyText=document.getElementById('tr-eval-accuracy-text').value;
+  var evalSpeedRank=document.getElementById('tr-eval-speed-rank').value;
+  var evalSpeedText=document.getElementById('tr-eval-speed-text').value;
+  var evalAutonomyRank=document.getElementById('tr-eval-autonomy-rank').value;
+  var evalAutonomyText=document.getElementById('tr-eval-autonomy-text').value;
+  var evalCommRank=document.getElementById('tr-eval-comm-rank').value;
+  var evalCommText=document.getElementById('tr-eval-comm-text').value;
+  var summary=document.getElementById('tr-summary').value;
+  var futurePlan=document.getElementById('tr-future-plan').value;
+  var userNotes=document.getElementById('tr-notes').value;
+
+  if(!name||!date){await cAlert('氏名と予定日は必須です');unlockUI();return;}
+
+  var extraObj={
+    creator:creator,
+    schedule:schedule,
+    evalAccuracyRank:evalAccuracyRank,
+    evalAccuracyText:evalAccuracyText,
+    evalSpeedRank:evalSpeedRank,
+    evalSpeedText:evalSpeedText,
+    evalAutonomyRank:evalAutonomyRank,
+    evalAutonomyText:evalAutonomyText,
+    evalCommRank:evalCommRank,
+    evalCommText:evalCommText,
+    summary:summary,
+    futurePlan:futurePlan
+  };
+
+  var packedNotes=(userNotes?userNotes.trim()+'\n':'')+'---REPORT_DATA---'+JSON.stringify(extraObj);
+
+  var data={
+    name:name,
+    type:type,
+    date:date,
+    time:time,
+    contact:contact,
+    bento:bento,
+    pickup:pickup,
+    status:status,
+    creator:creator,
+    schedule:schedule,
+    evalAccuracyRank:evalAccuracyRank,
+    evalAccuracyText:evalAccuracyText,
+    evalSpeedRank:evalSpeedRank,
+    evalSpeedText:evalSpeedText,
+    evalAutonomyRank:evalAutonomyRank,
+    evalAutonomyText:evalAutonomyText,
+    evalCommRank:evalCommRank,
+    evalCommText:evalCommText,
+    summary:summary,
+    futurePlan:futurePlan,
+    notes:packedNotes
+  };
+
+  try{
+    if(id){data.id=id;await gas('updateTrial',data);}
+    else{await gas('addTrial',data);}
+    S.trials=await gas('getTrials');
+    closeModal('tr-modal');
+    if(S.tab==='trials')renderTrials(document.getElementById('content'));
+  }catch(e){
+    await cAlert('保存失敗: '+e);
+  }finally{
+    unlockUI();
+  }
 }
+
 async function delTrial(id){if(!await cConfirm('削除しますか？'))return;try{await gas('deleteTrial',id);S.trials=await gas('getTrials');if(S.tab==='trials')renderTrials(document.getElementById('content'));}catch(e){await cAlert('削除失敗');}}
 
 // ═══ 出欠・日報 ═══
