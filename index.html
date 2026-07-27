@@ -87,7 +87,7 @@ tr:hover td{background:var(--hov)}
 .cal-nav button{background:var(--pri);color:#fff;padding:6px 14px;font-size:13px}
 .cal-nav .cal-month{font-size:18px;font-weight:700;min-width:160px;text-align:center}
 
-@media print{.no-print{display:none!important}body.printing-modal #content > .card,body.printing-modal .card,body:has(.overlay) #content > .card,body:has(.overlay) .card,body:has(.overlay) .hd-row,#content:has(.overlay) > .card,#content:has(.overlay) > .hd-row{display:none!important}.overlay{position:static!important;background:none!important;display:block!important;padding:0!important;margin:0!important;overflow:visible!important;height:auto!important;max-height:none!important}.modal{box-shadow:none!important;border:none!important;width:100%!important;max-width:100%!important;padding:0!important;margin:0!important;max-height:none!important;height:auto!important;overflow:visible!important}.trial-report-paper{overflow:visible!important;height:auto!important;max-height:none!important;page-break-inside:auto!important}body{background:#fff;margin:0;padding:0;overflow:visible!important;height:auto!important}#pr-form input[type=number]{-moz-appearance:textfield;appearance:textfield;border:none!important;background:transparent!important;box-shadow:none!important;outline:none!important}#pr-form input[type=number]::-webkit-outer-spin-button,#pr-form input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}.sr-page{page-break-after:always;page-break-inside:avoid;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.sr-page:last-child{page-break-after:auto;break-after:auto}.sr-page table{width:100%!important;table-layout:fixed}.irp-page{page-break-after:always;break-after:page}.irp-page:last-child{page-break-after:auto;break-after:auto}.wd-page{page-break-after:always;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.side,.hd-row{display:none!important}.main{padding:0!important;margin:0!important;overflow:visible!important;height:auto!important}#content,.card{overflow:visible!important;max-height:none!important;height:auto!important}.wd-screen{display:none!important}.wd-print{display:block!important}@page{margin:6mm}}
+@media print{.no-print{display:none!important}body.printing-modal #content > .card,body.printing-modal .card,body:has(.overlay) #content > .card,body:has(.overlay) .card,body:has(.overlay) .hd-row,#content:has(.overlay) > .card,#content:has(.overlay) > .hd-row{display:none!important}.overlay{position:static!important;background:none!important;display:block!important;padding:0!important;margin:0!important;overflow:visible!important;height:auto!important;max-height:none!important}.modal{box-shadow:none!important;border:none!important;width:100%!important;max-width:100%!important;padding:0!important;margin:0!important;max-height:none!important;height:auto!important;overflow:visible!important}.trial-report-paper{overflow:visible!important;height:auto!important;max-height:none!important;page-break-inside:auto!important}.tr-page-break{page-break-before:always!important;break-before:page!important;margin-top:0!important}body{background:#fff;margin:0;padding:0;overflow:visible!important;height:auto!important}#pr-form input[type=number]{-moz-appearance:textfield;appearance:textfield;border:none!important;background:transparent!important;box-shadow:none!important;outline:none!important}#pr-form input[type=number]::-webkit-outer-spin-button,#pr-form input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}.sr-page{page-break-after:always;page-break-inside:avoid;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.sr-page:last-child{page-break-after:auto;break-after:auto}.sr-page table{width:100%!important;table-layout:fixed}.irp-page{page-break-after:always;break-after:page}.irp-page:last-child{page-break-after:auto;break-after:auto}.wd-page{page-break-after:always;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.side,.hd-row{display:none!important}.main{padding:0!important;margin:0!important;overflow:visible!important;height:auto!important}#content,.card{overflow:visible!important;max-height:none!important;height:auto!important}.wd-screen{display:none!important}.wd-print{display:block!important}@page{margin:6mm}}
 .spin{width:20px;height:20px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:sp .6s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
 .login-box{background:#fff;border-radius:16px;box-shadow:0 4px 32px rgba(0,0,0,.12);padding:40px 36px;width:360px;max-width:90vw}
@@ -3866,31 +3866,34 @@ function openTrialReportModal(t){
         '<tbody>'+scheduleRowsHtml+'</tbody>'+
       '</table>'+
 
-      '<div style="font-weight:700;font-size:14px;margin-bottom:6px">■ 評価・振り返り項目（アセスメント視点）</div>'+
-      '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">'+
-        '<thead><tr style="background:#f0f4f0">'+
-          '<th style="border:1px solid #777;padding:6px;width:180px;text-align:center">評価項目</th>'+
-          '<th style="border:1px solid #777;padding:6px;width:130px;text-align:center">評価・所見</th>'+
-          '<th style="border:1px solid #777;padding:6px;text-align:center">具体的なご様子・ストレングス（強み）</th>'+
-        '</tr></thead>'+
-        '<tbody>'+
-          '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">作業精度・手先の器用さ</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalAccuracyRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalAccuracyText || '−')+'</td></tr>'+
-          '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">作業速度・持続力</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalSpeedRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalSpeedText || '−')+'</td></tr>'+
-          '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">自律性・自己管理</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalAutonomyRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalAutonomyText || '−')+'</td></tr>'+
-          '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">コミュニケーション・環境適応</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalCommRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalCommText || '−')+'</td></tr>'+
-        '</tbody>'+
-      '</table>'+
+      '<div class="tr-page-break" style="page-break-before:always;break-before:page">'+
+        '<div class="no-print" style="border-top:2px dashed #388e3c;margin:28px 0 18px 0;padding-top:8px;text-align:center;color:#2e7d32;font-size:12px;font-weight:700">📄 印刷 2ページ目</div>'+
+        '<div style="font-weight:700;font-size:14px;margin-bottom:6px">■ 評価・振り返り項目（アセスメント視点）</div>'+
+        '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">'+
+          '<thead><tr style="background:#f0f4f0">'+
+            '<th style="border:1px solid #777;padding:6px;width:180px;text-align:center">評価項目</th>'+
+            '<th style="border:1px solid #777;padding:6px;width:130px;text-align:center">評価・所見</th>'+
+            '<th style="border:1px solid #777;padding:6px;text-align:center">具体的なご様子・ストレングス（強み）</th>'+
+          '</tr></thead>'+
+          '<tbody>'+
+            '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">作業精度・手先の器用さ</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalAccuracyRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalAccuracyText || '−')+'</td></tr>'+
+            '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">作業速度・持続力</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalSpeedRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalSpeedText || '−')+'</td></tr>'+
+            '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">自律性・自己管理</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalAutonomyRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalAutonomyText || '−')+'</td></tr>'+
+            '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">コミュニケーション・環境適応</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalCommRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalCommText || '−')+'</td></tr>'+
+          '</tbody>'+
+        '</table>'+
 
-      '<div style="font-weight:700;font-size:14px;margin-bottom:6px">■ 総合所見および今後の支援方針・提案</div>'+
-      '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">'+
-        '<tr><td style="border:1px solid #777;padding:10px;white-space:pre-wrap">'+
-          '<div style="font-weight:700;margin-bottom:4px">【本日の体験利用の総括】</div>'+
-          esc(rep.summary || '（記載なし）')+'\n\n'+
-          '<div style="font-weight:700;margin-bottom:4px;margin-top:10px">【今後の支援・ステップアップの方向性提案】</div>'+
-          esc(rep.futurePlan || '（記載なし）')+
-        '</td></tr>'+
-      '</table>'+
-      (rep.notes ? '<div style="font-size:11px;color:#555;margin-top:6px"><strong>備考：</strong> ' + esc(rep.notes) + '</div>' : '')+
+        '<div style="font-weight:700;font-size:14px;margin-bottom:6px">■ 総合所見および今後の支援方針・提案</div>'+
+        '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">'+
+          '<tr><td style="border:1px solid #777;padding:10px;white-space:pre-wrap;line-height:1.5">'+
+            '<div style="font-weight:700;margin-bottom:4px">【本日の体験利用の総括】</div>'+
+            esc(rep.summary || '（記載なし）')+'\n\n'+
+            '<div style="font-weight:700;margin-bottom:4px;margin-top:10px">【今後の支援・ステップアップの方向性提案】</div>'+
+            esc(rep.futurePlan || '（記載なし）')+
+          '</td></tr>'+
+        '</table>'+
+        (rep.notes ? '<div style="font-size:11px;color:#555;margin-top:6px"><strong>備考：</strong> ' + esc(rep.notes) + '</div>' : '')+
+      '</div>'+
     '</div>'+
   '</div></div>';
 
