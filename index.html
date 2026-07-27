@@ -3266,6 +3266,61 @@ function _psRenderFromData(c){
 }
 
 // ═══ 見学・体験 ═══
+function _parseScheduleRows(scheduleStr){
+  if(!scheduleStr) return [];
+  var str = String(scheduleStr).trim();
+  if(str.startsWith('[') && str.endsWith(']')){
+    try {
+      var arr = JSON.parse(str);
+      if(Array.isArray(arr)) return arr;
+    } catch(e){}
+  }
+  var lines = str.split('\n').filter(Boolean);
+  if(lines.length === 0) return [];
+  return lines.map(function(line){
+    var timePart = '';
+    var itemTitle = '';
+    var itemDetail = line;
+
+    var matchTime = line.match(/^(\d{1,2}:\d{2}\s*[-~～]\s*\d{1,2}:\d{2}|\d{1,2}:\d{2}\s*[-~～]?)/);
+    if(matchTime){
+      timePart = matchTime[1];
+      var rest = line.substring(timePart.length).trim();
+      var itemParts = rest.split('：');
+      if(itemParts.length > 1){
+        itemTitle = itemParts[0];
+        itemDetail = itemParts.slice(1).join('：');
+      } else {
+        itemTitle = '項目';
+        itemDetail = rest;
+      }
+    } else {
+      var itemParts2 = line.split('：');
+      if(itemParts2.length > 1){
+        itemTitle = itemParts2[0];
+        itemDetail = itemParts2.slice(1).join('：');
+      }
+    }
+    return { time: timePart, item: itemTitle, detail: itemDetail };
+  });
+}
+
+function addTrialScheduleRow(row){
+  var r = row || { time: '', item: '', detail: '' };
+  var tbody = document.getElementById('tr-schedule-tbody');
+  if(!tbody) return;
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td style="padding:4px 6px;border:1px solid var(--bdr);vertical-align:top">'+
+    '<input class="tr-sched-time" value="'+esc(r.time||'')+'" style="width:100%;box-sizing:border-box" placeholder="09:10 - 09:40"></td>'+
+    '<td style="padding:4px 6px;border:1px solid var(--bdr);vertical-align:top">'+
+    '<input class="tr-sched-item" value="'+esc(r.item||'')+'" style="width:100%;box-sizing:border-box" placeholder="迎車・来所"></td>'+
+    '<td style="padding:4px 6px;border:1px solid var(--bdr);vertical-align:top">'+
+    '<textarea class="tr-sched-detail" rows="2" style="width:100%;box-sizing:border-box;font-size:12px;line-height:1.4" placeholder="ご様子・支援経過を入力">'+esc(r.detail||'')+'</textarea></td>'+
+    '<td style="padding:4px 6px;border:1px solid var(--bdr);text-align:center;vertical-align:top">'+
+    '<button type="button" class="br" onclick="this.closest(\'tr\').remove()" style="padding:3px 7px;font-size:11px">✕</button></td>';
+  tbody.appendChild(tr);
+}
+
 function _getTrialReportData(t){
   t = t || {};
   var extra = {};
@@ -3323,7 +3378,7 @@ function openTrialModal(t){
   var isEdit=!!d.id;
   
   var html='<div class="overlay" onclick="closeModal(\'tr-modal\')">'+
-    '<div class="modal" style="width:780px;max-width:95vw;max-height:88vh;overflow-y:auto" onclick="event.stopPropagation()">'+
+    '<div class="modal" style="width:820px;max-width:96vw;max-height:88vh;overflow-y:auto" onclick="event.stopPropagation()">'+
     '<div class="modal-hd"><h3>'+(isEdit?'体験・見学予定と報告書の編集':'体験・見学予定の追加')+'</h3>'+
     '<button class="modal-close" onclick="closeModal(\'tr-modal\')">✕</button></div>'+
 
@@ -3349,10 +3404,22 @@ function openTrialModal(t){
 
     '<!-- ② 当日の経過・タイムスケジュール -->'+
     '<div style="background:#f8f9fa;border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;margin-bottom:14px">'+
-      '<div style="font-weight:700;color:var(--pri);margin-bottom:10px;font-size:13px;border-bottom:1.5px solid var(--bdr);padding-bottom:4px">🕒 当日の経過・タイムスケジュール</div>'+
-      '<div class="field" style="margin-bottom:0">'+
-        '<label>経過・タイムスケジュール（時間・項目・内容）</label>'+
-        '<textarea id="tr-schedule" rows="5" style="width:100%;font-size:12px;line-height:1.5" placeholder="09:10 - 09:40 迎車・来所：ファミリーマートにて合流し、送迎車にて移動&#10;09:40 - 12:00 午前作業（ビーズ製作）：集中して熱心に多数のブレスレットを作成&#10;12:00 - 13:00 昼食・休憩：全量完食。和やかに会話&#10;13:00 - 13:30 午後作業①（ビーズ製作）：自発的に作業再開&#10;13:30 - 14:30 午後作業②（シール貼り）：正確かつスピーディー&#10;14:30 - 迎車・退所：帰路につかれる">'+esc(rep.schedule)+'</textarea>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1.5px solid var(--bdr);padding-bottom:6px">'+
+        '<div style="font-weight:700;color:var(--pri);font-size:13px">🕒 当日の経過・タイムスケジュール</div>'+
+        '<button class="bg" type="button" onclick="addTrialScheduleRow()" style="font-size:11px;padding:4px 12px;background:#fff;font-weight:600">+ 行を追加</button>'+
+      '</div>'+
+      '<div class="tbl-wrap">'+
+        '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+          '<thead>'+
+            '<tr style="background:#eef2ee">'+
+              '<th style="width:130px;padding:6px;border:1px solid var(--bdr);text-align:center">時間</th>'+
+              '<th style="width:160px;padding:6px;border:1px solid var(--bdr);text-align:center">区分 / 項目</th>'+
+              '<th style="padding:6px;border:1px solid var(--bdr);text-align:center">ご様子・支援経過（対外用文面）</th>'+
+              '<th style="width:40px;padding:6px;border:1px solid var(--bdr);text-align:center">削除</th>'+
+            '</tr>'+
+          '</thead>'+
+          '<tbody id="tr-schedule-tbody"></tbody>'+
+        '</table>'+
       '</div>'+
     '</div>'+
 
@@ -3445,6 +3512,20 @@ function openTrialModal(t){
     
   document.getElementById('tr-modal').innerHTML=html;
   updateTrialOpts();
+
+  // Populate schedule rows
+  var schedRows = _parseScheduleRows(rep.schedule);
+  if(schedRows.length === 0){
+    schedRows = [
+      { time: '09:10 - 09:40', item: '迎車・来所', detail: '' },
+      { time: '09:40 - 12:00', item: '午前作業（ビーズ製作）', detail: '' },
+      { time: '12:00 - 13:00', item: '昼食・休憩', detail: '' },
+      { time: '13:00 - 13:30', item: '午後作業①（ビーズ製作）', detail: '' },
+      { time: '13:30 - 14:30', item: '午後作業②（シール貼り）', detail: '' },
+      { time: '14:30 -', item: '迎車・退所', detail: '' }
+    ];
+  }
+  schedRows.forEach(function(r){ addTrialScheduleRow(r); });
 }
 
 function updateTrialOpts(){
@@ -3457,37 +3538,13 @@ function openTrialReportModal(t){
   var rep = _getTrialReportData(t);
   var fName = (S.settings && S.settings.facilityName) || '就労継続支援 B 型事業所 ひとつぎ豊中小曽根';
   
-  var scheduleLines = rep.schedule ? rep.schedule.split('\n').filter(Boolean) : [];
+  var schedRows = _parseScheduleRows(rep.schedule);
   var scheduleRowsHtml = '';
-  if(scheduleLines.length > 0){
-    scheduleRowsHtml = scheduleLines.map(function(line){
-      var timePart = '';
-      var itemTitle = '';
-      var itemDetail = line;
-
-      var matchTime = line.match(/^(\d{1,2}:\d{2}\s*[-~～]\s*\d{1,2}:\d{2}|\d{1,2}:\d{2}\s*[-~～]?)/);
-      if(matchTime){
-        timePart = matchTime[1];
-        var rest = line.substring(timePart.length).trim();
-        var itemParts = rest.split('：');
-        if(itemParts.length > 1){
-          itemTitle = itemParts[0];
-          itemDetail = itemParts.slice(1).join('：');
-        } else {
-          itemTitle = '項目';
-          itemDetail = rest;
-        }
-      } else {
-        var itemParts2 = line.split('：');
-        if(itemParts2.length > 1){
-          itemTitle = itemParts2[0];
-          itemDetail = itemParts2.slice(1).join('：');
-        }
-      }
-
-      return '<tr><td style="width:130px;font-weight:600;padding:6px 8px;border:1px solid #777;text-align:center">'+esc(timePart || '-')+'</td>'+
-        '<td style="width:150px;font-weight:600;padding:6px 8px;border:1px solid #777;text-align:center">'+esc(itemTitle || '-')+'</td>'+
-        '<td style="padding:6px 8px;border:1px solid #777;white-space:pre-wrap">'+esc(itemDetail)+'</td></tr>';
+  if(schedRows.length > 0){
+    scheduleRowsHtml = schedRows.map(function(r){
+      return '<tr><td style="width:130px;font-weight:600;padding:6px 8px;border:1px solid #777;text-align:center">'+esc(r.time || '-')+'</td>'+
+        '<td style="width:150px;font-weight:600;padding:6px 8px;border:1px solid #777;text-align:center">'+esc(r.item || '-')+'</td>'+
+        '<td style="padding:6px 8px;border:1px solid #777;white-space:pre-wrap">'+esc(r.detail || '−')+'</td></tr>';
     }).join('');
   } else {
     scheduleRowsHtml = '<tr><td colspan="3" style="text-align:center;color:#888;padding:12px;border:1px solid #777">当日の経過・タイムスケジュールの記載はありません</td></tr>';
@@ -3580,7 +3637,25 @@ async function saveTrial(id){
   var status=document.getElementById('tr-status').value;
   
   var creator=document.getElementById('tr-creator').value;
-  var schedule=document.getElementById('tr-schedule').value;
+  
+  // Collect dynamic schedule table rows
+  var schedRows = [];
+  var trs = document.querySelectorAll('#tr-schedule-tbody tr');
+  trs.forEach(function(tr){
+    var timeEl = tr.querySelector('.tr-sched-time');
+    var itemEl = tr.querySelector('.tr-sched-item');
+    var detailEl = tr.querySelector('.tr-sched-detail');
+    if(timeEl && itemEl && detailEl){
+      var tVal = timeEl.value.trim();
+      var iVal = itemEl.value.trim();
+      var dVal = detailEl.value.trim();
+      if(tVal || iVal || dVal){
+        schedRows.push({ time: tVal, item: iVal, detail: dVal });
+      }
+    }
+  });
+  var schedule = JSON.stringify(schedRows);
+
   var evalAccuracyRank=document.getElementById('tr-eval-accuracy-rank').value;
   var evalAccuracyText=document.getElementById('tr-eval-accuracy-text').value;
   var evalSpeedRank=document.getElementById('tr-eval-speed-rank').value;
