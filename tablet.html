@@ -526,7 +526,7 @@ async function selectUser(userId){
     });
     el('f-start').value=att?att.startTime||'':'';
     el('f-end').value=att?att.endTime||'':'';
-    el('f-break').value=att?String(att.breakMin||60):'60';
+    el('f-break').value=(att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?String(att.breakMin):'60';
     el('f-bento').value=att?(att.meal?'あり':'なし'):'なし';
     el('f-transport').value=att?(att.pickup&&att.dropoff?'往復':att.pickup?'往路':att.dropoff?'復路':'なし'):'なし';
     el('f-att-notes').value=att?att.notes||'':'';

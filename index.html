@@ -1123,7 +1123,7 @@ async function openAttDailyM(uid, ds){
       '      <label>休憩時間</label>'+
       '      <select id="adm-brk" style="width:100%" onchange="updateAdmAH()">'+
              [['0','なし（0分）'],['30','30分'],['45','45分'],['60','60分（標準）']].map(function(opt){
-               var brkVal=String(Number(att.breakMin)||60);
+               var brkVal=(att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?String(att.breakMin):'60';
                return'<option value="'+opt[0]+'"'+(brkVal===opt[0]?' selected':'')+'>'+opt[1]+'</option>';
              }).join('')+
       '      </select>'+
@@ -4094,10 +4094,10 @@ async function renderAttTbl(){
       var status=r?r.status:'未記録';
       var isTemp=tempUids.indexOf(u.id)>=0&&!(u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0);
       var stLabel=(r && r.status !== '調整休')?'<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>':'<span style="color:var(--sub);font-size:11px">-</span>';
-      var nameLabel=esc(u.name)+(isTemp?' <span style="font-size:9px;color:var(--acc)">★臨時</span>':'');
-      var wtDispAm=r?esc(wtName(r.workTypeId)):'-';
-      var pmId=r?((r.workTypeIdPm&&r.workTypeIdPm!=='')?r.workTypeIdPm:r.workTypeId):'';
-      var wtDispPm=r?esc(wtName(pmId)):'-';
+      var amIdRaw=r?(r.workTypeId||''):'';
+      var pmIdRaw=r?(r.workTypeIdPm!==undefined&&r.workTypeIdPm!==null?r.workTypeIdPm:r.workTypeId):'';
+      var wtDispAm=(r&&amIdRaw&&amIdRaw!=='none'&&amIdRaw!=='なし')?esc(wtName(amIdRaw)):'-';
+      var wtDispPm=(r&&pmIdRaw&&pmIdRaw!=='none'&&pmIdRaw!=='なし')?esc(wtName(pmIdRaw)):'-';
       var bIcon='-',pIcon='-';
       var curB=r?(r.bento||u.bento):u.bento;
       var curP=r?(r.pickup||u.pickup):u.pickup;
@@ -4242,9 +4242,10 @@ function renderAttMonthlyTbl(){
     var moodDisp='-';
     var isAbLine=['欠席','体調不良','通院'].indexOf(status)>=0;
     if(rep && status!=='調整休'){
-      wtDispAm=wtName(rep.workTypeId);
-      var pmId=(rep.workTypeIdPm&&rep.workTypeIdPm!=='')?rep.workTypeIdPm:rep.workTypeId;
-      wtDispPm=wtName(pmId);
+      var amM=rep.workTypeId||(r?r.workTypeId:'');
+      var pmM=(rep.workTypeIdPm!==undefined&&rep.workTypeIdPm!==null)?rep.workTypeIdPm:(r&&r.workTypeIdPm!==undefined&&r.workTypeIdPm!==null?r.workTypeIdPm:amM);
+      wtDispAm=(amM&&amM!=='none'&&amM!=='なし')?wtName(amM):'-';
+      wtDispPm=(pmM&&pmM!=='none'&&pmM!=='なし')?wtName(pmM):'-';
       repContent=rep.content||'';
       moodDisp=rep.mood||'';
     }else{
