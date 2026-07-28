@@ -319,7 +319,7 @@ function updateNav(){
   var btns=nav.querySelectorAll('button[data-tab]');
   for(var i=0;i<btns.length;i++){btns[i].className=btns[i].getAttribute('data-tab')===S.tab?'act':'';}
 }
-function switchTab(t){guardNav(function(){S.tab=t;updateNav();renderTab();});}
+function switchTab(t){guardNav(function(){if(t==='export')eT='menu';if(t==='attendance')S.attSubTab='daily';if(t==='staff')_staffTab='list';if(t==='transport')tSubTab='daily';S.tab=t;updateNav();renderTab();});}
 function renderTab(){var c=document.getElementById('content');var fn='render'+S.tab.charAt(0).toUpperCase()+S.tab.slice(1);if(typeof window[fn]==='function')window[fn](c);else c.innerHTML='準備中';}
 function closeModal(id){document.getElementById(id).innerHTML='';}
 
@@ -7052,7 +7052,7 @@ function toggleCustomAllowance(userId,alName){
 // ═══ ヒヤリハット・事故報告 ═══
 var _incidentData=[];
 async function renderIncidents(c){
-  c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:12px">⚠️ ヒヤリハット・事故報告</h2><div id="inc-area"><div class="loading-center"><div class="spin"></div></div></div>';
+  c.innerHTML='<div class="hd-row"><h2>⚠️ ヒヤリハット・事故報告</h2><button class="bg" onclick="eT=\'menu\';renderExport(document.getElementById(\'content\'))" style="font-size:12px">← 帳票一覧</button></div><div id="inc-area"><div class="loading-center"><div class="spin"></div></div></div>';
   try{_incidentData=await gas('getIncidents');loadIncidentList();}
   catch(e){document.getElementById('inc-area').innerHTML='<div class="card" style="color:#c62828">読み込みエラー: '+e+'</div>';}
 }
@@ -7213,7 +7213,7 @@ function printIncident(id){
 // ═══ 苦情・相談記録 ═══
 var _complaintData=[];
 async function renderComplaints(c){
-  c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:12px">📞 苦情・相談記録</h2><div id="cmp-area"><div class="loading-center"><div class="spin"></div></div></div>';
+  c.innerHTML='<div class="hd-row"><h2>📞 苦情・相談記録</h2><button class="bg" onclick="eT=\'menu\';renderExport(document.getElementById(\'content\'))" style="font-size:12px">← 帳票一覧</button></div><div id="cmp-area"><div class="loading-center"><div class="spin"></div></div></div>';
   try{_complaintData=await gas('getComplaints');loadComplaintList();}
   catch(e){document.getElementById('cmp-area').innerHTML='<div class="card" style="color:#c62828">読み込みエラー: '+e+'</div>';}
 }
@@ -7356,7 +7356,7 @@ var _trainData=[],_trainReports=[],_trainFY=null;
 function _getFY(){var d=new Date();var y=d.getFullYear();return d.getMonth()<3?y-1:y;}
 async function renderTraining(c){
   if(!_trainFY)_trainFY=_getFY();
-  c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:12px">📚 研修・委員会管理</h2><div id="trn-area"><div class="loading-center"><div class="spin"></div></div></div>';
+  c.innerHTML='<div class="hd-row"><h2>📚 研修・委員会管理</h2><button class="bg" onclick="eT=\'menu\';renderExport(document.getElementById(\'content\'))" style="font-size:12px">← 帳票一覧</button></div><div id="trn-area"><div class="loading-center"><div class="spin"></div></div></div>';
   try{
     _trainData=await gas('getTrainings');
     _trainReports=await gas('getTrainingReports');
