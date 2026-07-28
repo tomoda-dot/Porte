@@ -530,10 +530,18 @@ async function selectUser(userId){
     el('f-bento').value=att?(att.meal?'あり':'なし'):'なし';
     el('f-transport').value=att?(att.pickup&&att.dropoff?'往復':att.pickup?'往路':att.dropoff?'復路':'なし'):'なし';
     el('f-att-notes').value=att?att.notes||'':'';
-    el('f-work-am').value=rep?rep.workAM||'':'';
-    el('f-work-pm').value=rep?rep.workPM||'':'';
+    function resolveWtId(v){
+      if(!v || v==='none' || v==='なし' || v==='作業なし') return 'none';
+      var found=WORK_TYPES.find(function(w){return w.id===v || w.name===v;});
+      return found ? found.id : v;
+    }
+    var rawAm=rep?(rep.workAM||rep.workTypeId):att?att.workTypeId:'';
+    var rawPm=rep?(rep.workPM||rep.workTypeIdPm):att?(att.workTypeIdPm||att.workTypeId):'';
+
+    el('f-work-am').value=resolveWtId(rawAm);
+    el('f-work-pm').value=resolveWtId(rawPm);
     el('f-content').value=rep?rep.content||'':'';
-    el('f-condition').value=rep?rep.condition||'普通':'普通';
+    el('f-condition').value=rep?(rep.condition||rep.mood||'普通'):'普通';
     el('user-date-label').textContent=esc(user.name)+' — '+fmtDateJP(date);
     updateWorkTimeBadge();
   }catch(e){
@@ -542,8 +550,8 @@ async function selectUser(userId){
 }
 
 function buildFormHTML(){
-  var wtOpts='<option value="">-- 選択 --</option>';
-  WORK_TYPES.forEach(function(w){wtOpts+='<option value="'+esc(w.name)+'">'+esc(w.name)+'</option>';});
+  var wtOpts='<option value="">-- 選択 --</option><option value="none">なし（作業なし・午前帰宅等）</option>';
+  WORK_TYPES.forEach(function(w){wtOpts+='<option value="'+esc(w.id)+'">'+esc(w.name)+'</option>';});
   var tplOpts='<option value="">📋 テンプレートから入力...</option>';
   TEMPLATES.forEach(function(t){tplOpts+='<option value="'+esc(t.content||'')+'">'+esc(t.name||'')+'</option>';});
   return '<div id="user-date-label" style="font-size:16px;font-weight:700;color:var(--pri);margin-bottom:16px"></div>'
@@ -585,9 +593,9 @@ function buildFormHTML(){
 }
 
 function buildWorkTypeSelect(){
-  var opts='<option value="">-- 選択 --</option>';
+  var opts='<option value="">-- 選択 --</option><option value="none">なし（作業なし・午前帰宅等）</option>';
   WORK_TYPES.forEach(function(w){
-    opts+='<option value="'+esc(w.name)+'">'+esc(w.name)+'</option>';
+    opts+='<option value="'+esc(w.id)+'">'+esc(w.name)+'</option>';
   });
   el('f-work-am').innerHTML=opts;
   el('f-work-pm').innerHTML=opts;
@@ -641,6 +649,13 @@ async function saveForm(){
 
   try{
     var transport=el('f-transport').value;
+    var selAm=el('f-work-am').value;
+    var selPm=el('f-work-pm').value;
+    var wtAmObj=WORK_TYPES.find(function(w){return w.id===selAm;});
+    var wtPmObj=WORK_TYPES.find(function(w){return w.id===selPm;});
+    var amTypeId=(selAm&&selAm!=='none')?selAm:null;
+    var pmTypeId=(selPm&&selPm!=='none')?selPm:null;
+
     // 出欠データ
     var attData={
       userId:userId, date:date,
@@ -648,6 +663,9 @@ async function saveForm(){
       startTime:el('f-start').value,
       endTime:el('f-end').value,
       breakMin:parseInt(el('f-break').value)||60,
+      workTypeId:amTypeId,
+      workTypeIdPm:pmTypeId,
+      bento:el('f-bento').value==='あり'?'あり':'なし',
       meal:el('f-bento').value==='あり',
       pickup:transport==='往復'||transport==='往路',
       dropoff:transport==='往復'||transport==='復路',
@@ -666,10 +684,13 @@ async function saveForm(){
     // 日報データ
     var repData={
       userId:userId, date:date,
-      workAM:el('f-work-am').value,
-      workPM:el('f-work-pm').value,
+      workTypeId:amTypeId,
+      workTypeIdPm:pmTypeId,
+      workAM:selAm==='none'?'なし':(wtAmObj?wtAmObj.name:selAm),
+      workPM:selPm==='none'?'なし':(wtPmObj?wtPmObj.name:selPm),
       content:el('f-content').value,
       condition:el('f-condition').value,
+      mood:el('f-condition').value,
       staffId:ME.id, staffName:ME.name
     };
     var repEx=await SB.from('日報').select('id').eq('userId',userId).eq('date',date).limit(1);
