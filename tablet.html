@@ -465,11 +465,9 @@ async function renderUserList(){
   function makeItem(u){
     var isActive=u.id===curId;
     var isSaved=SAVED_DATES[u.id+'_'+date];
-    var att=attMap[String(u.id)];
+    var att=attMap[String(u.id||'').trim()];
     var badge='';
-    if(att && att.status==='調整休'){
-      badge='<span class="u-badge" style="color:#c07830;font-weight:700">☕ 調整休</span>';
-    }else if(att && ['欠席','体調不良','通院'].indexOf(att.status)>=0){
+    if(att && ['欠席','体調不良','通院'].indexOf(att.status)>=0){
       badge='<span class="u-badge" style="color:#c62828;font-weight:700">❌ '+esc(att.status)+'</span>';
     }else if(isSaved){
       badge='<span class="u-badge saved">✅ 入力済</span>';
