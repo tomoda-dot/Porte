@@ -92,11 +92,8 @@ tr:hover td{background:var(--hov)}
 </head>
 <body>
 <div id="app" class="loading"><div style="font-size:36px">🏢</div><div>読み込み中...</div></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="supabase-config.js"></script>
-<script src="kokuho-receipt-generator.js"></script>
-<script src="supabase-adapter.js"></script>
 <script>
+function gas(fn){var args=Array.prototype.slice.call(arguments,1);return new Promise(function(ok,ng){var r=google.script.run.withSuccessHandler(ok).withFailureHandler(ng);r[fn].apply(r,args);});}
 var S={tab:'dashboard',users:[],staff:[],workTypes:[],settings:{},ready:false};
 var today=function(){return new Date().toISOString().slice(0,10);};
 var fmtDate=function(d){if(!d||d==='undefined')return'';var p=String(d).split('-');if(p.length<3)return'';return p[0]+'/'+String(parseInt(p[1]))+'/'+String(parseInt(p[2]));};
@@ -119,7 +116,7 @@ async function loadAll(){
   }catch(e){document.getElementById('app').innerHTML='<div class="loading"><div style="font-size:36px">⚠️</div><div>initSheets を実行してください</div><button class="bp" onclick="location.reload()">再読み込み</button></div>';}
 }
 
-var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['attendance','🕐','出欠管理'],['daily','📝','日報記録'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['staff','👔','スタッフ'],['requests','📋','申請履歴'],['settings','⚙️','設定']];
+var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['attendance','🕐','出欠管理'],['daily','📝','日報記録'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
 
 function render(){
   var fn=S.settings.facilityName||'就労継続支援B型事業所';
@@ -433,198 +430,6 @@ async function saveFac(){try{await gas('updateSetting','facilityName',document.g
 function openWT(w){w=w||{name:'',rate:200};document.getElementById('wt-modal').innerHTML='<div class="overlay" onclick="closeModal(\'wt-modal\')"><div class="modal" style="width:420px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>作業種別</h3><button class="modal-close" onclick="closeModal(\'wt-modal\')">✕</button></div><div class="field"><label>名前</label><input id="wt-n" value="'+esc(w.name)+'" style="width:100%"></div><div class="field"><label>時給</label><input type="number" id="wt-r" value="'+w.rate+'" style="width:100%"></div><div class="btns"><button class="bg" onclick="closeModal(\'wt-modal\')">取消</button><button class="bp" onclick="saveWT(\''+(w.id||'')+'\')">保存</button></div></div></div>';}
 async function saveWT(id){var d={name:document.getElementById('wt-n').value,rate:Number(document.getElementById('wt-r').value)};if(!d.name)return;try{if(id){d.id=id;await gas('updateWorkType',d);}else{await gas('addWorkType',d);}S.workTypes=await gas('getWorkTypes');closeModal('wt-modal');renderSettings(document.getElementById('content'));}catch(e){alert('失敗');}}
 async function delWT(id){if(!confirm('削除？'))return;try{await gas('deleteWorkType',id);S.workTypes=await gas('getWorkTypes');renderSettings(document.getElementById('content'));}catch(e){alert('失敗');}}
-
-// ═══ 申請履歴 ═══
-var reqFilterStaff='', reqFilterType='all', reqFilterStatus='pending';
-var idxReqData = [];
-
-async function renderRequests(c){
-  c.innerHTML=
-    '<div class="hd-row"><h2>📋 申請履歴管理</h2>'+
-    '<button class="bp" onclick="renderRequests(document.getElementById(\'content\'))">🔄 更新</button></div>'+
-    '<div class="card">'+
-    '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'+
-      '<span style="font-size:12px;color:var(--sub)">スタッフ:</span>'+
-      '<select id="idx-req-staff" onchange="reqFilterStaff=this.value;filterRequestsTbl()" style="width:140px">'+
-        '<option value="">すべて</option>'+
-        S.staff.map(function(s){return'<option value="'+s.id+'"'+(reqFilterStaff===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+
-      '</select>'+
-      '<span style="font-size:12px;color:var(--sub);margin-left:10px">種別:</span>'+
-      '<select id="idx-req-type" onchange="reqFilterType=this.value;filterRequestsTbl()" style="width:160px">'+
-        '<option value="all"'+(reqFilterType==='all'?' selected':'')+'>すべて</option>'+
-        '<option value="shift"'+(reqFilterType==='shift'?' selected':'')+'>シフト変更申請</option>'+
-        '<option value="paid"'+(reqFilterType==='paid'?' selected':'')+'>有給申請</option>'+
-        '<option value="attendance"'+(reqFilterType==='attendance'?' selected':'')+'>勤怠修正申請</option>'+
-      '</select>'+
-      '<span style="font-size:12px;color:var(--sub);margin-left:10px">ステータス:</span>'+
-      '<select id="idx-req-status" onchange="reqFilterStatus=this.value;filterRequestsTbl()" style="width:120px">'+
-        '<option value="all"'+(reqFilterStatus==='all'?' selected':'')+'>すべて</option>'+
-        '<option value="pending"'+(reqFilterStatus==='pending'?' selected':'')+'>承認待ち</option>'+
-        '<option value="approved"'+(reqFilterStatus==='approved'?' selected':'')+'>承認済み</option>'+
-        '<option value="rejected"'+(reqFilterStatus==='rejected'?' selected':'')+'>却下</option>'+
-      '</select>'+
-    '</div>'+
-    '<div class="tbl-wrap"><table><thead><tr>'+
-      '<th>申請種別</th><th>スタッフ名</th><th>対象日</th><th>詳細</th><th>理由</th><th>申請日時</th><th>ステータス</th><th>操作</th>'+
-    '</tr></thead><tbody id="idx-req-tbody"><tr><td colspan="8" style="text-align:center;padding:20px">読み込み中...</td></tr></tbody></table></div>'+
-    '</div>';
-
-  await loadAndRenderIdxRequests();
-}
-
-async function loadAndRenderIdxRequests(){
-  try{
-    var p = await Promise.all([
-      gas('getChangeRequests'),
-      gas('getPaidLeaveRequests')
-    ]);
-    var cr = p[0]||[];
-    var plr = p[1]||[];
-    idxReqData = [];
-    cr.forEach(function(r){
-      idxReqData.push({
-        source: 'change_request',
-        id: r.id,
-        staffId: r.staffId,
-        type: r.type || 'shift',
-        date: r.date,
-        requestData: r.requestData,
-        reason: r.reason || '',
-        status: r.status || 'pending',
-        comment: r.comment || '',
-        createdAt: r.createdAt || ''
-      });
-    });
-    plr.forEach(function(r){
-      idxReqData.push({
-        source: 'paid_request',
-        id: r.id,
-        staffId: r.staffId,
-        type: 'paid',
-        paidType: r.type || '有給',
-        date: r.date,
-        reason: r.reason || '',
-        status: r.status || 'pending',
-        comment: r.comment || '',
-        createdAt: r.createdAt || ''
-      });
-    });
-    idxReqData.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
-    filterRequestsTbl();
-  }catch(e){
-    var tb=document.getElementById('idx-req-tbody');
-    if(tb) tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--red);padding:20px">読み込み失敗: '+esc(e.message||e)+'</td></tr>';
-  }
-}
-
-function filterRequestsTbl(){
-  var tb=document.getElementById('idx-req-tbody');
-  if(!tb) return;
-  var list = idxReqData.slice();
-  if(reqFilterStaff) list = list.filter(function(r){return r.staffId===reqFilterStaff;});
-  if(reqFilterType!=='all'){
-    if(reqFilterType==='paid') list = list.filter(function(r){return r.source==='paid_request';});
-    else list = list.filter(function(r){return r.type===reqFilterType;});
-  }
-  if(reqFilterStatus!=='all'){
-    list = list.filter(function(r){return r.status===reqFilterStatus;});
-  }
-
-  if(!list.length){
-    tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--sub);padding:28px">該当する申請履歴がありません</td></tr>';
-    return;
-  }
-
-  tb.innerHTML = list.map(function(r){
-    var sName = staffName(r.staffId) || 'スタッフ('+r.staffId+')';
-    var typeTitle='', badgeBg='#3d5a3e';
-    var detailText='';
-    if(r.source==='paid_request'){
-      typeTitle='📅 有給'; badgeBg='#1565c0';
-      var tl=r.paidType==='有給'?'全日':r.paidType==='午前半休'?'午前半休':'午後半休';
-      detailText=tl;
-    }else if(r.type==='shift'){
-      typeTitle='📆 シフト変更'; badgeBg='#c07830';
-      try{
-        var d=typeof r.requestData==='string'?JSON.parse(r.requestData):r.requestData;
-        detailText='希望: '+(d.requestedPattern||'');
-      }catch(e){}
-    }else{
-      typeTitle='📊 勤怠修正'; badgeBg='#2e7d32';
-      try{
-        var d2=typeof r.requestData==='string'?JSON.parse(r.requestData):r.requestData;
-        detailText=esc(d2.startTime||'')+'〜'+esc(d2.endTime||'');
-      }catch(e){}
-    }
-
-    var statusBadge = r.status==='pending'?'<span class="badge" style="background:#e65100">承認待ち</span>':
-                      r.status==='approved'?'<span class="badge" style="background:var(--grn)">承認済み</span>':
-                      '<span class="badge" style="background:var(--red)">却下</span>';
-    var cTime = r.createdAt ? r.createdAt.slice(0,16).replace('T',' ') : '-';
-
-    return '<tr>'+
-      '<td><span class="badge" style="background:'+badgeBg+'">'+typeTitle+'</span></td>'+
-      '<td style="font-weight:600">'+esc(sName)+'</td>'+
-      '<td>'+fmtDate(r.date)+'</td>'+
-      '<td>'+detailText+'</td>'+
-      '<td>'+esc(r.reason||'-')+'</td>'+
-      '<td style="font-size:11px;color:var(--sub)">'+cTime+'</td>'+
-      '<td>'+statusBadge+'</td>'+
-      '<td>'+(r.status==='pending'?
-        '<button class="bp" onclick="approveIdxReq(\''+r.source+'\',\''+r.id+'\')" style="font-size:11px;padding:3px 8px;margin-right:4px">承認</button>'+
-        '<button class="br" onclick="rejectIdxReq(\''+r.source+'\',\''+r.id+'\')" style="font-size:11px;padding:3px 8px">却下</button>':'-')+
-      '</td>'+
-    '</tr>';
-  }).join('');
-}
-
-async function approveIdxReq(source, id){
-  var comment = prompt('承認コメント（任意）:') || '';
-  try{
-    if(source==='paid_request'){
-      var req = idxReqData.find(function(x){return x.id===id;});
-      if(!req) return;
-      await gas('approvePaidLeaveRequest', {id:id, comment:comment});
-      var days = req.paidType==='有給'?1:0.5;
-      await gas('addPaidLeaveUsage', {staffId:req.staffId, date:req.date, days:days, reason:req.reason||'有給承認'});
-      var shiftPat = req.paidType==='有給'?'有給':req.paidType==='午前半休'?'有給（午前半休）':'有給（午後半休）';
-      await gas('saveShiftCell', {staffId:req.staffId, date:req.date, pattern:shiftPat});
-    }else{
-      var req2 = idxReqData.find(function(x){return x.id===id;});
-      if(!req2) return;
-      await gas('approveChangeRequest', {id:id, comment:comment});
-      if(req2.type==='shift'){
-        var reqPattern='';
-        try{
-          var d=typeof req2.requestData==='string'?JSON.parse(req2.requestData):req2.requestData;
-          reqPattern=d.requestedPattern||'';
-        }catch(e){}
-        if(reqPattern){
-          await gas('saveShiftCell', {staffId:req2.staffId, date:req2.date, pattern:reqPattern});
-        }
-      }
-    }
-    alert('✅ 承認しました');
-    await loadAndRenderIdxRequests();
-  }catch(e){
-    alert('承認エラー: '+(e.message||e));
-  }
-}
-
-async function rejectIdxReq(source, id){
-  var comment = prompt('却下コメント（任意）:') || '';
-  try{
-    if(source==='paid_request'){
-      await gas('rejectPaidLeaveRequest', {id:id, comment:comment});
-    }else{
-      await gas('rejectChangeRequest', {id:id, comment:comment});
-    }
-    alert('❌ 却下しました');
-    await loadAndRenderIdxRequests();
-  }catch(e){
-    alert('却下エラー: '+(e.message||e));
-  }
-}
 
 loadAll();
 </script>
