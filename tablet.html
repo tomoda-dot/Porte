@@ -404,32 +404,69 @@ function buildUserSelect(){
 
 // 保存済みキャッシュ（{userId: true}）
 var SAVED_DATES={};
+var ATTENDANCE_CACHE={};
+
+async function fetchAttendanceForDate(date){
+  if(!date)return;
+  try{
+    var r=await SB.from('出欠').select('userId,status,pickup,meal,startTime,endTime').eq('date',date);
+    if(r.data){
+      var map={};
+      r.data.forEach(function(a){ map[String(a.userId)]=a; });
+      ATTENDANCE_CACHE[date]=map;
+    }
+  }catch(e){console.error(e);}
+}
 
 function isScheduledToday(user, date){
   if(!date)return false;
+  if(user.userStatus==='利用終了')return false;
+  var attMap=ATTENDANCE_CACHE[date]||{};
+  var att=attMap[String(user.id)];
+  if(att && (att.status==='調整休'||att.status==='欠席'||att.status==='体調不良'||att.status==='通院')){
+    return false; // 調整休・欠席等は本日の予定者から除外
+  }
   var sd=(user.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
   if(sd.length===0)return false;
   var dow=['日','月','火','水','木','金','土'][new Date(date).getDay()];
   return sd.indexOf(dow)>=0;
 }
 
-function renderUserList(){
+async function renderUserList(){
   var kw=el('search-box').value.trim();
   var date=el('sel-date').value;
   var curId=el('sel-user').value;
+
+  if(date && !ATTENDANCE_CACHE[date]){
+    await fetchAttendanceForDate(date);
+  }
+  var attMap=ATTENDANCE_CACHE[date]||{};
+
   var list=USERS.filter(function(u){
+    if(u.userStatus==='利用終了')return false;
     if(!kw)return true;
     return(u.name||'').indexOf(kw)>=0||(u.kana||'').indexOf(kw)>=0;
   });
+
   var scheduled=list.filter(function(u){return isScheduledToday(u,date);});
   var others=list.filter(function(u){return !isScheduledToday(u,date);});
+
   function makeItem(u){
     var isActive=u.id===curId;
     var isSaved=SAVED_DATES[u.id+'_'+date];
+    var att=attMap[String(u.id)];
+    var badge='';
+    if(att && att.status==='調整休'){
+      badge='<span class="u-badge" style="color:#c07830;font-weight:700">☕ 調整休</span>';
+    }else if(att && ['欠席','体調不良','通院'].indexOf(att.status)>=0){
+      badge='<span class="u-badge" style="color:#c62828;font-weight:700">❌ '+esc(att.status)+'</span>';
+    }else if(isSaved){
+      badge='<span class="u-badge saved">✅ 入力済</span>';
+    }
     return '<div class="user-item'+(isActive?' active':'')+
       '" data-uid="'+u.id+'" onclick="selectUser(this.getAttribute(\'data-uid\'))">'  
       +'<span class="u-name">'+esc(u.name)+'</span>'
-      +(isSaved?'<span class="u-badge saved">✅ 入力済</span>':'')
+      +badge
       +'</div>';
   }
   var html='';
@@ -637,7 +674,9 @@ async function saveForm(){
 
     // 完了表示
     SAVED_DATES[userId+'_'+date]=true;
-    renderUserList();
+    if(!ATTENDANCE_CACHE[date]) ATTENDANCE_CACHE[date]={};
+    ATTENDANCE_CACHE[date][String(userId)]=attData;
+    await renderUserList();
     var user=USERS.find(function(u){return u.id===userId;});
     el('done-msg').textContent=(user?user.name:'')+' の日報を保存しました';
     hide('form-area');
