@@ -92,8 +92,11 @@ tr:hover td{background:var(--hov)}
 </head>
 <body>
 <div id="app" class="loading"><div style="font-size:36px">🏢</div><div>読み込み中...</div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-config.js"></script>
+<script src="kokuho-receipt-generator.js"></script>
+<script src="supabase-adapter.js"></script>
 <script>
-function gas(fn){var args=Array.prototype.slice.call(arguments,1);return new Promise(function(ok,ng){var r=google.script.run.withSuccessHandler(ok).withFailureHandler(ng);r[fn].apply(r,args);});}
 var S={tab:'dashboard',users:[],staff:[],workTypes:[],settings:{},ready:false};
 var today=function(){return new Date().toISOString().slice(0,10);};
 var fmtDate=function(d){if(!d||d==='undefined')return'';var p=String(d).split('-');if(p.length<3)return'';return p[0]+'/'+String(parseInt(p[1]))+'/'+String(parseInt(p[2]));};
