@@ -228,6 +228,24 @@ async function safeQuery(promise){
   catch(e){ return []; }
 }
 
+// 不明カラム自動除外付き安全insert
+async function safeInsert(table, obj){
+  var safe = Object.assign({}, obj);
+  for(var retry = 0; retry < 10; retry++){
+    var r = await SB.from(table).insert([safe]).select();
+    if(!r.error) return r;
+    if(r.error.message && r.error.message.indexOf('Could not find the') >= 0){
+      var m = r.error.message.match(/find the '([^']+)'/);
+      if(m){
+        delete safe[m[1]];
+        continue;
+      }
+    }
+    throw r.error;
+  }
+  throw new Error('Insert failed');
+}
+
 // ─── 有給計算 ────────────────────────
 var PL_TBL=[{m:6,d:10},{m:18,d:11},{m:30,d:12},{m:42,d:14},{m:54,d:16},{m:66,d:18},{m:78,d:20}];
 var PL_PT={4:[7,8,9,10,12,13,15],3:[5,6,6,8,9,10,11],2:[3,4,4,5,6,6,7],1:[1,2,2,2,3,3,3]};
@@ -511,8 +529,7 @@ el('btn-plr').onclick=async function(){
   if(dup){alert('同じ日付で承認待ちの申請があります');return;}
   btn.disabled=true; btn.textContent='申請中...';
   try{
-    var r=await SB.from('有給申請').insert({id:'plr'+Date.now(),staffId:ME.id,date:date,type:PLR_TYPE,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
-    if(r.error)throw r.error;
+    var r=await safeInsert('有給申請',{id:'plr'+Date.now(),staffId:ME.id,date:date,type:PLR_TYPE,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
     el('plr-date').value=today(); el('plr-reason').value='';
     PLR_LIST=await safeQuery(SB.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
     renderPLRList(); alert('✅ 申請しました');
@@ -575,8 +592,8 @@ function openShiftCR(row){
     var pat=el('cr-pat').value, reason=el('cr-reason').value, btn=this;
     btn.disabled=true; btn.textContent='送信中...';
     try{
-      var r=await SB.from('変更申請').insert({id:'cr'+Date.now(),staffId:ME.id,type:'shift',date:date,requestData:JSON.stringify({requestedPattern:pat}),reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
-      if(r.error)throw r.error;
+      var reqData = JSON.stringify({requestedPattern:pat, reason:reason});
+      var r=await safeInsert('変更申請',{id:'cr'+Date.now(),staffId:ME.id,type:'shift',date:date,requestData:reqData,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
       hide('modal'); alert('✅ シフト変更申請を送信しました');
     }catch(e){alert('送信失敗: '+(e.message||e));}
     finally{btn.disabled=false;btn.textContent='申請する';}
@@ -602,8 +619,8 @@ function openAttCR(row){
     if(!reason){alert('修正理由を入力してください');return;}
     btn.disabled=true; btn.textContent='送信中...';
     try{
-      var r=await SB.from('変更申請').insert({id:'cr'+Date.now(),staffId:ME.id,type:'attendance',date:rec.date,requestData:JSON.stringify({startTime:st,endTime:et,breakMin:brk}),reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
-      if(r.error)throw r.error;
+      var reqData = JSON.stringify({startTime:st,endTime:et,breakMin:brk,reason:reason});
+      var r=await safeInsert('変更申請',{id:'cr'+Date.now(),staffId:ME.id,type:'attendance',date:rec.date,requestData:reqData,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
       hide('modal'); alert('✅ 勤怠修正申請を送信しました');
     }catch(e){alert('送信失敗: '+(e.message||e));}
     finally{btn.disabled=false;btn.textContent='申請する';}
