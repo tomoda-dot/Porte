@@ -8719,6 +8719,7 @@ async function delTpl(id){
     S.templates=await gas('getTemplates');
     renderSettings(document.getElementById('content'));
   }catch(e){await cAlert('削除に失敗');}
+}
 async function saveFac(){if(!lockUI())return;try{
   await gas('updateSetting','facilityType',document.getElementById('sf-t').value);
   await gas('updateSetting','facilityName',document.getElementById('sf-n').value);
