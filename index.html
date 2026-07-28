@@ -5134,11 +5134,21 @@ function toggleExportUI(){
 }
 async function downloadKokuhoReceiptCSV(){
   var ym=(document.getElementById('kokuho-ym')?document.getElementById('kokuho-ym').value:eM)||eM;
-  var dataType=(document.getElementById('kokuho-dtype')?document.getElementById('kokuho-dtype').value:'J61')||'J61';
+  var dataType=(document.getElementById('kokuho-dtype')?document.getElementById('kokuho-dtype').value:'J11_J21')||'J11_J21';
+  
+  var kokuhoOpts = {
+    staffRatio: (document.getElementById('kokuho-staff')?document.getElementById('kokuho-staff').value:'7.5:1'),
+    welfareStaff: (document.getElementById('kokuho-welfare')?document.getElementById('kokuho-welfare').value:'Ⅰ'),
+    pickupAddition: (document.getElementById('kokuho-pickup')?document.getElementById('kokuho-pickup').value:'あり'),
+    mealAddition: (document.getElementById('kokuho-meal')?document.getElementById('kokuho-meal').value:'あり'),
+    targetWageStaff: (document.getElementById('kokuho-targetwage')?document.getElementById('kokuho-targetwage').value:'なし'),
+    areaCategory: (document.getElementById('kokuho-area')?document.getElementById('kokuho-area').value:'四級地')
+  };
+
   if(!lockUI())return;
   try{
     toast('国保連レセプトCSVを生成中...');
-    var csvText=await gas('generateKokuhoReceiptCSV',ym,dataType);
+    var csvText=await gas('generateKokuhoReceiptCSV',ym,dataType,kokuhoOpts);
     var filename='KOKUHO_'+dataType+'_'+ym.replace('-','')+'.CSV';
     KokuhoReceiptGenerator.downloadCsv(csvText,filename);
     toast('✅ ダウンロードが完了しました');
@@ -5152,25 +5162,75 @@ async function downloadKokuhoReceiptCSV(){
 async function loadE(){var fn=S.settings.facilityName||'事業所';try{
   if(eT==='kokuhoReceipt'){
     var fNum=S.settings.facilityNumber||'未設定';
+    var stRatio=S.settings.staffRatio||'7.5:1';
+    var welStaff=S.settings.welfareStaff||'Ⅰ';
+    var areaCat=S.settings.areaCategory||'四級地';
+    var pickAdd=S.settings.pickupAddition||'あり';
+    var mealAdd=S.settings.mealAddition||'あり';
+    var twStaff=S.settings.targetWageStaff||'なし';
+
     document.getElementById('e-c').innerHTML=
-      '<div class="card" style="max-width:700px;margin:0 auto;padding:24px">'+
+      '<div class="card" style="max-width:760px;margin:0 auto;padding:24px">'+
       '<div class="card-hd"><span class="card-t" style="font-size:16px">📦 国保連伝送用レセプトCSV出力</span></div>'+
-      '<p style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:20px">'+
+      '<p style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:16px">'+
       '厚生労働省・国保中央会「障害者総合支援給付審査支払等システム」規格準拠の伝送用CSVを生成・出力します。<br>'+
-      '・文字コード: <b>Shift-JIS (CP932)</b><br>'+
-      '・改行コード: <b>CRLF (\\r\\n)</b><br>'+
-      '・ファイル構造: <b>コントロール・データ・エンドレコード (3層構造)</b>'+
+      '・文字コード: <b>Shift-JIS (CP932)</b> / 改行コード: <b>CRLF (\\r\\n)</b> / 構造: <b>3層構造 (コントロール・データ・エンド)</b>'+
       '</p>'+
+      '<div class="grid2">'+
       '<div class="field"><label>対象審査年月</label><input type="month" id="kokuho-ym" value="'+eM+'" style="width:100%"></div>'+
       '<div class="field"><label>データ種別（伝送ファイル）</label><select id="kokuho-dtype" style="width:100%">'+
-      '<option value="J11_J21" selected>① 介護給付費等 請求書・明細書情報 (請求書4610 ＋ 明細書4620 連結一体型CSV)</option>'+
+      '<option value="J11_J21" selected>① 介護給付費等 請求書・明細書情報 (請求書4610 ＋ 明細書4620/4621 一体型CSV)</option>'+
       '<option value="J61">② サービス提供実績記録票情報 (実績記録票4611 CSV)</option>'+
       '</select></div>'+
-      '<div style="background:#f8f9fa;border:1.5px solid var(--bdr);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:12px;color:var(--sub)">'+
-      '🏢 指定事業所番号: <b>'+esc(fNum)+'</b><br>'+
-      '※事業所番号の設定・変更は「⚙️ 設定」画面から行えます。'+
       '</div>'+
-      '<button class="bp" onclick="downloadKokuhoReceiptCSV()" style="width:100%;padding:12px;font-size:14px;font-weight:700;margin-top:8px">📥 国保連伝送用CSVをダウンロード (.CSV)</button>'+
+
+      '<div style="background:#faf6f2;border:1.5px solid var(--bdr);border-radius:10px;padding:16px;margin:16px 0">'+
+      '<div style="font-weight:700;font-size:13px;color:var(--pri);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'+
+      '<span>⚡ 対象年月の体制加算・減算ワンタップ切り替え</span>'+
+      '<span style="font-size:11px;font-weight:normal;color:var(--sub)">月ごとの請求に応じて自由に切替可能</span>'+
+      '</div>'+
+      '<div class="grid2">'+
+      '<div class="field"><label>人員配置区分</label><select id="kokuho-staff" style="width:100%">'+
+      '<option value="7.5:1"'+(stRatio==='7.5:1'?' selected':'')+'>Ⅱ型 (7.5:1) [585単位/日]</option>'+
+      '<option value="6:1"'+(stRatio==='6:1'?' selected':'')+'>Ⅰ型 (6:1) [600単位/日]</option>'+
+      '<option value="10:1"'+(stRatio==='10:1'?' selected':'')+'>Ⅲ型 (10:1) [560単位/日]</option>'+
+      '</select></div>'+
+      '<div class="field"><label>福祉専門職員配置等加算</label><select id="kokuho-welfare" style="width:100%">'+
+      '<option value="Ⅰ"'+(welStaff==='Ⅰ'?' selected':'')+'>加算 (Ⅰ) [15単位/日]</option>'+
+      '<option value="Ⅱ"'+(welStaff==='Ⅱ'?' selected':'')+'>加算 (Ⅱ) [10単位/日]</option>'+
+      '<option value="Ⅲ"'+(welStaff==='Ⅲ'?' selected':'')+'>加算 (Ⅲ) [6単位/日]</option>'+
+      '<option value="なし"'+(welStaff==='なし'?' selected':'')+'>なし [0単位]</option>'+
+      '</select></div>'+
+      '</div>'+
+      '<div class="grid2">'+
+      '<div class="field"><label>送迎加算の有無</label><select id="kokuho-pickup" style="width:100%">'+
+      '<option value="あり"'+(pickAdd==='あり'?' selected':'')+'>ON (出欠実績から54単位自動連動)</option>'+
+      '<option value="なし"'+(pickAdd==='なし'?' selected':'')+'>OFF (送迎加算を計算しない)</option>'+
+      '</select></div>'+
+      '<div class="field"><label>食事提供体制加算の有無</label><select id="kokuho-meal" style="width:100%">'+
+      '<option value="あり"'+(mealAdd==='あり'?' selected':'')+'>ON (出欠実績から30単位自動連動)</option>'+
+      '<option value="なし"'+(mealAdd==='なし'?' selected':'')+'>OFF (食事加算を計算しない)</option>'+
+      '</select></div>'+
+      '</div>'+
+      '<div class="grid2">'+
+      '<div class="field"><label>地域区分</label><select id="kokuho-area" style="width:100%">'+
+      '<option value="四級地"'+(areaCat==='四級地'?' selected':'')+'>四級地 [10.54円]</option>'+
+      '<option value="一級地"'+(areaCat==='一級地'?' selected':'')+'>一級地 [11.20円]</option>'+
+      '<option value="二級地"'+(areaCat==='二級地'?' selected':'')+'>二級地 [10.96円]</option>'+
+      '<option value="三級地"'+(areaCat==='三級地'?' selected':'')+'>三級地 [10.84円]</option>'+
+      '<option value="その他"'+(areaCat==='その他'?' selected':'')+'>その他 [10.00円]</option>'+
+      '</select></div>'+
+      '<div class="field"><label>目標工賃達成指導員配置加算</label><select id="kokuho-targetwage" style="width:100%">'+
+      '<option value="なし"'+(twStaff==='なし'?' selected':'')+'>OFF (加算なし)</option>'+
+      '<option value="あり"'+(twStaff==='あり'?' selected':'')+'>ON [89単位/日]</option>'+
+      '</select></div>'+
+      '</div>'+
+      '</div>'+
+
+      '<div style="background:#f8f9fa;border:1.5px solid var(--bdr);border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:var(--sub)">'+
+      '🏢 指定事業所番号: <b>'+esc(fNum)+'</b> （※デフォルト体制は「⚙️ 設定」で変更可能です）'+
+      '</div>'+
+      '<button class="bp" onclick="downloadKokuhoReceiptCSV()" style="width:100%;padding:14px;font-size:15px;font-weight:700;margin-top:4px">📥 設定した体制・加算でCSVをダウンロード (.CSV)</button>'+
       '</div>';
   }else if(eT==='monthly'){
     var bentoPrice=Number(S.settings.bentoPrice)||100;
@@ -7677,6 +7737,33 @@ function renderSettings(c){
   c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:18px">⚙️ 設定</h2>'+
     settingsSection('s-fac','🏢','事業所情報',
       '<div class="grid2"><div class="field"><label>事業所種別</label><select id="sf-t" style="width:100%"><option value="就労継続支援B型"'+(S.settings.facilityType==='就労継続支援B型'||!S.settings.facilityType?' selected':'')+'>就労継続支援B型</option><option value="就労継続支援A型"'+(S.settings.facilityType==='就労継続支援A型'?' selected':'')+'>就労継続支援A型</option><option value="就労移行支援"'+(S.settings.facilityType==='就労移行支援'?' selected':'')+'>就労移行支援</option><option value="生活介護"'+(S.settings.facilityType==='生活介護'?' selected':'')+'>生活介護</option></select></div><div class="field"><label>事業所名</label><input id="sf-n" value="'+esc(S.settings.facilityName||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>定員</label><input type="number" id="sf-c" value="'+(S.settings.capacity||30)+'" style="width:100%"></div><div class="field"><label>指定事業所番号 (10桁)</label><input id="sf-num" value="'+esc(S.settings.facilityNumber||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>会社名</label><input id="sf-comp" value="'+esc(S.settings.companyName||'')+'" style="width:100%"></div><div class="field"><label>市町村番号 (6桁)</label><input id="sf-city" value="'+esc(S.settings.cityNumber||'')+'" placeholder="未指定時: 000000" style="width:100%"></div></div><div class="grid2"><div class="field"><label>弁当代（円/食）</label><input type="number" id="sf-bento" value="'+(S.settings.bentoPrice||100)+'" style="width:100%"></div><div></div></div><button class="bp" onclick="saveFac()">保存</button>',true)+
+    settingsSection('s-kokuho-kasan','📋','国保連 サービス体制加算・地域区分設定（指定体制届出）',
+      '<p style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.5">自治体届出の体制加算・人員配置区分・地域区分を設定します。国保連レセプトCSV生成時に全自動反映されます。</p>'+
+      '<div class="grid2">'+
+        '<div class="field"><label>定員区分</label><select id="sk-cap" style="width:100%"><option value="20人以下"'+(S.settings.capCategory==='20人以下'?' selected':'')+'>20人以下</option><option value="21人〜40人"'+(S.settings.capCategory==='21人〜40人'||!S.settings.capCategory?' selected':'')+'>21人〜40人</option><option value="41人〜60人"'+(S.settings.capCategory==='41人〜60人'?' selected':'')+'>41人〜60人</option></select></div>'+
+        '<div class="field"><label>人員配置区分</label><select id="sk-staff" style="width:100%"><option value="6:1"'+(S.settings.staffRatio==='6:1'?' selected':'')+'>Ⅰ型 (6:1)</option><option value="7.5:1"'+(S.settings.staffRatio==='7.5:1'||!S.settings.staffRatio?' selected':'')+'>Ⅱ型 (7.5:1)</option><option value="10:1"'+(S.settings.staffRatio==='10:1'?' selected':'')+'>Ⅲ型 (10:1)</option></select></div>'+
+      '</div>'+
+      '<div class="grid2">'+
+        '<div class="field"><label>福祉専門職員配置等加算</label><select id="sk-welfare" style="width:100%"><option value="Ⅰ"'+(S.settings.welfareStaff==='Ⅰ'||!S.settings.welfareStaff?' selected':'')+'>福祉専門職員配置等加算 (Ⅰ) 15単位/日</option><option value="Ⅱ"'+(S.settings.welfareStaff==='Ⅱ'?' selected':'')+'>福祉専門職員配置等加算 (Ⅱ) 10単位/日</option><option value="Ⅲ"'+(S.settings.welfareStaff==='Ⅲ'?' selected':'')+'>福祉専門職員配置等加算 (Ⅲ) 6単位/日</option><option value="なし"'+(S.settings.welfareStaff==='なし'?' selected':'')+'>なし</option></select></div>'+
+        '<div class="field"><label>地域区分</label><select id="sk-area" style="width:100%"><option value="一級地"'+(S.settings.areaCategory==='一級地'?' selected':'')+'>一級地 (11.20円)</option><option value="二級地"'+(S.settings.areaCategory==='二級地'?' selected':'')+'>二級地 (10.96円)</option><option value="三級地"'+(S.settings.areaCategory==='三級地'?' selected':'')+'>三級地 (10.84円)</option><option value="四級地"'+(S.settings.areaCategory==='四級地'||!S.settings.areaCategory?' selected':'')+'>四級地 (10.54円)</option><option value="五級地"'+(S.settings.areaCategory==='五級地'?' selected':'')+'>五級地 (10.42円)</option><option value="六級地"'+(S.settings.areaCategory==='六級地'?' selected':'')+'>六級地 (10.24円)</option><option value="七級地"'+(S.settings.areaCategory==='七級地'?' selected':'')+'>七級地 (10.12円)</option><option value="その他"'+(S.settings.areaCategory==='その他'?' selected':'')+'>その他 (10.00円)</option></select></div>'+
+      '</div>'+
+      '<div class="grid2">'+
+        '<div class="field"><label>送迎加算の有無</label><select id="sk-pickup" style="width:100%"><option value="あり"'+(S.settings.pickupAddition==='あり'||!S.settings.pickupAddition?' selected':'')+'>あり (出欠実績から自動算定)</option><option value="なし"'+(S.settings.pickupAddition==='なし'?' selected':'')+'>なし</option></select></div>'+
+        '<div class="field"><label>食事提供体制加算の有無</label><select id="sk-meal" style="width:100%"><option value="あり"'+(S.settings.mealAddition==='あり'||!S.settings.mealAddition?' selected':'')+'>あり (出欠実績から自動算定)</option><option value="なし"'+(S.settings.mealAddition==='なし'?' selected':'')+'>なし</option></select></div>'+
+      '</div>'+
+      '<div class="grid2">'+
+        '<div class="field"><label>目標工賃達成指導員配置加算</label><select id="sk-targetwage" style="width:100%"><option value="なし"'+(S.settings.targetWageStaff==='なし'||!S.settings.targetWageStaff?' selected':'')+'>なし</option><option value="あり"'+(S.settings.targetWageStaff==='あり'?' selected':'')+'>あり (89単位/日)</option></select></div>'+
+        '<div class="field"><label>目標工賃達成加算</label><select id="sk-targetachieve" style="width:100%"><option value="なし"'+(S.settings.targetWageAchieve==='なし'||!S.settings.targetWageAchieve?' selected':'')+'>なし</option><option value="あり"'+(S.settings.targetWageAchieve==='あり'?' selected':'')+'>あり</option></select></div>'+
+      '</div>'+
+      '<div style="margin:14px 0 10px;padding-top:10px;border-top:1.5px dashed var(--bdr)">'+
+        '<div style="font-weight:700;font-size:12px;color:var(--pri);margin-bottom:8px">⚠️ 国保連体制減算設定（届出減算項目）</div>'+
+        '<div class="grid3">'+
+          '<div class="field"><label>人員欠員減算</label><select id="sk-shortage" style="width:100%"><option value="なし"'+(S.settings.staffShortage==='なし'||!S.settings.staffShortage?' selected':'')+'>なし</option><option value="あり"'+(S.settings.staffShortage==='あり'?' selected':'')+'>減算あり (-30%)</option></select></div>'+
+          '<div class="field"><label>BCP未策定減算</label><select id="sk-bcp" style="width:100%"><option value="なし"'+(S.settings.bcpNotCreated==='なし'||!S.settings.bcpNotCreated?' selected':'')+'>なし</option><option value="あり"'+(S.settings.bcpNotCreated==='あり'?' selected':'')+'>減算あり (-1%)</option></select></div>'+
+          '<div class="field"><label>虐待防止未実施減算</label><select id="sk-abuse" style="width:100%"><option value="なし"'+(S.settings.abuseNotPrevented==='なし'||!S.settings.abuseNotPrevented?' selected':'')+'>なし</option><option value="あり"'+(S.settings.abuseNotPrevented==='あり'?' selected':'')+'>減算あり (-1%)</option></select></div>'+
+        '</div>'+
+      '</div>'+
+      '<button class="bp" onclick="saveKokuhoSettings()">体制加算・減算設定を保存</button>',false)+
     settingsSection('s-cal','📅','開所日カレンダー',
       '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">'+
         '<button class="bg" onclick="changeCalMonth(-1)" style="font-size:12px">‹ 前の月</button>'+
@@ -8729,6 +8816,20 @@ async function saveFac(){if(!lockUI())return;try{
   await gas('updateSetting','cityNumber',document.getElementById('sf-city').value);
   await gas('updateSetting','bentoPrice',document.getElementById('sf-bento').value);
   S.settings=await gas('getSettings');await cAlert('保存しました');render();}catch(e){await cAlert('失敗');}finally{unlockUI();}}
+
+async function saveKokuhoSettings(){if(!lockUI())return;try{
+  await gas('updateSetting','capCategory',document.getElementById('sk-cap').value);
+  await gas('updateSetting','staffRatio',document.getElementById('sk-staff').value);
+  await gas('updateSetting','welfareStaff',document.getElementById('sk-welfare').value);
+  await gas('updateSetting','areaCategory',document.getElementById('sk-area').value);
+  await gas('updateSetting','pickupAddition',document.getElementById('sk-pickup').value);
+  await gas('updateSetting','mealAddition',document.getElementById('sk-meal').value);
+  await gas('updateSetting','targetWageStaff',document.getElementById('sk-targetwage').value);
+  await gas('updateSetting','targetWageAchieve',document.getElementById('sk-targetachieve').value);
+  if(document.getElementById('sk-bcp')) await gas('updateSetting','bcpNotCreated',document.getElementById('sk-bcp').value);
+  if(document.getElementById('sk-abuse')) await gas('updateSetting','abuseNotPrevented',document.getElementById('sk-abuse').value);
+  if(document.getElementById('sk-shortage')) await gas('updateSetting','staffShortage',document.getElementById('sk-shortage').value);
+  S.settings=await gas('getSettings');await cAlert('✅ 国保連体制加算・減算設定を保存しました');renderSettings(document.getElementById('content'));}catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}}
 function openWT(w){w=w||{name:'',rate:200};document.getElementById('wt-modal').innerHTML='<div class="overlay" onclick="closeModal(\'wt-modal\')"><div class="modal" style="width:420px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>作業種別</h3><button class="modal-close" onclick="closeModal(\'wt-modal\')">✕</button></div><div class="field"><label>名前</label><input id="wt-n" value="'+esc(w.name)+'" style="width:100%"></div><div class="field"><label>時給</label><input type="number" id="wt-r" value="'+w.rate+'" style="width:100%"></div><div class="btns"><button class="bg" onclick="closeModal(\'wt-modal\')">取消</button><button class="bp" onclick="saveWT(\''+(w.id||'')+'\')">保存</button></div></div></div>';}
 async function saveWT(id){if(!lockUI())return;var d={name:document.getElementById('wt-n').value,rate:Number(document.getElementById('wt-r').value)};if(!d.name)return;try{if(id){d.id=id;await gas('updateWorkType',d);}else{await gas('addWorkType',d);}S.workTypes=await gas('getWorkTypes');closeModal('wt-modal');renderSettings(document.getElementById('content'));}catch(e){await cAlert('失敗');}finally{unlockUI();}}
 async function delWT(id){if(!await cConfirm('削除？'))return;try{await gas('deleteWorkType',id);S.workTypes=await gas('getWorkTypes');renderSettings(document.getElementById('content'));}catch(e){await cAlert('失敗');}}
