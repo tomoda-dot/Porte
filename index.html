@@ -5062,6 +5062,7 @@ function getFiscalYear(ym){var y=Number(ym.slice(0,4)),m=Number(ym.slice(5,7));r
 async function renderExport(c){
   var fy=getFiscalYear(eM);
   var tabs=[
+    ['kokuhoReceipt','📦','国保連レセプト(CSV)'],
     ['serviceRecord','📝','提供実績記録票'],
     ['attendance','📋','勤怠一覧'],
     ['workSummary','🔧','作業別集計表'],
@@ -5076,9 +5077,10 @@ async function renderExport(c){
   if(!eT||eT==='menu'){
     // メニュー画面
     var groups=[
-      {label:'📋 記録・集計',items:tabs.slice(0,4)},
-      {label:'💰 工賃',items:tabs.slice(4,7)},
-      {label:'🧾 請求・受領',items:tabs.slice(7)}
+      {label:'📦 国保連請求・伝送',items:tabs.slice(0,1)},
+      {label:'📋 記録・集計',items:tabs.slice(1,5)},
+      {label:'💰 工賃',items:tabs.slice(5,8)},
+      {label:'🧾 請求・受領',items:tabs.slice(8)}
     ];
     var menuH='<div class="hd-row"><h2>📄 帳票出力</h2></div>';
     groups.forEach(function(g){
@@ -5125,12 +5127,52 @@ async function renderExport(c){
 function toggleExportUI(){
   var mInp=document.getElementById('eM-inp'),fyS=document.getElementById('eFY-sel');
   if(eT==='annualDetail'){mInp.style.display='none';fyS.style.display='';}
+  else if(eT==='kokuhoReceipt'){mInp.style.display='none';fyS.style.display='none';}
   else if(eT==='utilization'){mInp.style.display='';fyS.style.display='none';}
   else{mInp.style.display='';fyS.style.display='none';}
   loadE();
 }
+async function downloadKokuhoReceiptCSV(){
+  var ym=(document.getElementById('kokuho-ym')?document.getElementById('kokuho-ym').value:eM)||eM;
+  var dataType=(document.getElementById('kokuho-dtype')?document.getElementById('kokuho-dtype').value:'J61')||'J61';
+  if(!lockUI())return;
+  try{
+    toast('国保連レセプトCSVを生成中...');
+    var csvText=await gas('generateKokuhoReceiptCSV',ym,dataType);
+    var filename='KOKUHO_'+dataType+'_'+ym.replace('-','')+'.CSV';
+    KokuhoReceiptGenerator.downloadCsv(csvText,filename);
+    toast('✅ ダウンロードが完了しました');
+  }catch(e){
+    await cAlert('生成エラー: '+e);
+  }finally{
+    unlockUI();
+  }
+}
+
 async function loadE(){var fn=S.settings.facilityName||'事業所';try{
-  if(eT==='monthly'){
+  if(eT==='kokuhoReceipt'){
+    var fNum=S.settings.facilityNumber||'未設定';
+    document.getElementById('e-c').innerHTML=
+      '<div class="card" style="max-width:700px;margin:0 auto;padding:24px">'+
+      '<div class="card-hd"><span class="card-t" style="font-size:16px">📦 国保連伝送用レセプトCSV出力</span></div>'+
+      '<p style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:20px">'+
+      '厚生労働省・国保中央会「障害者総合支援給付審査支払等システム」規格準拠の伝送用CSVを生成・出力します。<br>'+
+      '・文字コード: <b>Shift-JIS (CP932)</b><br>'+
+      '・改行コード: <b>CRLF (\\r\\n)</b><br>'+
+      '・ファイル構造: <b>コントロール・データ・エンドレコード (3層構造)</b>'+
+      '</p>'+
+      '<div class="field"><label>対象審査年月</label><input type="month" id="kokuho-ym" value="'+eM+'" style="width:100%"></div>'+
+      '<div class="field"><label>データ種別（伝送ファイル）</label><select id="kokuho-dtype" style="width:100%">'+
+      '<option value="J11_J21" selected>① 介護給付費等 請求書・明細書情報 (請求書4610 ＋ 明細書4620 連結一体型CSV)</option>'+
+      '<option value="J61">② サービス提供実績記録票情報 (実績記録票4611 CSV)</option>'+
+      '</select></div>'+
+      '<div style="background:#f8f9fa;border:1.5px solid var(--bdr);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:12px;color:var(--sub)">'+
+      '🏢 指定事業所番号: <b>'+esc(fNum)+'</b><br>'+
+      '※事業所番号の設定・変更は「⚙️ 設定」画面から行えます。'+
+      '</div>'+
+      '<button class="bp" onclick="downloadKokuhoReceiptCSV()" style="width:100%;padding:12px;font-size:14px;font-weight:700;margin-top:8px">📥 国保連伝送用CSVをダウンロード (.CSV)</button>'+
+      '</div>';
+  }else if(eT==='monthly'){
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     showLoading('e-c','月次明細を集計中...');
     var attRes=await Promise.all([cachedGas('getAttendance',eM),cachedGas('getClosedDays',eM)]);var att=attRes[0],closedDays=attRes[1]||[];var d=S.users.map(function(u){var r=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});var h=0,w=0,bc=0;r.forEach(function(a){var cw=calcWage(a);h+=cw.h;w+=cw.wage;if(a.bento&&String(a.bento)!=='0'&&String(a.bento)!=='false'&&String(a.bento)!==''&&String(a.bento)!=='なし')bc++;});var kk=checkKaikin(u,att,eM,closedDays);var bonus=kk.kaikin?KAIKIN_BONUS:0;var bd=bc*bentoPrice;return{n:u.name,d:r.length,h:h,w:w,kk:kk.kaikin,bonus:bonus,bc:bc,bd:bd,total:w+bonus-bd};}).filter(function(x){return x.d>0;});

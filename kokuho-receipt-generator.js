@@ -168,7 +168,7 @@
     },
 
     /**
-     * 就労継続支援B型（サービスコード 46）用サービス提供実績記録票データ行の組み立てサンプル
+     * 就労継続支援B型（サービスコード 46）用 サービス提供実績記録票 (J61 / 交換識別4611) データ行
      * @param {Object} record
      * @returns {Array<any>}
      */
@@ -185,6 +185,44 @@
         record.pickupFlag ? '1' : '0',                // 送迎加算フラグ
         record.mealFlag ? '1' : '0',                  // 食事提供加算フラグ
         record.remarks || ''                          // 備考
+      ];
+    },
+
+    /**
+     * 就労継続支援B型（サービスコード 46）用 介護給付費・訓練等給付費等請求書 (J11 / 交換識別4610) データ行
+     * @param {Object} record
+     * @returns {Array<any>}
+     */
+    formatShuukouBClaimInvoiceRow: function (record) {
+      return [
+        '4610',                                       // 交換情報識別 code (請求書)
+        this.padZero(record.facilityNumber || '', 10),  // 指定事業所番号 (10桁)
+        record.targetYm || '',                        // 請求年月 (YYYYMM)
+        record.serviceType || '46',                   // サービス種類コード (46: 就労継続支援B型)
+        record.totalUsersCount || 0,                  // 請求人数
+        record.totalDaysCount || 0,                   // 請求延日数
+        record.totalUnits || 0,                       // 総給付単位数
+        record.totalClaimAmount || 0,                 // 請求額 (単位数×単価)
+        record.totalCopayAmount || 0                  // 利用者負担額計
+      ];
+    },
+
+    /**
+     * 就労継続支援B型（サービスコード 46）用 介護給付費・訓練等給付費等明細書 (J21 / 交換識別4620) データ行
+     * @param {Object} record
+     * @returns {Array<any>}
+     */
+    formatShuukouBClaimDetailRow: function (record) {
+      return [
+        '4620',                                       // 交換情報識別 code (明細書)
+        this.padZero(record.recipientNumber || '', 10), // 受給者証番号 (10桁前ゼロ)
+        record.userName || '',                         // 利用者氏名
+        record.serviceType || '46',                   // サービス種類コード (46: 就労継続支援B型)
+        record.targetYm || '',                        // サービス提供年月 (YYYYMM)
+        record.serviceDays || 0,                      // 利用日数
+        record.totalUnits || 0,                       // 算定単位数
+        record.copayAmount || 0,                      // 利用者負担額
+        record.claimAmount || 0                       // 給付費請求額
       ];
     },
 
