@@ -1143,6 +1143,7 @@ async function openAttDailyM(uid, ds){
       '      <div class="field">'+
       '        <label>作業(AM)</label>'+
       '        <select id="adm-wt" style="width:100%">'+
+                 '<option value="none" '+(rep.workTypeId==='none'||rep.workTypeId==='なし'||!rep.workTypeId?'selected':'')+'>なし（作業なし・午前帰宅等）</option>'+
                  S.workTypes.map(function(w){
                    return'<option value="'+w.id+'"'+(rep.workTypeId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';
                  }).join('')+
@@ -1151,8 +1152,9 @@ async function openAttDailyM(uid, ds){
       '      <div class="field">'+
       '        <label>作業(PM)</label>'+
       '        <select id="adm-wtp" style="width:100%">'+
+                 '<option value="none" '+(rep.workTypeIdPm==='none'||rep.workTypeIdPm==='なし'||rep.workTypeIdPm===''||(rep.workTypeIdPm===undefined&&(rep.workTypeId==='none'||!rep.workTypeId))?'selected':'')+'>なし（作業なし・午前帰宅等）</option>'+
                  S.workTypes.map(function(w){
-                   var pmId = rep.workTypeIdPm || rep.workTypeId;
+                   var pmId = (rep.workTypeIdPm!==undefined && rep.workTypeIdPm!==null)?rep.workTypeIdPm:rep.workTypeId;
                    return'<option value="'+w.id+'"'+(pmId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';
                  }).join('')+
       '        </select>'+
@@ -1223,6 +1225,11 @@ async function saveAttDaily(uid, ds){
   var isAbs=['欠席','体調不良','通院'].indexOf(st)>=0;
   var isAdj=st==='調整休';
   var isNoWork=isAbs||isAdj;
+  var rawAm=document.getElementById('adm-wt')?document.getElementById('adm-wt').value:'';
+  var rawPm=document.getElementById('adm-wtp')?document.getElementById('adm-wtp').value:'';
+  var saveAmId=(rawAm&&rawAm!=='none')?rawAm:'';
+  var savePmId=(rawPm&&rawPm!=='none')?rawPm:'';
+
   var attObj={
     userId:uid,
     date:ds,
@@ -1230,8 +1237,8 @@ async function saveAttDaily(uid, ds){
     startTime:isNoWork?'':document.getElementById('adm-s').value,
     endTime:isNoWork?'':document.getElementById('adm-e').value,
     breakMin:isNoWork?0:Number(document.getElementById('adm-brk').value)||0,
-    workTypeId:isNoWork?'':(document.getElementById('adm-wt')?document.getElementById('adm-wt').value:''),
-    workTypeIdPm:isNoWork?'':(document.getElementById('adm-wtp')?document.getElementById('adm-wtp').value:''),
+    workTypeId:isNoWork?'':saveAmId,
+    workTypeIdPm:isNoWork?'':savePmId,
     bento:document.getElementById('adm-b').value,
     pickup:document.getElementById('adm-p').value,
     notes:document.getElementById('adm-an').value
@@ -1246,8 +1253,8 @@ async function saveAttDaily(uid, ds){
       var dailyObj={
         userId:uid,
         date:ds,
-        workTypeId:document.getElementById('adm-wt').value,
-        workTypeIdPm:document.getElementById('adm-wtp').value,
+        workTypeId:saveAmId,
+        workTypeIdPm:savePmId,
         content:document.getElementById('adm-content').value,
         mood:document.getElementById('adm-m').value,
         notes:document.getElementById('adm-dn').value
