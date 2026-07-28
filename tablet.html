@@ -369,8 +369,13 @@ async function boot(){
     el('sel-date').max=today();
 
     // サイドバー構築
-    renderUserList();
-    el('sel-date').onchange=function(){ renderUserList(); };
+    await fetchAttendanceForDate(el('sel-date').value);
+    await renderUserList();
+    el('sel-date').onchange=async function(){
+      delete ATTENDANCE_CACHE[this.value];
+      await fetchAttendanceForDate(this.value);
+      await renderUserList();
+    };
     el('search-box').oninput=function(){ renderUserList(); };
 
     show('pg-main');
@@ -410,21 +415,27 @@ async function fetchAttendanceForDate(date){
   if(!date)return;
   try{
     var r=await SB.from('出欠').select('userId,status,pickup,meal,startTime,endTime').eq('date',date);
-    if(r.data){
-      var map={};
-      r.data.forEach(function(a){ map[String(a.userId)]=a; });
-      ATTENDANCE_CACHE[date]=map;
+    var map={};
+    if(r.data&&Array.isArray(r.data)){
+      r.data.forEach(function(a){
+        if(a&&a.userId) map[String(a.userId).trim()]=a;
+      });
     }
-  }catch(e){console.error(e);}
+    ATTENDANCE_CACHE[date]=map;
+  }catch(e){
+    console.error('fetchAttendanceForDate error:', e);
+    ATTENDANCE_CACHE[date]={};
+  }
 }
 
 function isScheduledToday(user, date){
   if(!date)return false;
   if(user.userStatus==='利用終了')return false;
   var attMap=ATTENDANCE_CACHE[date]||{};
-  var att=attMap[String(user.id)];
+  var uKey=String(user.id||'').trim();
+  var att=attMap[uKey];
   if(att && (att.status==='調整休'||att.status==='欠席'||att.status==='体調不良'||att.status==='通院')){
-    return false; // 調整休・欠席等は本日の予定者から除外
+    return false; // 調整休・欠席等は本日の予定者から絶対除外
   }
   var sd=(user.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
   if(sd.length===0)return false;
@@ -437,7 +448,7 @@ async function renderUserList(){
   var date=el('sel-date').value;
   var curId=el('sel-user').value;
 
-  if(date && !ATTENDANCE_CACHE[date]){
+  if(date && (!ATTENDANCE_CACHE[date] || Object.keys(ATTENDANCE_CACHE[date]).length===0)){
     await fetchAttendanceForDate(date);
   }
   var attMap=ATTENDANCE_CACHE[date]||{};
