@@ -332,12 +332,14 @@ async function renderDashboard(c){
   var activeUsers=S.users.filter(function(u){return isUserActive(u,d);});
   // セッション情報（友田判定に使用・全体で共通）
   var _sess=getSession()||{};
-  var abIds=att.filter(function(a){return['欠席','体調不良','通院','調整休'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
+  var offIds=att.filter(function(a){return a.status==='調整休';}).map(function(a){return a.userId;});
+  var abIds=att.filter(function(a){return['欠席','体調不良','通院'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
   var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;});
   
   var bc=0,pc=0;
   var todayTempIds=todayTemp.map(function(t){return t.userId;});
-  var allIds=Array.from(new Set(sch.map(function(u){return u.id;}).concat(att.map(function(a){return a.userId;})).concat(todayTempIds)));
+  var rawAllIds=Array.from(new Set(sch.map(function(u){return u.id;}).concat(att.map(function(a){return a.userId;})).concat(todayTempIds)));
+  var allIds=rawAllIds.filter(function(uid){return offIds.indexOf(uid)<0;});
   allIds.forEach(function(uid){
     if(abIds.indexOf(uid)>=0)return;
     var u=S.users.find(function(x){return x.id===uid;});if(!u)return;
@@ -4062,6 +4064,8 @@ async function renderAttTbl(){
 
   var activeUsers=S.users.filter(function(u){
     if(!isUserActive(u,attDate))return false;
+    var r=attData.find(function(a){return a.userId===u.id;});
+    if(r&&r.status==='調整休')return false;
     var isScheduled=u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;
     var hasRecord=attData.some(function(a){return a.userId===u.id;});
     var isTemp=tempUids.indexOf(u.id)>=0;
@@ -4614,8 +4618,8 @@ async function autoGenRoutes(){
     if(u.userStatus==='利用終了')return false;
     if(!u.scheduleDays||u.scheduleDays.indexOf(dwj)<0)return false;
     var r=dayAtt.find(function(a){return String(a.userId)===String(u.id);});
-    // 欠席系はスキップ
-    if(r&&['欠席','体調不良','通院'].indexOf(r.status)>=0)return false;
+    // 欠席系・調整休はスキップ
+    if(r&&['欠席','体調不良','通院','調整休'].indexOf(r.status)>=0)return false;
     // 出欠記録で送迎が明示的に「なし」ならスキップ
     var curP=(r&&r.pickup)?r.pickup:u.pickup;
     return curP==='あり';
