@@ -5,10 +5,11 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
 :root{--bg:#f5f0eb;--card:#fff;--pri:#3d5a3e;--pri-l:#5a7d5c;--acc:#c07830;--txt:#2c2c2c;--sub:#6b6b6b;--bdr:#e0d8d0;--hov:#f0ebe5;--red:#b33a3a;--grn:#3d7a3d;--shd:0 2px 12px rgba(0,0,0,.06)}
+*,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0;height:100%;overflow:hidden}
 body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--txt);font-size:13px}
-input,select,textarea,button{font-family:inherit;font-size:13px}
-input,select,textarea{border:1.5px solid var(--bdr);border-radius:7px;padding:7px 10px;background:#fff;outline:none}
+input,select,textarea,button{font-family:inherit;font-size:13px;box-sizing:border-box}
+input,select,textarea{border:1.5px solid var(--bdr);border-radius:7px;padding:7px 10px;background:#fff;outline:none;max-width:100%}
 input:focus,select:focus,textarea:focus{border-color:var(--pri)}
 button{cursor:pointer;border:none;border-radius:7px;padding:7px 15px;font-weight:500;transition:all .15s}
 button:hover{opacity:.85}
@@ -35,10 +36,10 @@ tr:hover td{background:var(--hov)}
 .stat-l{font-size:11px;color:var(--sub);margin-bottom:3px}
 .stat-v{font-size:22px;font-weight:700;color:var(--pri)}
 .stat-s{font-size:10px;color:var(--sub);margin-top:2px}
-.field{margin-bottom:14px}
+.field{margin-bottom:14px;min-width:0}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:5px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;margin-bottom:14px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 16px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px;margin-bottom:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px;margin-bottom:14px}
 .grid2:last-child,.grid3:last-child{margin-bottom:0}
 .hd-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px}
 .hd-row h2{font-size:19px;font-weight:700}
