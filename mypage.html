@@ -129,6 +129,7 @@ header{background:var(--pri);color:#fff;padding:12px 16px;border-radius:12px;mar
     <button class="tb on" id="tb-shift" onclick="showTab('shift')">📆 シフト</button>
     <button class="tb" id="tb-att" onclick="showTab('att')">📊 出勤</button>
     <button class="tb" id="tb-paid" onclick="showTab('paid')">📅 有給</button>
+    <button class="tb" id="tb-reqs" style="display:none;" onclick="showTab('reqs')">📋 申請履歴</button>
   </div>
 
   <div id="tab-shift">
@@ -140,6 +141,10 @@ header{background:var(--pri);color:#fff;padding:12px 16px;border-radius:12px;mar
         <button onclick="shiftNow()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px">今月</button>
       </div>
       <div id="shift-body" class="rows"></div>
+    </div>
+    <div class="card" id="my-shift-reqs-card">
+      <div class="ct">📋 自分のシフト変更・勤怠修正 申請履歴</div>
+      <div id="my-shift-reqs-list"></div>
     </div>
   </div>
 
@@ -187,6 +192,38 @@ header{background:var(--pri);color:#fff;padding:12px 16px;border-radius:12px;mar
       <div id="pl-used"></div>
     </div>
   </div>
+
+  <!-- 申請履歴タブ（友田アカウント専用） -->
+  <div id="tab-reqs" style="display:none">
+    <div class="sum3" id="reqs-sum"></div>
+    <div class="card" style="padding:12px 16px;margin-bottom:10px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span style="font-weight:700;font-size:12px;color:var(--sub)">絞り込み:</span>
+        <select id="req-filter-staff" onchange="renderAdminReqs()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px;">
+          <option value="">全スタッフ</option>
+        </select>
+        <select id="req-filter-type" onchange="renderAdminReqs()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px;">
+          <option value="all">全申請種別</option>
+          <option value="shift">📆 シフト変更申請</option>
+          <option value="paid">📅 有給申請</option>
+          <option value="attendance">📊 勤怠修正申請</option>
+        </select>
+        <select id="req-filter-status" onchange="renderAdminReqs()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px;">
+          <option value="all">全ステータス</option>
+          <option value="pending" selected>承認待ち</option>
+          <option value="approved">承認済み</option>
+          <option value="rejected">却下</option>
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>📋 全スタッフの申請一覧</span>
+        <button onclick="loadAdminReqs()" style="background:none;border:1px solid var(--bdr);padding:3px 8px;border-radius:6px;font-size:11px;cursor:pointer;">🔄 更新</button>
+      </div>
+      <div id="admin-reqs-list"></div>
+    </div>
+  </div>
 </div>
 
 <!-- モーダル -->
@@ -206,6 +243,14 @@ header{background:var(--pri);color:#fff;padding:12px 16px;border-radius:12px;mar
 var SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var ME = null, PATS = [], PL_USAGES = [], PL_GRANTS = [], PLR_LIST = [];
 var PLR_TYPE = '有給', SHIFT_YM = '', ATT_YM = '', TC_REC = null;
+var ALL_STAFF = [], ADMIN_SHIFT_REQS = [], ADMIN_PAID_REQS = [], MY_SHIFT_REQS = [];
+
+function isTomoda(staff){
+  if(!staff) return false;
+  var n = String(staff.name || '');
+  var l = String(staff.loginId || '');
+  return n.indexOf('友田') >= 0 || l.toLowerCase().indexOf('tomoda') >= 0;
+}
 
 // ─── ユーティリティ ──────────────────
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -325,8 +370,11 @@ async function boot(){
     PL_USAGES=await safeQuery(SB.from('有給取得記録').select('*').eq('staffId',ME.id));
     // 付与履歴
     PL_GRANTS=buildGrants(ME);
-    // 有給申請
+    // 有給申請 (自分)
     PLR_LIST=await safeQuery(SB.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+    // シフト変更申請 (自分)
+    MY_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+    
     // 画面設定
     el('hd-name').textContent=ME.name||'';
     el('hd-role').textContent=ME.role||'';
@@ -334,7 +382,16 @@ async function boot(){
     hide('pg-loading'); show('pg-main');
     await loadTC();
     await renderShift();
+    renderMyShiftReqs();
     var di=el('plr-date'); if(di)di.value=today();
+
+    // 友田アカウントチェック（管理者特権）
+    if(isTomoda(ME)){
+      el('tb-reqs').style.display='inline-block';
+      await loadAdminReqs();
+    }else{
+      el('tb-reqs').style.display='none';
+    }
   }catch(e){
     hide('pg-loading'); flex('pg-login');
     alert('読み込みエラー: '+(e.message||String(e)));
@@ -351,12 +408,15 @@ async function boot(){
 
 // ─── タブ ────────────────────────────
 function showTab(tab){
-  ['shift','att','paid'].forEach(function(t){
-    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
-    document.getElementById('tb-'+t).className='tb'+(t===tab?' on':'');
+  ['shift','att','paid','reqs'].forEach(function(t){
+    var tabEl=document.getElementById('tab-'+t);
+    var tbEl=document.getElementById('tb-'+t);
+    if(tabEl) tabEl.style.display=t===tab?'block':'none';
+    if(tbEl) tbEl.className='tb'+(t===tab?' on':'');
   });
   if(tab==='att')renderAtt();
   if(tab==='paid'){renderPaid();renderPLRList();}
+  if(tab==='reqs'){renderAdminReqs();}
 }
 
 // ─── タイムカード ─────────────────────
@@ -594,6 +654,9 @@ function openShiftCR(row){
     try{
       var reqData = JSON.stringify({requestedPattern:pat, reason:reason});
       var r=await safeInsert('変更申請',{id:'cr'+Date.now(),staffId:ME.id,type:'shift',date:date,requestData:reqData,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
+      MY_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+      renderMyShiftReqs();
+      if(isTomoda(ME)) await loadAdminReqs();
       hide('modal'); alert('✅ シフト変更申請を送信しました');
     }catch(e){alert('送信失敗: '+(e.message||e));}
     finally{btn.disabled=false;btn.textContent='申請する';}
@@ -621,10 +684,256 @@ function openAttCR(row){
     try{
       var reqData = JSON.stringify({startTime:st,endTime:et,breakMin:brk,reason:reason});
       var r=await safeInsert('変更申請',{id:'cr'+Date.now(),staffId:ME.id,type:'attendance',date:rec.date,requestData:reqData,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
+      MY_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+      renderMyShiftReqs();
+      if(isTomoda(ME)) await loadAdminReqs();
       hide('modal'); alert('✅ 勤怠修正申請を送信しました');
     }catch(e){alert('送信失敗: '+(e.message||e));}
     finally{btn.disabled=false;btn.textContent='申請する';}
   };
+}
+
+// ─── 管理者・全申請履歴処理（友田専用） ──────────────────
+async function loadAdminReqs(){
+  if(!isTomoda(ME)) return;
+  var sRes=await safeQuery(SB.from('スタッフ').select('*'));
+  ALL_STAFF=sRes||[];
+  var sel=el('req-filter-staff');
+  if(sel){
+    var curVal=sel.value;
+    sel.innerHTML='<option value="">全スタッフ</option>'+
+      ALL_STAFF.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('');
+    sel.value=curVal;
+  }
+  ADMIN_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').order('createdAt',{ascending:false}));
+  ADMIN_PAID_REQS=await safeQuery(SB.from('有給申請').select('*').order('createdAt',{ascending:false}));
+  renderAdminReqs();
+}
+
+function staffNameById(staffId){
+  var s=ALL_STAFF.find(function(x){return x.id===staffId;});
+  return s?s.name:'スタッフ('+staffId+')';
+}
+
+function renderAdminReqs(){
+  if(!isTomoda(ME)) return;
+  var filterStaff=el('req-filter-staff')?el('req-filter-staff').value:'';
+  var filterType=el('req-filter-type')?el('req-filter-type').value:'all';
+  var filterStatus=el('req-filter-status')?el('req-filter-status').value:'pending';
+
+  var list=[];
+
+  if(filterType==='all'||filterType==='shift'||filterType==='attendance'){
+    ADMIN_SHIFT_REQS.forEach(function(r){
+      if(filterType==='shift'&&r.type!=='shift') return;
+      if(filterType==='attendance'&&r.type!=='attendance') return;
+      list.push({
+        source: 'change_request',
+        id: r.id,
+        staffId: r.staffId,
+        type: r.type || 'shift',
+        date: r.date,
+        requestData: r.requestData,
+        reason: r.reason || '',
+        status: r.status || 'pending',
+        comment: r.comment || '',
+        createdAt: r.createdAt || ''
+      });
+    });
+  }
+
+  if(filterType==='all'||filterType==='paid'){
+    ADMIN_PAID_REQS.forEach(function(r){
+      list.push({
+        source: 'paid_request',
+        id: r.id,
+        staffId: r.staffId,
+        type: 'paid',
+        paidType: r.type || '有給',
+        date: r.date,
+        reason: r.reason || '',
+        status: r.status || 'pending',
+        comment: r.comment || '',
+        createdAt: r.createdAt || ''
+      });
+    });
+  }
+
+  list.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
+
+  if(filterStaff){
+    list=list.filter(function(r){return r.staffId===filterStaff;});
+  }
+  if(filterStatus!=='all'){
+    list=list.filter(function(r){return r.status===filterStatus;});
+  }
+
+  var pendingCnt = list.filter(function(r){return r.status==='pending';}).length;
+  var shiftCnt = list.filter(function(r){return r.source==='change_request';}).length;
+  var paidCnt = list.filter(function(r){return r.source==='paid_request';}).length;
+
+  var sumEl=el('reqs-sum');
+  if(sumEl){
+    sumEl.innerHTML=
+      '<div class="sum-i"><div class="v" style="color:#e65100">'+pendingCnt+'</div><div class="l">承認待ち</div></div>'+
+      '<div class="sum-i"><div class="v">'+shiftCnt+'</div><div class="l">シフト/勤怠申請</div></div>'+
+      '<div class="sum-i"><div class="v">'+paidCnt+'</div><div class="l">有給申請</div></div>';
+  }
+
+  var b=el('admin-reqs-list');
+  if(!b) return;
+  if(!list.length){
+    b.innerHTML='<p style="color:var(--sub);text-align:center;padding:20px">該当する申請履歴がありません</p>';
+    return;
+  }
+
+  var html='';
+  list.forEach(function(r){
+    var sName=staffNameById(r.staffId);
+    var sl=r.status==='pending'?'承認待ち':r.status==='approved'?'承認済み':'却下';
+    var typeTitle='', typeBadgeBg='#3d5a3e';
+    var detailText='';
+
+    if(r.source==='paid_request'){
+      typeTitle='📅 有給申請';
+      typeBadgeBg='#1565c0';
+      var tl=r.paidType==='有給'?'全日':r.paidType==='午前半休'?'午前半休':'午後半休';
+      detailText='種別: <b>'+tl+'</b>';
+    }else if(r.type==='shift'){
+      typeTitle='📆 シフト変更申請';
+      typeBadgeBg='#c07830';
+      var reqPattern='';
+      try{
+        var d=typeof r.requestData==='string'?JSON.parse(r.requestData):r.requestData;
+        reqPattern=d.requestedPattern||'';
+      }catch(e){}
+      detailText='希望シフト: <b style="color:var(--pri)">'+esc(reqPattern||'指定あり')+'</b>';
+    }else{
+      typeTitle='📊 勤怠修正申請';
+      typeBadgeBg='#2e7d32';
+      var st='',et='',brk='';
+      try{
+        var d2=typeof r.requestData==='string'?JSON.parse(r.requestData):r.requestData;
+        st=d2.startTime||''; et=d2.endTime||''; brk=d2.breakMin||'';
+      }catch(e){}
+      detailText='修正時間: <b>'+esc(st)+'〜'+esc(et)+'</b> (休憩'+esc(brk)+'分)';
+    }
+
+    var createdFmt = r.createdAt ? new Date(r.createdAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+
+    html+='<div class="plr-i '+r.status+'" style="margin-bottom:10px;padding:12px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'+
+        '<div><span class="pat" style="background:'+typeBadgeBg+';margin-right:6px;">'+typeTitle+'</span><b>'+esc(sName)+'</b></div>'+
+        '<span class="badge '+r.status+'">'+sl+'</span>'+
+      '</div>'+
+      '<div style="font-size:13px;margin:4px 0;">対象日: <b>'+fmtD(r.date)+'</b> ｜ '+detailText+'</div>'+
+      (r.reason?'<div style="font-size:12px;color:var(--sub);margin-top:4px;">理由: '+esc(r.reason)+'</div>':'')+
+      (r.comment?'<div style="font-size:12px;color:#c62828;margin-top:4px;background:rgba(0,0,0,0.03);padding:4px 8px;border-radius:4px;">コメント: '+esc(r.comment)+'</div>':'')+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px dashed #eee;font-size:11px;color:#999;">'+
+        '<span>申請日時: '+createdFmt+'</span>'+
+        (r.status==='pending'?
+          '<div>'+
+            '<button onclick="approveAdminReq(\''+r.source+'\',\''+r.id+'\')" style="background:var(--grn);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-right:6px;">✅ 承認</button>'+
+            '<button onclick="rejectAdminReq(\''+r.source+'\',\''+r.id+'\')" style="background:#c62828;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">❌ 却下</button>'+
+          '</div>':''
+        )+
+      '</div>'+
+    '</div>';
+  });
+
+  b.innerHTML=html;
+}
+
+// 承認処理
+async function approveAdminReq(source, id){
+  var comment = prompt('承認コメント（任意）:') || '';
+  try{
+    if(source==='paid_request'){
+      var req = ADMIN_PAID_REQS.find(function(x){return x.id===id;});
+      if(!req) return;
+      await SB.from('有給申請').update({status:'approved', comment:comment}).eq('id',id);
+      var days = req.type==='有給'?1:0.5;
+      await safeInsert('有給取得記録',{id:'pl'+Date.now(), staffId:req.staffId, date:req.date, days:days, reason:req.reason||'有給申請承認'});
+      var shiftPat = req.type==='有給'?'有給':req.type==='午前半休'?'有給（午前半休）':'有給（午後半休）';
+      var sEx = await SB.from('シフト').select('id').eq('staffId',req.staffId).eq('date',req.date).limit(1);
+      if(sEx.data && sEx.data.length>0){
+        await SB.from('シフト').update({pattern:shiftPat}).eq('id',sEx.data[0].id);
+      }else{
+        await safeInsert('シフト',{id:'sh'+Date.now(), staffId:req.staffId, date:req.date, pattern:shiftPat});
+      }
+    }else{
+      var req2 = ADMIN_SHIFT_REQS.find(function(x){return x.id===id;});
+      if(!req2) return;
+      await SB.from('変更申請').update({status:'approved', comment:comment}).eq('id',id);
+      if(req2.type==='shift'){
+        var reqPattern='';
+        try{
+          var d=typeof req2.requestData==='string'?JSON.parse(req2.requestData):req2.requestData;
+          reqPattern=d.requestedPattern||'';
+        }catch(e){}
+        if(reqPattern){
+          var sEx2 = await SB.from('シフト').select('id').eq('staffId',req2.staffId).eq('date',req2.date).limit(1);
+          if(sEx2.data && sEx2.data.length>0){
+            await SB.from('シフト').update({pattern:reqPattern}).eq('id',sEx2.data[0].id);
+          }else{
+            await safeInsert('シフト',{id:'sh'+Date.now(), staffId:req2.staffId, date:req2.date, pattern:reqPattern});
+          }
+        }
+      }
+    }
+    alert('✅ 承認しました');
+    await loadAdminReqs();
+    await renderShift();
+  }catch(e){
+    alert('承認エラー: '+(e.message||e));
+  }
+}
+
+// 却下処理
+async function rejectAdminReq(source, id){
+  var comment = prompt('却下理由・コメント（任意）:') || '';
+  try{
+    if(source==='paid_request'){
+      await SB.from('有給申請').update({status:'rejected', comment:comment}).eq('id',id);
+    }else{
+      await SB.from('変更申請').update({status:'rejected', comment:comment}).eq('id',id);
+    }
+    alert('❌ 却下しました');
+    await loadAdminReqs();
+  }catch(e){
+    alert('却下エラー: '+(e.message||e));
+  }
+}
+
+// 自分のシフト変更申請履歴レンダー
+function renderMyShiftReqs(){
+  var b=el('my-shift-reqs-list');
+  if(!b) return;
+  if(!MY_SHIFT_REQS.length){
+    b.innerHTML='<p style="color:var(--sub);text-align:center;padding:10px;font-size:12px;">申請履歴がありません</p>';
+    return;
+  }
+  var html='';
+  MY_SHIFT_REQS.forEach(function(r){
+    var sl=r.status==='pending'?'承認待ち':r.status==='approved'?'承認済み':'却下';
+    var tLabel=r.type==='shift'?'シフト変更':'勤怠修正';
+    var info='';
+    try{
+      var d=typeof r.requestData==='string'?JSON.parse(r.requestData):r.requestData;
+      if(r.type==='shift') info='希望: <b>'+esc(d.requestedPattern||'')+'</b>';
+      else info='修正: <b>'+esc(d.startTime||'')+'〜'+esc(d.endTime||'')+'</b>';
+    }catch(e){}
+    html+='<div class="plr-i '+r.status+'" style="padding:8px 10px;margin-bottom:6px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;">'+
+        '<span><b>'+fmtD(r.date)+'</b> <span style="font-size:11px;color:var(--sub);">('+tLabel+')</span></span>'+
+        '<span class="badge '+r.status+'">'+sl+'</span>'+
+      '</div>'+
+      '<div style="font-size:12px;margin-top:2px;">'+info+'</div>'+
+      (r.reason?'<div style="font-size:11px;color:var(--sub);margin-top:2px;">理由: '+esc(r.reason)+'</div>':'')+
+      (r.comment?'<div style="font-size:11px;color:#c62828;margin-top:2px;">返答: '+esc(r.comment)+'</div>':'')+
+    '</div>';
+  });
+  b.innerHTML=html;
 }
 </script>
 </body>
