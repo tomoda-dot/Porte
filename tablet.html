@@ -414,7 +414,7 @@ var ATTENDANCE_CACHE={};
 async function fetchAttendanceForDate(date){
   if(!date)return;
   try{
-    var r=await SB.from('出欠').select('userId,status,pickup,meal,startTime,endTime').eq('date',date);
+    var r=await SB.from('出欠').select('*').eq('date',date);
     var map={};
     if(r.data&&Array.isArray(r.data)){
       r.data.forEach(function(a){
