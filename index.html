@@ -1154,7 +1154,7 @@ async function openAttDailyM(uid, ds){
       '        <select id="adm-wtp" style="width:100%">'+
                  '<option value="none" '+(rep.workTypeIdPm==='none'||rep.workTypeIdPm==='なし'||rep.workTypeIdPm===''||(rep.workTypeIdPm===undefined&&(rep.workTypeId==='none'||!rep.workTypeId))?'selected':'')+'>なし（作業なし・午前帰宅等）</option>'+
                  S.workTypes.map(function(w){
-                   var pmId = (rep.workTypeIdPm!==undefined && rep.workTypeIdPm!==null)?rep.workTypeIdPm:rep.workTypeId;
+                   var pmId = (rep.workTypeIdPm!==undefined && rep.workTypeIdPm!==null && rep.workTypeIdPm!=='')?rep.workTypeIdPm:(att && att.workTypeIdPm!==undefined && att.workTypeIdPm!==null && att.workTypeIdPm!=='' ? att.workTypeIdPm : rep.workTypeId);
                    return'<option value="'+w.id+'"'+(pmId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';
                  }).join('')+
       '        </select>'+
@@ -1227,8 +1227,8 @@ async function saveAttDaily(uid, ds){
   var isNoWork=isAbs||isAdj;
   var rawAm=document.getElementById('adm-wt')?document.getElementById('adm-wt').value:'';
   var rawPm=document.getElementById('adm-wtp')?document.getElementById('adm-wtp').value:'';
-  var saveAmId=(rawAm&&rawAm!=='none')?rawAm:'';
-  var savePmId=(rawPm&&rawPm!=='none')?rawPm:'';
+  var saveAmId=(rawAm&&rawAm!=='none')?rawAm:'none';
+  var savePmId=(rawPm&&rawPm!=='none')?rawPm:'none';
 
   var attObj={
     userId:uid,
