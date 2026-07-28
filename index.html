@@ -97,8 +97,8 @@ tr:hover td{background:var(--hov)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase-config.js"></script>
-<script src="kokuho-receipt-generator.js"></script>
-<script src="supabase-adapter.js"></script>
+<script src="kokuho-receipt-generator.js?v=20260728"></script>
+<script src="supabase-adapter.js?v=20260728"></script>
 </head>
 <title>就労継続支援B型 管理ソフト「Porte」</title>
 <body>
@@ -7676,7 +7676,7 @@ function renderSettings(c){
 
   c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:18px">⚙️ 設定</h2>'+
     settingsSection('s-fac','🏢','事業所情報',
-      '<div class="grid2"><div class="field"><label>事業所種別</label><select id="sf-t" style="width:100%"><option value="就労継続支援B型"'+(S.settings.facilityType==='就労継続支援B型'||!S.settings.facilityType?' selected':'')+'>就労継続支援B型</option><option value="就労継続支援A型"'+(S.settings.facilityType==='就労継続支援A型'?' selected':'')+'>就労継続支援A型</option><option value="就労移行支援"'+(S.settings.facilityType==='就労移行支援'?' selected':'')+'>就労移行支援</option><option value="生活介護"'+(S.settings.facilityType==='生活介護'?' selected':'')+'>生活介護</option></select></div><div class="field"><label>事業所名</label><input id="sf-n" value="'+esc(S.settings.facilityName||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>定員</label><input type="number" id="sf-c" value="'+(S.settings.capacity||30)+'" style="width:100%"></div><div class="field"><label>事業所番号</label><input id="sf-num" value="'+esc(S.settings.facilityNumber||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>会社名</label><input id="sf-comp" value="'+esc(S.settings.companyName||'')+'" style="width:100%"></div><div class="field"><label>弁当代（円/食）</label><input type="number" id="sf-bento" value="'+(S.settings.bentoPrice||100)+'" style="width:100%"></div></div><button class="bp" onclick="saveFac()">保存</button>',true)+
+      '<div class="grid2"><div class="field"><label>事業所種別</label><select id="sf-t" style="width:100%"><option value="就労継続支援B型"'+(S.settings.facilityType==='就労継続支援B型'||!S.settings.facilityType?' selected':'')+'>就労継続支援B型</option><option value="就労継続支援A型"'+(S.settings.facilityType==='就労継続支援A型'?' selected':'')+'>就労継続支援A型</option><option value="就労移行支援"'+(S.settings.facilityType==='就労移行支援'?' selected':'')+'>就労移行支援</option><option value="生活介護"'+(S.settings.facilityType==='生活介護'?' selected':'')+'>生活介護</option></select></div><div class="field"><label>事業所名</label><input id="sf-n" value="'+esc(S.settings.facilityName||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>定員</label><input type="number" id="sf-c" value="'+(S.settings.capacity||30)+'" style="width:100%"></div><div class="field"><label>指定事業所番号 (10桁)</label><input id="sf-num" value="'+esc(S.settings.facilityNumber||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>会社名</label><input id="sf-comp" value="'+esc(S.settings.companyName||'')+'" style="width:100%"></div><div class="field"><label>市町村番号 (6桁)</label><input id="sf-city" value="'+esc(S.settings.cityNumber||'')+'" placeholder="未指定時: 000000" style="width:100%"></div></div><div class="grid2"><div class="field"><label>弁当代（円/食）</label><input type="number" id="sf-bento" value="'+(S.settings.bentoPrice||100)+'" style="width:100%"></div><div></div></div><button class="bp" onclick="saveFac()">保存</button>',true)+
     settingsSection('s-cal','📅','開所日カレンダー',
       '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">'+
         '<button class="bg" onclick="changeCalMonth(-1)" style="font-size:12px">‹ 前の月</button>'+
@@ -8719,13 +8719,13 @@ async function delTpl(id){
     S.templates=await gas('getTemplates');
     renderSettings(document.getElementById('content'));
   }catch(e){await cAlert('削除に失敗');}
-}
 async function saveFac(){if(!lockUI())return;try{
   await gas('updateSetting','facilityType',document.getElementById('sf-t').value);
   await gas('updateSetting','facilityName',document.getElementById('sf-n').value);
   await gas('updateSetting','capacity',document.getElementById('sf-c').value);
   await gas('updateSetting','facilityNumber',document.getElementById('sf-num').value);
   await gas('updateSetting','companyName',document.getElementById('sf-comp').value);
+  await gas('updateSetting','cityNumber',document.getElementById('sf-city').value);
   await gas('updateSetting','bentoPrice',document.getElementById('sf-bento').value);
   S.settings=await gas('getSettings');await cAlert('保存しました');render();}catch(e){await cAlert('失敗');}finally{unlockUI();}}
 function openWT(w){w=w||{name:'',rate:200};document.getElementById('wt-modal').innerHTML='<div class="overlay" onclick="closeModal(\'wt-modal\')"><div class="modal" style="width:420px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>作業種別</h3><button class="modal-close" onclick="closeModal(\'wt-modal\')">✕</button></div><div class="field"><label>名前</label><input id="wt-n" value="'+esc(w.name)+'" style="width:100%"></div><div class="field"><label>時給</label><input type="number" id="wt-r" value="'+w.rate+'" style="width:100%"></div><div class="btns"><button class="bg" onclick="closeModal(\'wt-modal\')">取消</button><button class="bp" onclick="saveWT(\''+(w.id||'')+'\')">保存</button></div></div></div>';}
