@@ -948,7 +948,7 @@ async function openCalAttM(uid, ds){
     var u=S.users.find(function(x){return x.id===uid;});
     if(u){
       if(!att.startTime)att.startTime=u.scheduleStart||'10:00';
-      if(!att.endTime)att.endTime=u.scheduleEnd||'16:00';
+      if(!att.endTime && att.status==='予定')att.endTime=u.scheduleEnd||'16:00';
       if(!att.bento)att.bento=u.bento||'なし';
       if(!att.pickup)att.pickup=u.pickup||'なし';
     }
@@ -962,7 +962,7 @@ async function openCalAttM(uid, ds){
         ['予定','出席','欠席','遅刻','早退','体調不良','通院','調整休'].map(function(s){return'<option'+(att.status===s?' selected':'')+'>'+s+'</option>';}).join('')+
       '</select></div>'+
       '<div class="grid2"><div class="field"><label>出勤時間</label><input type="time" id="adm-s" value="'+att.startTime+'" style="width:100%" onchange="updateAdmAH()"></div>'+
-      '<div class="field"><label>退勤時間</label><input type="time" id="adm-e" value="'+att.endTime+'" style="width:100%" onchange="updateAdmAH()"></div></div>'+
+      '<div class="field"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><label style="margin-bottom:0">退勤時間</label><button type="button" class="bg" id="adm-e-clear" onclick="document.getElementById(\'adm-e\').value=\'\';updateAdmAH();" style="font-size:10px;padding:1px 6px;line-height:1.2;cursor:pointer" title="退勤時間を未確定(利用中)の状態に戻します">未確定にする</button></div><input type="time" id="adm-e" value="'+att.endTime+'" style="width:100%" onchange="updateAdmAH()"></div></div>'+
       '<div class="grid2"><div class="field"><label>お弁当</label><select id="adm-b" style="width:100%"><option'+(att.bento==='あり'?' selected':'')+'>あり</option><option'+(att.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
       '<div class="field"><label>送迎</label><select id="adm-p" style="width:100%"><option'+(att.pickup==='あり'?' selected':'')+'>あり</option><option'+(att.pickup!=='あり'?' selected':'')+'>なし</option></select></div></div>'+
       '<div class="field"><label>備考（変更理由）</label><textarea id="adm-an" rows="2" style="width:100%" placeholder="変更理由や連絡事項を記入...">'+esc(att.notes||'')+'</textarea></div>'+
@@ -1046,6 +1046,8 @@ function updateAdmAH(){
   document.getElementById('adm-wtp').disabled=isAbs;
   document.getElementById('adm-content').disabled=isAbs;
   document.getElementById('adm-m').disabled=isAbs;
+  var btnClear=document.getElementById('adm-e-clear');
+  if(btnClear) btnClear.disabled=isAbs;
   if(isAbs){
     document.getElementById('adm-s').value='';
     document.getElementById('adm-e').value='';
@@ -1054,7 +1056,7 @@ function updateAdmAH(){
   var eTime=document.getElementById('adm-e').value;
   var brk=Number(document.getElementById('adm-brk').value)||0;
   var hrs=isAbs?0:calcH(sTime,eTime,brk);
-  document.getElementById('adm-h-calc').textContent=isAbs?'-':'実働: '+hrs.toFixed(2)+' 時間';
+  document.getElementById('adm-h-calc').textContent=isAbs?'-':(eTime ? '実働: '+hrs.toFixed(2)+' 時間' : '実働: 未確定（利用中）');
 }
 async function openAttDailyM(uid, ds){
   showLoading('content','出欠・日報を読み込み中...');
@@ -1068,7 +1070,7 @@ async function openAttDailyM(uid, ds){
     var u=S.users.find(function(x){return x.id===uid;});
     if(u){
       if(!att.startTime)att.startTime=u.scheduleStart||'10:00';
-      if(!att.endTime)att.endTime=u.scheduleEnd||'16:00';
+      if(!att.endTime && att.status==='予定')att.endTime=u.scheduleEnd||'16:00';
       if(!att.bento)att.bento=u.bento||'なし';
       if(!att.pickup)att.pickup=u.pickup||'なし';
     }
@@ -1118,7 +1120,7 @@ async function openAttDailyM(uid, ds){
       '    </div>'+
       '    <div class="grid2">'+
       '      <div class="field"><label>出勤時間</label><input type="time" id="adm-s" value="'+att.startTime+'" style="width:100%" onchange="updateAdmAH()"></div>'+
-      '      <div class="field"><label>退勤時間</label><input type="time" id="adm-e" value="'+att.endTime+'" style="width:100%" onchange="updateAdmAH()"></div>'+
+      '      <div class="field"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><label style="margin-bottom:0">退勤時間</label><button type="button" class="bg" id="adm-e-clear" onclick="document.getElementById(\'adm-e\').value=\'\';updateAdmAH();" style="font-size:10px;padding:1px 6px;line-height:1.2;cursor:pointer" title="退勤時間を未確定(利用中)の状態に戻します">未確定にする</button></div><input type="time" id="adm-e" value="'+att.endTime+'" style="width:100%" onchange="updateAdmAH()"></div>'+
       '    </div>'+
       '    <div class="field">'+
       '      <label>休憩時間</label>'+
