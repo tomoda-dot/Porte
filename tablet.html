@@ -656,6 +656,7 @@ async function saveForm(){
     var amTypeId=(selAm&&selAm!=='none')?selAm:null;
     var pmTypeId=(selPm&&selPm!=='none')?selPm:null;
 
+    var userObj=USERS.find(function(u){return String(u.id)===String(userId);});
     // 出欠データ
     var attData={
       userId:userId, date:date,
@@ -666,6 +667,7 @@ async function saveForm(){
       workTypeId:amTypeId,
       workTypeIdPm:pmTypeId,
       bento:el('f-bento').value==='あり'?'あり':'なし',
+      bentoPaymentMethod:userObj?(userObj.bentoPaymentMethod||'工賃払い'):'工賃払い',
       meal:el('f-bento').value==='あり',
       pickup:transport==='往復'||transport==='往路',
       dropoff:transport==='往復'||transport==='復路',

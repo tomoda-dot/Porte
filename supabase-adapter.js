@@ -535,7 +535,7 @@ async function _calcAttendanceList(ym){
   us.forEach(function(user){
     var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
     if(recs.length===0)return;
-    var tServiceMin=0,tWM=0,tBM=0,tW=0,bc=0;
+    var tServiceMin=0,tWM=0,tBM=0,tW=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
     recs.forEach(function(rec){
       if(!rec.startTime||!rec.endTime)return;
       var netH=_calcNetH(rec);
@@ -543,10 +543,16 @@ async function _calcAttendanceList(ym){
       var sp=String(rec.startTime).split(':'),ep=String(rec.endTime).split(':');
       var wm=Number(ep[0])*60+Number(ep[1])-Number(sp[0])*60-Number(sp[1]);var brk=Number(rec.breakMin)||0;
       tServiceMin+=sMin;tWM+=wm;tBM+=brk;tW+=_calcRecWage(rec,wts).wage;
-      if(_isBento(rec))bc++;
+      if(_isBento(rec)){
+        bc++;
+        var pm=rec.bentoPaymentMethod||user.bentoPaymentMethod||'工賃払い';
+        if(pm==='当日')bcDaily++;
+        else if(pm==='月末締め翌月払い')bcNext++;
+        else bcDeduct++;
+      }
     });
     var net=Math.max(0,tWM-tBM);var kk=_checkKaikin(user,att,ym);var bonus=kk.kaikin?KAIKIN_BONUS:0;
-    result.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',days:recs.length,workMin:tServiceMin,breakMin:tBM,netMin:net,avgNetMin:recs.length>0?Math.round(tServiceMin/recs.length):0,bonus:bonus,wage:Math.round(tW),bentoCount:bc,bentoDed:bc*bentoPrice,total:Math.round(tW)+bonus-bc*bentoPrice});
+    result.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',days:recs.length,workMin:tServiceMin,breakMin:tBM,netMin:net,avgNetMin:recs.length>0?Math.round(tServiceMin/recs.length):0,bonus:bonus,wage:Math.round(tW),bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,total:Math.round(tW)+bonus-bcDeduct*bentoPrice});
   });
   return{users:result,bentoPrice:bentoPrice};
 }
@@ -569,7 +575,7 @@ async function _calcWageDetailPerUser(ym){
   us.forEach(function(user){
     var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
     if(recs.length===0)return;
-    var byWt={},bc=0;
+    var byWt={},bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
     recs.forEach(function(rec){
       var netH=_calcNetH(rec);if(netH<=0)return;
       var wt=_findWt(wts,rec.workTypeId||'',(rec.workTypeIdPm&&String(rec.workTypeIdPm)!=='')?rec.workTypeIdPm:rec.workTypeId||'');
@@ -580,7 +586,13 @@ async function _calcWageDetailPerUser(ym){
         if(!byWt[wt.am.name])byWt[wt.am.name]={hours:0,rate:Number(wt.am.rate)||0,wage:0};byWt[wt.am.name].hours+=hh;byWt[wt.am.name].wage+=hh*(Number(wt.am.rate)||0);
         if(!byWt[wt.pm.name])byWt[wt.pm.name]={hours:0,rate:Number(wt.pm.rate)||0,wage:0};byWt[wt.pm.name].hours+=hh;byWt[wt.pm.name].wage+=hh*(Number(wt.pm.rate)||0);
       }
-      if(_isBento(rec))bc++;
+      if(_isBento(rec)){
+        bc++;
+        var pm=rec.bentoPaymentMethod||user.bentoPaymentMethod||'工賃払い';
+        if(pm==='当日')bcDaily++;
+        else if(pm==='月末締め翌月払い')bcNext++;
+        else bcDeduct++;
+      }
     });
     var items=[],wSub=0;Object.keys(byWt).forEach(function(k){var w=byWt[k];var rw=Math.round(w.wage);items.push({name:k,hours:Math.round(w.hours*100)/100,rate:w.rate,wage:rw});wSub+=rw;});
     
@@ -611,7 +623,7 @@ async function _calcWageDetailPerUser(ym){
       }
     }
 
-    result.push({id:user.id,name:user.name,days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,bentoCount:bc,bentoDed:bc*bentoPrice,bentoPrice:bentoPrice,total:wSub+bonus-bc*bentoPrice});
+    result.push({id:user.id,name:user.name,days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,bentoPrice:bentoPrice,total:wSub+bonus-bcDeduct*bentoPrice});
   });
   return{ym:ym,companyName:companyName,payDate:payDateStr,users:result,bentoPrice:bentoPrice};
 }

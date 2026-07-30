@@ -963,7 +963,8 @@ async function openCalAttM(uid, ds){
       '</select></div>'+
       '<div class="grid2"><div class="field"><label>出勤時間</label><input type="time" id="adm-s" value="'+att.startTime+'" style="width:100%" onchange="updateAdmAH()"></div>'+
       '<div class="field"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><label style="margin-bottom:0">退勤時間</label><button type="button" class="bg" id="adm-e-clear" onclick="document.getElementById(\'adm-e\').value=\'\';updateAdmAH();" style="font-size:10px;padding:1px 6px;line-height:1.2;cursor:pointer" title="退勤時間を未確定(利用中)の状態に戻します">未確定にする</button></div><input type="time" id="adm-e" value="'+att.endTime+'" style="width:100%" onchange="updateAdmAH()"></div></div>'+
-      '<div class="grid2"><div class="field"><label>お弁当</label><select id="adm-b" style="width:100%"><option'+(att.bento==='あり'?' selected':'')+'>あり</option><option'+(att.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
+      '<div class="grid3"><div class="field"><label>お弁当</label><select id="adm-b" style="width:100%"><option'+(att.bento==='あり'?' selected':'')+'>あり</option><option'+(att.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
+      '<div class="field"><label>支払方法</label><select id="adm-bp" style="width:100%"><option value="工賃払い"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod)||'工賃払い')==='工賃払い'?' selected':'')+'>工賃払い</option><option value="当日"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod))==='当日'?' selected':'')+'>当日</option><option value="月末締め翌月払い"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod))==='月末締め翌月払い'?' selected':'')+'>翌月払い</option></select></div>'+
       '<div class="field"><label>送迎</label><select id="adm-p" style="width:100%"><option'+(att.pickup==='あり'?' selected':'')+'>あり</option><option'+(att.pickup!=='あり'?' selected':'')+'>なし</option></select></div></div>'+
       '<div class="field"><label>備考（変更理由）</label><textarea id="adm-an" rows="2" style="width:100%" placeholder="変更理由や連絡事項を記入...">'+esc(att.notes||'')+'</textarea></div>'+
       '<div style="display:none"><select id="adm-brk"><option value="'+(att.breakMin||60)+'"></option></select><select id="adm-wt"><option value="'+(dWt?dWt.id:'')+'"></option></select><select id="adm-wtp"><option value="'+(dWt?dWt.id:'')+'"></option></select><textarea id="adm-content">'+esc(rep.content||'')+'</textarea><select id="adm-m"><option>'+esc(rep.mood||'普通')+'</option></select><textarea id="adm-dn">'+esc(rep.notes||'')+'</textarea></div>'+
@@ -1021,6 +1022,7 @@ async function saveCalAtt(uid,ds){
     endTime:isAbs?'':document.getElementById('adm-e').value,
     breakMin:isAbs?0:Number(document.getElementById('adm-brk').value)||0,
     bento:document.getElementById('adm-b').value,
+    bentoPaymentMethod:document.getElementById('adm-bp')?document.getElementById('adm-bp').value:'',
     pickup:document.getElementById('adm-p').value,
     notes:document.getElementById('adm-an').value};
   try{
@@ -1537,7 +1539,8 @@ function openUserModal(u){
     '<div class="field"><label>利用日（曜日）</label><div style="display:flex;flex-wrap:wrap;gap:2px">'+DAYS_JP.map(function(day){return'<label class="day-check"><input type="checkbox" class="uf-day" value="'+day+'"'+(schDays.indexOf(day)>=0?' checked':'')+'>'+day+'</label>';}).join('')+'</div></div>'+
     '<div class="grid2"><div class="field"><label>利用時間（開始）</label><input type="time" id="uf-tstart" value="'+(d.scheduleStart||'10:00')+'" style="width:100%"></div>'+
     '<div class="field"><label>利用時間（終了）</label><input type="time" id="uf-tend" value="'+(d.scheduleEnd||'16:00')+'" style="width:100%"></div></div>'+
-    '<div class="grid2"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%"><option'+(d.bento==='あり'?' selected':'')+'>あり</option><option'+(d.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
+    '<div class="grid3"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%"><option'+(d.bento==='あり'?' selected':'')+'>あり</option><option'+(d.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
+    '<div class="field"><label>お弁当支払方法</label><select id="uf-bento-pay" style="width:100%"><option value="工賃払い"'+(d.bentoPaymentMethod==='工賃払い'||!d.bentoPaymentMethod?' selected':'')+'>工賃払い</option><option value="当日"'+(d.bentoPaymentMethod==='当日'?' selected':'')+'>当日払い</option><option value="月末締め翌月払い"'+(d.bentoPaymentMethod==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option></select></div>'+
     '<div class="field"><label>送迎</label><select id="uf-pickup" style="width:100%"><option'+(d.pickup==='あり'?' selected':'')+'>あり</option><option'+(d.pickup!=='あり'?' selected':'')+'>なし</option></select></div></div></div>';
 
   // 利用後の進路（基本情報内）
@@ -2914,7 +2917,7 @@ function collectCurrentUserData(){
     supportStartDate:'uf-sstart',supportEndDate:'uf-send',
     enrollDate:'uf-enroll',endDate:'uf-edate',endReason:'uf-endreason',
     scheduleStart:'uf-tstart',scheduleEnd:'uf-tend',
-    bento:'uf-bento',pickup:'uf-pickup',notes:'uf-notes',
+    bento:'uf-bento',bentoPaymentMethod:'uf-bento-pay',pickup:'uf-pickup',notes:'uf-notes',
     afterCarePlan:'uf-aftercare',afterCareOrg:'uf-afterorg',
     disabilityName:'uf-disname',handicapBook:'uf-hbook',handicapGrade:'uf-hgrade',
     category:'uf-cat',copayAmount:'uf-copay',jiritsuMedical:'uf-jiritsu',severeDisMedical:'uf-severe',
@@ -3003,7 +3006,7 @@ async function saveUser(id){
     endReason:gv('uf-endreason',existing.endReason||''),
     scheduleDays:hasDays?days.join(','):(existing.scheduleDays||''),
     scheduleStart:gv('uf-tstart',existing.scheduleStart||'10:00'),scheduleEnd:gv('uf-tend',existing.scheduleEnd||'16:00'),
-    bento:gv('uf-bento',existing.bento||'なし'),pickup:gv('uf-pickup',existing.pickup||'なし'),
+    bento:gv('uf-bento',existing.bento||'なし'),bentoPaymentMethod:gv('uf-bento-pay',existing.bentoPaymentMethod||'工賃払い'),pickup:gv('uf-pickup',existing.pickup||'なし'),
     notes:gv('uf-notes',existing.notes||''),
     afterCarePlan:gv('uf-aftercare',existing.afterCarePlan||''),afterCareOrg:gv('uf-afterorg',existing.afterCareOrg||''),
     relatedOrgs:document.getElementById('rel-org-body')?JSON.stringify(collectRelOrgs()):(existing.relatedOrgs||''),
@@ -4949,7 +4952,7 @@ function calcWage(r,user){
 
 async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var attRes=await Promise.all([cachedGas('getAttendance',wM),cachedGas('getClosedDays',wM)]);var att=attRes[0],closedDays=attRes[1]||[];var bentoPrice=Number(S.settings.bentoPrice)||100;var data=S.users.map(function(u){
   var recs=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
-  var tH=0,tW=0,bt={},bc=0;
+  var tH=0,tW=0,bt={},bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
   recs.forEach(function(r){
     var w=calcWage(r,u);
     tH+=w.h; tW+=w.wage;
@@ -4957,14 +4960,22 @@ async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var attR
       if(!bt[item.name])bt[item.name]={h:0,w:0,r:item.rate};
       bt[item.name].h+=item.h; bt[item.name].w+=item.wage;
     });
-    if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;
+    if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
+      bc++;
+      var pm=r.bentoPaymentMethod||u.bentoPaymentMethod||'工賃払い';
+      if(pm==='当日')bcDaily++;
+      else if(pm==='月末締め翌月払い')bcNext++;
+      else bcDeduct++;
+    }
   });
   var kk=checkKaikin(u, att, wM, closedDays);
   var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
   var alResult=_useNew?calcAllowances(u,att,wM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
   var bonus=alResult.total;
-  var bd=bc*bentoPrice;
-  return{u:u,d:recs.length,tH:tH,tW:tW,bt:bt,kk:kk,bonus:bonus,alDetails:alResult.details,bc:bc,bd:bd,total:tW+bonus-bd};
+  var bd=bcDeduct*bentoPrice;
+  var bdNext=bcNext*bentoPrice;
+  var bdDaily=bcDaily*bentoPrice;
+  return{u:u,d:recs.length,tH:tH,tW:tW,bt:bt,kk:kk,bonus:bonus,alDetails:alResult.details,bc:bc,bcDeduct:bcDeduct,bcDaily:bcDaily,bcNext:bcNext,bd:bd,bdNext:bdNext,bdDaily:bdDaily,total:tW+bonus-bd};
 }).filter(function(d){return d.d>0;});
 var g=data.reduce(function(s,d){return s+d.total;},0);
 var th=data.reduce(function(s,d){return s+d.tH;},0);
@@ -4972,9 +4983,10 @@ var kaikinCount=data.filter(function(d){return d.kk.kaikin;}).length;
 var seikinCount=data.filter(function(d){return !d.kk.kaikin&&d.kk.ng<=2&&d.kk.ok>0;}).length;
 var totalBonus=data.reduce(function(s,d){return s+d.bonus;},0);
 var totalBento=data.reduce(function(s,d){return s+d.bd;},0);
+var totalBentoAll=data.reduce(function(s,d){return s+d.bc;},0);
 
   var totalWage=data.reduce(function(s,d){return s+d.tW;},0);
-  document.getElementById('w-st').innerHTML='<div class="stat"><div class="stat-l">対象者</div><div class="stat-v">'+data.length+'</div></div><div class="stat" style="border-color:#1565c0"><div class="stat-l">総時間</div><div class="stat-v" style="color:#1565c0">'+th.toFixed(1)+'h</div></div><div class="stat" style="border-color:var(--acc)"><div class="stat-l">工賃額</div><div class="stat-v" style="color:var(--acc)">¥'+Math.round(totalWage).toLocaleString()+'</div></div><div class="stat" style="border-color:var(--grn)"><div class="stat-l">🎁 手当合計</div><div class="stat-v" style="color:var(--grn)">¥'+totalBonus.toLocaleString()+'</div><div class="stat-s">皆勤 '+kaikinCount+'名 / 精勤 '+seikinCount+'名</div></div><div class="stat" style="border-color:#c62828"><div class="stat-l">🍱弁当代</div><div class="stat-v" style="color:#c62828">-¥'+totalBento.toLocaleString()+'</div><div class="stat-s">単価 ¥'+bentoPrice.toLocaleString()+'/食</div></div><div class="stat" style="border-color:var(--pri)"><div class="stat-l">支給合計</div><div class="stat-v" style="color:var(--pri)">¥'+Math.round(g).toLocaleString()+'</div></div>';
+  document.getElementById('w-st').innerHTML='<div class="stat"><div class="stat-l">対象者</div><div class="stat-v">'+data.length+'</div></div><div class="stat" style="border-color:#1565c0"><div class="stat-l">総時間</div><div class="stat-v" style="color:#1565c0">'+th.toFixed(1)+'h</div></div><div class="stat" style="border-color:var(--acc)"><div class="stat-l">工賃額</div><div class="stat-v" style="color:var(--acc)">¥'+Math.round(totalWage).toLocaleString()+'</div></div><div class="stat" style="border-color:var(--grn)"><div class="stat-l">🎁 手当合計</div><div class="stat-v" style="color:var(--grn)">¥'+totalBonus.toLocaleString()+'</div><div class="stat-s">皆勤 '+kaikinCount+'名 / 精勤 '+seikinCount+'名</div></div><div class="stat" style="border-color:#c62828"><div class="stat-l">🍱弁当控除</div><div class="stat-v" style="color:#c62828">-¥'+totalBento.toLocaleString()+'</div><div class="stat-s">全'+totalBentoAll+'食 (控除対象)</div></div><div class="stat" style="border-color:var(--pri)"><div class="stat-l">支給合計</div><div class="stat-v" style="color:var(--pri)">¥'+Math.round(g).toLocaleString()+'</div></div>';
   document.getElementById('w-tbl').innerHTML=data.length===0?'<p style="color:var(--sub);padding:20px;text-align:center">記録なし</p>':
     '<table style="font-size:12px;width:100%"><thead><tr style="background:#f5f0ea"><th style="padding:10px 8px;text-align:left">氏名</th><th style="padding:10px 4px;text-align:center;width:70px">日数</th><th style="padding:10px 4px;text-align:center;width:50px">時間</th><th style="padding:10px 8px;text-align:right;width:80px">工賃</th><th style="padding:10px 8px;text-align:right;width:80px">手当</th><th style="padding:10px 8px;text-align:right;width:70px">弁当代</th><th style="padding:10px 8px;text-align:right;width:90px">合計</th></tr></thead><tbody>'+
     data.map(function(d,idx){
@@ -5009,7 +5021,13 @@ var totalBento=data.reduce(function(s,d){return s+d.bd;},0);
       detail+='<div><div style="font-size:9px;color:#888">休み</div><div style="font-size:16px;font-weight:700;color:'+(d.kk.ng>0?'#c62828':'#ccc')+'">'+d.kk.ng+'</div></div>';
       detail+='</div>';
       if(d.kk.pending>0){detail+='<div style="font-size:10px;color:#1565c0;margin-top:6px;text-align:center">⏳ 未記録 '+d.kk.pending+'日</div>';}
-      if(d.bd>0){detail+='<div style="margin-top:12px;padding-top:8px;border-top:1px solid #eee"><div style="font-size:11px;font-weight:700;color:var(--pri);margin-bottom:4px">🍱 弁当</div><div style="font-size:11px;color:#888">'+d.bc+'食 × ¥'+bentoPrice.toLocaleString()+' = <span style="color:#c62828;font-weight:600">-¥'+d.bd.toLocaleString()+'</span></div></div>';}
+      if(d.bc>0){
+        var bDetails=[];
+        if(d.bcDeduct>0)bDetails.push('工賃控除: '+d.bcDeduct+'食 (-¥'+d.bd.toLocaleString()+')');
+        if(d.bcDaily>0)bDetails.push('当日精算: '+d.bcDaily+'食 (¥'+d.bdDaily.toLocaleString()+')');
+        if(d.bcNext>0)bDetails.push('翌月請求: '+d.bcNext+'食 (¥'+d.bdNext.toLocaleString()+')');
+        detail+='<div style="margin-top:12px;padding-top:8px;border-top:1px solid #eee"><div style="font-size:11px;font-weight:700;color:var(--pri);margin-bottom:4px">🍱 弁当 (全'+d.bc+'食)</div><div style="font-size:11px;color:#888">'+bDetails.join(' / ')+'</div></div>';
+      }
       detail+='</div>';
 
       // 中：作業内訳
@@ -5460,13 +5478,23 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var att=await cachedGas('getAttendance',eM);
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     var recs=att.filter(function(a){return String(a.userId)===uid&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
-    var tW=0,tH=0,bc=0;
-    recs.forEach(function(r){var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;});
+    var tW=0,tH=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
+    recs.forEach(function(r){
+      var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
+      if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
+        bc++;
+        var pm=r.bentoPaymentMethod||u.bentoPaymentMethod||'工賃払い';
+        if(pm==='当日')bcDaily++;
+        else if(pm==='月末締め翌月払い')bcNext++;
+        else bcDeduct++;
+      }
+    });
     var kk=checkKaikin(u,att,eM);
     var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
     var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
     var bonus=alResult.total;
-    var bd=bc*bentoPrice;
+    var bd=bcDeduct*bentoPrice;
+    var bdNext=bcNext*bentoPrice;
     var total=Math.round(tW)+bonus-bd;
     var ym=eM.split('-');var yStr=ym[0];var mStr=parseInt(ym[1]);
     var fNum=S.settings.facilityNumber||'';
@@ -5475,10 +5503,10 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var fType=S.settings.facilityType||'就労継続支援B型';
 
     if(eT==='invoice'){
-      document.getElementById('e-c').innerHTML=userSelHtml+renderOneInvoice(u,recs,bc,bd,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
+      document.getElementById('e-c').innerHTML=userSelHtml+renderOneInvoice(u,recs,bcNext,bdNext,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
 
     }else if(eT==='receipt'){
-      document.getElementById('e-c').innerHTML=userSelHtml+renderOneReceipt(u,recs,tW,tH,bc,bd,bonus,total,alResult,yStr,mStr,compName,fName,fNum,fType);
+      document.getElementById('e-c').innerHTML=userSelHtml+renderOneReceipt(u,recs,tW,tH,bcDeduct,bd,bonus,total,alResult,yStr,mStr,compName,fName,fNum,fType);
 
     }else if(eT==='proxyReceipt'){
       // 代理受領通知書（編集・保存対応）
@@ -5604,14 +5632,25 @@ async function printAllIRP(){
   users.forEach(function(u){
     var recs=att.filter(function(a){return String(a.userId)===u.id&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
     if(recs.length===0)return;
-    var tW=0,tH=0,bc=0;
-    recs.forEach(function(r){var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし')bc++;});
+    var tW=0,tH=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
+    recs.forEach(function(r){
+      var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
+      if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
+        bc++;
+        var pm=r.bentoPaymentMethod||u.bentoPaymentMethod||'工賃払い';
+        if(pm==='当日')bcDaily++;
+        else if(pm==='月末締め翌月払い')bcNext++;
+        else bcDeduct++;
+      }
+    });
     var kk=checkKaikin(u,att,eM);
     var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
     var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
-    var bonus=alResult.total;var bd=bc*bentoPrice;var total=Math.round(tW)+bonus-bd;
-    if(eT==='invoice')allH+=renderOneInvoice(u,recs,bc,bd,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
-    else if(eT==='receipt')allH+=renderOneReceipt(u,recs,tW,tH,bc,bd,bonus,total,alResult,yStr,mStr,compName,fName,fNum,fType);
+    var bonus=alResult.total;var bd=bcDeduct*bentoPrice;var bdNext=bcNext*bentoPrice;var total=Math.round(tW)+bonus-bd;
+    if(eT==='invoice'){
+      if(bcNext>0)allH+=renderOneInvoice(u,recs,bcNext,bdNext,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
+    }
+    else if(eT==='receipt')allH+=renderOneReceipt(u,recs,tW,tH,bcDeduct,bd,bonus,total,alResult,yStr,mStr,compName,fName,fNum,fType);
   });
   if(!allH){await cAlert('出勤データのある利用者がいません');return;}
   document.getElementById('e-c').innerHTML=allH;
