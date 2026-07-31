@@ -180,7 +180,7 @@ async function clockIn(userId,signatureDataUrl){
     await sb.from('出欠').update({startTime:now,status:'出席',signature:signatureDataUrl||null}).eq('id',existing.id);
   }else{
     var rec={id:_genId('a'),userId:userId,date:today2,status:'出席',startTime:now,endTime:null,
-      breakMin:String(user.breakMin||60),workTypeId:defaultWt,
+      breakMin:String(user.breakMin!==undefined&&user.breakMin!==null&&user.breakMin!==''?user.breakMin:60),workTypeId:defaultWt,
       bento:user.bento||'なし',pickup:user.pickup||'なし',signature:signatureDataUrl||null};
     var safe={};var cols=Object.keys(rec);
     for(var i=0;i<cols.length;i++){var v=rec[cols[i]];safe[cols[i]]=v===''?null:v;}

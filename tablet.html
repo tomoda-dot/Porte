@@ -663,7 +663,7 @@ async function saveForm(){
       status:CURRENT_STATUS,
       startTime:el('f-start').value,
       endTime:el('f-end').value,
-      breakMin:parseInt(el('f-break').value)||60,
+      breakMin:(el('f-break')&&el('f-break').value!=='')?parseInt(el('f-break').value):60,
       workTypeId:amTypeId,
       workTypeIdPm:pmTypeId,
       bento:el('f-bento').value==='あり'?'あり':'なし',

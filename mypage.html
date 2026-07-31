@@ -515,7 +515,7 @@ async function renderAtt(){
   recs.forEach(function(r){
     var sp=r.startTime.split(':'),ep=(r.endTime||'').split(':');
     if(ep.length<2)return;
-    tmin+=Math.max(0,parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1])-(parseInt(r.breakMin)||60));
+    tmin+=Math.max(0,parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1])-(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!==''?parseInt(r.breakMin):60));
   });
   var plD=PL_USAGES.filter(function(u){return(u.date||'').indexOf(ATT_YM)===0;}).reduce(function(s,u){return s+(Number(u.days)||0);},0);
   el('att-sum').innerHTML=
@@ -525,7 +525,7 @@ async function renderAtt(){
   var html='';
   recs.forEach(function(r){
     var di=new Date(r.date).getDay();
-    var recData=JSON.stringify({date:r.date,startTime:r.startTime,endTime:r.endTime||'',breakMin:r.breakMin||60});
+    var recData=JSON.stringify({date:r.date,startTime:r.startTime,endTime:r.endTime||'',breakMin:(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!==''?r.breakMin:60)});
     var shift=r.shift||'';
     var timeDisp='';
     if(shift==='有給'){

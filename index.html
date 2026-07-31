@@ -938,6 +938,7 @@ function renderDD(ds){
     '</div>';
 }
 async function openCalAttM(uid, ds){
+  window._curAttUid=uid;
   document.getElementById('common-modal').innerHTML='<div class="overlay" style="z-index:1000"><div class="modal" style="width:300px;text-align:center;padding:30px"><div class="spin" style="margin:0 auto"></div><div style="margin-top:8px">読み込み中...</div></div></div>';
   try{
     var results=await Promise.all([cachedGas('getAttendanceByDate',ds),cachedGas('getDailyByDate',ds),cachedGas('getTempByDate',ds)]);
@@ -966,8 +967,9 @@ async function openCalAttM(uid, ds){
       '<div class="grid3"><div class="field"><label>お弁当</label><select id="adm-b" style="width:100%"><option'+(att.bento==='あり'?' selected':'')+'>あり</option><option'+(att.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
       '<div class="field"><label>支払方法</label><select id="adm-bp" style="width:100%"><option value="工賃払い"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod)||'工賃払い')==='工賃払い'?' selected':'')+'>工賃払い</option><option value="当日"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod))==='当日'?' selected':'')+'>当日</option><option value="月末締め翌月払い"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod))==='月末締め翌月払い'?' selected':'')+'>翌月払い</option></select></div>'+
       '<div class="field"><label>送迎</label><select id="adm-p" style="width:100%"><option'+(att.pickup==='あり'?' selected':'')+'>あり</option><option'+(att.pickup!=='あり'?' selected':'')+'>なし</option></select></div></div>'+
+      '<div class="field"><label>工賃算定時間（調整） <span style="font-weight:normal;font-size:11px;color:var(--sub)">※早帰り・延長時に指定</span></label><input type="number" step="0.1" min="0" max="24" id="adm-ah" value="'+(att.actualHours!=null?att.actualHours:'')+'" placeholder="自動算定 (サービス提供時間)" style="width:100%" onchange="updateAdmAH()" oninput="updateAdmAH()"></div>'+
       '<div class="field"><label>備考（変更理由）</label><textarea id="adm-an" rows="2" style="width:100%" placeholder="変更理由や連絡事項を記入...">'+esc(att.notes||'')+'</textarea></div>'+
-      '<div style="display:none"><select id="adm-brk"><option value="'+(att.breakMin||60)+'"></option></select><select id="adm-wt"><option value="'+(dWt?dWt.id:'')+'"></option></select><select id="adm-wtp"><option value="'+(dWt?dWt.id:'')+'"></option></select><textarea id="adm-content">'+esc(rep.content||'')+'</textarea><select id="adm-m"><option>'+esc(rep.mood||'普通')+'</option></select><textarea id="adm-dn">'+esc(rep.notes||'')+'</textarea></div>'+
+      '<div style="display:none"><select id="adm-brk"><option value="'+((att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?att.breakMin:60)+'"></option></select><select id="adm-wt"><option value="'+(dWt?dWt.id:'')+'"></option></select><select id="adm-wtp"><option value="'+(dWt?dWt.id:'')+'"></option></select><textarea id="adm-content">'+esc(rep.content||'')+'</textarea><select id="adm-m"><option>'+esc(rep.mood||'普通')+'</option></select><textarea id="adm-dn">'+esc(rep.notes||'')+'</textarea></div>'+
       '<div style="font-size:11px;color:var(--sub);text-align:right;margin-top:4px" id="adm-h-calc"></div>'+
       '<div class="btns" style="margin-top:14px;border-top:1px solid var(--bdr);padding-top:14px;display:flex;justify-content:space-between;align-items:center">'+
       '  <button style="background:#c62828;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer" onclick="deleteCalAtt(\''+uid+'\',\''+ds+'\')">🗑️ 削除</button>'+
@@ -1017,10 +1019,12 @@ async function saveCalAtt(uid,ds){
   if(!lockUI())return;
   var st=document.getElementById('adm-st').value;
   var isAbs=['欠席','体調不良','通院','調整休'].indexOf(st)>=0;
+  var ahVal=document.getElementById('adm-ah')&&document.getElementById('adm-ah').value!==''?Number(document.getElementById('adm-ah').value):null;
   var attObj={userId:uid,date:ds,status:st,
     startTime:isAbs?'':document.getElementById('adm-s').value,
     endTime:isAbs?'':document.getElementById('adm-e').value,
     breakMin:isAbs?0:Number(document.getElementById('adm-brk').value)||0,
+    actualHours:isAbs?null:ahVal,
     bento:document.getElementById('adm-b').value,
     bentoPaymentMethod:document.getElementById('adm-bp')?document.getElementById('adm-bp').value:'',
     pickup:document.getElementById('adm-p').value,
@@ -1044,6 +1048,8 @@ function updateAdmAH(){
   document.getElementById('adm-s').disabled=isAbs;
   document.getElementById('adm-e').disabled=isAbs;
   document.getElementById('adm-brk').disabled=isAbs;
+  var ahInp=document.getElementById('adm-ah');
+  if(ahInp) ahInp.disabled=isAbs;
   document.getElementById('adm-wt').disabled=isAbs;
   document.getElementById('adm-wtp').disabled=isAbs;
   document.getElementById('adm-content').disabled=isAbs;
@@ -1053,14 +1059,26 @@ function updateAdmAH(){
   if(isAbs){
     document.getElementById('adm-s').value='';
     document.getElementById('adm-e').value='';
+    if(ahInp) ahInp.value='';
   }
-  var sTime=document.getElementById('adm-s').value;
-  var eTime=document.getElementById('adm-e').value;
-  var brk=Number(document.getElementById('adm-brk').value)||0;
-  var hrs=isAbs?0:calcH(sTime,eTime,brk);
-  document.getElementById('adm-h-calc').textContent=isAbs?'-':(eTime ? '実働: '+hrs.toFixed(2)+' 時間' : '実働: 未確定（利用中）');
+  function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
+  var uid=window._curAttUid||'';
+  var u=S.users.find(function(x){return String(x.id)===String(uid);});
+  var sSch=(u&&u.scheduleStart)?u.scheduleStart:'10:00';
+  var eSch=(u&&u.scheduleEnd)?u.scheduleEnd:'16:00';
+  var brk=(document.getElementById('adm-brk')?Number(document.getElementById('adm-brk').value):0);
+  var stdHrs=Math.max(0, toMin(eSch)-toMin(sSch)-brk)/60;
+  
+  var customAH=(ahInp&&ahInp.value!=='')?Number(ahInp.value):null;
+  var finalHrs=customAH!==null?customAH:stdHrs;
+  
+  var calcEl=document.getElementById('adm-h-calc');
+  if(calcEl){
+    calcEl.textContent=isAbs?'-':(customAH!==null?'工賃算定: '+finalHrs.toFixed(2)+' 時間 (手動調整)' :'工賃算定: '+finalHrs.toFixed(2)+' 時間 (サービス提供時間)');
+  }
 }
 async function openAttDailyM(uid, ds){
+  window._curAttUid=uid;
   showLoading('content','出欠・日報を読み込み中...');
   try{
     var results=await Promise.all([cachedGas('getAttendanceByDate',ds),cachedGas('getDailyByDate',ds)]);
@@ -1128,10 +1146,14 @@ async function openAttDailyM(uid, ds){
       '      <label>休憩時間</label>'+
       '      <select id="adm-brk" style="width:100%" onchange="updateAdmAH()">'+
              [['0','なし（0分）'],['30','30分'],['45','45分'],['60','60分（標準）']].map(function(opt){
-               var brkVal=String(Number(att.breakMin)||60);
+               var brkVal=(att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?String(att.breakMin):'60';
                return'<option value="'+opt[0]+'"'+(brkVal===opt[0]?' selected':'')+'>'+opt[1]+'</option>';
              }).join('')+
       '      </select>'+
+      '    </div>'+
+      '    <div class="field">'+
+      '      <label>工賃算定時間（調整） <span style="font-weight:normal;font-size:11px;color:var(--sub)">※早帰り・延長時に指定（未入力時は自動適用）</span></label>'+
+      '      <input type="number" step="0.1" min="0" max="24" id="adm-ah" value="'+(att.actualHours!=null?att.actualHours:'')+'" placeholder="自動算定 (サービス提供時間)" style="width:100%" onchange="updateAdmAH()" oninput="updateAdmAH()">'+
       '    </div>'+
       '    <div class="grid2">'+
       '      <div class="field"><label>お弁当</label><select id="adm-b" style="width:100%"><option'+(att.bento==='あり'?' selected':'')+'>あり</option><option'+(att.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
@@ -1234,6 +1256,7 @@ async function saveAttDaily(uid, ds){
   var rawPm=document.getElementById('adm-wtp')?document.getElementById('adm-wtp').value:'';
   var saveAmId=(rawAm&&rawAm!=='none')?rawAm:'none';
   var savePmId=(rawPm&&rawPm!=='none')?rawPm:'none';
+  var ahVal=document.getElementById('adm-ah')&&document.getElementById('adm-ah').value!==''?Number(document.getElementById('adm-ah').value):null;
 
   var attObj={
     userId:uid,
@@ -1242,6 +1265,7 @@ async function saveAttDaily(uid, ds){
     startTime:isNoWork?'':document.getElementById('adm-s').value,
     endTime:isNoWork?'':document.getElementById('adm-e').value,
     breakMin:isNoWork?0:Number(document.getElementById('adm-brk').value)||0,
+    actualHours:isNoWork?null:ahVal,
     workTypeId:isNoWork?'':saveAmId,
     workTypeIdPm:isNoWork?'':savePmId,
     bento:document.getElementById('adm-b').value,
@@ -4906,42 +4930,32 @@ function checkKaikin(u, allAtt, ym, closedDays){
 }
 var KAIKIN_BONUS=Number(S.settings.kaikinBonus)||0; // 旧互換用、手当設定に移行
 
-// 工賃計算: (退勤-出勤-休憩)×時給。午前午後で時給が違う場合は半分ずつ分割
+// 工賃計算: 基本はサービス提供時間（予定時間から休憩を差し引いた時間）。手動調整(actualHours)があればそれを優先
 function calcWage(r,user){
-  // 時刻を分に変換
   function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
-  var sRec=r.startTime?String(r.startTime):'';
-  var eRec=r.endTime?String(r.endTime):'';
-  var sSch=(user&&user.scheduleStart)?String(user.scheduleStart):'';
-  var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):'';
-  var totalMin;
-  if(sRec&&eRec){
-    // 打刻あり → 打刻時間（休憩差し引き）を30分単位で切り捨て
-    var rawMin=Math.max(0,toMin(eRec)-toMin(sRec)-(Number(r.breakMin)||0));
-    totalMin=Math.floor(rawMin/30)*30;
-  }else if(sSch&&eSch){
-    // 打刻なし → 予定時間をそのまま使用
-    totalMin=Math.max(0,toMin(eSch)-toMin(sSch));
-  }else{
-    return{h:0,wage:0,items:[]};
+  var totalH=0;
+  if(r.actualHours!==undefined && r.actualHours!==null && r.actualHours!==''){
+    totalH=Math.max(0, Number(r.actualHours));
+  } else {
+    var sSch=(user&&user.scheduleStart)?String(user.scheduleStart):(r.scheduleStart?String(r.scheduleStart):'10:00');
+    var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):(r.scheduleEnd?String(r.scheduleEnd):'16:00');
+    var brk=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?Number(r.breakMin):60;
+    var rawMin=Math.max(0, toMin(eSch)-toMin(sSch)-brk);
+    totalH=rawMin/60;
   }
-  var totalH=Math.max(0,totalMin/60);
   var amId=r.workTypeId||'';
   var pmId=(r.workTypeIdPm&&r.workTypeIdPm!=='')?r.workTypeIdPm:amId;
   var wtAm=amId?S.workTypes.find(function(w){return w.id===amId;}):null;
   var wtPm=pmId?S.workTypes.find(function(w){return w.id===pmId;}):null;
-  // AMもPMも見つからない場合、最初の作業種別をデフォルトにする
   if(!wtAm&&!wtPm&&S.workTypes.length>0){wtAm=S.workTypes[0];wtPm=S.workTypes[0];}
   else if(!wtAm&&wtPm){wtAm=wtPm;}
   else if(wtAm&&!wtPm){wtPm=wtAm;}
-  // 午前午後の作業種別が同じ → シンプル計算
   if(!wtAm||wtAm.id===wtPm.id){
     var wt=wtAm||wtPm;
     var rt=wt?Number(wt.rate):0;
     var nm=wt?wt.name:'未設定';
     return{h:totalH,wage:totalH*rt,items:[{name:nm,h:totalH,rate:rt,wage:totalH*rt}]};
   }
-  // 異なる場合は半分ずつ
   var halfH=totalH/2;
   var rtAm=Number(wtAm.rate)||0,rtPm=Number(wtPm.rate)||0;
   var items=[];
@@ -5263,7 +5277,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
   }else if(eT==='monthly'){
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     showLoading('e-c','月次明細を集計中...');
-    var attRes=await Promise.all([cachedGas('getAttendance',eM),cachedGas('getClosedDays',eM)]);var att=attRes[0],closedDays=attRes[1]||[];var d=S.users.map(function(u){var r=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});var h=0,w=0,bc=0;r.forEach(function(a){var cw=calcWage(a);h+=cw.h;w+=cw.wage;if(a.bento&&String(a.bento)!=='0'&&String(a.bento)!=='false'&&String(a.bento)!==''&&String(a.bento)!=='なし')bc++;});var kk=checkKaikin(u,att,eM,closedDays);var bonus=kk.kaikin?KAIKIN_BONUS:0;var bd=bc*bentoPrice;return{n:u.name,d:r.length,h:h,w:w,kk:kk.kaikin,bonus:bonus,bc:bc,bd:bd,total:w+bonus-bd};}).filter(function(x){return x.d>0;});
+    var attRes=await Promise.all([cachedGas('getAttendance',eM),cachedGas('getClosedDays',eM)]);var att=attRes[0],closedDays=attRes[1]||[];var d=S.users.map(function(u){var r=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});var h=0,w=0,bc=0;r.forEach(function(a){var cw=calcWage(a,u);h+=cw.h;w+=cw.wage;if(a.bento&&String(a.bento)!=='0'&&String(a.bento)!=='false'&&String(a.bento)!==''&&String(a.bento)!=='なし')bc++;});var kk=checkKaikin(u,att,eM,closedDays);var bonus=kk.kaikin?KAIKIN_BONUS:0;var bd=bc*bentoPrice;return{n:u.name,d:r.length,h:h,w:w,kk:kk.kaikin,bonus:bonus,bc:bc,bd:bd,total:w+bonus-bd};}).filter(function(x){return x.d>0;});
     var grandWage=d.reduce(function(s,x){return s+Math.round(x.w);},0);
     var grandBonus=d.reduce(function(s,x){return s+x.bonus;},0);
     var grandBento=d.reduce(function(s,x){return s+x.bd;},0);
@@ -6368,7 +6382,7 @@ async function renderStaffAttendance(){
         days++;
         var sp=r.startTime.split(':'),ep=r.endTime.split(':');
         var grossMin=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1]);
-        var bMin=parseInt(r.breakMin)||60;
+        var bMin=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?parseInt(r.breakMin):60;
         var netMin=Math.max(0,grossMin-bMin);
         workMin+=grossMin;breakMin2+=bMin;
         // 1日8h超を時間外に
@@ -6545,7 +6559,7 @@ async function dlStaffAttCSV(){
       days++;
       var sp=r.startTime.split(':'),ep=r.endTime.split(':');
       var grossMin=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1]);
-      var bMin=parseInt(r.breakMin)||60;
+      var bMin=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?parseInt(r.breakMin):60;
       var netMin=Math.max(0,grossMin-bMin);
       workMin+=grossMin;bkMin+=bMin;
       otMin+=Math.max(0,netMin-stdHPerDay*60);
@@ -6594,7 +6608,7 @@ async function dlStaffAttCSV(){
     var sName=s?s.name:'';
     var sp=r.startTime.split(':'),ep=r.endTime.split(':');
     var grossMin=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1]);
-    var bMin=parseInt(r.breakMin)||60;
+    var bMin=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?parseInt(r.breakMin):60;
     var netH2=Math.round(Math.max(0,grossMin-bMin)/60*100)/100;
     var dow=dowNames2[new Date(r.date).getDay()];
     rows.push([fmtDate(r.date),dow,sName,r.startTime,r.endTime,bMin,netH2,r.shift||'']);
