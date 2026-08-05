@@ -676,8 +676,6 @@
       items.forEach((item, index) => {
         const isSoldOut = item.stock <= 0;
         const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id);
-        const earliestExp = getBentoEarliestExpDate(item);
-        const expBadgeText = earliestExp !== '9999-12-31' ? `⏳ 賞味期限: ${earliestExp}` : '';
 
         let usersHtml = '';
         chosenUsers.forEach(u => {
@@ -692,7 +690,6 @@
           <div class="bento-icon-box">${item.icon}</div>
           <h2 class="bento-title">${item.name}</h2>
           <p class="bento-desc">${item.desc || ''}</p>
-          ${expBadgeText ? `<div style="font-size:0.85rem; font-weight:800; color:#d9480f; background:#fff4e6; border:1px solid #ffd8a8; padding:4px 12px; border-radius:12px; margin-bottom:12px; display:inline-block;">${expBadgeText}</div>` : ''}
 
           <div class="stock-chip">
             ${isSoldOut ? '<span style="color:#ff4757;">完売いたしました</span>' : `残り <strong>${item.stock}</strong> 食`}
