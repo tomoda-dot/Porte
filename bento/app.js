@@ -111,6 +111,9 @@ function loadData() {
       orderHistory = [];
     }
   }
+
+  // 初期ロード時、完売している品目を自動的に「在庫あり品目」へと置換
+  autoReplaceSoldOutMenu();
 }
 
 function saveMaster() {
@@ -127,6 +130,31 @@ function savePorteUsers() {
 
 function saveOrderHistory() {
   localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
+}
+
+// 本日の5品の中で「完売（在庫0）」になっているお弁当があれば、マスターの「在庫あり商品」と自動差し替え
+function autoReplaceSoldOutMenu() {
+  if (!bentoMaster || bentoMaster.length === 0 || !todaysMenuIds) return;
+
+  const inStockMaster = bentoMaster.filter(b => b.stock > 0);
+  if (inStockMaster.length === 0) return;
+
+  let changed = false;
+  for (let i = 0; i < todaysMenuIds.length; i++) {
+    const bento = bentoMaster.find(b => b.id === todaysMenuIds[i]);
+    if (!bento || bento.stock <= 0) {
+      // 本日の5品に未採用の「在庫がある商品」を探す
+      const unusedInStock = inStockMaster.find(b => !todaysMenuIds.includes(b.id));
+      if (unusedInStock) {
+        todaysMenuIds[i] = unusedInStock.id;
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    saveTodaysMenu();
+  }
 }
 
 // タブ切り替え
@@ -168,6 +196,8 @@ function renderProgressBar() {
 
 // 1. 本日の5品 メニュー表示
 function renderTodaysMenu() {
+  autoReplaceSoldOutMenu();
+
   const grid = document.getElementById('todaysMenuGrid');
   grid.innerHTML = '';
 
@@ -756,18 +786,53 @@ function setupEventListeners() {
   document.getElementById('closeUserSelectForBentoModal').addEventListener('click', closeUserSelectForBentoModal);
   document.getElementById('cancelUserSelectForBentoBtn').addEventListener('click', closeUserSelectForBentoModal);
 
+  // 在庫がある商品（stock > 0）を最優先でランダム5品選出
   document.getElementById('randomSelectBtn').addEventListener('click', () => {
     const cards = document.querySelectorAll('.bento-card');
     cards.forEach(c => c.classList.add('shuffling'));
 
     setTimeout(() => {
-      const shuffled = [...bentoMaster].sort(() => 0.5 - Math.random());
-      todaysMenuIds = shuffled.slice(0, 5).map(b => b.id);
+      const available = bentoMaster.filter(b => b.stock > 0);
+      let chosenIds = [];
+
+      if (available.length >= 5) {
+        chosenIds = [...available].sort(() => 0.5 - Math.random()).slice(0, 5).map(b => b.id);
+      } else if (available.length > 0) {
+        const chosenAvailable = [...available].sort(() => 0.5 - Math.random());
+        const remainingMaster = bentoMaster.filter(b => !chosenAvailable.some(a => a.id === b.id));
+        const chosenRemaining = [...remainingMaster].sort(() => 0.5 - Math.random()).slice(0, 5 - available.length);
+        chosenIds = [...chosenAvailable, ...chosenRemaining].map(b => b.id);
+      } else {
+        chosenIds = [...bentoMaster].sort(() => 0.5 - Math.random()).slice(0, 5).map(b => b.id);
+      }
+
+      todaysMenuIds = chosenIds;
       saveTodaysMenu();
       renderAll();
-      showToast('✨ 本日の5品をランダムに選出しました！', 'success');
+
+      if (available.length >= 5) {
+        showToast('✨ 在庫がある30品目の中から本日の5品を選出しました！', 'success');
+      } else if (available.length > 0) {
+        showToast(`⚠️ 在庫あり商品(${available.length}品)を優先選出しました。一部完売商品が含まれます。`, 'info');
+      } else {
+        showToast('⚠️ 全商品の在庫が0食です。商品マスター画面で在庫を補充してください。', 'warning');
+      }
     }, 400);
   });
+
+  const autoStockPickBtn = document.getElementById('autoStockPickBtn');
+  if (autoStockPickBtn) {
+    autoStockPickBtn.addEventListener('click', () => {
+      const available = bentoMaster.filter(b => b.stock > 0);
+      if (available.length === 0) {
+        showToast('⚠️ 在庫がある商品がありません。商品マスターで在庫を補充してください。', 'warning');
+        return;
+      }
+      autoReplaceSoldOutMenu();
+      renderAll();
+      showToast('🔄 完売品を在庫がある商品と自動で差し替えました！', 'success');
+    });
+  }
 
   document.getElementById('customPickBtn').addEventListener('click', openPickFiveModal);
   document.getElementById('closePickFiveModal').addEventListener('click', closePickFiveModal);
@@ -951,12 +1016,15 @@ function openPickFiveModal() {
 
   bentoMaster.forEach(item => {
     const isChecked = todaysMenuIds.includes(item.id);
+    const isSoldOut = item.stock <= 0;
+
     const div = document.createElement('label');
     div.className = 'pick-five-item';
     div.innerHTML = `
       <input type="checkbox" value="${item.id}" ${isChecked ? 'checked' : ''} onchange="updatePickFiveCount()">
       <span>${item.icon}</span>
       <strong>${item.name}</strong>
+      ${isSoldOut ? '<span style="color:#ff4757; font-size:0.75rem; margin-left:6px; font-weight:700;">(完売)</span>' : `<span style="color:#2b8a3e; font-size:0.75rem; margin-left:6px;">(残${item.stock}食)</span>`}
       <span style="font-size:0.8rem; color:#747d8c; margin-left:auto;">${item.category}</span>
     `;
     list.appendChild(div);
