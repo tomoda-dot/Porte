@@ -638,10 +638,34 @@
       }
     }
 
+    function getBentoEarliestExpDate(bento) {
+      if (!bento.lots) return '9999-12-31';
+      const activeLots = bento.lots.filter(l => l.qty > 0);
+      if (activeLots.length === 0) return '9999-12-31';
+      activeLots.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
+      return activeLots[0].expDate;
+    }
+
+    function sortTodaysMenuIdsByExpiration() {
+      if (!todaysMenuIds || todaysMenuIds.length === 0) return;
+      todaysMenuIds.sort((idA, idB) => {
+        const bA = bentoMaster.find(b => b.id === idA);
+        const bB = bentoMaster.find(b => b.id === idB);
+        if (!bA) return 1;
+        if (!bB) return -1;
+        if (bA.stock > 0 && bB.stock <= 0) return -1;
+        if (bA.stock <= 0 && bB.stock > 0) return 1;
+        const expA = getBentoEarliestExpDate(bA);
+        const expB = getBentoEarliestExpDate(bB);
+        return new Date(expA) - new Date(expB);
+      });
+    }
+
     function renderClientView() {
       const grid = document.getElementById('clientCardsGrid');
       grid.innerHTML = '';
 
+      sortTodaysMenuIdsByExpiration();
       const items = todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean);
 
       if (items.length === 0) {
@@ -652,7 +676,9 @@
       items.forEach((item, index) => {
         const isSoldOut = item.stock <= 0;
         const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id);
-        
+        const earliestExp = getBentoEarliestExpDate(item);
+        const expBadgeText = earliestExp !== '9999-12-31' ? `⏳ 賞味期限: ${earliestExp}` : '';
+
         let usersHtml = '';
         chosenUsers.forEach(u => {
           usersHtml += `<span class="user-pill">👤 ${u.name} 様</span>`;
@@ -666,6 +692,7 @@
           <div class="bento-icon-box">${item.icon}</div>
           <h2 class="bento-title">${item.name}</h2>
           <p class="bento-desc">${item.desc || ''}</p>
+          ${expBadgeText ? `<div style="font-size:0.85rem; font-weight:800; color:#d9480f; background:#fff4e6; border:1px solid #ffd8a8; padding:4px 12px; border-radius:12px; margin-bottom:12px; display:inline-block;">${expBadgeText}</div>` : ''}
 
           <div class="stock-chip">
             ${isSoldOut ? '<span style="color:#ff4757;">完売いたしました</span>' : `残り <strong>${item.stock}</strong> 食`}

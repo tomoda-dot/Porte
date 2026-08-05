@@ -84,7 +84,7 @@ function ensureBentoLots(bento) {
   if (bento.lots.length === 0 && bento.stock > 0) {
     bento.lots.push({
       id: 'lot_' + Date.now(),
-      type: 'STOCK', // 'STOCK' (既存在庫分) or 'ARRIVED' (新規入荷分)
+      type: 'STOCK',
       qty: parseInt(bento.stock, 10) || 0,
       expDate: getOffsetDateStr(7)
     });
@@ -95,6 +95,33 @@ function ensureBentoLots(bento) {
 function recalculateBentoTotalStock(bento) {
   if (!bento.lots) bento.lots = [];
   bento.stock = bento.lots.reduce((sum, l) => sum + (parseInt(l.qty, 10) || 0), 0);
+}
+
+// 最長・最も早い賞味期限の取得
+function getBentoEarliestExpDate(bento) {
+  ensureBentoLots(bento);
+  const activeLots = (bento.lots || []).filter(l => l.qty > 0);
+  if (activeLots.length === 0) return '9999-12-31';
+  activeLots.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
+  return activeLots[0].expDate;
+}
+
+// 本日の5品を賞味期限の近い順（昇順）に並び替え
+function sortTodaysMenuIdsByExpiration() {
+  if (!todaysMenuIds || todaysMenuIds.length === 0) return;
+  todaysMenuIds.sort((idA, idB) => {
+    const bA = bentoMaster.find(b => b.id === idA);
+    const bB = bentoMaster.find(b => b.id === idB);
+    if (!bA) return 1;
+    if (!bB) return -1;
+
+    if (bA.stock > 0 && bB.stock <= 0) return -1;
+    if (bA.stock <= 0 && bB.stock > 0) return 1;
+
+    const expA = getBentoEarliestExpDate(bA);
+    const expB = getBentoEarliestExpDate(bB);
+    return new Date(expA) - new Date(expB);
+  });
 }
 
 // FIFO（賞味期限が近い順）での在庫消費
@@ -121,7 +148,6 @@ function deductBentoStockFIFO(bento, count = 1) {
   recalculateBentoTotalStock(bento);
 }
 
-// 入荷・在庫ロットの追加
 function addBentoStockLot(bento, qty, expDate, type = 'ARRIVED') {
   ensureBentoLots(bento);
   bento.lots.push({
@@ -134,7 +160,6 @@ function addBentoStockLot(bento, qty, expDate, type = 'ARRIVED') {
   recalculateBentoTotalStock(bento);
 }
 
-// データ読み込み
 function loadData() {
   const savedMaster = localStorage.getItem('bento_master');
   if (savedMaster) {
@@ -188,6 +213,7 @@ function saveMaster() {
 }
 
 function saveTodaysMenu() {
+  sortTodaysMenuIdsByExpiration();
   localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
 }
 
@@ -205,6 +231,9 @@ function autoReplaceSoldOutMenu() {
   const inStockMaster = bentoMaster.filter(b => b.stock > 0);
   if (inStockMaster.length === 0) return;
 
+  // 在庫あり商品を賞味期限が近い順に並び替え
+  inStockMaster.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
+
   let changed = false;
   const currentlyOrderedIds = porteUsers.map(u => u.selectedBentoId).filter(Boolean);
 
@@ -221,6 +250,8 @@ function autoReplaceSoldOutMenu() {
       }
     }
   }
+
+  sortTodaysMenuIdsByExpiration();
 
   if (changed) {
     saveTodaysMenu();
@@ -262,9 +293,10 @@ function renderProgressBar() {
   document.getElementById('progressFill').style.width = `${percent}%`;
 }
 
-// 1. 本日の5品 メニュー表示
+// 1. 本日の5品 メニュー表示（賞味期限の短い順で描画）
 function renderTodaysMenu() {
   autoReplaceSoldOutMenu();
+  sortTodaysMenuIdsByExpiration();
 
   const grid = document.getElementById('todaysMenuGrid');
   grid.innerHTML = '';
@@ -274,6 +306,9 @@ function renderTodaysMenu() {
   items.forEach((item, index) => {
     const isSoldOut = item.stock <= 0;
     const stockPercent = Math.min(100, Math.max(0, (item.stock / 15) * 100));
+
+    const earliestExp = getBentoEarliestExpDate(item);
+    const expBadgeText = earliestExp !== '9999-12-31' ? `⏳ 賞味期限: ${earliestExp}` : '';
 
     const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id);
     let userTagsHtml = '';
@@ -288,7 +323,8 @@ function renderTodaysMenu() {
       <span class="bento-cat-tag">${item.category}</span>
       <div class="bento-avatar-box">${item.icon}</div>
       <h3 class="bento-title">${item.name}</h3>
-      <p style="font-size:0.8rem; color:#747d8c; margin-bottom:6px;">${item.desc || ''}</p>
+      <p style="font-size:0.8rem; color:#747d8c; margin-bottom:4px;">${item.desc || ''}</p>
+      ${expBadgeText ? `<div style="font-size:0.78rem; font-weight:800; color:#d9480f; background:#fff4e6; border:1px solid #ffd8a8; padding:2px 8px; border-radius:10px; margin-bottom:8px;">${expBadgeText}</div>` : ''}
       
       <div class="bento-stock-bar">
         <div class="bento-stock-fill ${item.stock <= 3 ? 'low' : ''} ${item.stock <= 0 ? 'zero' : ''}" style="width: ${stockPercent}%;"></div>
@@ -686,7 +722,6 @@ window.cancelOrderHistory = function(index) {
   renderAll();
 };
 
-// 4. 商品マスター＆全在庫管理レンダー (全幅テーブル表示・既存在庫＆入荷分の明確分化)
 function renderMasterSection() {
   const container = document.getElementById('masterItemsGrid');
   container.innerHTML = '';
@@ -802,7 +837,6 @@ function renderMasterSection() {
   container.appendChild(table);
 }
 
-// モーダル内既存在庫・入荷ロット明細コントロール
 window.addModalLotRow = function(type = 'STOCK') {
   tempModalLots.push({
     id: 'lot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
@@ -1074,30 +1108,26 @@ function setupEventListeners() {
 
     setTimeout(() => {
       const available = bentoMaster.filter(b => b.stock > 0);
-      let chosenIds = [];
+      available.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
 
+      let chosenIds = [];
       if (available.length >= 5) {
-        chosenIds = [...available].sort(() => 0.5 - Math.random()).slice(0, 5).map(b => b.id);
+        chosenIds = available.slice(0, 5).map(b => b.id);
       } else if (available.length > 0) {
-        const chosenAvailable = [...available].sort(() => 0.5 - Math.random());
+        const chosenAvailable = [...available];
         const remainingMaster = bentoMaster.filter(b => !chosenAvailable.some(a => a.id === b.id));
-        const chosenRemaining = [...remainingMaster].sort(() => 0.5 - Math.random()).slice(0, 5 - available.length);
+        remainingMaster.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
+        const chosenRemaining = remainingMaster.slice(0, 5 - available.length);
         chosenIds = [...chosenAvailable, ...chosenRemaining].map(b => b.id);
       } else {
-        chosenIds = [...bentoMaster].sort(() => 0.5 - Math.random()).slice(0, 5).map(b => b.id);
+        chosenIds = [...bentoMaster].slice(0, 5).map(b => b.id);
       }
 
       todaysMenuIds = chosenIds;
       saveTodaysMenu();
       renderAll();
 
-      if (available.length >= 5) {
-        showToast('✨ 在庫がある30品目の中から本日の5品を選出しました！', 'success');
-      } else if (available.length > 0) {
-        showToast(`⚠️ 在庫あり商品(${available.length}品)を優先選出しました。一部完売商品が含まれます。`, 'info');
-      } else {
-        showToast('⚠️ 全商品の在庫が0食です。商品マスター画面で在庫を補充してください。', 'warning');
-      }
+      showToast('⏳ 賞味期限の近い順に優先して本日の5品を選出しました！', 'success');
     }, 400);
   });
 
@@ -1111,7 +1141,7 @@ function setupEventListeners() {
       }
       autoReplaceSoldOutMenu();
       renderAll();
-      showToast('🔄 完売品を在庫がある商品と自動で差し替えました！', 'success');
+      showToast('🔄 完売品を賞味期限の短い順に自動で差し替えました！', 'success');
     });
   }
 
