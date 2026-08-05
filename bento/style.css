@@ -992,8 +992,14 @@ body {
 }
 
 /* リストタイプ (商品マスター) */
+.master-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .master-list-table {
   width: 100%;
+  min-width: 850px;
   border-collapse: separate;
   border-spacing: 0;
   background: #fff;
@@ -1001,6 +1007,7 @@ body {
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0,0,0,0.03);
   border: 2px solid #ffe8cc;
+  table-layout: auto;
 }
 
 .master-list-table th {
@@ -1010,6 +1017,7 @@ body {
   font-size: 0.9rem;
   padding: 14px 16px;
   border-bottom: 2px solid #ffd8a8;
+  white-space: nowrap;
 }
 
 .master-list-table td {
@@ -1017,6 +1025,7 @@ body {
   border-bottom: 1px solid #f1f3f5;
   font-size: 0.95rem;
   vertical-align: middle;
+  white-space: normal;
 }
 
 .master-list-table tr:last-child td {
@@ -1035,6 +1044,60 @@ body {
   padding: 4px 10px;
   border-radius: 12px;
   display: inline-block;
+  white-space: nowrap;
+}
+
+/* 賞味期限ロットバッジ */
+.lot-badge-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.lot-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px solid #ced4da;
+  background: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.lot-badge.exp-normal {
+  background: #e6fcf5;
+  color: #0ca678;
+  border-color: #63e6be;
+}
+
+.lot-badge.exp-warning {
+  background: #fff9db;
+  color: #f59f00;
+  border-color: #ffe066;
+}
+
+.lot-badge.exp-expired {
+  background: #fff0f6;
+  color: #e64980;
+  border-color: #ffdeeb;
+}
+
+.btn-del-lot {
+  background: transparent;
+  border: none;
+  color: #adb5bd;
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-left: 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.btn-del-lot:hover {
+  color: #ff4757;
 }
 
 /* Master grid & cards */

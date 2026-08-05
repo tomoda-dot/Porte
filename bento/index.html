@@ -255,8 +255,8 @@
     <section id="master-tab" class="tab-content">
       <div class="master-header-row">
         <div>
-          <h2>⚙️ 商品マスター ＆ 全在庫管理 （全<span id="masterTotalCount">30</span>品目）</h2>
-          <p>すべての商品の在庫数をこの画面で直接変更できます。追加・編集も可能です。</p>
+          <h2>⚙️ 商品マスター ＆ 全在庫・賞味期限管理 （全<span id="masterTotalCount">30</span>品目）</h2>
+          <p>全商品の在庫数および入荷ロット別の賞味期限を一括管理できます。</p>
         </div>
         <div class="action-buttons">
           <button class="btn btn-primary" id="addNewBentoBtn">➕ 新しいお弁当を追加</button>
@@ -280,9 +280,9 @@
         </div>
       </div>
 
-      <!-- 商品マスター＆全在庫管理グリッド -->
-      <div class="master-grid" id="masterItemsGrid">
-        <!-- 各カードを表示 -->
+      <!-- 商品マスター＆全在庫管理テーブル -->
+      <div class="master-container" id="masterItemsGrid">
+        <!-- テーブル表示 -->
       </div>
     </section>
 
@@ -386,6 +386,43 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ロット別 入荷＆賞味期限 追加/編集モーダル -->
+  <div class="modal-overlay" id="addLotModal">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 id="addLotModalTitle">📦 入荷・賞味期限の追加</h3>
+        <button class="close-btn" id="closeAddLotModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="addLotBentoName" style="font-size:1.1rem; font-weight:800; color:#d9480f; margin-bottom:16px;">タラのトマトソース弁当</p>
+        
+        <form id="addLotForm">
+          <input type="hidden" id="addLotBentoId">
+          <div class="form-group" style="margin-bottom:14px;">
+            <label style="font-weight:700;">📦 今回の入荷数（食）</label>
+            <input type="number" id="lotQtyInput" class="form-control" min="1" value="5" required style="font-size:1.1rem; padding:8px 12px;">
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label style="font-weight:700;">📅 この入荷分の賞味期限</label>
+            <input type="date" id="lotExpDateInput" class="form-control" required style="font-size:1.1rem; padding:8px 12px;">
+          </div>
+
+          <div style="margin-top:16px; text-align:left;">
+            <h4 style="font-size:0.9rem; color:#495057; margin-bottom:8px; font-weight:700;">現在の登録ロット一覧:</h4>
+            <div id="existingLotsList" style="max-height:140px; overflow-y:auto; background:#f8f9fa; border-radius:12px; padding:10px; border:1px solid #dee2e6;">
+              <!-- JSで既存ロットリスト表示 -->
+            </div>
+          </div>
+
+          <div class="modal-footer" style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
+            <button type="button" class="btn btn-outline" id="cancelAddLotModalBtn">キャンセル</button>
+            <button type="submit" class="btn btn-primary">入荷・賞味期限を登録 💾</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
