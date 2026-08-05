@@ -52,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   renderAll();
   
-  // デフォルトで通所者が空の場合、自動サンプルまたはPorteDBからロードを試行
   if (porteUsers.length === 0) {
     loadSamplePorteData(false);
   }
@@ -175,7 +174,6 @@ function renderTodaysMenu() {
     const isSoldOut = item.stock <= 0;
     const stockPercent = Math.min(100, Math.max(0, (item.stock / 15) * 100));
 
-    // このお弁当を選んでいる利用者様タグ
     const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id);
     let userTagsHtml = '';
     chosenUsers.forEach(u => {
@@ -198,7 +196,6 @@ function renderTodaysMenu() {
         ${isSoldOut ? '<span style="color:#ff4757; font-weight:800;">完売いたしました</span>' : `残り <strong>${item.stock}</strong> 食`}
       </div>
 
-      <!-- 選択中ご利用者リスト -->
       <div class="bento-selected-users">
         ${userTagsHtml || '<span style="font-size:0.75rem; color:#adb5bd;">選択した方はまだいません</span>'}
       </div>
@@ -218,7 +215,6 @@ function renderTodaysMenu() {
   });
 }
 
-// クイック注文：利用者の名前選択モーダルを開く
 window.quickOrderBento = function(bentoId) {
   const item = bentoMaster.find(b => b.id === bentoId);
   if (!item || item.stock <= 0) {
@@ -235,7 +231,6 @@ window.quickOrderBento = function(bentoId) {
   openUserSelectForBentoModal(item);
 };
 
-// 利用者選択モーダルの描画・表示
 function openUserSelectForBentoModal(bentoItem) {
   document.getElementById('selectUserModalBentoTitle').textContent = `🍱 『${bentoItem.name}』を誰の注文にしますか？`;
   document.getElementById('userSelectModalSearch').value = '';
@@ -249,7 +244,6 @@ function renderUserPickerList(searchQuery) {
   listContainer.innerHTML = '';
 
   const q = searchQuery.toLowerCase();
-  const bentoItem = bentoMaster.find(b => b.id === currentSelectingBentoId);
 
   const filtered = porteUsers.filter(u => {
     return u.name.toLowerCase().includes(q) || (u.kana && u.kana.toLowerCase().includes(q)) || u.id.toLowerCase().includes(q);
@@ -284,7 +278,6 @@ function renderUserPickerList(searchQuery) {
   });
 }
 
-// 利用者決定時の処理
 window.confirmAssignUserForBento = function(userId) {
   const userIndex = porteUsers.findIndex(u => u.id === userId);
   if (userIndex < 0 || !currentSelectingBentoId) return;
@@ -315,7 +308,6 @@ function renderPorteSection() {
 
   document.getElementById('porteTabBadge').textContent = `未受付 ${pending}`;
 
-  // テーブル
   const tbody = document.getElementById('porteUserTableBody');
   tbody.innerHTML = '';
 
@@ -356,24 +348,20 @@ function renderPorteSection() {
     });
   }
 
-  // 集計表の更新
   renderCateringOrderTally();
 }
 
-// ポルテユーザーへの弁当割り当て
 window.assignUserBento = function(userIndex, newBentoId) {
   const user = porteUsers[userIndex];
   const oldBentoId = user.selectedBentoId;
 
   if (oldBentoId === newBentoId) return;
 
-  // 旧弁当の在庫戻し
   if (oldBentoId) {
     const oldBento = bentoMaster.find(b => b.id === oldBentoId);
     if (oldBento) oldBento.stock += 1;
   }
 
-  // 新弁当の在庫減算
   if (newBentoId) {
     const newBento = bentoMaster.find(b => b.id === newBentoId);
     if (newBento) {
@@ -385,7 +373,6 @@ window.assignUserBento = function(userIndex, newBentoId) {
       }
       newBento.stock -= 1;
 
-      // 履歴登録
       orderHistory.unshift({
         id: 'ord_' + Date.now(),
         date: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
@@ -404,7 +391,6 @@ window.assignUserBento = function(userIndex, newBentoId) {
   renderAll();
 };
 
-// お弁当集計
 function renderCateringOrderTally() {
   const container = document.getElementById('cateringOrderTally');
   container.innerHTML = '';
@@ -437,14 +423,12 @@ function renderCateringOrderTally() {
     container.appendChild(itemEl);
   });
 
-  // 合計行
   const totalEl = document.createElement('div');
-  totalEl.style.cssText = 'display:flex; justify-content:space-between; font-weight:800; font-size:1.1rem; margin-top:10px; padding-top:10px; border-top:2px solid #ffd8a8; color:#d9480f;';
+  totalEl.style.cssText = 'display:flex; justify-space-between; font-weight:800; font-size:1.1rem; margin-top:10px; padding-top:10px; border-top:2px solid #ffd8a8; color:#d9480f;';
   totalEl.innerHTML = `<span>発注合計</span><span>${totalCount} 食</span>`;
   container.appendChild(totalEl);
 }
 
-// 3. 在庫＆利用履歴レンダー
 function renderStockSection() {
   const quickList = document.getElementById('quickStockAdjustList');
   quickList.innerHTML = '';
@@ -466,7 +450,6 @@ function renderStockSection() {
     quickList.appendChild(div);
   });
 
-  // 注文履歴テーブル
   const tbody = document.getElementById('orderHistoryTableBody');
   tbody.innerHTML = '';
 
@@ -505,6 +488,26 @@ window.setStockDirect = function(bentoId, val) {
   }
 };
 
+// 商品マスター画面での直接在庫変更 (+ / - ボタン)
+window.adjustMasterStock = function(bentoId, delta) {
+  const item = bentoMaster.find(b => b.id === bentoId);
+  if (item) {
+    item.stock = Math.max(0, item.stock + delta);
+    saveMaster();
+    renderAll();
+  }
+};
+
+// 商品マスター画面での直接在庫変更 (数値入力)
+window.setMasterStockDirect = function(bentoId, val) {
+  const item = bentoMaster.find(b => b.id === bentoId);
+  if (item) {
+    item.stock = Math.max(0, parseInt(val, 10) || 0);
+    saveMaster();
+    renderAll();
+  }
+};
+
 window.cancelOrderHistory = function(index) {
   const removed = orderHistory.splice(index, 1)[0];
   if (removed) {
@@ -517,7 +520,7 @@ window.cancelOrderHistory = function(index) {
   renderAll();
 };
 
-// 4. 商品マスター管理レンダー
+// 4. 商品マスター＆全在庫管理レンダー
 function renderMasterSection() {
   const grid = document.getElementById('masterItemsGrid');
   grid.innerHTML = '';
@@ -544,11 +547,22 @@ function renderMasterSection() {
         <div class="master-icon">${item.icon}</div>
         <div>
           <h4 class="master-title">${item.name}</h4>
-          <span style="font-size:0.75rem; color:#747d8c;">${item.category} | 初期在庫: ${item.stock}食</span>
+          <span style="font-size:0.75rem; color:#747d8c;">${item.category}</span>
         </div>
       </div>
-      <p style="font-size:0.8rem; color:#495057; margin-bottom:12px;">${item.desc || '説明なし'}</p>
+      <p style="font-size:0.8rem; color:#495057; margin-bottom:8px;">${item.desc || '説明なし'}</p>
       
+      <!-- 商品マスター画面で全在庫を直接変更できるコントローラー -->
+      <div class="master-stock-panel">
+        <span class="master-stock-label">📦 現在の在庫:</span>
+        <div class="stock-control">
+          <button class="btn-qty" onclick="adjustMasterStock('${item.id}', -1)">-</button>
+          <input type="number" class="stock-val-input" value="${item.stock}" min="0" onchange="setMasterStockDirect('${item.id}', this.value)">
+          <button class="btn-qty" onclick="adjustMasterStock('${item.id}', 1)">+</button>
+          <span style="font-size:0.85rem; font-weight:800; color:#495057;">食</span>
+        </div>
+      </div>
+
       <div class="master-actions">
         <button class="btn btn-sm btn-outline" onclick="openEditBentoModal('${item.id}')">編集</button>
         <button class="btn btn-sm btn-outline-danger" onclick="deleteBento('${item.id}')">削除</button>
@@ -558,7 +572,6 @@ function renderMasterSection() {
   });
 }
 
-// ヘッダーステータス更新
 function updateHeaderStats() {
   const totalUsers = porteUsers.length;
   const orderedUsers = porteUsers.filter(u => u.selectedBentoId).length;
@@ -579,11 +592,9 @@ async function fetchPorteDbAttendance() {
 
   try {
     const SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    // Porte DBの『利用者』または『出欠』テーブルを検索
     const userRes = await SB.from('利用者').select('*');
     
     if (userRes.error || !userRes.data || userRes.data.length === 0) {
-      // 代替としてスタッフまたは出欠テーブルをトライ
       const attRes = await SB.from('スタッフ').select('*');
       if (attRes.data && attRes.data.length > 0) {
         porteUsers = attRes.data.map((s, idx) => ({
@@ -620,6 +631,19 @@ async function fetchPorteDbAttendance() {
 
 // イベント処理（イベントリスナー登録）
 function setupEventListeners() {
+  // 全商品を一律10食に一括設定するボタン
+  const bulkBtn = document.getElementById('bulkSet10StockBtn');
+  if (bulkBtn) {
+    bulkBtn.addEventListener('click', () => {
+      if (confirm('全商品の在庫数を一律10食に更新しますか？')) {
+        bentoMaster.forEach(item => { item.stock = 10; });
+        saveMaster();
+        renderAll();
+        showToast('📦 全商品の在庫を一律10食に更新しました！', 'success');
+      }
+    });
+  }
+
   // Porte DB読み込みボタン
   document.getElementById('fetchPorteDbBtn').addEventListener('click', fetchPorteDbAttendance);
 
@@ -758,7 +782,6 @@ function parsePorteCsvFile(file) {
       if (!line) continue;
       const cols = line.split(',');
 
-      // ヘッダー行スキップ判定
       if (i === 0 && (cols[0].includes('ID') || cols[0].includes('利用者'))) continue;
 
       if (cols.length >= 2) {
@@ -960,7 +983,6 @@ window.deleteBento = function(id) {
   }
 };
 
-// トースト通知表示
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');

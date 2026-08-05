@@ -907,23 +907,25 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.15s ease;
 }
 
 .btn-qty:hover {
   background: var(--primary-light);
+  transform: scale(1.08);
 }
 
 .stock-val-input {
-  width: 48px;
+  width: 52px;
   text-align: center;
   font-weight: 800;
   font-size: 1rem;
-  border: 2px solid #ced4da;
+  border: 2px solid #ffd8a8;
   border-radius: 8px;
   padding: 4px;
 }
 
-/* Tab 4: Master Management */
+/* Tab 4: Master Management & Direct Inventory */
 .master-header-row {
   display: flex;
   justify-content: space-between;
@@ -999,18 +1001,24 @@ body {
   background: #fff;
   border-radius: var(--radius-md);
   border: 2px solid #ffe8cc;
-  padding: 16px;
+  padding: 18px 16px;
   display: flex;
   flex-direction: column;
   position: relative;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.master-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
 }
 
 .master-card-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .master-icon {
@@ -1030,12 +1038,30 @@ body {
   color: var(--text-dark);
 }
 
+/* 商品マスターカード内の在庫直接コントローラー */
+.master-stock-panel {
+  background: #fff9f2;
+  border: 2px dashed #ffd8a8;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.master-stock-label {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #d9480f;
+}
+
 .master-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 10px;
   border-top: 1px solid #f1f3f5;
 }
 
