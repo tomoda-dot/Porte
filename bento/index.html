@@ -337,24 +337,25 @@
     </div>
   </div>
 
-  <!-- お弁当追加・編集モーダル -->
+    <!-- お弁当追加・編集 ＆ 在庫・入荷ロット管理モーダル -->
   <div class="modal-overlay" id="bentoEditModal">
-    <div class="modal-card">
+    <div class="modal-card modal-lg" style="max-width: 680px;">
       <div class="modal-header">
-        <h3 id="bentoModalTitle">お弁当の編集</h3>
+        <h3 id="bentoModalTitle">お弁当・在庫・入荷管理</h3>
         <button class="close-btn" id="closeBentoEditModal">&times;</button>
       </div>
       <form id="bentoForm">
-        <input type="hidden" id="editBentoId">
         <div class="modal-body">
-          <div class="form-group">
-            <label for="bentoNameInput">お弁当名 <span class="req">*</span></label>
-            <input type="text" id="bentoNameInput" required placeholder="例：タラのトマトソース弁当">
-          </div>
-          <div class="form-row">
+          <input type="hidden" id="editBentoId">
+          
+          <div style="display:grid; grid-template-columns: 2fr 1fr; gap:12px;">
             <div class="form-group">
-              <label for="bentoCategoryInput">カテゴリー</label>
-              <select id="bentoCategoryInput">
+              <label for="bentoNameInput" style="font-weight:800;">お弁当名 <span class="req">*</span></label>
+              <input type="text" id="bentoNameInput" required placeholder="例: タラのトマトソース弁当" style="font-size:1.05rem;">
+            </div>
+            <div class="form-group">
+              <label for="bentoCategoryInput" style="font-weight:800;">カテゴリー</label>
+              <select id="bentoCategoryInput" required style="font-size:1rem;">
                 <option value="魚">🐟 魚料理</option>
                 <option value="豚肉">🐖 豚肉料理</option>
                 <option value="牛肉">🐂 牛肉料理</option>
@@ -362,27 +363,41 @@
                 <option value="和食・その他">🍲 和食・中華・その他</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="bentoStockInput">初期/現在在庫数</label>
-              <input type="number" id="bentoStockInput" min="0" value="10">
+          </div>
+
+          <!-- 在庫分 ＆ 入荷分のリスト明細個数管理パネル -->
+          <div style="background:#fff8f0; border:2px solid #ffd8a8; border-radius:18px; padding:18px; margin:16px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h4 style="font-size:1.05rem; color:#d9480f; font-weight:900;">📦 在庫分 ＆ 🚚 入荷分のリスト管理</h4>
+              <div style="font-size:1rem; font-weight:900; color:#212529;">
+                合計在庫数: <strong id="modalTotalStockText" style="color:#d9480f; font-size:1.35rem;">0</strong> 食
+              </div>
+            </div>
+
+            <div id="modalLotRowsContainer" style="display:flex; flex-direction:column; gap:10px; max-height:220px; overflow-y:auto; padding-right:4px;">
+              <!-- 在庫・入荷ロット行が動的に追加・編集されます -->
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:14px; padding-top:10px; border-top:1px dashed #ffd8a8;">
+              <button type="button" class="btn btn-sm btn-outline" onclick="addModalLotRow('STOCK')">📦 既存在庫分を追加</button>
+              <button type="button" class="btn btn-sm btn-pop" style="font-size:0.85rem; padding:6px 14px;" onclick="addModalLotRow('ARRIVED')">🚚 新規入荷分を追加</button>
             </div>
           </div>
-          <div class="form-group">
-            <label for="bentoIconInput">絵文字・アイコン</label>
-            <input type="text" id="bentoIconInput" placeholder="例：🍱, 🐟, 🥩, 🐓, 🍛" value="🍱">
-          </div>
-          <div class="form-group">
-            <label for="bentoDescInput">説明・アピールポイント</label>
-            <textarea id="bentoDescInput" rows="2" placeholder="美味しい自家製ソースでお召し上がりください"></textarea>
+
+          <div style="display:none;">
+            <input type="number" id="bentoStockInput" value="0">
+            <input type="text" id="bentoIconInput" value="🍱">
+            <textarea id="bentoDescInput"></textarea>
           </div>
         </div>
+
         <div class="modal-footer" style="justify-content: space-between;">
           <button type="button" class="btn btn-outline-danger" id="deleteCurrentBentoBtn" style="display:none;">
             🗑️ このお弁当を削除
           </button>
           <div style="display:flex; gap:12px; margin-left:auto;">
             <button type="button" class="btn btn-secondary" id="cancelBentoEditBtn">キャンセル</button>
-            <button type="submit" class="btn btn-primary">保存する</button>
+            <button type="submit" class="btn btn-primary">保存する 💾</button>
           </div>
         </div>
       </form>

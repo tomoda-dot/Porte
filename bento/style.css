@@ -1100,6 +1100,43 @@ body {
   color: #ff4757;
 }
 
+/* モーダル内 在庫・入荷ロット行 */
+.modal-lot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1.5px solid #ffe8cc;
+  padding: 8px 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.modal-lot-row select {
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1.5px solid #ffd8a8;
+  background: #fff4e6;
+  color: #d9480f;
+}
+
+.modal-lot-row input[type="number"] {
+  width: 70px;
+  text-align: center;
+  font-weight: 900;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1.5px solid #ffd8a8;
+}
+
+.modal-lot-row input[type="date"] {
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1.5px solid #ffd8a8;
+}
+
 /* Master grid & cards */
 .master-grid {
   display: grid;

@@ -47,6 +47,9 @@ let currentSelectingBentoId = null;
 let modalShowAll = false;
 let tableShowAll = false;
 
+// モーダル内 一時編集ロット
+let tempModalLots = [];
+
 // DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   initDate();
@@ -60,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// 日付表示
 function initDate() {
   const now = new Date();
   const days = ['日', '月', '火', '水', '木', '金', '土'];
@@ -74,15 +76,25 @@ function getOffsetDateStr(days) {
   return d.toISOString().slice(0, 10);
 }
 
-// ロットデータの整合性保証ヘルパー
+// ロットデータの整合性保証 ＆ 合計在庫数の自動同期
 function ensureBentoLots(bento) {
   if (!bento.lots) {
     bento.lots = [];
   }
-  if (bento.stock > 0 && bento.lots.length === 0) {
-    const defaultExp = getOffsetDateStr(7);
-    bento.lots.push({ id: 'lot_' + Date.now(), qty: bento.stock, expDate: defaultExp });
+  if (bento.lots.length === 0 && bento.stock > 0) {
+    bento.lots.push({
+      id: 'lot_' + Date.now(),
+      type: 'STOCK', // 'STOCK' (既存在庫分) or 'ARRIVED' (新規入荷分)
+      qty: parseInt(bento.stock, 10) || 0,
+      expDate: getOffsetDateStr(7)
+    });
   }
+  recalculateBentoTotalStock(bento);
+}
+
+function recalculateBentoTotalStock(bento) {
+  if (!bento.lots) bento.lots = [];
+  bento.stock = bento.lots.reduce((sum, l) => sum + (parseInt(l.qty, 10) || 0), 0);
 }
 
 // FIFO（賞味期限が近い順）での在庫消費
@@ -106,23 +118,23 @@ function deductBentoStockFIFO(bento, count = 1) {
   }
 
   bento.lots = bento.lots.filter(l => l.qty > 0);
-  bento.stock = bento.lots.reduce((sum, l) => sum + l.qty, 0);
+  recalculateBentoTotalStock(bento);
 }
 
-// 入荷ロットの追加
-function addBentoStockLot(bento, qty, expDate) {
+// 入荷・在庫ロットの追加
+function addBentoStockLot(bento, qty, expDate, type = 'ARRIVED') {
   ensureBentoLots(bento);
-  const existingLot = bento.lots.find(l => l.expDate === expDate);
-  if (existingLot) {
-    existingLot.qty += qty;
-  } else {
-    bento.lots.push({ id: 'lot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4), qty: qty, expDate: expDate });
-  }
+  bento.lots.push({
+    id: 'lot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    type: type,
+    qty: parseInt(qty, 10) || 0,
+    expDate: expDate
+  });
   bento.lots.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
-  bento.stock = bento.lots.reduce((sum, l) => sum + l.qty, 0);
+  recalculateBentoTotalStock(bento);
 }
 
-// データ読み込み（LocalStorage or デフォルト）
+// データ読み込み
 function loadData() {
   const savedMaster = localStorage.getItem('bento_master');
   if (savedMaster) {
@@ -199,7 +211,6 @@ function autoReplaceSoldOutMenu() {
   for (let i = 0; i < todaysMenuIds.length; i++) {
     const currentId = todaysMenuIds[i];
     const bento = bentoMaster.find(b => b.id === currentId);
-    
     const isOrderedBySomeone = currentlyOrderedIds.includes(currentId);
 
     if (!isOrderedBySomeone && (!bento || bento.stock <= 0)) {
@@ -216,7 +227,6 @@ function autoReplaceSoldOutMenu() {
   }
 }
 
-// タブ切り替え
 function setupTabs() {
   const tabs = document.querySelectorAll('.tab-btn');
   tabs.forEach(tab => {
@@ -231,7 +241,6 @@ function setupTabs() {
   });
 }
 
-// 全再描画
 function renderAll() {
   renderTodaysMenu();
   renderPorteSection();
@@ -505,7 +514,7 @@ window.assignUserBento = function(userIndex, newBentoId) {
   if (oldBentoId) {
     const oldBento = bentoMaster.find(b => b.id === oldBentoId);
     if (oldBento) {
-      addBentoStockLot(oldBento, 1, getOffsetDateStr(7));
+      addBentoStockLot(oldBento, 1, getOffsetDateStr(7), 'STOCK');
     }
   }
 
@@ -519,7 +528,6 @@ window.assignUserBento = function(userIndex, newBentoId) {
         return;
       }
 
-      // FIFO（賞味期限が近い順）で1食消費
       deductBentoStockFIFO(newBento, 1);
       user.wantsBento = true;
 
@@ -605,7 +613,7 @@ function renderStockSection() {
       </div>
       <div class="stock-control">
         <button class="btn-qty" onclick="adjustStock('${item.id}', -1)">-</button>
-        <input type="number" class="stock-val-input" value="${item.stock}" onchange="setStockDirect('${item.id}', this.value)">
+        <strong style="font-size:1.1rem; color:#d9480f; min-width:32px; text-align:center;">${item.stock}</strong>
         <button class="btn-qty" onclick="adjustStock('${item.id}', 1)">+</button>
       </div>
     `;
@@ -638,7 +646,7 @@ window.adjustStock = function(bentoId, delta) {
     if (delta < 0) {
       deductBentoStockFIFO(item, Math.abs(delta));
     } else {
-      addBentoStockLot(item, delta, getOffsetDateStr(7));
+      addBentoStockLot(item, delta, getOffsetDateStr(7), 'ARRIVED');
     }
     saveMaster();
     renderAll();
@@ -653,7 +661,7 @@ window.setStockDirect = function(bentoId, val) {
     if (diff < 0) {
       deductBentoStockFIFO(item, Math.abs(diff));
     } else if (diff > 0) {
-      addBentoStockLot(item, diff, getOffsetDateStr(7));
+      addBentoStockLot(item, diff, getOffsetDateStr(7), 'ARRIVED');
     }
     saveMaster();
     renderAll();
@@ -664,16 +672,12 @@ window.adjustMasterStock = function(bentoId, delta) {
   adjustStock(bentoId, delta);
 };
 
-window.setMasterStockDirect = function(bentoId, val) {
-  setStockDirect(bentoId, val);
-};
-
 window.cancelOrderHistory = function(index) {
   const removed = orderHistory.splice(index, 1)[0];
   if (removed) {
     const item = bentoMaster.find(b => b.id === removed.bentoId);
     if (item) {
-      addBentoStockLot(item, 1, getOffsetDateStr(7));
+      addBentoStockLot(item, 1, getOffsetDateStr(7), 'STOCK');
     }
   }
   saveMaster();
@@ -682,7 +686,7 @@ window.cancelOrderHistory = function(index) {
   renderAll();
 };
 
-// 4. 商品マスター＆全在庫管理レンダー (全幅テーブル表示・商品説明なし・ロット別賞味期限管理)
+// 4. 商品マスター＆全在庫管理レンダー (全幅テーブル表示・既存在庫＆入荷分の明確分化)
 function renderMasterSection() {
   const container = document.getElementById('masterItemsGrid');
   container.innerHTML = '';
@@ -712,20 +716,26 @@ function renderMasterSection() {
   filtered.forEach(item => {
     const isToday = todaysMenuIds.includes(item.id);
 
-    // ロット別賞味期限バッジ一覧の作成
     let lotBadgesHtml = '';
     if (item.lots && item.lots.length > 0) {
       item.lots.forEach((lot, lIdx) => {
         if (lot.qty > 0) {
+          const isArrived = lot.type === 'ARRIVED';
           const daysLeft = Math.ceil((new Date(lot.expDate) - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
+          
           let statusClass = 'exp-normal';
           if (daysLeft <= 0) statusClass = 'exp-expired';
           else if (daysLeft <= 3) statusClass = 'exp-warning';
 
+          const typeLabel = isArrived ? '🚚 入荷分' : '📦 既存在庫';
+          const typeBg = isArrived ? '#e7f5ff' : '#fff4e6';
+          const typeColor = isArrived ? '#1971c2' : '#d9480f';
+
           lotBadgesHtml += `
             <div class="lot-badge ${statusClass}">
+              <span style="font-size:0.75rem; font-weight:900; background:${typeBg}; color:${typeColor}; padding:2px 6px; border-radius:6px; margin-right:4px;">${typeLabel}</span>
               <span>📅 ${lot.expDate}</span>
-              <strong style="margin-left:6px; font-size:0.88rem;">${lot.qty}食</strong>
+              <strong style="margin-left:6px; font-size:0.88rem; color:#212529;">${lot.qty}食</strong>
               <button class="btn-del-lot" onclick="deleteBentoLot('${item.id}', ${lIdx})" title="このロットを削除">&times;</button>
             </div>
           `;
@@ -734,7 +744,7 @@ function renderMasterSection() {
     }
 
     if (!lotBadgesHtml) {
-      lotBadgesHtml = `<span style="color:#adb5bd; font-size:0.85rem;">(賞味期限未設定)</span>`;
+      lotBadgesHtml = `<span style="color:#adb5bd; font-size:0.85rem;">(在庫・入荷ロットなし)</span>`;
     }
 
     rowsHtml += `
@@ -745,10 +755,10 @@ function renderMasterSection() {
         <td style="width: 240px;">
           <strong style="font-size:1.05rem; color:#212529;">${item.name}</strong>
         </td>
-        <td style="width: 150px; text-align:center;">
+        <td style="width: 140px; text-align:center;">
           <div class="stock-control" style="justify-content: center;">
             <button class="btn-qty" onclick="adjustMasterStock('${item.id}', -1)">-</button>
-            <input type="number" class="stock-val-input" value="${item.stock}" min="0" onchange="setMasterStockDirect('${item.id}', this.value)">
+            <strong style="font-size:1.2rem; color:#d9480f; min-width:34px; text-align:center;">${item.stock}</strong>
             <button class="btn-qty" onclick="adjustMasterStock('${item.id}', 1)">+</button>
             <span style="font-size:0.85rem; font-weight:800; color:#495057; margin-left:4px;">食</span>
           </div>
@@ -759,15 +769,15 @@ function renderMasterSection() {
               ${lotBadgesHtml}
             </div>
             <button class="btn btn-sm btn-outline" style="font-size:0.8rem; padding:4px 10px; font-weight:700; border-color:#ffa8a8; color:#e03131;" onclick="openAddLotModal('${item.id}')">
-              📦 入荷・賞味期限追加
+              🚚 入荷分を追加
             </button>
           </div>
         </td>
-        <td style="width: 110px; text-align:center;">
+        <td style="width: 100px; text-align:center;">
           ${isToday ? '<span class="badge-status done">本日5品</span>' : '<span style="color:#adb5bd; font-size:0.85rem;">-</span>'}
         </td>
-        <td style="width: 90px; text-align:center;">
-          <button class="btn btn-sm btn-outline" style="font-weight:700;" onclick="openEditBentoModal('${item.id}')">✏️ 編集</button>
+        <td style="width: 110px; text-align:center;">
+          <button class="btn btn-sm btn-outline" style="font-weight:700;" onclick="openEditBentoModal('${item.id}')">✏️ 編集・明細</button>
         </td>
       </tr>
     `;
@@ -778,10 +788,10 @@ function renderMasterSection() {
       <tr>
         <th style="width: 120px;">カテゴリー</th>
         <th style="width: 240px;">商品名</th>
-        <th style="width: 150px; text-align:center;">合計在庫数</th>
-        <th>賞味期限 ＆ 入荷ロット一覧</th>
-        <th style="width: 110px; text-align:center;">本日の5品</th>
-        <th style="width: 90px; text-align:center;">操作</th>
+        <th style="width: 140px; text-align:center;">合計在庫数</th>
+        <th>既存在庫 ＆ 入荷分 ロット明細一覧</th>
+        <th style="width: 100px; text-align:center;">本日の5品</th>
+        <th style="width: 110px; text-align:center;">操作</th>
       </tr>
     </thead>
     <tbody>
@@ -792,7 +802,82 @@ function renderMasterSection() {
   container.appendChild(table);
 }
 
-// ロット入荷・賞味期限モーダルの操作
+// モーダル内既存在庫・入荷ロット明細コントロール
+window.addModalLotRow = function(type = 'STOCK') {
+  tempModalLots.push({
+    id: 'lot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    type: type,
+    qty: type === 'ARRIVED' ? 5 : 2,
+    expDate: getOffsetDateStr(7)
+  });
+  renderModalLotRows();
+};
+
+window.removeModalLotRow = function(index) {
+  tempModalLots.splice(index, 1);
+  renderModalLotRows();
+};
+
+window.updateModalLotField = function(index, field, val) {
+  if (!tempModalLots[index]) return;
+  if (field === 'qty') {
+    tempModalLots[index].qty = Math.max(0, parseInt(val, 10) || 0);
+  } else if (field === 'expDate') {
+    tempModalLots[index].expDate = val;
+  } else if (field === 'type') {
+    tempModalLots[index].type = val;
+  }
+  updateModalTotalStockText();
+};
+
+function updateModalTotalStockText() {
+  const total = tempModalLots.reduce((sum, l) => sum + (parseInt(l.qty, 10) || 0), 0);
+  const textEl = document.getElementById('modalTotalStockText');
+  if (textEl) textEl.textContent = total;
+  const inputEl = document.getElementById('bentoStockInput');
+  if (inputEl) inputEl.value = total;
+}
+
+function renderModalLotRows() {
+  const container = document.getElementById('modalLotRowsContainer');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (tempModalLots.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:16px; color:#868e96; font-size:0.9rem;">登録されている既存在庫・入荷ロットはありません。下のボタンから追加してください。</div>`;
+    updateModalTotalStockText();
+    return;
+  }
+
+  tempModalLots.forEach((lot, idx) => {
+    const row = document.createElement('div');
+    row.className = 'modal-lot-row';
+    row.innerHTML = `
+      <select onchange="updateModalLotField(${idx}, 'type', this.value)">
+        <option value="STOCK" ${lot.type === 'STOCK' ? 'selected' : ''}>📦 既存在庫分</option>
+        <option value="ARRIVED" ${lot.type === 'ARRIVED' ? 'selected' : ''}>🚚 新規入荷分</option>
+      </select>
+      
+      <div style="display:flex; align-items:center; gap:4px;">
+        <span style="font-size:0.85rem; font-weight:700; color:#495057;">数量:</span>
+        <input type="number" value="${lot.qty}" min="0" onchange="updateModalLotField(${idx}, 'qty', this.value)">
+        <span style="font-size:0.85rem; font-weight:800; color:#495057;">食</span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:4px; margin-left:auto;">
+        <span style="font-size:0.85rem; font-weight:700; color:#495057;">賞味期限:</span>
+        <input type="date" value="${lot.expDate}" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
+      </div>
+
+      <button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 8px; font-size:0.8rem;" onclick="removeModalLotRow(${idx})" title="この明細行を削除">&times;</button>
+    `;
+    container.appendChild(row);
+  });
+
+  updateModalTotalStockText();
+}
+
 window.openAddLotModal = function(bentoId) {
   const item = bentoMaster.find(b => b.id === bentoId);
   if (!item) return;
@@ -804,15 +889,17 @@ window.openAddLotModal = function(bentoId) {
   document.getElementById('lotQtyInput').value = 5;
   document.getElementById('lotExpDateInput').value = getOffsetDateStr(7);
 
-  // 既存ロットの描画
   const listEl = document.getElementById('existingLotsList');
   listEl.innerHTML = '';
   if (item.lots && item.lots.length > 0) {
     item.lots.forEach((l, idx) => {
+      const isArrived = l.type === 'ARRIVED';
+      const label = isArrived ? '🚚 新規入荷' : '📦 既存在庫';
+
       const div = document.createElement('div');
       div.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px dashed #dee2e6; font-size:0.9rem;';
       div.innerHTML = `
-        <span>📅 <strong>${l.expDate}</strong> (${l.qty}食)</span>
+        <span><strong>${label}</strong>: 📅 <strong>${l.expDate}</strong> (${l.qty}食)</span>
         <button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 8px; font-size:0.75rem;" onclick="deleteBentoLot('${item.id}', ${idx})">削除</button>
       `;
       listEl.appendChild(div);
@@ -833,18 +920,17 @@ window.deleteBentoLot = function(bentoId, lotIndex) {
   if (!item || !item.lots || !item.lots[lotIndex]) return;
 
   item.lots.splice(lotIndex, 1);
-  item.stock = item.lots.reduce((sum, l) => sum + l.qty, 0);
+  recalculateBentoTotalStock(item);
 
   saveMaster();
   renderAll();
 
-  // モーダルが開いていれば更新
   const openModalId = document.getElementById('addLotBentoId').value;
   if (openModalId === bentoId && document.getElementById('addLotModal').classList.contains('active')) {
     openAddLotModal(bentoId);
   }
 
-  showToast('ロットを削除しました', 'info');
+  showToast('ロット明細を削除しました', 'info');
 };
 
 function updateHeaderStats() {
@@ -963,8 +1049,8 @@ function setupEventListeners() {
     bulkBtn.addEventListener('click', () => {
       if (confirm('全商品の在庫数を一律10食に更新しますか？')) {
         bentoMaster.forEach(item => {
-          item.stock = 10;
-          item.lots = [{ id: 'lot_' + Date.now(), qty: 10, expDate: getOffsetDateStr(7) }];
+          item.lots = [{ id: 'lot_' + Date.now(), type: 'STOCK', qty: 10, expDate: getOffsetDateStr(7) }];
+          recalculateBentoTotalStock(item);
         });
         saveMaster();
         renderAll();
@@ -982,7 +1068,6 @@ function setupEventListeners() {
   document.getElementById('closeUserSelectForBentoModal').addEventListener('click', closeUserSelectForBentoModal);
   document.getElementById('cancelUserSelectForBentoBtn').addEventListener('click', closeUserSelectForBentoModal);
 
-  // 在庫がある商品（stock > 0）を最優先でランダム5品選出
   document.getElementById('randomSelectBtn').addEventListener('click', () => {
     const cards = document.querySelectorAll('.bento-card');
     cards.forEach(c => c.classList.add('shuffling'));
@@ -1094,7 +1179,6 @@ function setupEventListeners() {
   document.getElementById('cancelBentoEditBtn').addEventListener('click', closeEditBentoModal);
   document.getElementById('bentoForm').addEventListener('submit', handleSaveBentoForm);
 
-  // ロット追加モーダルのイベント設定
   const closeLotBtn = document.getElementById('closeAddLotModalBtn');
   const cancelLotBtn = document.getElementById('cancelAddLotModalBtn');
   if (closeLotBtn) closeLotBtn.addEventListener('click', closeAddLotModal);
@@ -1115,15 +1199,121 @@ function setupEventListeners() {
 
       const item = bentoMaster.find(b => b.id === bentoId);
       if (item) {
-        addBentoStockLot(item, qty, expDate);
+        addBentoStockLot(item, qty, expDate, 'ARRIVED');
         saveMaster();
         renderAll();
         closeAddLotModal();
-        showToast(`📦 『${item.name}』に ${expDate} 期限 ${qty}食 の入荷を登録しました！`, 'success');
+        showToast(`🚚 『${item.name}』に ${expDate} 期限 ${qty}食 の新規入荷分を追加しました！`, 'success');
       }
     });
   }
 }
+
+function openEditBentoModal(id) {
+  const modal = document.getElementById('bentoEditModal');
+  const title = document.getElementById('bentoModalTitle');
+  const deleteBtn = document.getElementById('deleteCurrentBentoBtn');
+
+  if (id) {
+    const item = bentoMaster.find(b => b.id === id);
+    if (item) {
+      ensureBentoLots(item);
+      title.textContent = 'お弁当・在庫・入荷管理';
+      document.getElementById('editBentoId').value = item.id;
+      document.getElementById('bentoNameInput').value = item.name;
+      document.getElementById('bentoCategoryInput').value = item.category;
+      document.getElementById('bentoIconInput').value = item.icon || '🍱';
+      document.getElementById('bentoDescInput').value = item.desc || '';
+
+      tempModalLots = JSON.parse(JSON.stringify(item.lots || []));
+
+      deleteBtn.style.display = 'inline-flex';
+      deleteBtn.onclick = () => deleteBento(item.id);
+    }
+  } else {
+    title.textContent = '新しいお弁当の追加';
+    document.getElementById('editBentoId').value = '';
+    document.getElementById('bentoForm').reset();
+    document.getElementById('bentoIconInput').value = '🍱';
+
+    tempModalLots = [
+      { id: 'lot_init_1', type: 'STOCK', qty: 5, expDate: getOffsetDateStr(7) }
+    ];
+
+    deleteBtn.style.display = 'none';
+    deleteBtn.onclick = null;
+  }
+
+  renderModalLotRows();
+  modal.classList.add('active');
+}
+
+function closeEditBentoModal() {
+  document.getElementById('bentoEditModal').classList.remove('active');
+}
+
+function handleSaveBentoForm(e) {
+  e.preventDefault();
+  const id = document.getElementById('editBentoId').value;
+  const name = document.getElementById('bentoNameInput').value.trim();
+  const category = document.getElementById('bentoCategoryInput').value;
+  const icon = document.getElementById('bentoIconInput').value.trim() || '🍱';
+  const desc = document.getElementById('bentoDescInput').value.trim();
+
+  if (!name) return;
+
+  const validLots = tempModalLots.filter(l => l.qty > 0 && l.expDate);
+  validLots.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
+  const newTotalStock = validLots.reduce((sum, l) => sum + (parseInt(l.qty, 10) || 0), 0);
+
+  if (id) {
+    const item = bentoMaster.find(b => b.id === id);
+    if (item) {
+      item.name = name;
+      item.category = category;
+      item.icon = icon;
+      item.desc = desc;
+      item.lots = validLots;
+      item.stock = newTotalStock;
+    }
+  } else {
+    const newId = 'b' + (Date.now());
+    const newItem = {
+      id: newId,
+      name,
+      category,
+      icon,
+      desc,
+      lots: validLots,
+      stock: newTotalStock
+    };
+    bentoMaster.push(newItem);
+  }
+
+  saveMaster();
+  closeEditBentoModal();
+  renderAll();
+  showToast('お弁当・在庫明細を保存しました！', 'success');
+}
+
+window.deleteBento = function(id) {
+  const item = bentoMaster.find(b => b.id === id);
+  if (!item) return;
+
+  if (confirm(`『${item.name}』をマスターから削除してもよろしいですか？`)) {
+    bentoMaster = bentoMaster.filter(b => b.id !== id);
+    todaysMenuIds = todaysMenuIds.filter(tId => tId !== id);
+    if (todaysMenuIds.length < 5 && bentoMaster.length >= 5) {
+      const unused = bentoMaster.find(b => !todaysMenuIds.includes(b.id));
+      if (unused) todaysMenuIds.push(unused.id);
+    }
+    saveMaster();
+    saveTodaysMenu();
+    closeEditBentoModal();
+    renderAll();
+    showToast('お弁当を削除しました', 'info');
+  }
+};
 
 function loadSamplePorteData(showNotification = true) {
   porteUsers = [
@@ -1283,96 +1473,6 @@ function savePickFiveSelection() {
   renderAll();
   showToast('🍱 本日の5品メニューを手動設定しました！', 'success');
 }
-
-function openEditBentoModal(id) {
-  const modal = document.getElementById('bentoEditModal');
-  const title = document.getElementById('bentoModalTitle');
-  const deleteBtn = document.getElementById('deleteCurrentBentoBtn');
-
-  if (id) {
-    const item = bentoMaster.find(b => b.id === id);
-    if (item) {
-      title.textContent = 'お弁当の編集';
-      document.getElementById('editBentoId').value = item.id;
-      document.getElementById('bentoNameInput').value = item.name;
-      document.getElementById('bentoCategoryInput').value = item.category;
-      document.getElementById('bentoStockInput').value = item.stock;
-      document.getElementById('bentoIconInput').value = item.icon || '🍱';
-      document.getElementById('bentoDescInput').value = item.desc || '';
-
-      deleteBtn.style.display = 'inline-flex';
-      deleteBtn.onclick = () => deleteBento(item.id);
-    }
-  } else {
-    title.textContent = '新しいお弁当の追加';
-    document.getElementById('editBentoId').value = '';
-    document.getElementById('bentoForm').reset();
-    document.getElementById('bentoStockInput').value = 10;
-    document.getElementById('bentoIconInput').value = '🍱';
-
-    deleteBtn.style.display = 'none';
-    deleteBtn.onclick = null;
-  }
-
-  modal.classList.add('active');
-}
-
-function closeEditBentoModal() {
-  document.getElementById('bentoEditModal').classList.remove('active');
-}
-
-function handleSaveBentoForm(e) {
-  e.preventDefault();
-  const id = document.getElementById('editBentoId').value;
-  const name = document.getElementById('bentoNameInput').value.trim();
-  const category = document.getElementById('bentoCategoryInput').value;
-  const stock = parseInt(document.getElementById('bentoStockInput').value, 10) || 0;
-  const icon = document.getElementById('bentoIconInput').value.trim() || '🍱';
-  const desc = document.getElementById('bentoDescInput').value.trim();
-
-  if (!name) return;
-
-  if (id) {
-    const item = bentoMaster.find(b => b.id === id);
-    if (item) {
-      item.name = name;
-      item.category = category;
-      item.stock = stock;
-      item.icon = icon;
-      item.desc = desc;
-      ensureBentoLots(item);
-    }
-  } else {
-    const newId = 'b' + (Date.now());
-    const newItem = { id: newId, name, category, stock, icon, desc, lots: [] };
-    ensureBentoLots(newItem);
-    bentoMaster.push(newItem);
-  }
-
-  saveMaster();
-  closeEditBentoModal();
-  renderAll();
-  showToast('お弁当情報を保存しました！', 'success');
-}
-
-window.deleteBento = function(id) {
-  const item = bentoMaster.find(b => b.id === id);
-  if (!item) return;
-
-  if (confirm(`『${item.name}』をマスターから削除してもよろしいですか？`)) {
-    bentoMaster = bentoMaster.filter(b => b.id !== id);
-    todaysMenuIds = todaysMenuIds.filter(tId => tId !== id);
-    if (todaysMenuIds.length < 5 && bentoMaster.length >= 5) {
-      const unused = bentoMaster.find(b => !todaysMenuIds.includes(b.id));
-      if (unused) todaysMenuIds.push(unused.id);
-    }
-    saveMaster();
-    saveTodaysMenu();
-    closeEditBentoModal();
-    renderAll();
-    showToast('お弁当を削除しました', 'info');
-  }
-};
 
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
