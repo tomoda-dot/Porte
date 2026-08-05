@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <!-- Supabase client for direct Porte DB integration -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../supabase-config.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -28,7 +31,7 @@
           <strong id="headerUserCount">0名</strong>
         </div>
         <div class="status-chip success">
-          <span>注文確定:</span>
+          <span>お弁当決定:</span>
           <strong id="headerOrderedCount">0食</strong>
         </div>
       </div>
@@ -66,7 +69,7 @@
       <div class="menu-tab-header">
         <div class="title-with-desc">
           <h2>🌟 本日のお昼ごはんメニュー</h2>
-          <p>下記のお弁当の中からお好きなものを１つお選びください♪（リアルタイム在庫連動中）</p>
+          <p>下記のお弁当の中からお好きなものを１つお選びください♪（タップするとお名前の選択が出ます）</p>
         </div>
         <div class="action-buttons">
           <button class="btn btn-pop" id="randomSelectBtn">
@@ -75,6 +78,17 @@
           <button class="btn btn-outline" id="customPickBtn">
             ⚙️ 5品を手動で選ぶ
           </button>
+        </div>
+      </div>
+
+      <!-- 選択進捗バー -->
+      <div class="selection-progress-bar card">
+        <div class="progress-info">
+          <span>👥 本日のお弁当選択状況: <strong id="progressText">0 / 0 名完了</strong></span>
+          <span class="progress-sub" id="progressSubText">未選択: 0名</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
         </div>
       </div>
 
@@ -89,11 +103,16 @@
       <div class="section-title-row">
         <div>
           <h2>📋 ポルテ（Porte）利用データ読み込み ＆ 注文受付</h2>
-          <p>ポルテからエクスポートしたCSVファイルをドラッグ＆ドロップして本日の人数・メニューを管理します。</p>
+          <p>Porteデータベースからの自動取得、またはCSVファイルのアップロードで本日の人数を連動します。</p>
         </div>
-        <button class="btn btn-sample" id="loadSamplePorteBtn">
-          📂 サンプルポルテCSVを読み込む
-        </button>
+        <div class="action-buttons">
+          <button class="btn btn-primary" id="fetchPorteDbBtn">
+            ⚡ Porte DBから最新利用者を自動読み込み
+          </button>
+          <button class="btn btn-sample" id="loadSamplePorteBtn">
+            📂 サンプルデータ（10名）
+          </button>
+        </div>
       </div>
 
       <!-- CSV ドロップエリア & ダッシュボード -->
@@ -103,7 +122,7 @@
           <div class="upload-icon">📄</div>
           <h3>ポルテCSVファイルをドラッグ＆ドロップ</h3>
           <p>またはファイルを選択（利用者ID, 氏名, 区分等）</p>
-          <button class="btn btn-sm btn-primary" onclick="document.getElementById('porteCsvInput').click()">ファイルを選択</button>
+          <button class="btn btn-sm btn-outline" onclick="document.getElementById('porteCsvInput').click()">ファイルを選択</button>
         </div>
 
         <!-- 集計ステータスカード -->
@@ -241,7 +260,7 @@
           <button class="pill-btn" data-category="豚肉">🐖 豚肉</button>
           <button class="pill-btn" data-category="牛肉">🐂 牛肉</button>
           <button class="pill-btn" data-category="鶏肉">🐓 鶏肉</button>
-          <button class="pill-btn" data-category="和食・その他">🍲 和食・中華・その他</button>
+          <button class="pill-btn" data-category="削除・その他">🍲 和食・中華・その他</button>
         </div>
         <div class="search-box">
           <input type="text" id="masterSearchInput" placeholder="お弁当名で検索...">
@@ -255,6 +274,28 @@
     </section>
 
   </main>
+
+  <!-- お弁当選択用 利用者選びモーダル -->
+  <div class="modal-overlay" id="userSelectForBentoModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="selectUserModalBentoTitle">🍱 誰のお弁当にしますか？</h3>
+        <button class="close-btn" id="closeUserSelectForBentoModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtitle">お弁当を選ぶご利用者様のお名前をタップしてください。</p>
+        <div class="search-box" style="margin-bottom:14px;">
+          <input type="text" id="userSelectModalSearch" placeholder="氏名・カタカナで検索...">
+        </div>
+        <div class="user-picker-list" id="userPickerList">
+          <!-- JSで本日利用者一覧を動的表示 -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelUserSelectForBentoBtn">キャンセル</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 5品手動選択モーダル -->
   <div class="modal-overlay" id="pickFiveModal">

@@ -217,7 +217,7 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   background: var(--bg-card);
   padding: 20px 24px;
   border-radius: var(--radius-lg);
@@ -240,6 +240,47 @@ body {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* Progress bar */
+.selection-progress-bar {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 2px solid #ffe8cc;
+  border-radius: var(--radius-md);
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.progress-sub {
+  font-size: 0.85rem;
+  color: #e64980;
+  background: #fff0f6;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 12px;
+  background: #f1f3f5;
+  border-radius: 50px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff7e36 0%, #2ed573 100%);
+  border-radius: 50px;
+  transition: width 0.4s ease;
 }
 
 /* Buttons */
@@ -447,12 +488,33 @@ body {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-muted);
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .bento-stock-text strong {
   color: var(--primary);
   font-size: 1.05rem;
+}
+
+/* 選択者リスト（カード下部） */
+.bento-selected-users {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 14px;
+  min-height: 26px;
+}
+
+.user-tag {
+  background: #fff4e6;
+  border: 1px solid #ffd8a8;
+  color: #d9480f;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
 }
 
 .bento-order-btn {
@@ -518,6 +580,53 @@ body {
   border: 4px dashed #fff;
   box-shadow: 0 8px 20px rgba(255, 71, 87, 0.35);
   letter-spacing: 2px;
+}
+
+/* User Picker Modal List */
+.user-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.user-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.user-picker-item:hover {
+  background: #fff0e6;
+  border-color: var(--primary);
+}
+
+.user-picker-item.selected {
+  background: #ebfbee;
+  border-color: #34c759;
+}
+
+.user-picker-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-picker-name {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text-dark);
+}
+
+.user-picker-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 /* Tab 2: Porte CSV Layout */
@@ -873,6 +982,7 @@ body {
   border: 2px solid #ffd8a8;
   font-size: 0.9rem;
   outline: none;
+  width: 100%;
 }
 
 .search-box input:focus, .search-mini input:focus {

@@ -42,6 +42,7 @@ let todaysMenuIds = [];
 let porteUsers = [];
 let orderHistory = [];
 let currentCategoryFilter = 'ALL';
+let currentSelectingBentoId = null;
 
 // DOM ready
 document.addEventListener('DOMContentLoaded', () => {
@@ -50,6 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
   setupTabs();
   setupEventListeners();
   renderAll();
+  
+  // デフォルトで通所者が空の場合、自動サンプルまたはPorteDBからロードを試行
+  if (porteUsers.length === 0) {
+    loadSamplePorteData(false);
+  }
 });
 
 // 日付表示
@@ -82,7 +88,6 @@ function loadData() {
       todaysMenuIds = bentoMaster.slice(0, 5).map(b => b.id);
     }
   } else {
-    // デフォルトで先頭5品
     todaysMenuIds = bentoMaster.slice(0, 5).map(b => b.id);
     saveTodaysMenu();
   }
@@ -144,6 +149,19 @@ function renderAll() {
   renderStockSection();
   renderMasterSection();
   updateHeaderStats();
+  renderProgressBar();
+}
+
+// 進捗バーの更新
+function renderProgressBar() {
+  const total = porteUsers.length;
+  const ordered = porteUsers.filter(u => u.selectedBentoId).length;
+  const pending = total - ordered;
+  const percent = total > 0 ? Math.round((ordered / total) * 100) : 0;
+
+  document.getElementById('progressText').textContent = `${ordered} / ${total} 名完了 (${percent}%)`;
+  document.getElementById('progressSubText').textContent = `未選択: ${pending}名`;
+  document.getElementById('progressFill').style.width = `${percent}%`;
 }
 
 // 1. 本日の5品 メニュー表示
@@ -157,6 +175,13 @@ function renderTodaysMenu() {
     const isSoldOut = item.stock <= 0;
     const stockPercent = Math.min(100, Math.max(0, (item.stock / 15) * 100));
 
+    // このお弁当を選んでいる利用者様タグ
+    const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id);
+    let userTagsHtml = '';
+    chosenUsers.forEach(u => {
+      userTagsHtml += `<span class="user-tag">👤 ${u.name}</span>`;
+    });
+
     const card = document.createElement('div');
     card.className = `bento-card ${isSoldOut ? 'sold-out' : ''}`;
     card.innerHTML = `
@@ -164,13 +189,18 @@ function renderTodaysMenu() {
       <span class="bento-cat-tag">${item.category}</span>
       <div class="bento-avatar-box">${item.icon}</div>
       <h3 class="bento-title">${item.name}</h3>
-      <p style="font-size:0.8rem; color:#747d8c; margin-bottom:8px;">${item.desc || ''}</p>
+      <p style="font-size:0.8rem; color:#747d8c; margin-bottom:6px;">${item.desc || ''}</p>
       
       <div class="bento-stock-bar">
         <div class="bento-stock-fill ${item.stock <= 3 ? 'low' : ''} ${item.stock <= 0 ? 'zero' : ''}" style="width: ${stockPercent}%;"></div>
       </div>
       <div class="bento-stock-text">
         ${isSoldOut ? '<span style="color:#ff4757; font-weight:800;">完売いたしました</span>' : `残り <strong>${item.stock}</strong> 食`}
+      </div>
+
+      <!-- 選択中ご利用者リスト -->
+      <div class="bento-selected-users">
+        ${userTagsHtml || '<span style="font-size:0.75rem; color:#adb5bd;">選択した方はまだいません</span>'}
       </div>
 
       <button class="bento-order-btn" ${isSoldOut ? 'disabled' : ''} onclick="quickOrderBento('${item.id}')">
@@ -188,7 +218,7 @@ function renderTodaysMenu() {
   });
 }
 
-// クイック注文（メニュー表から直接選択）
+// クイック注文：利用者の名前選択モーダルを開く
 window.quickOrderBento = function(bentoId) {
   const item = bentoMaster.find(b => b.id === bentoId);
   if (!item || item.stock <= 0) {
@@ -196,25 +226,82 @@ window.quickOrderBento = function(bentoId) {
     return;
   }
 
-  // 在庫減算
-  item.stock -= 1;
-  saveMaster();
+  if (porteUsers.length === 0) {
+    showToast('本日利用者のデータがありません。先にポルテデータを読み込んでください。', 'info');
+    return;
+  }
 
-  // 履歴追加
-  const newOrder = {
-    id: 'ord_' + Date.now(),
-    date: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-    userName: '一般選択・ゲスト',
-    bentoId: item.id,
-    bentoName: item.name,
-    category: item.category
-  };
-  orderHistory.unshift(newOrder);
-  saveOrderHistory();
-
-  showToast(`『${item.name}』の受付を完了しました！`, 'success');
-  renderAll();
+  currentSelectingBentoId = bentoId;
+  openUserSelectForBentoModal(item);
 };
+
+// 利用者選択モーダルの描画・表示
+function openUserSelectForBentoModal(bentoItem) {
+  document.getElementById('selectUserModalBentoTitle').textContent = `🍱 『${bentoItem.name}』を誰の注文にしますか？`;
+  document.getElementById('userSelectModalSearch').value = '';
+  
+  renderUserPickerList('');
+  document.getElementById('userSelectForBentoModal').classList.add('active');
+}
+
+function renderUserPickerList(searchQuery) {
+  const listContainer = document.getElementById('userPickerList');
+  listContainer.innerHTML = '';
+
+  const q = searchQuery.toLowerCase();
+  const bentoItem = bentoMaster.find(b => b.id === currentSelectingBentoId);
+
+  const filtered = porteUsers.filter(u => {
+    return u.name.toLowerCase().includes(q) || (u.kana && u.kana.toLowerCase().includes(q)) || u.id.toLowerCase().includes(q);
+  });
+
+  if (filtered.length === 0) {
+    listContainer.innerHTML = `<p style="text-align:center; padding:20px; color:#747d8c;">該当する利用者様が見つかりません。</p>`;
+    return;
+  }
+
+  filtered.forEach(u => {
+    const isChosenThis = u.selectedBentoId === currentSelectingBentoId;
+    const currentChoice = u.selectedBentoId ? bentoMaster.find(b => b.id === u.selectedBentoId) : null;
+
+    const div = document.createElement('div');
+    div.className = `user-picker-item ${isChosenThis ? 'selected' : ''}`;
+    div.innerHTML = `
+      <div class="user-picker-info">
+        <span class="user-picker-name">${u.name} <small style="color:#868e96; font-size:0.8rem;">(${u.kana || ''})</small></span>
+        <span class="user-picker-sub">
+          ${currentChoice ? `現在の選択: <strong>${currentChoice.icon} ${currentChoice.name}</strong>` : '<span style="color:#e64980; font-weight:700;">未選択</span>'}
+          ${u.note ? ` | 特記: ${u.note}` : ''}
+        </span>
+      </div>
+      <div>
+        <button class="btn btn-sm ${isChosenThis ? 'btn-secondary' : 'btn-primary'}" onclick="confirmAssignUserForBento('${u.id}')">
+          ${isChosenThis ? '選択済み' : (currentChoice ? '変更する' : 'この人に決定 🎯')}
+        </button>
+      </div>
+    `;
+    listContainer.appendChild(div);
+  });
+}
+
+// 利用者決定時の処理
+window.confirmAssignUserForBento = function(userId) {
+  const userIndex = porteUsers.findIndex(u => u.id === userId);
+  if (userIndex < 0 || !currentSelectingBentoId) return;
+
+  assignUserBento(userIndex, currentSelectingBentoId);
+  
+  const user = porteUsers[userIndex];
+  const bentoItem = bentoMaster.find(b => b.id === currentSelectingBentoId);
+
+  closeUserSelectForBentoModal();
+  showToast(`🎉 ${user.name} 様のお弁当を『${bentoItem.name}』に登録しました！`, 'success');
+};
+
+function closeUserSelectForBentoModal() {
+  document.getElementById('userSelectForBentoModal').classList.remove('active');
+  currentSelectingBentoId = null;
+}
 
 // 2. ポルテデータ＆注文受付レンダー
 function renderPorteSection() {
@@ -233,7 +320,7 @@ function renderPorteSection() {
   tbody.innerHTML = '';
 
   if (porteUsers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#747d8c;">ポルテのCSVファイルを読み込むか、右上からサンプルデータをロードしてください。</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#747d8c;">ポルテのDBから自動読込するか、CSVファイルを読み込んでください。</td></tr>`;
   } else {
     const todaysBentoList = todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean);
 
@@ -352,7 +439,7 @@ function renderCateringOrderTally() {
 
   // 合計行
   const totalEl = document.createElement('div');
-  totalEl.style.cssText = 'display:flex; justify-space-between; font-weight:800; font-size:1.1rem; margin-top:10px; padding-top:10px; border-top:2px solid #ffd8a8; color:#d9480f;';
+  totalEl.style.cssText = 'display:flex; justify-content:space-between; font-weight:800; font-size:1.1rem; margin-top:10px; padding-top:10px; border-top:2px solid #ffd8a8; color:#d9480f;';
   totalEl.innerHTML = `<span>発注合計</span><span>${totalCount} 食</span>`;
   container.appendChild(totalEl);
 }
@@ -480,15 +567,76 @@ function updateHeaderStats() {
   document.getElementById('headerOrderedCount').textContent = `${orderedUsers}食`;
 }
 
-// 事件処理（イベントリスナー登録）
+// Porte Supabase DB から直接本日利用者を読み込む機能
+async function fetchPorteDbAttendance() {
+  if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined') {
+    showToast('Supabase設定が見つかりません。サンプルデータをロードします。', 'info');
+    loadSamplePorteData(true);
+    return;
+  }
+
+  showToast('⚡ Porteデータベースから最新利用者を読み込み中...', 'info');
+
+  try {
+    const SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Porte DBの『利用者』または『出欠』テーブルを検索
+    const userRes = await SB.from('利用者').select('*');
+    
+    if (userRes.error || !userRes.data || userRes.data.length === 0) {
+      // 代替としてスタッフまたは出欠テーブルをトライ
+      const attRes = await SB.from('スタッフ').select('*');
+      if (attRes.data && attRes.data.length > 0) {
+        porteUsers = attRes.data.map((s, idx) => ({
+          id: s.id || `P${idx+1}`,
+          name: s.name || s.username || '利用者',
+          kana: s.kana || '',
+          type: '通所',
+          note: s.note || '',
+          selectedBentoId: ''
+        }));
+      } else {
+        loadSamplePorteData(true);
+        return;
+      }
+    } else {
+      porteUsers = userRes.data.map((u, idx) => ({
+        id: u.id || `P${idx+1}`,
+        name: u.name || u.氏名 || '利用者',
+        kana: u.kana || u.フリガナ || '',
+        type: u.type || u.区分 || '通所',
+        note: u.note || u.特記事項 || '',
+        selectedBentoId: ''
+      }));
+    }
+
+    savePorteUsers();
+    showToast(`⚡ Porte DBから${porteUsers.length}名の利用者データを読み込みました！`, 'success');
+    renderAll();
+  } catch (err) {
+    console.warn('Porte DB read error:', err);
+    loadSamplePorteData(true);
+  }
+}
+
+// イベント処理（イベントリスナー登録）
 function setupEventListeners() {
+  // Porte DB読み込みボタン
+  document.getElementById('fetchPorteDbBtn').addEventListener('click', fetchPorteDbAttendance);
+
+  // 利用者選択モーダルの検索フィルタ
+  document.getElementById('userSelectModalSearch').addEventListener('input', (e) => {
+    renderUserPickerList(e.target.value);
+  });
+
+  document.getElementById('closeUserSelectForBentoModal').addEventListener('click', closeUserSelectForBentoModal);
+  document.getElementById('cancelUserSelectForBentoBtn').addEventListener('click', closeUserSelectForBentoModal);
+
   // 5品ランダム選出
   document.getElementById('randomSelectBtn').addEventListener('click', () => {
     const cards = document.querySelectorAll('.bento-card');
     cards.forEach(c => c.classList.add('shuffling'));
 
     setTimeout(() => {
-      // 30品目からランダムで5つ選出
       const shuffled = [...bentoMaster].sort(() => 0.5 - Math.random());
       todaysMenuIds = shuffled.slice(0, 5).map(b => b.id);
       saveTodaysMenu();
@@ -504,7 +652,7 @@ function setupEventListeners() {
   document.getElementById('savePickFiveBtn').addEventListener('click', savePickFiveSelection);
 
   // ポルテサンプル読込
-  document.getElementById('loadSamplePorteBtn').addEventListener('click', loadSamplePorteData);
+  document.getElementById('loadSamplePorteBtn').addEventListener('click', () => loadSamplePorteData(true));
 
   // ポルテCSVインポート
   const csvInput = document.getElementById('porteCsvInput');
@@ -571,7 +719,7 @@ function setupEventListeners() {
 }
 
 // サンプルポルテデータ読み込み
-function loadSamplePorteData() {
+function loadSamplePorteData(showNotification = true) {
   porteUsers = [
     { id: 'P001', name: '山田 太郎', kana: 'ヤマダ タロウ', type: '通所A', note: 'アレルギーなし', selectedBentoId: '' },
     { id: 'P002', name: '佐藤 花子', kana: 'サトウ ハナコ', type: '通所A', note: '減塩希望', selectedBentoId: '' },
@@ -585,7 +733,9 @@ function loadSamplePorteData() {
     { id: 'P010', name: '吉田 由美', kana: 'ヨシダ ユミ', type: '通所A', note: '一口大カット', selectedBentoId: '' }
   ];
   savePorteUsers();
-  showToast('📂 ポルテのサンプル利用者データ（10名）をセットしました！', 'success');
+  if (showNotification) {
+    showToast('📂 ポルテのサンプル利用者データ（10名）をセットしました！', 'success');
+  }
   renderAll();
 }
 
@@ -800,7 +950,6 @@ window.deleteBento = function(id) {
     bentoMaster = bentoMaster.filter(b => b.id !== id);
     todaysMenuIds = todaysMenuIds.filter(tId => tId !== id);
     if (todaysMenuIds.length < 5 && bentoMaster.length >= 5) {
-      // 5品足りない場合は自動補填
       const unused = bentoMaster.find(b => !todaysMenuIds.includes(b.id));
       if (unused) todaysMenuIds.push(unused.id);
     }
