@@ -630,10 +630,10 @@ window.cancelOrderHistory = function(index) {
   renderAll();
 };
 
-// 4. 商品マスター＆全在庫管理レンダー
+// 4. 商品マスター＆全在庫管理レンダー (リストタイプ・アイコンなし)
 function renderMasterSection() {
-  const grid = document.getElementById('masterItemsGrid');
-  grid.innerHTML = '';
+  const container = document.getElementById('masterItemsGrid');
+  container.innerHTML = '';
 
   const searchVal = (document.getElementById('masterSearchInput').value || '').toLowerCase();
 
@@ -646,38 +646,64 @@ function renderMasterSection() {
   document.getElementById('masterTotalCount').textContent = bentoMaster.length;
   document.getElementById('masterCountBadge').textContent = `${bentoMaster.length}品目`;
 
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:40px; color:#747d8c; font-weight:700;">該当する商品が見つかりません。</div>`;
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'master-list-table';
+  
+  let rowsHtml = '';
   filtered.forEach(item => {
     const isToday = todaysMenuIds.includes(item.id);
 
-    const card = document.createElement('div');
-    card.className = 'master-card';
-    card.innerHTML = `
-      ${isToday ? '<span class="badge-status done" style="position:absolute; top:12px; right:12px;">本日5品表示中</span>' : ''}
-      <div class="master-card-header">
-        <div class="master-icon">${item.icon}</div>
-        <div>
-          <h4 class="master-title">${item.name}</h4>
-          <span style="font-size:0.75rem; color:#747d8c;">${item.category}</span>
-        </div>
-      </div>
-      <p style="font-size:0.8rem; color:#495057; margin-bottom:8px;">${item.desc || '説明なし'}</p>
-      
-      <div class="master-stock-panel">
-        <span class="master-stock-label">📦 現在の在庫:</span>
-        <div class="stock-control">
-          <button class="btn-qty" onclick="adjustMasterStock('${item.id}', -1)">-</button>
-          <input type="number" class="stock-val-input" value="${item.stock}" min="0" onchange="setMasterStockDirect('${item.id}', this.value)">
-          <button class="btn-qty" onclick="adjustMasterStock('${item.id}', 1)">+</button>
-          <span style="font-size:0.85rem; font-weight:800; color:#495057;">食</span>
-        </div>
-      </div>
-
-      <div class="master-actions">
-        <button class="btn btn-sm btn-outline" style="width:100%; font-weight:700;" onclick="openEditBentoModal('${item.id}')">✏️ 編集</button>
-      </div>
+    rowsHtml += `
+      <tr>
+        <td class="col-cat" style="width: 140px;">
+          <span class="cat-pill">${item.category}</span>
+        </td>
+        <td class="col-name" style="width: 260px;">
+          <strong style="font-size:1.05rem; color:#212529;">${item.name}</strong>
+        </td>
+        <td class="col-desc">
+          <span style="font-size:0.85rem; color:#495057;">${item.desc || '<span style="color:#adb5bd;">-</span>'}</span>
+        </td>
+        <td class="col-stock" style="width: 200px; text-align:center;">
+          <div class="stock-control" style="justify-content: center;">
+            <button class="btn-qty" onclick="adjustMasterStock('${item.id}', -1)">-</button>
+            <input type="number" class="stock-val-input" value="${item.stock}" min="0" onchange="setMasterStockDirect('${item.id}', this.value)">
+            <button class="btn-qty" onclick="adjustMasterStock('${item.id}', 1)">+</button>
+            <span style="font-size:0.85rem; font-weight:800; color:#495057; margin-left:4px;">食</span>
+          </div>
+        </td>
+        <td class="col-status" style="width: 120px; text-align:center;">
+          ${isToday ? '<span class="badge-status done">本日5品</span>' : '<span style="color:#adb5bd; font-size:0.85rem;">-</span>'}
+        </td>
+        <td class="col-action" style="width: 100px; text-align:center;">
+          <button class="btn btn-sm btn-outline" style="font-weight:700;" onclick="openEditBentoModal('${item.id}')">✏️ 編集</button>
+        </td>
+      </tr>
     `;
-    grid.appendChild(card);
   });
+
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th style="width: 140px;">カテゴリー</th>
+        <th style="width: 260px;">商品名</th>
+        <th>商品説明</th>
+        <th style="width: 200px; text-align:center;">現在の在庫数</th>
+        <th style="width: 120px; text-align:center;">本日のメニュー</th>
+        <th style="width: 100px; text-align:center;">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+    </tbody>
+  `;
+
+  container.appendChild(table);
 }
 
 function updateHeaderStats() {

@@ -991,10 +991,57 @@ body {
   border-color: var(--primary);
 }
 
+/* リストタイプ (商品マスター) */
+.master-list-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+  border: 2px solid #ffe8cc;
+}
+
+.master-list-table th {
+  background: #fff4e6;
+  color: #d9480f;
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 14px 16px;
+  border-bottom: 2px solid #ffd8a8;
+}
+
+.master-list-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f3f5;
+  font-size: 0.95rem;
+  vertical-align: middle;
+}
+
+.master-list-table tr:last-child td {
+  border-bottom: none;
+}
+
+.master-list-table tr:hover td {
+  background: #fff9db;
+}
+
+.cat-pill {
+  background: #e7f5ff;
+  color: #1971c2;
+  font-weight: 800;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+/* Master grid & cards */
 .master-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
+  gap: 16px;
 }
 
 .master-card {
