@@ -244,7 +244,7 @@
       <div class="master-header-row">
         <div>
           <h2>⚙️ 商品マスター ＆ 全在庫管理 （全<span id="masterTotalCount">30</span>品目）</h2>
-          <p>すべての商品の在庫数をこの画面で直接変更できます。追加・編集・削除も可能です。</p>
+          <p>すべての商品の在庫数をこの画面で直接変更できます。追加・編集も可能です。</p>
         </div>
         <div class="action-buttons">
           <button class="btn btn-primary" id="addNewBentoBtn">➕ 新しいお弁当を追加</button>
@@ -270,7 +270,7 @@
 
       <!-- 商品マスター＆全在庫管理グリッド -->
       <div class="master-grid" id="masterItemsGrid">
-        <!-- 各カードに直接+-で在庫調整できるUIが入ります -->
+        <!-- 各カードを表示（編集ボタンのみ配置） -->
       </div>
     </section>
 
@@ -318,7 +318,7 @@
     </div>
   </div>
 
-  <!-- お弁当追加・編集モーダル -->
+  <!-- お弁当追加・編集モーダル（削除ボタンをモーダル内に移動） -->
   <div class="modal-overlay" id="bentoEditModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -357,9 +357,14 @@
             <textarea id="bentoDescInput" rows="2" placeholder="美味しい自家製ソースでお召し上がりください"></textarea>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="cancelBentoEditBtn">キャンセル</button>
-          <button type="submit" class="btn btn-primary">保存する</button>
+        <div class="modal-footer" style="justify-content: space-between;">
+          <button type="button" class="btn btn-outline-danger" id="deleteCurrentBentoBtn" style="display:none;">
+            🗑️ このお弁当を削除
+          </button>
+          <div style="display:flex; gap:12px; margin-left:auto;">
+            <button type="button" class="btn btn-secondary" id="cancelBentoEditBtn">キャンセル</button>
+            <button type="submit" class="btn btn-primary">保存する</button>
+          </div>
         </div>
       </form>
     </div>

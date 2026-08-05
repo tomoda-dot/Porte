@@ -520,7 +520,7 @@ window.cancelOrderHistory = function(index) {
   renderAll();
 };
 
-// 4. 商品マスター＆全在庫管理レンダー
+// 4. 商品マスター＆全在庫管理レンダー（カード上は「編集」ボタンのみ表示）
 function renderMasterSection() {
   const grid = document.getElementById('masterItemsGrid');
   grid.innerHTML = '';
@@ -564,8 +564,7 @@ function renderMasterSection() {
       </div>
 
       <div class="master-actions">
-        <button class="btn btn-sm btn-outline" onclick="openEditBentoModal('${item.id}')">編集</button>
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteBento('${item.id}')">削除</button>
+        <button class="btn btn-sm btn-outline" style="width:100%; font-weight:700;" onclick="openEditBentoModal('${item.id}')">✏️ 編集</button>
       </div>
     `;
     grid.appendChild(card);
@@ -631,7 +630,6 @@ async function fetchPorteDbAttendance() {
 
 // イベント処理（イベントリスナー登録）
 function setupEventListeners() {
-  // 全商品を一律10食に一括設定するボタン
   const bulkBtn = document.getElementById('bulkSet10StockBtn');
   if (bulkBtn) {
     bulkBtn.addEventListener('click', () => {
@@ -644,10 +642,6 @@ function setupEventListeners() {
     });
   }
 
-  // Porte DB読み込みボタン
-  document.getElementById('fetchPorteDbBtn').addEventListener('click', fetchPorteDbAttendance);
-
-  // 利用者選択モーダルの検索フィルタ
   document.getElementById('userSelectModalSearch').addEventListener('input', (e) => {
     renderUserPickerList(e.target.value);
   });
@@ -655,7 +649,6 @@ function setupEventListeners() {
   document.getElementById('closeUserSelectForBentoModal').addEventListener('click', closeUserSelectForBentoModal);
   document.getElementById('cancelUserSelectForBentoBtn').addEventListener('click', closeUserSelectForBentoModal);
 
-  // 5品ランダム選出
   document.getElementById('randomSelectBtn').addEventListener('click', () => {
     const cards = document.querySelectorAll('.bento-card');
     cards.forEach(c => c.classList.add('shuffling'));
@@ -669,16 +662,13 @@ function setupEventListeners() {
     }, 400);
   });
 
-  // 手動選出モーダル
   document.getElementById('customPickBtn').addEventListener('click', openPickFiveModal);
   document.getElementById('closePickFiveModal').addEventListener('click', closePickFiveModal);
   document.getElementById('cancelPickFiveBtn').addEventListener('click', closePickFiveModal);
   document.getElementById('savePickFiveBtn').addEventListener('click', savePickFiveSelection);
 
-  // ポルテサンプル読込
   document.getElementById('loadSamplePorteBtn').addEventListener('click', () => loadSamplePorteData(true));
 
-  // ポルテCSVインポート
   const csvInput = document.getElementById('porteCsvInput');
   csvInput.addEventListener('change', handlePorteCsvUpload);
 
@@ -696,10 +686,8 @@ function setupEventListeners() {
     }
   });
 
-  // 発注コピー
   document.getElementById('copyOrderSummaryBtn').addEventListener('click', copyCateringOrderTally);
 
-  // 履歴クリア
   document.getElementById('clearTodayOrdersBtn').addEventListener('click', () => {
     if (confirm('本日の注文履歴をクリアしますか？')) {
       orderHistory = [];
@@ -709,10 +697,8 @@ function setupEventListeners() {
     }
   });
 
-  // 履歴CSVダウンロード
   document.getElementById('exportHistoryCsvBtn').addEventListener('click', exportHistoryCsv);
 
-  // マスター管理フィルター＆検索
   document.getElementById('masterSearchInput').addEventListener('input', renderMasterSection);
   document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -723,7 +709,6 @@ function setupEventListeners() {
     });
   });
 
-  // マスター追加/リセット
   document.getElementById('addNewBentoBtn').addEventListener('click', () => openEditBentoModal(null));
   document.getElementById('resetMasterBtn').addEventListener('click', () => {
     if (confirm('商品マスターを初期30品目にリセットしますか？')) {
@@ -736,13 +721,11 @@ function setupEventListeners() {
     }
   });
 
-  // お弁当編集モーダル
   document.getElementById('closeBentoEditModal').addEventListener('click', closeEditBentoModal);
   document.getElementById('cancelBentoEditBtn').addEventListener('click', closeEditBentoModal);
   document.getElementById('bentoForm').addEventListener('submit', handleSaveBentoForm);
 }
 
-// サンプルポルテデータ読み込み
 function loadSamplePorteData(showNotification = true) {
   porteUsers = [
     { id: 'P001', name: '山田 太郎', kana: 'ヤマダ タロウ', type: '通所A', note: 'アレルギーなし', selectedBentoId: '' },
@@ -763,7 +746,6 @@ function loadSamplePorteData(showNotification = true) {
   renderAll();
 }
 
-// ポルテCSVインポート処理
 function handlePorteCsvUpload(e) {
   if (e.target.files.length > 0) {
     parsePorteCsvFile(e.target.files[0]);
@@ -808,7 +790,6 @@ function parsePorteCsvFile(file) {
   reader.readAsText(file, 'UTF-8');
 }
 
-// 発注リストクリップボードコピー
 function copyCateringOrderTally() {
   const tally = {};
   porteUsers.forEach(u => {
@@ -838,7 +819,6 @@ function copyCateringOrderTally() {
   });
 }
 
-// 履歴CSV出力
 function exportHistoryCsv() {
   if (orderHistory.length === 0) {
     showToast('出力する注文履歴がありません', 'info');
@@ -858,7 +838,6 @@ function exportHistoryCsv() {
   showToast('📥 注文履歴CSVを出力しました', 'success');
 }
 
-// 5品手動選出モーダル
 function openPickFiveModal() {
   const list = document.getElementById('pickFiveItemsList');
   list.innerHTML = '';
@@ -903,10 +882,11 @@ function savePickFiveSelection() {
   showToast('🍱 本日の5品メニューを手動設定しました！', 'success');
 }
 
-// お弁当マスター追加・編集モーダル
+// お弁当マスター追加・編集モーダル（削除ボタンをモーダル内に移動）
 function openEditBentoModal(id) {
   const modal = document.getElementById('bentoEditModal');
   const title = document.getElementById('bentoModalTitle');
+  const deleteBtn = document.getElementById('deleteCurrentBentoBtn');
 
   if (id) {
     const item = bentoMaster.find(b => b.id === id);
@@ -918,6 +898,10 @@ function openEditBentoModal(id) {
       document.getElementById('bentoStockInput').value = item.stock;
       document.getElementById('bentoIconInput').value = item.icon || '🍱';
       document.getElementById('bentoDescInput').value = item.desc || '';
+
+      // モーダル内に削除ボタンを表示
+      deleteBtn.style.display = 'inline-flex';
+      deleteBtn.onclick = () => deleteBento(item.id);
     }
   } else {
     title.textContent = '新しいお弁当の追加';
@@ -925,6 +909,10 @@ function openEditBentoModal(id) {
     document.getElementById('bentoForm').reset();
     document.getElementById('bentoStockInput').value = 10;
     document.getElementById('bentoIconInput').value = '🍱';
+
+    // 新規作成時は削除ボタンを非表示
+    deleteBtn.style.display = 'none';
+    deleteBtn.onclick = null;
   }
 
   modal.classList.add('active');
@@ -978,6 +966,7 @@ window.deleteBento = function(id) {
     }
     saveMaster();
     saveTodaysMenu();
+    closeEditBentoModal();
     renderAll();
     showToast('お弁当を削除しました', 'info');
   }
