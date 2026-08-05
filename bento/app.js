@@ -112,7 +112,7 @@ function loadData() {
     }
   }
 
-  // 初期ロード時、完売している品目を自動的に「在庫あり品目」へと置換
+  // 初期ロード時、注文中の品目は保持しつつ完売品目を自動置換
   autoReplaceSoldOutMenu();
 }
 
@@ -132,7 +132,7 @@ function saveOrderHistory() {
   localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
 }
 
-// 本日の5品の中で「完売（在庫0）」になっているお弁当があれば、マスターの「在庫あり商品」と自動差し替え
+// 本日の5品の中で「完売（在庫0）」になっているお弁当があれば、マスターの「在庫あり商品」と自動差し替え（※選択中のお弁当は保護）
 function autoReplaceSoldOutMenu() {
   if (!bentoMaster || bentoMaster.length === 0 || !todaysMenuIds) return;
 
@@ -140,10 +140,18 @@ function autoReplaceSoldOutMenu() {
   if (inStockMaster.length === 0) return;
 
   let changed = false;
+
+  // 既に誰かが選択中のお弁当IDリスト
+  const currentlyOrderedIds = porteUsers.map(u => u.selectedBentoId).filter(Boolean);
+
   for (let i = 0; i < todaysMenuIds.length; i++) {
-    const bento = bentoMaster.find(b => b.id === todaysMenuIds[i]);
-    if (!bento || bento.stock <= 0) {
-      // 本日の5品に未採用の「在庫がある商品」を探す
+    const currentId = todaysMenuIds[i];
+    const bento = bentoMaster.find(b => b.id === currentId);
+    
+    // 誰も選択しておらず、かつ在庫0または無効な商品のみ置換
+    const isOrderedBySomeone = currentlyOrderedIds.includes(currentId);
+
+    if (!isOrderedBySomeone && (!bento || bento.stock <= 0)) {
       const unusedInStock = inStockMaster.find(b => !todaysMenuIds.includes(b.id));
       if (unusedInStock) {
         todaysMenuIds[i] = unusedInStock.id;
@@ -372,7 +380,6 @@ function renderPorteSection() {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#747d8c;">ポルテのDBから自動読込するか、CSVファイルを読み込んでください。</td></tr>`;
   } else {
     const todaysBentoList = todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean);
-
     const displayList = porteUsers.filter(u => tableShowAll || u.wantsBento !== false || u.selectedBentoId);
 
     displayList.forEach((u) => {
@@ -381,11 +388,21 @@ function renderPorteSection() {
       const wantsBento = u.wantsBento !== false;
       const tr = document.createElement('tr');
 
+      // 本日の5品に加えて、そのご利用者様が選択中のお弁当もドロップダウン選択肢に必ず含める
+      let userBentoOptions = [...todaysBentoList];
+      if (u.selectedBentoId && !userBentoOptions.some(b => b.id === u.selectedBentoId)) {
+        const chosenItem = bentoMaster.find(b => b.id === u.selectedBentoId);
+        if (chosenItem) {
+          userBentoOptions.push(chosenItem);
+        }
+      }
+
       let optionsHtml = `<option value="">-- お弁当を選択してください --</option>`;
-      todaysBentoList.forEach(b => {
+      userBentoOptions.forEach(b => {
         const isSoldOut = b.stock <= 0 && u.selectedBentoId !== b.id;
-        optionsHtml += `<option value="${b.id}" ${u.selectedBentoId === b.id ? 'selected' : ''} ${isSoldOut ? 'disabled' : ''}>
-          ${b.icon} ${b.name} (残${b.stock})
+        const isSelected = u.selectedBentoId === b.id;
+        optionsHtml += `<option value="${b.id}" ${isSelected ? 'selected' : ''} ${isSoldOut ? 'disabled' : ''}>
+          ${b.icon} ${b.name} (残${b.stock}) ${isSelected ? '✓ 選択中' : ''}
         </option>`;
       });
 
@@ -451,6 +468,20 @@ window.assignUserBento = function(userIndex, newBentoId) {
       }
       newBento.stock -= 1;
       user.wantsBento = true;
+
+      // 新しく選択したお弁当が本日の5品に含まれていなければ、自動で本日の5品に追加
+      if (!todaysMenuIds.includes(newBento.id)) {
+        // 未使用のワクと置換
+        const replaceableIndex = todaysMenuIds.findIndex(id => {
+          return !porteUsers.some(u => u.selectedBentoId === id);
+        });
+        if (replaceableIndex >= 0) {
+          todaysMenuIds[replaceableIndex] = newBento.id;
+        } else {
+          todaysMenuIds[0] = newBento.id;
+        }
+        saveTodaysMenu();
+      }
 
       orderHistory.unshift({
         id: 'ord_' + Date.now(),
@@ -694,11 +725,9 @@ async function fetchPorteDbAttendance() {
         const r = attMap[uId];
         
         // Porteダッシュボードと100%同一の判定ロジック
-        // curB = (r && r.bento) ? r.bento : u.bento
         const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? r.bento : u.bento;
         const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
 
-        // curBが「あり」、またはcurMealがtrueの場合のみお弁当必要
         const wantsBento = (curB === 'あり' || curMeal === true);
 
         return {
