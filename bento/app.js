@@ -661,35 +661,22 @@ async function fetchPorteDbAttendance() {
     if (userRes.data && userRes.data.length > 0) {
       porteUsers = userRes.data.map((u, idx) => {
         const uId = String(u.id || '').trim();
-        const att = attMap[uId];
+        const r = attMap[uId];
         
-        let wantsBento = true; // デフォルト
+        // Porteダッシュボードと100%同一の判定ロジック
+        // curB = (r && r.bento) ? r.bento : u.bento
+        const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? r.bento : u.bento;
+        const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
 
-        // 1. 本日の出欠テーブル記録を最優先（bento / meal / status）
-        if (att) {
-          if (att.bento === 'なし' || att.meal === false || att.status === '欠席' || att.status === '調整休') {
-            wantsBento = false;
-          } else if (att.bento === 'あり' || att.meal === true) {
-            wantsBento = true;
-          }
-        } else {
-          // 2. 利用者マスタの個別判定・備考欄チェック
-          if (u.bento === 'なし' || u.meal === false) {
-            wantsBento = false;
-          } else {
-            const descStr = (u.note || u.特記事項 || u.区分 || u.備考 || '').toString();
-            if (descStr.includes('持参') || descStr.includes('なし') || descStr.includes('不要')) {
-              wantsBento = false;
-            }
-          }
-        }
+        // curBが「あり」、またはcurMealがtrueの場合のみお弁当必要
+        const wantsBento = (curB === 'あり' || curMeal === true);
 
         return {
           id: u.id || `P${idx+1}`,
           name: u.name || u.氏名 || '利用者',
           kana: u.kana || u.フリガナ || '',
           type: u.type || u.区分 || '通所',
-          note: u.note || u.特記事項 || (att ? att.notes : ''),
+          note: u.note || u.特記事項 || (r ? r.notes : ''),
           wantsBento: wantsBento,
           selectedBentoId: ''
         };
@@ -703,7 +690,7 @@ async function fetchPorteDbAttendance() {
           kana: s.kana || '',
           type: '通所',
           note: s.note || '',
-          wantsBento: true,
+          wantsBento: false,
           selectedBentoId: ''
         }));
       } else {
@@ -849,7 +836,7 @@ function setupEventListeners() {
 function loadSamplePorteData(showNotification = true) {
   porteUsers = [
     { id: 'P001', name: '岡村 芽衣', kana: 'オカムラ メイ', type: '通所A', note: 'アレルギーなし', wantsBento: true, selectedBentoId: '' },
-    { id: 'P002', name: '髙島 直樹', kana: 'タカシマ ナオキ', type: '通所A', note: '持参弁当', wantsBento: false, selectedBentoId: '' },
+    { id: 'P002', name: '高島 直樹', kana: 'タカシマ ナオキ', type: '通所A', note: '持参弁当', wantsBento: false, selectedBentoId: '' },
     { id: 'P003', name: '佐藤 花子', kana: 'サトウ ハナコ', type: '通所A', note: '減塩希望', wantsBento: true, selectedBentoId: '' },
     { id: 'P004', name: '鈴木 一郎', kana: 'スズキ イチロウ', type: '通所B', note: '一口大カット', wantsBento: true, selectedBentoId: '' },
     { id: 'P005', name: '高橋 恵子', kana: 'タカハシ ケイコ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
@@ -857,7 +844,7 @@ function loadSamplePorteData(showNotification = true) {
   ];
   savePorteUsers();
   if (showNotification) {
-    showToast('📂 ポルテのサンプル利用者データ（岡村様:お弁当要, 髙島様:持参/なし）をセットしました！', 'success');
+    showToast('📂 ポルテのサンプル利用者データ（岡村様:お弁当要, 高島様:持参/なし）をセットしました！', 'success');
   }
   renderAll();
 }
