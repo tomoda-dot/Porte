@@ -84,7 +84,7 @@
       <!-- 選択進捗バー -->
       <div class="selection-progress-bar card">
         <div class="progress-info">
-          <span>👥 本日のお弁当選択状況: <strong id="progressText">0 / 0 名完了</strong></span>
+          <span>👥 本日のお弁当選択状況 (対象者): <strong id="progressText">0 / 0 名完了</strong></span>
           <span class="progress-sub" id="progressSubText">未選択: 0名</span>
         </div>
         <div class="progress-track">
@@ -166,13 +166,19 @@
             </div>
           </div>
           <div class="card-body p-0">
+            <!-- 表示フィルター（お弁当対象者のみ / 全員） -->
+            <div style="padding:10px 16px; background:#fff4e6; border-bottom:1px solid #ffd8a8; display:flex; gap:10px; align-items:center;">
+              <span style="font-size:0.85rem; font-weight:700; color:#d9480f;">表示切替:</span>
+              <button class="pill-btn active" id="filterBentoUsersOnlyBtn">🍱 本日お弁当を注文する方のみ</button>
+              <button class="pill-btn" id="filterAllUsersBtn">👥 通所者全員を表示</button>
+            </div>
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
                   <tr>
                     <th>ID</th>
                     <th>氏名</th>
-                    <th>区分</th>
+                    <th>お弁当必要</th>
                     <th>特記事項</th>
                     <th>選んだお弁当（本日5品から）</th>
                     <th>状態</th>
@@ -270,7 +276,7 @@
 
       <!-- 商品マスター＆全在庫管理グリッド -->
       <div class="master-grid" id="masterItemsGrid">
-        <!-- 各カードを表示（編集ボタンのみ配置） -->
+        <!-- 各カードを表示 -->
       </div>
     </section>
 
@@ -285,6 +291,13 @@
       </div>
       <div class="modal-body">
         <p class="modal-subtitle">お弁当を選ぶご利用者様のお名前をタップしてください。</p>
+        
+        <!-- モーダル内フィルタ切替タブ -->
+        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+          <button class="pill-btn active" id="modalFilterBentoOnlyBtn">🍱 お弁当注文の方のみ</button>
+          <button class="pill-btn" id="modalFilterShowAllBtn">👥 急遽追加 / 通所者全員表示</button>
+        </div>
+
         <div class="search-box" style="margin-bottom:14px;">
           <input type="text" id="userSelectModalSearch" placeholder="氏名・カタカナで検索...">
         </div>
@@ -318,7 +331,7 @@
     </div>
   </div>
 
-  <!-- お弁当追加・編集モーダル（削除ボタンをモーダル内に移動） -->
+  <!-- お弁当追加・編集モーダル -->
   <div class="modal-overlay" id="bentoEditModal">
     <div class="modal-card">
       <div class="modal-header">

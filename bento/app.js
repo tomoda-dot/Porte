@@ -44,6 +44,10 @@ let orderHistory = [];
 let currentCategoryFilter = 'ALL';
 let currentSelectingBentoId = null;
 
+// 表示フィルタ状態
+let modalShowAll = false; // false: 本日お弁当対象者のみ, true: 急遽追加含む全員
+let tableShowAll = false; // false: 本日お弁当対象者のみ, true: 全員
+
 // DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   initDate();
@@ -151,10 +155,11 @@ function renderAll() {
   renderProgressBar();
 }
 
-// 進捗バーの更新
+// 進捗バーの更新（お弁当対象者のみを母数として算出）
 function renderProgressBar() {
-  const total = porteUsers.length;
-  const ordered = porteUsers.filter(u => u.selectedBentoId).length;
+  const bentoTargetUsers = porteUsers.filter(u => u.wantsBento !== false);
+  const total = bentoTargetUsers.length;
+  const ordered = bentoTargetUsers.filter(u => u.selectedBentoId).length;
   const pending = total - ordered;
   const percent = total > 0 ? Math.round((ordered / total) * 100) : 0;
 
@@ -245,24 +250,36 @@ function renderUserPickerList(searchQuery) {
 
   const q = searchQuery.toLowerCase();
 
+  // デフォルトは「お弁当対象者のみ (wantsBento !== false)」、modalShowAllがtrueの時は全員を表示
   const filtered = porteUsers.filter(u => {
-    return u.name.toLowerCase().includes(q) || (u.kana && u.kana.toLowerCase().includes(q)) || u.id.toLowerCase().includes(q);
+    const isTarget = modalShowAll || (u.wantsBento !== false) || u.selectedBentoId;
+    const matchQuery = u.name.toLowerCase().includes(q) || (u.kana && u.kana.toLowerCase().includes(q)) || u.id.toLowerCase().includes(q);
+    return isTarget && matchQuery;
   });
 
   if (filtered.length === 0) {
-    listContainer.innerHTML = `<p style="text-align:center; padding:20px; color:#747d8c;">該当する利用者様が見つかりません。</p>`;
+    listContainer.innerHTML = `
+      <div style="text-align:center; padding:24px; color:#747d8c;">
+        <p style="margin-bottom:8px;">該当するお弁当対象者様が見つかりません。</p>
+        <button class="btn btn-sm btn-outline" onclick="toggleModalShowAll(true)">👥 全通所者から急遽追加する</button>
+      </div>
+    `;
     return;
   }
 
   filtered.forEach(u => {
     const isChosenThis = u.selectedBentoId === currentSelectingBentoId;
     const currentChoice = u.selectedBentoId ? bentoMaster.find(b => b.id === u.selectedBentoId) : null;
+    const isSuddenAdd = u.wantsBento === false;
 
     const div = document.createElement('div');
     div.className = `user-picker-item ${isChosenThis ? 'selected' : ''}`;
     div.innerHTML = `
       <div class="user-picker-info">
-        <span class="user-picker-name">${u.name} <small style="color:#868e96; font-size:0.8rem;">(${u.kana || ''})</small></span>
+        <span class="user-picker-name">
+          ${u.name} <small style="color:#868e96; font-size:0.8rem;">(${u.kana || ''})</small>
+          ${isSuddenAdd ? '<span style="background:#fff0f6; color:#e64980; font-size:0.75rem; padding:2px 8px; border-radius:10px; margin-left:6px; font-weight:800;">急遽追加</span>' : ''}
+        </span>
         <span class="user-picker-sub">
           ${currentChoice ? `現在の選択: <strong>${currentChoice.icon} ${currentChoice.name}</strong>` : '<span style="color:#e64980; font-weight:700;">未選択</span>'}
           ${u.note ? ` | 特記: ${u.note}` : ''}
@@ -270,7 +287,7 @@ function renderUserPickerList(searchQuery) {
       </div>
       <div>
         <button class="btn btn-sm ${isChosenThis ? 'btn-secondary' : 'btn-primary'}" onclick="confirmAssignUserForBento('${u.id}')">
-          ${isChosenThis ? '選択済み' : (currentChoice ? '変更する' : 'この人に決定 🎯')}
+          ${isChosenThis ? '選択済み' : (isSuddenAdd ? '急遽お弁当を追加 ➕' : (currentChoice ? '変更する' : 'この人に決定 🎯'))}
         </button>
       </div>
     `;
@@ -278,13 +295,26 @@ function renderUserPickerList(searchQuery) {
   });
 }
 
+window.toggleModalShowAll = function(showAll) {
+  modalShowAll = showAll;
+  document.getElementById('modalFilterBentoOnlyBtn').classList.toggle('active', !showAll);
+  document.getElementById('modalFilterShowAllBtn').classList.toggle('active', showAll);
+  renderUserPickerList(document.getElementById('userSelectModalSearch').value);
+};
+
 window.confirmAssignUserForBento = function(userId) {
   const userIndex = porteUsers.findIndex(u => u.id === userId);
   if (userIndex < 0 || !currentSelectingBentoId) return;
 
-  assignUserBento(userIndex, currentSelectingBentoId);
-  
   const user = porteUsers[userIndex];
+  
+  // 急遽追加の場合、wantsBentoフラグをtrueに自動切り替え
+  if (user.wantsBento === false) {
+    user.wantsBento = true;
+    showToast(`⚡ ${user.name} 様のお弁当希望を追加しました！`, 'info');
+  }
+
+  assignUserBento(userIndex, currentSelectingBentoId);
   const bentoItem = bentoMaster.find(b => b.id === currentSelectingBentoId);
 
   closeUserSelectForBentoModal();
@@ -298,11 +328,12 @@ function closeUserSelectForBentoModal() {
 
 // 2. ポルテデータ＆注文受付レンダー
 function renderPorteSection() {
-  const total = porteUsers.length;
-  const ordered = porteUsers.filter(u => u.selectedBentoId).length;
-  const pending = total - ordered;
+  const bentoUsers = porteUsers.filter(u => u.wantsBento !== false);
+  const totalTarget = bentoUsers.length;
+  const ordered = bentoUsers.filter(u => u.selectedBentoId).length;
+  const pending = totalTarget - ordered;
 
-  document.getElementById('summaryTotalUsers').textContent = total;
+  document.getElementById('summaryTotalUsers').textContent = `${totalTarget} (全員:${porteUsers.length})`;
   document.getElementById('summaryOrderedUsers').textContent = ordered;
   document.getElementById('summaryPendingUsers').textContent = pending;
 
@@ -316,8 +347,13 @@ function renderPorteSection() {
   } else {
     const todaysBentoList = todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean);
 
-    porteUsers.forEach((u, idx) => {
+    // tableShowAllがfalseの時はお弁当対象者のみ表示
+    const displayList = porteUsers.filter(u => tableShowAll || u.wantsBento !== false || u.selectedBentoId);
+
+    displayList.forEach((u) => {
+      const realIndex = porteUsers.findIndex(item => item.id === u.id);
       const isDone = !!u.selectedBentoId;
+      const wantsBento = u.wantsBento !== false;
       const tr = document.createElement('tr');
 
       let optionsHtml = `<option value="">-- お弁当を選択してください --</option>`;
@@ -331,10 +367,14 @@ function renderPorteSection() {
       tr.innerHTML = `
         <td><strong>${u.id}</strong></td>
         <td><strong>${u.name}</strong> <span style="font-size:0.75rem; color:#868e96;">(${u.kana || ''})</span></td>
-        <td>${u.type || '通所'}</td>
+        <td>
+          <button class="btn btn-sm ${wantsBento ? 'btn-outline' : 'btn-sample'}" style="padding:2px 8px; font-size:0.75rem;" onclick="toggleUserBentoWant(${realIndex})">
+            ${wantsBento ? '🍱 注文あり' : '⚪ 注文なし'}
+          </button>
+        </td>
         <td><span style="color:#e64980; font-size:0.85rem; font-weight:700;">${u.note || '-'}</span></td>
         <td>
-          <select class="bento-select-dropdown" onchange="assignUserBento(${idx}, this.value)">
+          <select class="bento-select-dropdown" onchange="assignUserBento(${realIndex}, this.value)">
             ${optionsHtml}
           </select>
         </td>
@@ -350,6 +390,19 @@ function renderPorteSection() {
 
   renderCateringOrderTally();
 }
+
+window.toggleUserBentoWant = function(userIndex) {
+  const user = porteUsers[userIndex];
+  if (!user) return;
+
+  user.wantsBento = !(user.wantsBento !== false);
+  if (!user.wantsBento && user.selectedBentoId) {
+    assignUserBento(userIndex, ''); // 注文取消
+  }
+  savePorteUsers();
+  renderAll();
+  showToast(`${user.name} 様のお弁当注文希望を切り替えました`, 'info');
+};
 
 window.assignUserBento = function(userIndex, newBentoId) {
   const user = porteUsers[userIndex];
@@ -372,6 +425,7 @@ window.assignUserBento = function(userIndex, newBentoId) {
         return;
       }
       newBento.stock -= 1;
+      user.wantsBento = true; // 注文割り当て時自動ON
 
       orderHistory.unshift({
         id: 'ord_' + Date.now(),
@@ -520,7 +574,7 @@ window.cancelOrderHistory = function(index) {
   renderAll();
 };
 
-// 4. 商品マスター＆全在庫管理レンダー（カード上は「編集」ボタンのみ表示）
+// 4. 商品マスター＆全在庫管理レンダー
 function renderMasterSection() {
   const grid = document.getElementById('masterItemsGrid');
   grid.innerHTML = '';
@@ -552,7 +606,6 @@ function renderMasterSection() {
       </div>
       <p style="font-size:0.8rem; color:#495057; margin-bottom:8px;">${item.desc || '説明なし'}</p>
       
-      <!-- 商品マスター画面で全在庫を直接変更できるコントローラー -->
       <div class="master-stock-panel">
         <span class="master-stock-label">📦 現在の在庫:</span>
         <div class="stock-control">
@@ -572,10 +625,11 @@ function renderMasterSection() {
 }
 
 function updateHeaderStats() {
-  const totalUsers = porteUsers.length;
-  const orderedUsers = porteUsers.filter(u => u.selectedBentoId).length;
+  const bentoUsers = porteUsers.filter(u => u.wantsBento !== false);
+  const totalUsers = bentoUsers.length;
+  const orderedUsers = bentoUsers.filter(u => u.selectedBentoId).length;
 
-  document.getElementById('headerUserCount').textContent = `${totalUsers}名`;
+  document.getElementById('headerUserCount').textContent = `${totalUsers}名 (全${porteUsers.length}名)`;
   document.getElementById('headerOrderedCount').textContent = `${orderedUsers}食`;
 }
 
@@ -602,6 +656,7 @@ async function fetchPorteDbAttendance() {
           kana: s.kana || '',
           type: '通所',
           note: s.note || '',
+          wantsBento: true,
           selectedBentoId: ''
         }));
       } else {
@@ -609,14 +664,19 @@ async function fetchPorteDbAttendance() {
         return;
       }
     } else {
-      porteUsers = userRes.data.map((u, idx) => ({
-        id: u.id || `P${idx+1}`,
-        name: u.name || u.氏名 || '利用者',
-        kana: u.kana || u.フリガナ || '',
-        type: u.type || u.区分 || '通所',
-        note: u.note || u.特記事項 || '',
-        selectedBentoId: ''
-      }));
+      porteUsers = userRes.data.map((u, idx) => {
+        const descStr = (u.note || u.特記事項 || u.区分 || '').toString();
+        const noBento = descStr.includes('持参') || descStr.includes('なし') || descStr.includes('不要');
+        return {
+          id: u.id || `P${idx+1}`,
+          name: u.name || u.氏名 || '利用者',
+          kana: u.kana || u.フリガナ || '',
+          type: u.type || u.区分 || '通所',
+          note: u.note || u.特記事項 || '',
+          wantsBento: !noBento,
+          selectedBentoId: ''
+        };
+      });
     }
 
     savePorteUsers();
@@ -630,6 +690,32 @@ async function fetchPorteDbAttendance() {
 
 // イベント処理（イベントリスナー登録）
 function setupEventListeners() {
+  // ポルテ表フィルタボタン
+  const bentoOnlyBtn = document.getElementById('filterBentoUsersOnlyBtn');
+  const allUsersBtn = document.getElementById('filterAllUsersBtn');
+  if (bentoOnlyBtn && allUsersBtn) {
+    bentoOnlyBtn.addEventListener('click', () => {
+      tableShowAll = false;
+      bentoOnlyBtn.classList.add('active');
+      allUsersBtn.classList.remove('active');
+      renderPorteSection();
+    });
+    allUsersBtn.addEventListener('click', () => {
+      tableShowAll = true;
+      allUsersBtn.classList.add('active');
+      bentoOnlyBtn.classList.remove('active');
+      renderPorteSection();
+    });
+  }
+
+  // モーダル内フィルタボタン
+  const modalBentoBtn = document.getElementById('modalFilterBentoOnlyBtn');
+  const modalAllBtn = document.getElementById('modalFilterShowAllBtn');
+  if (modalBentoBtn && modalAllBtn) {
+    modalBentoBtn.addEventListener('click', () => toggleModalShowAll(false));
+    modalAllBtn.addEventListener('click', () => toggleModalShowAll(true));
+  }
+
   const bulkBtn = document.getElementById('bulkSet10StockBtn');
   if (bulkBtn) {
     bulkBtn.addEventListener('click', () => {
@@ -641,6 +727,8 @@ function setupEventListeners() {
       }
     });
   }
+
+  document.getElementById('fetchPorteDbBtn').addEventListener('click', fetchPorteDbAttendance);
 
   document.getElementById('userSelectModalSearch').addEventListener('input', (e) => {
     renderUserPickerList(e.target.value);
@@ -728,20 +816,20 @@ function setupEventListeners() {
 
 function loadSamplePorteData(showNotification = true) {
   porteUsers = [
-    { id: 'P001', name: '山田 太郎', kana: 'ヤマダ タロウ', type: '通所A', note: 'アレルギーなし', selectedBentoId: '' },
-    { id: 'P002', name: '佐藤 花子', kana: 'サトウ ハナコ', type: '通所A', note: '減塩希望', selectedBentoId: '' },
-    { id: 'P003', name: '鈴木 一郎', kana: 'スズキ イチロウ', type: '通所B', note: '一口大カット', selectedBentoId: '' },
-    { id: 'P004', name: '高橋 恵子', kana: 'タカハシ ケイコ', type: '通所A', note: '', selectedBentoId: '' },
-    { id: 'P005', name: '田中 健二', kana: 'タナカ ケンジ', type: '通所A', note: '', selectedBentoId: '' },
-    { id: 'P006', name: '伊藤 美咲', kana: 'イトウ ミサキ', type: '通所B', note: 'アレルギー：エビ', selectedBentoId: '' },
-    { id: 'P007', name: '渡辺 誠', kana: 'ワタナベ マコト', type: '通所A', note: '', selectedBentoId: '' },
-    { id: 'P008', name: '小林 さゆり', kana: 'コバヤシ サユリ', type: '通所A', note: '', selectedBentoId: '' },
-    { id: 'P009', name: '加藤 隆', kana: 'カトウ タカシ', type: '通所B', note: '', selectedBentoId: '' },
-    { id: 'P010', name: '吉田 由美', kana: 'ヨシダ ユミ', type: '通所A', note: '一口大カット', selectedBentoId: '' }
+    { id: 'P001', name: '山田 太郎', kana: 'ヤマダ タロウ', type: '通所A', note: 'アレルギーなし', wantsBento: true, selectedBentoId: '' },
+    { id: 'P002', name: '佐藤 花子', kana: 'サトウ ハナコ', type: '通所A', note: '減塩希望', wantsBento: true, selectedBentoId: '' },
+    { id: 'P003', name: '鈴木 一郎', kana: 'スズキ イチロウ', type: '通所B', note: '一口大カット', wantsBento: true, selectedBentoId: '' },
+    { id: 'P004', name: '高橋 恵子', kana: 'タカハシ ケイコ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
+    { id: 'P005', name: '田中 健二', kana: 'タナカ ケンジ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
+    { id: 'P006', name: '伊藤 美咲', kana: 'イトウ ミサキ', type: '通所B', note: 'アレルギー：エビ', wantsBento: true, selectedBentoId: '' },
+    { id: 'P007', name: '渡辺 誠', kana: 'ワタナベ マコト', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
+    { id: 'P008', name: '小林 さゆり', kana: 'コバヤシ サユリ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
+    { id: 'P009', name: '加藤 隆', kana: 'カトウ タカシ', type: '通所B', note: '持参弁当', wantsBento: false, selectedBentoId: '' },
+    { id: 'P010', name: '吉田 由美', kana: 'ヨシダ ユミ', type: '通所A', note: '持参弁当', wantsBento: false, selectedBentoId: '' }
   ];
   savePorteUsers();
   if (showNotification) {
-    showToast('📂 ポルテのサンプル利用者データ（10名）をセットしました！', 'success');
+    showToast('📂 ポルテのサンプル利用者データ（10名: うちお弁当対象8名）をセットしました！', 'success');
   }
   renderAll();
 }
@@ -767,12 +855,16 @@ function parsePorteCsvFile(file) {
       if (i === 0 && (cols[0].includes('ID') || cols[0].includes('利用者'))) continue;
 
       if (cols.length >= 2) {
+        const noteStr = (cols[5] || cols[4] || '').toString();
+        const noBento = noteStr.includes('持参') || noteStr.includes('なし') || noteStr.includes('不要');
+
         parsed.push({
           id: cols[0] || `P${parsed.length + 1}`,
           name: cols[1] || '名前未設定',
           kana: cols[2] || '',
           type: cols[3] || '通所',
-          note: cols[5] || cols[4] || '',
+          note: noteStr,
+          wantsBento: !noBento,
           selectedBentoId: ''
         });
       }
@@ -882,7 +974,7 @@ function savePickFiveSelection() {
   showToast('🍱 本日の5品メニューを手動設定しました！', 'success');
 }
 
-// お弁当マスター追加・編集モーダル（削除ボタンをモーダル内に移動）
+// お弁当マスター追加・編集モーダル
 function openEditBentoModal(id) {
   const modal = document.getElementById('bentoEditModal');
   const title = document.getElementById('bentoModalTitle');
@@ -899,7 +991,6 @@ function openEditBentoModal(id) {
       document.getElementById('bentoIconInput').value = item.icon || '🍱';
       document.getElementById('bentoDescInput').value = item.desc || '';
 
-      // モーダル内に削除ボタンを表示
       deleteBtn.style.display = 'inline-flex';
       deleteBtn.onclick = () => deleteBento(item.id);
     }
@@ -910,7 +1001,6 @@ function openEditBentoModal(id) {
     document.getElementById('bentoStockInput').value = 10;
     document.getElementById('bentoIconInput').value = '🍱';
 
-    // 新規作成時は削除ボタンを非表示
     deleteBtn.style.display = 'none';
     deleteBtn.onclick = null;
   }
