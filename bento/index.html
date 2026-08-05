@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ぽかぽか弁当メニュー & 利用・在庫管理システム | Porte</title>
+  <!-- Google Fonts: Zen Maru Gothic & M PLUS Rounded 1c -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo-area">
+        <span class="logo-icon">🍱</span>
+        <div>
+          <h1 class="logo-title">ぽかぽか弁当メニュー</h1>
+          <p class="logo-subtitle">デイサービス お昼ごはん注文＆在庫管理システム (Porte連携)</p>
+        </div>
+      </div>
+      <div class="header-info">
+        <div class="date-badge" id="currentDateBadge">2026年8月5日(水)</div>
+        <div class="status-chip">
+          <span>本日のご利用者数:</span>
+          <strong id="headerUserCount">0名</strong>
+        </div>
+        <div class="status-chip success">
+          <span>注文確定:</span>
+          <strong id="headerOrderedCount">0食</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- タブナビゲーション -->
+    <nav class="main-tabs">
+      <button class="tab-btn active" data-tab="menu-tab">
+        <span class="tab-icon">✨</span>
+        <span class="tab-label">本日のメニュー表</span>
+        <span class="tab-badge" id="menuTabBadge">5品</span>
+      </button>
+      <button class="tab-btn" data-tab="porte-tab">
+        <span class="tab-icon">📋</span>
+        <span class="tab-label">ポルテ連携・注文受付</span>
+        <span class="tab-badge warning" id="porteTabBadge">未受付 0</span>
+      </button>
+      <button class="tab-btn" data-tab="stock-tab">
+        <span class="tab-icon">📦</span>
+        <span class="tab-label">在庫＆利用履歴</span>
+      </button>
+      <button class="tab-btn" data-tab="master-tab">
+        <span class="tab-icon">⚙️</span>
+        <span class="tab-label">商品マスター管理</span>
+        <span class="tab-badge secondary" id="masterCountBadge">30品目</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- メインコンテンツエリア -->
+  <main class="app-main">
+    
+    <!-- タブ1: 本日のメニュー表 (利用者様向け画面) -->
+    <section id="menu-tab" class="tab-content active">
+      <div class="menu-tab-header">
+        <div class="title-with-desc">
+          <h2>🌟 本日のお昼ごはんメニュー</h2>
+          <p>下記のお弁当の中からお好きなものを１つお選びください♪（リアルタイム在庫連動中）</p>
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-pop" id="randomSelectBtn">
+            <span class="btn-sparkle">🎲</span> 本日の5品をランダム選出！
+          </button>
+          <button class="btn btn-outline" id="customPickBtn">
+            ⚙️ 5品を手動で選ぶ
+          </button>
+        </div>
+      </div>
+
+      <!-- 5品カードコンテナ -->
+      <div class="menu-cards-grid" id="todaysMenuGrid">
+        <!-- JSで動的に5品をレンダリング -->
+      </div>
+    </section>
+
+    <!-- タブ2: ポルテ連携・注文受付 -->
+    <section id="porte-tab" class="tab-content">
+      <div class="section-title-row">
+        <div>
+          <h2>📋 ポルテ（Porte）利用データ読み込み ＆ 注文受付</h2>
+          <p>ポルテからエクスポートしたCSVファイルをドラッグ＆ドロップして本日の人数・メニューを管理します。</p>
+        </div>
+        <button class="btn btn-sample" id="loadSamplePorteBtn">
+          📂 サンプルポルテCSVを読み込む
+        </button>
+      </div>
+
+      <!-- CSV ドロップエリア & ダッシュボード -->
+      <div class="porte-top-grid">
+        <div class="csv-upload-box" id="csvDropZone">
+          <input type="file" id="porteCsvInput" accept=".csv" class="file-input-hidden">
+          <div class="upload-icon">📄</div>
+          <h3>ポルテCSVファイルをドラッグ＆ドロップ</h3>
+          <p>またはファイルを選択（利用者ID, 氏名, 区分等）</p>
+          <button class="btn btn-sm btn-primary" onclick="document.getElementById('porteCsvInput').click()">ファイルを選択</button>
+        </div>
+
+        <!-- 集計ステータスカード -->
+        <div class="summary-cards">
+          <div class="stat-card">
+            <div class="stat-value" id="summaryTotalUsers">0</div>
+            <div class="stat-label">本日の通所人数</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-value" id="summaryOrderedUsers">0</div>
+            <div class="stat-label">お弁当決定済み</div>
+          </div>
+          <div class="stat-card danger">
+            <div class="stat-value" id="summaryPendingUsers">0</div>
+            <div class="stat-label">未選択人数</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 発注集計 & 注文者リスト -->
+      <div class="porte-detail-grid">
+        <!-- お弁当屋さん発注書プレビュー -->
+        <div class="card order-summary-card">
+          <div class="card-header">
+            <h3>🍱 本日の合計お弁当発注数</h3>
+            <button class="btn btn-sm btn-outline" id="copyOrderSummaryBtn">📋 発注リストをコピー</button>
+          </div>
+          <div class="card-body">
+            <div id="cateringOrderTally" class="tally-list">
+              <!-- 集計結果がここに表示されます -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 利用者一覧 ＆ 注文割り当て -->
+        <div class="card user-list-card">
+          <div class="card-header">
+            <h3>👥 利用者様別 注文選択リスト</h3>
+            <div class="search-mini">
+              <input type="text" id="userSearchInput" placeholder="氏名・IDで検索...">
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>氏名</th>
+                    <th>区分</th>
+                    <th>特記事項</th>
+                    <th>選んだお弁当（本日5品から）</th>
+                    <th>状態</th>
+                  </tr>
+                </thead>
+                <tbody id="porteUserTableBody">
+                  <!-- CSVから読み込まれた行がレンダリングされます -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- タブ3: 在庫＆利用履歴 -->
+    <section id="stock-tab" class="tab-content">
+      <div class="section-title-row">
+        <div>
+          <h2>📦 リアルタイム在庫状況 ＆ 注文履歴</h2>
+          <p>各お弁当の在庫調整および過去の注文履歴ログの確認・CSV出力ができます。</p>
+        </div>
+        <button class="btn btn-secondary" id="exportHistoryCsvBtn">📥 注文履歴CSV出力</button>
+      </div>
+
+      <div class="stock-tab-grid">
+        <!-- 在庫クイック変更 -->
+        <div class="card">
+          <div class="card-header">
+            <h3>⚡ 本日5品の在庫クイック調整</h3>
+          </div>
+          <div class="card-body">
+            <div class="quick-stock-list" id="quickStockAdjustList">
+              <!-- JSレンダリング -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 履歴ログ -->
+        <div class="card history-card">
+          <div class="card-header">
+            <h3>📜 注文・受付履歴ログ</h3>
+            <button class="btn btn-sm btn-danger-outline" id="clearTodayOrdersBtn">本日注文のクリア</button>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>日時</th>
+                    <th>利用者名</th>
+                    <th>注文お弁当</th>
+                    <th>カテゴリ</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="orderHistoryTableBody">
+                  <!-- 履歴行 -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- タブ4: 商品マスター管理 (30品目) -->
+    <section id="master-tab" class="tab-content">
+      <div class="master-header-row">
+        <div>
+          <h2>⚙️ 商品マスター一覧 （全<span id="masterTotalCount">30</span>品目）</h2>
+          <p>お弁当の追加・編集・削除・初期在庫の設定を行います。</p>
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-primary" id="addNewBentoBtn">➕ 新しいお弁当を追加</button>
+          <button class="btn btn-outline-danger" id="resetMasterBtn">🔄 30品目デフォルトにリセット</button>
+        </div>
+      </div>
+
+      <!-- フィルター・検索バー -->
+      <div class="master-filter-bar">
+        <div class="category-pills" id="categoryFilterPills">
+          <button class="pill-btn active" data-category="ALL">すべて (30)</button>
+          <button class="pill-btn" data-category="魚">🐟 魚料理</button>
+          <button class="pill-btn" data-category="豚肉">🐖 豚肉</button>
+          <button class="pill-btn" data-category="牛肉">🐂 牛肉</button>
+          <button class="pill-btn" data-category="鶏肉">🐓 鶏肉</button>
+          <button class="pill-btn" data-category="和食・その他">🍲 和食・中華・その他</button>
+        </div>
+        <div class="search-box">
+          <input type="text" id="masterSearchInput" placeholder="お弁当名で検索...">
+        </div>
+      </div>
+
+      <!-- 商品マスターグリッド -->
+      <div class="master-grid" id="masterItemsGrid">
+        <!-- 30品目がここに表示されます -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 5品手動選択モーダル -->
+  <div class="modal-overlay" id="pickFiveModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🍱 本日の5品を手動でえらぶ</h3>
+        <button class="close-btn" id="closePickFiveModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtitle">マスター一覧から本日表示したいお弁当を5つチェックしてください。（現在: <strong id="selectedFiveCount">0</strong> / 5）</p>
+        <div class="pick-five-list" id="pickFiveItemsList">
+          <!-- JSでマスター一覧を表示 -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelPickFiveBtn">キャンセル</button>
+        <button class="btn btn-primary" id="savePickFiveBtn">本日のメニューに設定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- お弁当追加・編集モーダル -->
+  <div class="modal-overlay" id="bentoEditModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="bentoModalTitle">お弁当の編集</h3>
+        <button class="close-btn" id="closeBentoEditModal">&times;</button>
+      </div>
+      <form id="bentoForm">
+        <input type="hidden" id="editBentoId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="bentoNameInput">お弁当名 <span class="req">*</span></label>
+            <input type="text" id="bentoNameInput" required placeholder="例：タラのトマトソース弁当">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="bentoCategoryInput">カテゴリー</label>
+              <select id="bentoCategoryInput">
+                <option value="魚">🐟 魚料理</option>
+                <option value="豚肉">🐖 豚肉料理</option>
+                <option value="牛肉">🐂 牛肉料理</option>
+                <option value="鶏肉">🐓 鶏肉料理</option>
+                <option value="和食・その他">🍲 和食・中華・その他</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="bentoStockInput">初期在庫数</label>
+              <input type="number" id="bentoStockInput" min="0" value="10">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bentoIconInput">絵文字・アイコン</label>
+            <input type="text" id="bentoIconInput" placeholder="例：🍱, 🐟, 🥩, 🐓, 🍛" value="🍱">
+          </div>
+          <div class="form-group">
+            <label for="bentoDescInput">説明・アピールポイント</label>
+            <textarea id="bentoDescInput" rows="2" placeholder="美味しい自家製ソースでお召し上がりください"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelBentoEditBtn">キャンセル</button>
+          <button type="submit" class="btn btn-primary">保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
