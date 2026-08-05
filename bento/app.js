@@ -44,9 +44,8 @@ let orderHistory = [];
 let currentCategoryFilter = 'ALL';
 let currentSelectingBentoId = null;
 
-// 表示フィルタ状態
-let modalShowAll = false; // false: 本日お弁当対象者のみ, true: 急遽追加含む全員
-let tableShowAll = false; // false: 本日お弁当対象者のみ, true: 全員
+let modalShowAll = false;
+let tableShowAll = false;
 
 // DOM ready
 document.addEventListener('DOMContentLoaded', () => {
@@ -155,7 +154,6 @@ function renderAll() {
   renderProgressBar();
 }
 
-// 進捗バーの更新（お弁当対象者のみを母数として算出）
 function renderProgressBar() {
   const bentoTargetUsers = porteUsers.filter(u => u.wantsBento !== false);
   const total = bentoTargetUsers.length;
@@ -250,7 +248,6 @@ function renderUserPickerList(searchQuery) {
 
   const q = searchQuery.toLowerCase();
 
-  // デフォルトは「お弁当対象者のみ (wantsBento !== false)」、modalShowAllがtrueの時は全員を表示
   const filtered = porteUsers.filter(u => {
     const isTarget = modalShowAll || (u.wantsBento !== false) || u.selectedBentoId;
     const matchQuery = u.name.toLowerCase().includes(q) || (u.kana && u.kana.toLowerCase().includes(q)) || u.id.toLowerCase().includes(q);
@@ -308,7 +305,6 @@ window.confirmAssignUserForBento = function(userId) {
 
   const user = porteUsers[userIndex];
   
-  // 急遽追加の場合、wantsBentoフラグをtrueに自動切り替え
   if (user.wantsBento === false) {
     user.wantsBento = true;
     showToast(`⚡ ${user.name} 様のお弁当希望を追加しました！`, 'info');
@@ -347,7 +343,6 @@ function renderPorteSection() {
   } else {
     const todaysBentoList = todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean);
 
-    // tableShowAllがfalseの時はお弁当対象者のみ表示
     const displayList = porteUsers.filter(u => tableShowAll || u.wantsBento !== false || u.selectedBentoId);
 
     displayList.forEach((u) => {
@@ -397,7 +392,7 @@ window.toggleUserBentoWant = function(userIndex) {
 
   user.wantsBento = !(user.wantsBento !== false);
   if (!user.wantsBento && user.selectedBentoId) {
-    assignUserBento(userIndex, ''); // 注文取消
+    assignUserBento(userIndex, '');
   }
   savePorteUsers();
   renderAll();
@@ -425,7 +420,7 @@ window.assignUserBento = function(userIndex, newBentoId) {
         return;
       }
       newBento.stock -= 1;
-      user.wantsBento = true; // 注文割り当て時自動ON
+      user.wantsBento = true;
 
       orderHistory.unshift({
         id: 'ord_' + Date.now(),
@@ -633,7 +628,7 @@ function updateHeaderStats() {
   document.getElementById('headerOrderedCount').textContent = `${orderedUsers}食`;
 }
 
-// Porte Supabase DB から直接本日利用者を読み込む機能
+// Porte Supabase DB から直接本日利用者＆本日の出欠（お弁当要不要）を自動取得
 async function fetchPorteDbAttendance() {
   if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined') {
     showToast('Supabase設定が見つかりません。サンプルデータをロードします。', 'info');
@@ -645,12 +640,64 @@ async function fetchPorteDbAttendance() {
 
   try {
     const SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    const userRes = await SB.from('利用者').select('*');
     
-    if (userRes.error || !userRes.data || userRes.data.length === 0) {
-      const attRes = await SB.from('スタッフ').select('*');
-      if (attRes.data && attRes.data.length > 0) {
-        porteUsers = attRes.data.map((s, idx) => ({
+    // 本日の日付 (YYYY-MM-DD)
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    // 利用者テーブルと本日の出欠テーブルを並行取得
+    const [userRes, attRes] = await Promise.all([
+      SB.from('利用者').select('*'),
+      SB.from('出欠').select('*').eq('date', todayStr)
+    ]);
+
+    const attMap = {};
+    if (attRes && attRes.data) {
+      attRes.data.forEach(a => {
+        if (a && a.userId) attMap[String(a.userId).trim()] = a;
+      });
+    }
+
+    if (userRes.data && userRes.data.length > 0) {
+      porteUsers = userRes.data.map((u, idx) => {
+        const uId = String(u.id || '').trim();
+        const att = attMap[uId];
+        
+        let wantsBento = true; // デフォルト
+
+        // 1. 本日の出欠テーブル記録を最優先（bento / meal / status）
+        if (att) {
+          if (att.bento === 'なし' || att.meal === false || att.status === '欠席' || att.status === '調整休') {
+            wantsBento = false;
+          } else if (att.bento === 'あり' || att.meal === true) {
+            wantsBento = true;
+          }
+        } else {
+          // 2. 利用者マスタの個別判定・備考欄チェック
+          if (u.bento === 'なし' || u.meal === false) {
+            wantsBento = false;
+          } else {
+            const descStr = (u.note || u.特記事項 || u.区分 || u.備考 || '').toString();
+            if (descStr.includes('持参') || descStr.includes('なし') || descStr.includes('不要')) {
+              wantsBento = false;
+            }
+          }
+        }
+
+        return {
+          id: u.id || `P${idx+1}`,
+          name: u.name || u.氏名 || '利用者',
+          kana: u.kana || u.フリガナ || '',
+          type: u.type || u.区分 || '通所',
+          note: u.note || u.特記事項 || (att ? att.notes : ''),
+          wantsBento: wantsBento,
+          selectedBentoId: ''
+        };
+      });
+    } else {
+      const staffRes = await SB.from('スタッフ').select('*');
+      if (staffRes.data && staffRes.data.length > 0) {
+        porteUsers = staffRes.data.map((s, idx) => ({
           id: s.id || `P${idx+1}`,
           name: s.name || s.username || '利用者',
           kana: s.kana || '',
@@ -663,24 +710,11 @@ async function fetchPorteDbAttendance() {
         loadSamplePorteData(true);
         return;
       }
-    } else {
-      porteUsers = userRes.data.map((u, idx) => {
-        const descStr = (u.note || u.特記事項 || u.区分 || '').toString();
-        const noBento = descStr.includes('持参') || descStr.includes('なし') || descStr.includes('不要');
-        return {
-          id: u.id || `P${idx+1}`,
-          name: u.name || u.氏名 || '利用者',
-          kana: u.kana || u.フリガナ || '',
-          type: u.type || u.区分 || '通所',
-          note: u.note || u.特記事項 || '',
-          wantsBento: !noBento,
-          selectedBentoId: ''
-        };
-      });
     }
 
     savePorteUsers();
-    showToast(`⚡ Porte DBから${porteUsers.length}名の利用者データを読み込みました！`, 'success');
+    const bentoCount = porteUsers.filter(u => u.wantsBento).length;
+    showToast(`⚡ Porte DBから${porteUsers.length}名の利用者データを読み込みました！（お弁当対象: ${bentoCount}名）`, 'success');
     renderAll();
   } catch (err) {
     console.warn('Porte DB read error:', err);
@@ -690,7 +724,6 @@ async function fetchPorteDbAttendance() {
 
 // イベント処理（イベントリスナー登録）
 function setupEventListeners() {
-  // ポルテ表フィルタボタン
   const bentoOnlyBtn = document.getElementById('filterBentoUsersOnlyBtn');
   const allUsersBtn = document.getElementById('filterAllUsersBtn');
   if (bentoOnlyBtn && allUsersBtn) {
@@ -708,7 +741,6 @@ function setupEventListeners() {
     });
   }
 
-  // モーダル内フィルタボタン
   const modalBentoBtn = document.getElementById('modalFilterBentoOnlyBtn');
   const modalAllBtn = document.getElementById('modalFilterShowAllBtn');
   if (modalBentoBtn && modalAllBtn) {
@@ -816,20 +848,16 @@ function setupEventListeners() {
 
 function loadSamplePorteData(showNotification = true) {
   porteUsers = [
-    { id: 'P001', name: '山田 太郎', kana: 'ヤマダ タロウ', type: '通所A', note: 'アレルギーなし', wantsBento: true, selectedBentoId: '' },
-    { id: 'P002', name: '佐藤 花子', kana: 'サトウ ハナコ', type: '通所A', note: '減塩希望', wantsBento: true, selectedBentoId: '' },
-    { id: 'P003', name: '鈴木 一郎', kana: 'スズキ イチロウ', type: '通所B', note: '一口大カット', wantsBento: true, selectedBentoId: '' },
-    { id: 'P004', name: '高橋 恵子', kana: 'タカハシ ケイコ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
-    { id: 'P005', name: '田中 健二', kana: 'タナカ ケンジ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
-    { id: 'P006', name: '伊藤 美咲', kana: 'イトウ ミサキ', type: '通所B', note: 'アレルギー：エビ', wantsBento: true, selectedBentoId: '' },
-    { id: 'P007', name: '渡辺 誠', kana: 'ワタナベ マコト', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
-    { id: 'P008', name: '小林 さゆり', kana: 'コバヤシ サユリ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
-    { id: 'P009', name: '加藤 隆', kana: 'カトウ タカシ', type: '通所B', note: '持参弁当', wantsBento: false, selectedBentoId: '' },
-    { id: 'P010', name: '吉田 由美', kana: 'ヨシダ ユミ', type: '通所A', note: '持参弁当', wantsBento: false, selectedBentoId: '' }
+    { id: 'P001', name: '岡村 芽衣', kana: 'オカムラ メイ', type: '通所A', note: 'アレルギーなし', wantsBento: true, selectedBentoId: '' },
+    { id: 'P002', name: '髙島 直樹', kana: 'タカシマ ナオキ', type: '通所A', note: '持参弁当', wantsBento: false, selectedBentoId: '' },
+    { id: 'P003', name: '佐藤 花子', kana: 'サトウ ハナコ', type: '通所A', note: '減塩希望', wantsBento: true, selectedBentoId: '' },
+    { id: 'P004', name: '鈴木 一郎', kana: 'スズキ イチロウ', type: '通所B', note: '一口大カット', wantsBento: true, selectedBentoId: '' },
+    { id: 'P005', name: '高橋 恵子', kana: 'タカハシ ケイコ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
+    { id: 'P006', name: '田中 健二', kana: 'タナカ ケンジ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' }
   ];
   savePorteUsers();
   if (showNotification) {
-    showToast('📂 ポルテのサンプル利用者データ（10名: うちお弁当対象8名）をセットしました！', 'success');
+    showToast('📂 ポルテのサンプル利用者データ（岡村様:お弁当要, 髙島様:持参/なし）をセットしました！', 'success');
   }
   renderAll();
 }
@@ -974,7 +1002,6 @@ function savePickFiveSelection() {
   showToast('🍱 本日の5品メニューを手動設定しました！', 'success');
 }
 
-// お弁当マスター追加・編集モーダル
 function openEditBentoModal(id) {
   const modal = document.getElementById('bentoEditModal');
   const title = document.getElementById('bentoModalTitle');
