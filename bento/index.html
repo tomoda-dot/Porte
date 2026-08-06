@@ -34,6 +34,9 @@
           <span>お弁当決定:</span>
           <strong id="headerOrderedCount">0食</strong>
         </div>
+        <button class="btn btn-primary" id="refreshUsersHeaderBtn" style="font-weight:900; font-size:0.95rem; border-radius:16px; padding:8px 18px; background: linear-gradient(135deg, #ff7e67 0%, #ff5252 100%); border:none; box-shadow:0 4px 12px rgba(255, 82, 82, 0.35); color:#fff; cursor:pointer; display:flex; align-items:center; gap:6px;">
+          🔄 利用者更新
+        </button>
       </div>
     </div>
   </header>
@@ -111,23 +114,13 @@
         <div class="porte-control-header">
           <div class="porte-title-group">
             <h2>📋 本日の利用者リスト ＆ 注文受付</h2>
-            <p>ポルテから自動読み込みまたはCSVを読み込んで、ご利用者様のご注文を記録します。</p>
+            <p>ポルテから自動取得した本日のご利用者様のご注文を記録します。</p>
           </div>
           <div class="porte-actions">
-            <button class="btn btn-primary" id="fetchPorteDbBtn">⚡ Porte DBから自動読込</button>
-            <button class="btn btn-outline" id="openSupabaseConfigBtn">⚙️ DB接続設定</button>
-            <label for="porteCsvInput" class="btn btn-secondary">
-              📄 Porte CSV読込
-            </label>
-            <input type="file" id="porteCsvInput" accept=".csv" style="display: none;">
-            <button class="btn btn-outline" id="loadSamplePorteBtn">サンプルデータ読込</button>
+            <button class="btn btn-primary" id="fetchPorteDbBtn" style="background: linear-gradient(135deg, #ff7e67 0%, #ff5252 100%);">
+              🔄 利用者更新
+            </button>
           </div>
-        </div>
-
-        <!-- ドラッグ＆ドロップ用エリア -->
-        <div class="csv-drop-zone" id="csvDropZone">
-          <span class="drop-icon">📥</span>
-          <p>ここにPorteの出欠データCSVファイルをドロップしても読み込めます</p>
         </div>
 
         <div class="grid-2col">

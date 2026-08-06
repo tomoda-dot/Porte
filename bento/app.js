@@ -1164,43 +1164,54 @@ function setupEventListeners() {
     });
   }
 
-  document.getElementById('fetchPorteDbBtn').addEventListener('click', fetchPorteDbAttendance);
+  const fetchBtn = document.getElementById('fetchPorteDbBtn');
+  if (fetchBtn) fetchBtn.addEventListener('click', fetchPorteDbAttendance);
 
-  document.getElementById('userSelectModalSearch').addEventListener('input', (e) => {
-    renderUserPickerList(e.target.value);
-  });
+  const refreshHeaderBtn = document.getElementById('refreshUsersHeaderBtn');
+  if (refreshHeaderBtn) refreshHeaderBtn.addEventListener('click', fetchPorteDbAttendance);
 
-  document.getElementById('closeUserSelectForBentoModal').addEventListener('click', closeUserSelectForBentoModal);
-  document.getElementById('cancelUserSelectForBentoBtn').addEventListener('click', closeUserSelectForBentoModal);
+  const userSearch = document.getElementById('userSelectModalSearch');
+  if (userSearch) {
+    userSearch.addEventListener('input', (e) => renderUserPickerList(e.target.value));
+  }
 
-  document.getElementById('randomSelectBtn').addEventListener('click', () => {
-    const cards = document.querySelectorAll('.bento-card');
-    cards.forEach(c => c.classList.add('shuffling'));
+  const closeUserModalBtn = document.getElementById('closeUserSelectForBentoModal');
+  if (closeUserModalBtn) closeUserModalBtn.addEventListener('click', closeUserSelectForBentoModal);
 
-    setTimeout(() => {
-      const available = bentoMaster.filter(b => b.stock > 0);
-      available.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
+  const cancelUserModalBtn = document.getElementById('cancelUserSelectForBentoBtn');
+  if (cancelUserModalBtn) cancelUserModalBtn.addEventListener('click', closeUserSelectForBentoModal);
 
-      let chosenIds = [];
-      if (available.length >= 5) {
-        chosenIds = available.slice(0, 5).map(b => b.id);
-      } else if (available.length > 0) {
-        const chosenAvailable = [...available];
-        const remainingMaster = bentoMaster.filter(b => !chosenAvailable.some(a => a.id === b.id));
-        remainingMaster.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
-        const chosenRemaining = remainingMaster.slice(0, 5 - available.length);
-        chosenIds = [...chosenAvailable, ...chosenRemaining].map(b => b.id);
-      } else {
-        chosenIds = [...bentoMaster].slice(0, 5).map(b => b.id);
-      }
+  const randomBtn = document.getElementById('randomSelectBtn');
+  if (randomBtn) {
+    randomBtn.addEventListener('click', () => {
+      const cards = document.querySelectorAll('.bento-card');
+      cards.forEach(c => c.classList.add('shuffling'));
 
-      todaysMenuIds = chosenIds;
-      saveTodaysMenu();
-      renderAll();
+      setTimeout(() => {
+        const available = bentoMaster.filter(b => b.stock > 0);
+        available.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
 
-      showToast('⏳ 賞味期限の近い順に優先して本日の5品を選出しました！', 'success');
-    }, 400);
-  });
+        let chosenIds = [];
+        if (available.length >= 5) {
+          chosenIds = available.slice(0, 5).map(b => b.id);
+        } else if (available.length > 0) {
+          const chosenAvailable = [...available];
+          const remainingMaster = bentoMaster.filter(b => !chosenAvailable.some(a => a.id === b.id));
+          remainingMaster.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
+          const chosenRemaining = remainingMaster.slice(0, 5 - available.length);
+          chosenIds = [...chosenAvailable, ...chosenRemaining].map(b => b.id);
+        } else {
+          chosenIds = [...bentoMaster].slice(0, 5).map(b => b.id);
+        }
+
+        todaysMenuIds = chosenIds;
+        saveTodaysMenu();
+        renderAll();
+
+        showToast('⏳ 賞味期限の近い順に優先して本日の5品を選出しました！', 'success');
+      }, 400);
+    });
+  }
 
   const autoStockPickBtn = document.getElementById('autoStockPickBtn');
   if (autoStockPickBtn) {
@@ -1216,12 +1227,17 @@ function setupEventListeners() {
     });
   }
 
-  document.getElementById('customPickBtn').addEventListener('click', openPickFiveModal);
-  document.getElementById('closePickFiveModal').addEventListener('click', closePickFiveModal);
-  document.getElementById('cancelPickFiveBtn').addEventListener('click', closePickFiveModal);
-  document.getElementById('savePickFiveBtn').addEventListener('click', savePickFiveSelection);
-
-  document.getElementById('loadSamplePorteBtn').addEventListener('click', () => loadSamplePorteData(true));
+  const customPickBtn = document.getElementById('customPickBtn');
+  if (customPickBtn) customPickBtn.addEventListener('click', openPickFiveModal);
+  
+  const closePickModalBtn = document.getElementById('closePickFiveModal');
+  if (closePickModalBtn) closePickModalBtn.addEventListener('click', closePickFiveModal);
+  
+  const cancelPickModalBtn = document.getElementById('cancelPickFiveBtn');
+  if (cancelPickModalBtn) cancelPickModalBtn.addEventListener('click', closePickFiveModal);
+  
+  const savePickModalBtn = document.getElementById('savePickFiveBtn');
+  if (savePickModalBtn) savePickModalBtn.addEventListener('click', savePickFiveSelection);
 
   const openConfigBtn = document.getElementById('openSupabaseConfigBtn');
   if (openConfigBtn) openConfigBtn.addEventListener('click', openSupabaseConfigModal);
