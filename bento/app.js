@@ -897,18 +897,31 @@ function renderMasterSection() {
     }
   });
 
+function matchCategoryItem(itemCategory, filterCategory) {
+  if (!filterCategory || filterCategory === 'ALL') return true;
+  if (!itemCategory) return false;
+
+  const itemCat = itemCategory.trim();
+  const filterCat = filterCategory.trim();
+
+  if (itemCat === filterCat) return true;
+
+  if (filterCat.includes('魚') && itemCat.includes('魚')) return true;
+  if (filterCat.includes('豚') && itemCat.includes('豚')) return true;
+  if (filterCat.includes('牛') && itemCat.includes('牛')) return true;
+  if (filterCat.includes('鶏') && itemCat.includes('鶏')) return true;
+  
+  if ((filterCat.includes('和食') || filterCat.includes('その他') || filterCat.includes('中華')) &&
+      (itemCat.includes('和食') || itemCat.includes('その他') || itemCat.includes('中華') || itemCat.includes('エビ') || itemCat.includes('海老') || itemCat.includes('カレー'))) {
+    return true;
+  }
+
+  return false;
+}
+
   let filtered = bentoMaster.filter(item => {
     ensureBentoLots(item);
-
-    let matchCat = (currentCategoryFilter === 'ALL');
-    if (!matchCat && item.category) {
-      const itemCat = item.category.trim();
-      const filterCat = currentCategoryFilter.trim();
-      matchCat = (itemCat === filterCat) ||
-                 (filterCat !== 'ALL' && itemCat.includes(filterCat)) ||
-                 (filterCat !== 'ALL' && filterCat.includes(itemCat));
-    }
-
+    const matchCat = matchCategoryItem(item.category, currentCategoryFilter);
     const matchSearch = !searchVal || item.name.toLowerCase().includes(searchVal);
     return matchCat && matchSearch;
   });
@@ -1660,14 +1673,19 @@ window.savePickFiveSelection = function() {
     });
   }
 
-  document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentCategoryFilter = btn.getAttribute('data-category');
-      renderMasterSection();
+  const categoryPillsContainer = document.getElementById('categoryFilterPills');
+  if (categoryPillsContainer) {
+    categoryPillsContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('.pill-btn');
+      if (btn) {
+        const catKey = btn.getAttribute('data-category');
+        if (catKey) {
+          currentCategoryFilter = catKey;
+          renderMasterSection();
+        }
+      }
     });
-  });
+  }
 
   document.getElementById('addNewBentoBtn').addEventListener('click', () => openEditBentoModal(null));
   document.getElementById('resetMasterBtn').addEventListener('click', () => {
