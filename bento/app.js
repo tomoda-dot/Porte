@@ -1057,17 +1057,36 @@ async function fetchPorteDbAttendance() {
         const uId = String(u.id || '').trim();
         const r = attMap[uId];
         
+        // 欠席・お休み判定
+        const isAbsent = r ? (
+          r.status === '欠席' || 
+          r.status === '公休' || 
+          r.status === '調整休' || 
+          r.status === '欠勤' || 
+          r.status === 'お休み' || 
+          r.status === 'キャンセル' ||
+          String(r.status || '').includes('欠') ||
+          String(r.status || '').includes('休')
+        ) : (
+          u.status === '欠席' || u.status === 'お休み'
+        );
+
         const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? r.bento : u.bento;
         const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
 
-        const wantsBento = (curB === 'あり' || curMeal === true);
+        // 欠席・お休みの場合はお弁当対象外（wantsBento = false）
+        const wantsBento = !isAbsent && (curB === 'あり' || curMeal === true);
+
+        const noteText = (r && r.notes) ? r.notes : (u.note || u.特記事項 || '');
+        const fullNote = isAbsent ? (noteText ? `【欠席】${noteText}` : '【欠席】') : noteText;
 
         return {
           id: u.id || `P${idx+1}`,
           name: u.name || u.氏名 || '利用者',
           kana: u.kana || u.フリガナ || '',
           type: u.type || u.区分 || '通所',
-          note: u.note || u.特記事項 || (r ? r.notes : ''),
+          note: fullNote,
+          status: r ? (r.status || '出席') : '出席',
           wantsBento: wantsBento,
           selectedBentoId: ''
         };
