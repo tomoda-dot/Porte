@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -113,6 +115,7 @@
           </div>
           <div class="porte-actions">
             <button class="btn btn-primary" id="fetchPorteDbBtn">⚡ Porte DBから自動読込</button>
+            <button class="btn btn-outline" id="openSupabaseConfigBtn">⚙️ DB接続設定</button>
             <label for="porteCsvInput" class="btn btn-secondary">
               📄 Porte CSV読込
             </label>
@@ -434,9 +437,45 @@
     </div>
   </div>
 
+  <!-- Supabase DB 接続設定モーダル -->
+  <div class="modal-overlay" id="supabaseConfigModal">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3>⚡ Porte Supabase DB 接続設定</h3>
+        <button class="close-btn" id="closeSupabaseConfigModalBtn">&times;</button>
+      </div>
+      <form id="supabaseConfigForm">
+        <div class="modal-body">
+          <p style="font-size:0.9rem; color:#495057; margin-bottom:16px; line-height:1.5;">
+            PorteのSupabaseデータベースからリアルタイムに本日の出欠・利用者データを取得するための設定です。
+          </p>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label style="font-weight:700;">🌐 Supabase Project URL</label>
+            <input type="url" id="supabaseUrlInput" class="form-control" placeholder="https://your-project.supabase.co" required style="font-size:0.95rem;">
+          </div>
+          
+          <div class="form-group" style="margin-bottom:14px;">
+            <label style="font-weight:700;">🔑 Supabase Anon / Public Key</label>
+            <textarea id="supabaseKeyInput" class="form-control" rows="3" placeholder="eyJhbGciOiJIUzI1Ni..." required style="font-size:0.85rem; font-family:monospace;"></textarea>
+          </div>
+          
+          <div style="background:#e7f5ff; border:1px solid #74c0fc; padding:10px 14px; border-radius:12px; font-size:0.85rem; color:#1864ab;">
+            💡 設定内容はブラウザに安全に保存されます。<code>config.js</code> に直接記述することも可能です。
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelSupabaseConfigBtn">キャンセル</button>
+          <button type="submit" class="btn btn-primary">設定を保存 💾</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- トースト通知 -->
   <div id="toastContainer" class="toast-container"></div>
 
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

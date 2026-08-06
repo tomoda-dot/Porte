@@ -975,18 +975,62 @@ function updateHeaderStats() {
   document.getElementById('headerOrderedCount').textContent = `${orderedUsers}食`;
 }
 
+function getSupabaseCredentials() {
+  const url = (window.SUPABASE_URL || localStorage.getItem('porte_supabase_url') || '').trim();
+  const key = (window.SUPABASE_KEY || localStorage.getItem('porte_supabase_key') || '').trim();
+  return { url, key };
+}
+
+function openSupabaseConfigModal() {
+  const { url, key } = getSupabaseCredentials();
+  const urlInput = document.getElementById('supabaseUrlInput');
+  const keyInput = document.getElementById('supabaseKeyInput');
+  if (urlInput) urlInput.value = url;
+  if (keyInput) keyInput.value = key;
+
+  const modal = document.getElementById('supabaseConfigModal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeSupabaseConfigModal() {
+  const modal = document.getElementById('supabaseConfigModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function handleSaveSupabaseConfig(e) {
+  e.preventDefault();
+  const url = document.getElementById('supabaseUrlInput').value.trim();
+  const key = document.getElementById('supabaseKeyInput').value.trim();
+
+  localStorage.setItem('porte_supabase_url', url);
+  localStorage.setItem('porte_supabase_key', key);
+  window.SUPABASE_URL = url;
+  window.SUPABASE_KEY = key;
+
+  closeSupabaseConfigModal();
+  showToast('💾 Supabase接続設定を保存しました！DBから読み込みます...', 'success');
+  fetchPorteDbAttendance();
+}
+
 // Porte Supabase DB から直接本日利用者＆本日の出欠（お弁当要不要）を自動取得
 async function fetchPorteDbAttendance() {
-  if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined') {
-    showToast('Supabase設定が見つかりません。サンプルデータをロードします。', 'info');
-    loadSamplePorteData(true);
+  const { url, key } = getSupabaseCredentials();
+
+  if (!url || !key) {
+    showToast('⚙️ Supabaseの接続設定（URL・APIキー）を入力してください。', 'warning');
+    openSupabaseConfigModal();
+    return;
+  }
+
+  if (typeof supabase === 'undefined') {
+    showToast('⚠️ Supabase SDKの読み込みに失敗しました。インターネット接続をご確認ください。', 'warning');
     return;
   }
 
   showToast('⚡ Porteデータベースから最新利用者を読み込み中...', 'info');
 
   try {
-    const SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const SB = supabase.createClient(url, key);
     
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -995,6 +1039,11 @@ async function fetchPorteDbAttendance() {
       SB.from('利用者').select('*'),
       SB.from('出欠').select('*').eq('date', todayStr)
     ]);
+
+    if (userRes.error) {
+      console.warn('Porte DB Error:', userRes.error);
+      throw userRes.error;
+    }
 
     const attMap = {};
     if (attRes && attRes.data) {
@@ -1036,7 +1085,7 @@ async function fetchPorteDbAttendance() {
           selectedBentoId: ''
         }));
       } else {
-        loadSamplePorteData(true);
+        showToast('⚠️ テーブル内にデータが見つかりませんでした。', 'warning');
         return;
       }
     }
@@ -1046,8 +1095,8 @@ async function fetchPorteDbAttendance() {
     showToast(`⚡ Porte DBから${porteUsers.length}名の利用者データを読み込みました！（お弁当対象: ${bentoCount}名）`, 'success');
     renderAll();
   } catch (err) {
-    console.warn('Porte DB read error:', err);
-    loadSamplePorteData(true);
+    console.error('Porte DB read error:', err);
+    showToast(`❌ Supabase接続エラー: ${err.message || 'URL・APIキーをご確認ください'}`, 'warning');
   }
 }
 
@@ -1150,6 +1199,18 @@ function setupEventListeners() {
   document.getElementById('savePickFiveBtn').addEventListener('click', savePickFiveSelection);
 
   document.getElementById('loadSamplePorteBtn').addEventListener('click', () => loadSamplePorteData(true));
+
+  const openConfigBtn = document.getElementById('openSupabaseConfigBtn');
+  if (openConfigBtn) openConfigBtn.addEventListener('click', openSupabaseConfigModal);
+
+  const closeConfigBtn = document.getElementById('closeSupabaseConfigModalBtn');
+  if (closeConfigBtn) closeConfigBtn.addEventListener('click', closeSupabaseConfigModal);
+
+  const cancelConfigBtn = document.getElementById('cancelSupabaseConfigBtn');
+  if (cancelConfigBtn) cancelConfigBtn.addEventListener('click', closeSupabaseConfigModal);
+
+  const configForm = document.getElementById('supabaseConfigForm');
+  if (configForm) configForm.addEventListener('submit', handleSaveSupabaseConfig);
 
   const csvInput = document.getElementById('porteCsvInput');
   csvInput.addEventListener('change', handlePorteCsvUpload);
