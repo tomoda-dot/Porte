@@ -51,14 +51,18 @@ let tableShowAll = false;
 let tempModalLots = [];
 
 // DOM ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initDate();
   loadData();
   setupTabs();
   setupEventListeners();
   renderAll();
   
-  if (porteUsers.length === 0) {
+  // ページを開いた瞬間に自動的にPorte Supabase DBから最新利用者＆出欠データを自動取得
+  const { url, key } = getSupabaseCredentials();
+  if (url && key && typeof supabase !== 'undefined') {
+    await fetchPorteDbAttendance();
+  } else if (porteUsers.length === 0) {
     loadSamplePorteData(false);
   }
 });
