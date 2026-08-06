@@ -861,12 +861,55 @@ function renderMasterSection() {
   const container = document.getElementById('masterItemsGrid');
   container.innerHTML = '';
 
-  const searchVal = (document.getElementById('masterSearchInput').value || '').toLowerCase();
+  const searchInput = document.getElementById('masterSearchInput');
+  const searchVal = (searchInput ? searchInput.value || '' : '').toLowerCase().trim();
+
+  // 各カテゴリーの件数を集計＆ピルボタン表示更新
+  const catCounts = { ALL: bentoMaster.length, '魚': 0, '豚肉': 0, '牛肉': 0, '鶏肉': 0, '和食・その他': 0 };
+  bentoMaster.forEach(b => {
+    const cat = (b.category || '').trim();
+    if (cat.includes('魚')) catCounts['魚']++;
+    else if (cat.includes('豚')) catCounts['豚肉']++;
+    else if (cat.includes('牛')) catCounts['牛肉']++;
+    else if (cat.includes('鶏')) catCounts['鶏肉']++;
+    else catCounts['和食・その他']++;
+  });
+
+  const iconLabels = {
+    'ALL': 'すべて',
+    '魚': '🐟 魚料理',
+    '豚肉': '🐖 豚肉',
+    '牛肉': '🐂 牛肉',
+    '鶏肉': '🐓 鶏肉',
+    '和食・その他': '🍲 和食・中華・その他'
+  };
+
+  document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(btn => {
+    const catKey = btn.getAttribute('data-category');
+    const label = iconLabels[catKey] || catKey;
+    const count = catCounts[catKey] !== undefined ? catCounts[catKey] : 0;
+    btn.textContent = `${label} (${count})`;
+
+    if (catKey === currentCategoryFilter) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
 
   let filtered = bentoMaster.filter(item => {
     ensureBentoLots(item);
-    const matchCat = currentCategoryFilter === 'ALL' || item.category === currentCategoryFilter;
-    const matchSearch = item.name.toLowerCase().includes(searchVal);
+
+    let matchCat = (currentCategoryFilter === 'ALL');
+    if (!matchCat && item.category) {
+      const itemCat = item.category.trim();
+      const filterCat = currentCategoryFilter.trim();
+      matchCat = (itemCat === filterCat) ||
+                 (filterCat !== 'ALL' && itemCat.includes(filterCat)) ||
+                 (filterCat !== 'ALL' && filterCat.includes(itemCat));
+    }
+
+    const matchSearch = !searchVal || item.name.toLowerCase().includes(searchVal);
     return matchCat && matchSearch;
   });
 
