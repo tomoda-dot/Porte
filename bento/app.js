@@ -252,13 +252,16 @@ async function syncFromSupabase() {
 
     // 2. 本日の5品 メニューデータ同期
     const todayRes = await SB.from('bento_todays_menu').select('*').eq('id', 'today').single();
-    if (todayRes.data && todayRes.data.todays_ids) {
+    if (todayRes.data && Array.isArray(todayRes.data.todays_ids) && todayRes.data.todays_ids.length >= 5) {
       todaysMenuIds = todayRes.data.todays_ids;
       localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
+    } else if (!todaysMenuIds || todaysMenuIds.length < 5) {
+      todaysMenuIds = pickBalancedTodaysMenu(true);
+      saveTodaysMenu();
     }
 
-    // 3. 注文履歴同期
-    const ordersRes = await SB.from('bento_orders').select('*').order('created_at', { ascending: false }).limit(50);
+    // 3. 注文履歴 & 各利用者の選択お弁当同期
+    const ordersRes = await SB.from('bento_orders').select('*').order('created_at', { ascending: false }).limit(100);
     if (ordersRes.data) {
       orderHistory = ordersRes.data.map(o => ({
         id: o.id,
@@ -269,6 +272,17 @@ async function syncFromSupabase() {
         category: o.category
       }));
       localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
+
+      // 利用者が選んだお弁当の選択状態を全端末で同期
+      if (porteUsers && porteUsers.length > 0) {
+        porteUsers.forEach(u => {
+          const userLatestOrder = ordersRes.data.find(o => o.user_name === u.name);
+          if (userLatestOrder) {
+            u.selectedBentoId = userLatestOrder.bento_id;
+          }
+        });
+        localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+      }
     }
 
     renderAll();
@@ -1285,6 +1299,60 @@ function setupEventListeners() {
   const cancelUserModalBtn = document.getElementById('cancelUserSelectForBentoBtn');
   if (cancelUserModalBtn) cancelUserModalBtn.addEventListener('click', closeUserSelectForBentoModal);
 
+// 賞味期限の短さを最重視しつつ、同等期限内でのゆらぎ選出 ＆ 肉・魚・その他カテゴリーバランス調整
+function pickBalancedTodaysMenu(preferStockOnly = true) {
+  let pool = preferStockOnly ? bentoMaster.filter(b => b.stock > 0) : bentoMaster;
+  if (!pool || pool.length === 0) pool = [...bentoMaster];
+
+  // 1. 賞味期限（日数）に0〜2.5日のランダムゆらぎ（Jitter）を加算してスコア化
+  // 賞味期限が短いものが最優先されつつ、近い期限の商品同士で毎回ランダムな変化が出ます
+  const scored = pool.map(item => {
+    const earliestExp = getBentoEarliestExpDate(item);
+    const expTime = earliestExp !== '9999-12-31' ? new Date(earliestExp).getTime() : (Date.now() + 30 * 86400000);
+    const jitter = Math.random() * 2.5 * 86400000;
+    return { item, score: expTime + jitter };
+  });
+
+  scored.sort((a, b) => a.score - b.score);
+  const candidates = scored.map(s => s.item);
+
+  // 2. カテゴリーバランス調整（魚・肉・その他をバランスよく抽出）
+  const selected = [];
+  const getCatType = (cat) => {
+    if (cat === '魚') return 'FISH';
+    if (cat === '豚肉' || cat === '牛肉' || cat === '鶏肉') return 'MEAT';
+    return 'OTHER';
+  };
+
+  // 魚、肉、その他からそれぞれ1品ずつ優先ピック
+  const fishItem = candidates.find(b => getCatType(b.category) === 'FISH');
+  if (fishItem) selected.push(fishItem);
+
+  const meatItem = candidates.find(b => getCatType(b.category) === 'MEAT' && !selected.includes(b));
+  if (meatItem) selected.push(meatItem);
+
+  const otherItem = candidates.find(b => getCatType(b.category) === 'OTHER' && !selected.includes(b));
+  if (otherItem) selected.push(otherItem);
+
+  // 残りの枠（計5品になるまで）をスコア（期限重視＋ゆらぎ）順で補充
+  for (let i = 0; i < candidates.length && selected.length < 5; i++) {
+    if (!selected.includes(candidates[i])) {
+      selected.push(candidates[i]);
+    }
+  }
+
+  // 万が一足りない場合はマスター全体から補填
+  if (selected.length < 5) {
+    for (let i = 0; i < bentoMaster.length && selected.length < 5; i++) {
+      if (!selected.includes(bentoMaster[i])) {
+        selected.push(bentoMaster[i]);
+      }
+    }
+  }
+
+  return selected.slice(0, 5).sort(() => Math.random() - 0.5).map(b => b.id);
+}
+
   const randomBtn = document.getElementById('randomSelectBtn');
   if (randomBtn) {
     randomBtn.addEventListener('click', () => {
@@ -1292,27 +1360,10 @@ function setupEventListeners() {
       cards.forEach(c => c.classList.add('shuffling'));
 
       setTimeout(() => {
-        const available = bentoMaster.filter(b => b.stock > 0);
-        available.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
-
-        let chosenIds = [];
-        if (available.length >= 5) {
-          chosenIds = available.slice(0, 5).map(b => b.id);
-        } else if (available.length > 0) {
-          const chosenAvailable = [...available];
-          const remainingMaster = bentoMaster.filter(b => !chosenAvailable.some(a => a.id === b.id));
-          remainingMaster.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
-          const chosenRemaining = remainingMaster.slice(0, 5 - available.length);
-          chosenIds = [...chosenAvailable, ...chosenRemaining].map(b => b.id);
-        } else {
-          chosenIds = [...bentoMaster].slice(0, 5).map(b => b.id);
-        }
-
-        todaysMenuIds = chosenIds;
+        todaysMenuIds = pickBalancedTodaysMenu(true);
         saveTodaysMenu();
         renderAll();
-
-        showToast('⏳ 賞味期限の近い順に優先して本日の5品を選出しました！', 'success');
+        showToast('🍱 賞味期限の短い商品を優先し、魚・お肉のバランスよく本日の5品を選出しました！', 'success');
       }, 400);
     });
   }
