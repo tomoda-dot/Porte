@@ -1454,6 +1454,100 @@ function pickBalancedTodaysMenu(preferStockOnly = true) {
   return selected.slice(0, 5).sort(() => Math.random() - 0.5).map(b => b.id);
 }
 
+// 5品カスタム手動選択モーダル機能
+let tempPickFiveIds = [];
+
+window.openPickFiveModal = function() {
+  tempPickFiveIds = [...todaysMenuIds];
+  renderPickFiveGrid();
+  const modal = document.getElementById('pickFiveModal');
+  if (modal) modal.classList.add('active');
+};
+
+window.closePickFiveModal = function() {
+  const modal = document.getElementById('pickFiveModal');
+  if (modal) modal.classList.remove('active');
+};
+
+window.renderPickFiveGrid = function() {
+  const countEl = document.getElementById('selectedFiveCount');
+  if (countEl) countEl.textContent = tempPickFiveIds.length;
+
+  const container = document.getElementById('pickFiveItemsList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  bentoMaster.forEach(item => {
+    ensureBentoLots(item);
+    const isSelected = tempPickFiveIds.includes(item.id);
+    const earliestExp = getBentoEarliestExpDate(item);
+    const expText = earliestExp !== '9999-12-31' ? earliestExp : '未設定';
+
+    const card = document.createElement('div');
+    card.className = `pick-five-item-card ${isSelected ? 'selected' : ''}`;
+    card.style.cssText = `
+      border: 2px solid ${isSelected ? '#ff7e67' : '#e9ecef'};
+      background: ${isSelected ? '#fff5eb' : '#ffffff'};
+      border-radius: 14px;
+      padding: 12px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+      box-shadow: ${isSelected ? '0 4px 12px rgba(255, 126, 103, 0.18)' : 'none'};
+    `;
+
+    card.onclick = () => togglePickFiveItem(item.id);
+
+    card.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:1.6rem;">${item.icon || '🍱'}</span>
+        <div>
+          <div style="font-weight:800; font-size:0.95rem; color:#212529;">${item.name}</div>
+          <div style="font-size:0.78rem; color:#747d8c; margin-top:2px;">
+            <span class="cat-pill" style="font-size:0.7rem; padding:1px 6px;">${item.category}</span>
+            <span style="margin-left:6px;">在庫: <strong style="color:#d9480f;">${item.stock}食</strong></span>
+            <span style="margin-left:6px;">賞味期限: 📅 ${expText}</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <input type="checkbox" ${isSelected ? 'checked' : ''} style="width:20px; height:20px; accent-color:#ff7e67; pointer-events:none;">
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+};
+
+window.togglePickFiveItem = function(bentoId) {
+  const index = tempPickFiveIds.indexOf(bentoId);
+  if (index >= 0) {
+    tempPickFiveIds.splice(index, 1);
+  } else {
+    if (tempPickFiveIds.length >= 5) {
+      showToast('⚠️ 本日のメニューは5品までしか選べません。先に別の商品の選択を解除してください。', 'warning');
+      return;
+    }
+    tempPickFiveIds.push(bentoId);
+  }
+  renderPickFiveGrid();
+};
+
+window.savePickFiveSelection = function() {
+  if (tempPickFiveIds.length !== 5) {
+    showToast(`⚠️ 本日のメニューはちょうど5品選んでください（現在: ${tempPickFiveIds.length}品選択中）`, 'warning');
+    return;
+  }
+
+  todaysMenuIds = [...tempPickFiveIds];
+  saveTodaysMenu();
+  closePickFiveModal();
+  renderAll();
+  showToast('✨ 本日のメニュー5品をカスタム更新しました！', 'success');
+};
+
   const randomBtn = document.getElementById('randomSelectBtn');
   if (randomBtn) {
     randomBtn.addEventListener('click', () => {
