@@ -843,18 +843,59 @@ window.cancelOrderHistory = function(index) {
   renderAll();
 };
 
+let currentMasterSortKey = 'default';
+let currentMasterSortOrder = 'asc';
+
+window.setMasterSort = function(key) {
+  if (currentMasterSortKey === key) {
+    currentMasterSortOrder = (currentMasterSortOrder === 'asc') ? 'desc' : 'asc';
+  } else {
+    currentMasterSortKey = key;
+    currentMasterSortOrder = (key === 'expDate' || key === 'stock' || key === 'isToday') ? 'desc' : 'asc';
+    if (key === 'expDate') currentMasterSortOrder = 'asc';
+  }
+  renderMasterSection();
+};
+
 function renderMasterSection() {
   const container = document.getElementById('masterItemsGrid');
   container.innerHTML = '';
 
   const searchVal = (document.getElementById('masterSearchInput').value || '').toLowerCase();
 
-  const filtered = bentoMaster.filter(item => {
+  let filtered = bentoMaster.filter(item => {
     ensureBentoLots(item);
     const matchCat = currentCategoryFilter === 'ALL' || item.category === currentCategoryFilter;
     const matchSearch = item.name.toLowerCase().includes(searchVal);
     return matchCat && matchSearch;
   });
+
+  // テーブルソート実行
+  if (currentMasterSortKey !== 'default') {
+    filtered.sort((a, b) => {
+      let valA, valB;
+      if (currentMasterSortKey === 'category') {
+        valA = a.category || '';
+        valB = b.category || '';
+      } else if (currentMasterSortKey === 'name') {
+        valA = a.name || '';
+        valB = b.name || '';
+      } else if (currentMasterSortKey === 'stock') {
+        valA = a.stock || 0;
+        valB = b.stock || 0;
+      } else if (currentMasterSortKey === 'expDate') {
+        valA = getBentoEarliestExpDate(a);
+        valB = getBentoEarliestExpDate(b);
+      } else if (currentMasterSortKey === 'isToday') {
+        valA = todaysMenuIds.includes(a.id) ? 1 : 0;
+        valB = todaysMenuIds.includes(b.id) ? 1 : 0;
+      }
+
+      if (valA < valB) return currentMasterSortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return currentMasterSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
 
   document.getElementById('masterTotalCount').textContent = bentoMaster.length;
   const countBadge = document.getElementById('masterCountBadge');
@@ -939,14 +980,31 @@ function renderMasterSection() {
     `;
   });
 
+  const getSortIcon = (key) => {
+    if (currentMasterSortKey !== key) return '<span style="color:#adb5bd; font-size:0.75rem; margin-left:4px;">⇅</span>';
+    return currentMasterSortOrder === 'asc' 
+      ? '<span style="color:#d9480f; font-size:0.85rem; margin-left:4px; font-weight:900;">▲</span>' 
+      : '<span style="color:#d9480f; font-size:0.85rem; margin-left:4px; font-weight:900;">▼</span>';
+  };
+
   table.innerHTML = `
     <thead>
       <tr>
-        <th style="width: 120px;">カテゴリー</th>
-        <th style="width: 240px;">商品名</th>
-        <th style="width: 140px; text-align:center;">合計在庫数</th>
-        <th>既存在庫 ＆ 入荷分 ロット明細一覧</th>
-        <th style="width: 100px; text-align:center;">本日の5品</th>
+        <th style="width: 120px; cursor:pointer; user-select:none;" onclick="setMasterSort('category')" title="カテゴリーで並び替え">
+          カテゴリー ${getSortIcon('category')}
+        </th>
+        <th style="width: 240px; cursor:pointer; user-select:none;" onclick="setMasterSort('name')" title="商品名で並び替え">
+          商品名 ${getSortIcon('name')}
+        </th>
+        <th style="width: 140px; text-align:center; cursor:pointer; user-select:none;" onclick="setMasterSort('stock')" title="合計在庫数で並び替え">
+          合計在庫数 ${getSortIcon('stock')}
+        </th>
+        <th style="cursor:pointer; user-select:none;" onclick="setMasterSort('expDate')" title="賞味期限の近い順で並び替え">
+          既存在庫 ＆ 入荷分 ロット明細一覧 ${getSortIcon('expDate')}
+        </th>
+        <th style="width: 110px; text-align:center; cursor:pointer; user-select:none;" onclick="setMasterSort('isToday')" title="本日の5品で並び替え">
+          本日の5品 ${getSortIcon('isToday')}
+        </th>
         <th style="width: 110px; text-align:center;">操作</th>
       </tr>
     </thead>
@@ -1422,36 +1480,49 @@ function pickBalancedTodaysMenu(preferStockOnly = true) {
   if (configForm) configForm.addEventListener('submit', handleSaveSupabaseConfig);
 
   const csvInput = document.getElementById('porteCsvInput');
-  csvInput.addEventListener('change', handlePorteCsvUpload);
+  if (csvInput) csvInput.addEventListener('change', handlePorteCsvUpload);
 
   const dropZone = document.getElementById('csvDropZone');
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
-  });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files.length > 0) {
-      parsePorteCsvFile(e.dataTransfer.files[0]);
-    }
-  });
+  if (dropZone) {
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        parsePorteCsvFile(e.dataTransfer.files[0]);
+      }
+    });
+  }
 
-  document.getElementById('copyOrderSummaryBtn').addEventListener('click', copyCateringOrderTally);
+  const copySummaryBtn = document.getElementById('copyOrderSummaryBtn');
+  if (copySummaryBtn) copySummaryBtn.addEventListener('click', copyCateringOrderTally);
 
-  document.getElementById('clearTodayOrdersBtn').addEventListener('click', () => {
-    if (confirm('本日の注文履歴をクリアしますか？')) {
-      orderHistory = [];
-      saveOrderHistory();
-      renderAll();
-      showToast('履歴をクリアしました', 'info');
-    }
-  });
+  const clearTodayBtn = document.getElementById('clearTodayOrdersBtn');
+  if (clearTodayBtn) {
+    clearTodayBtn.addEventListener('click', () => {
+      if (confirm('本日の注文履歴をクリアしますか？')) {
+        orderHistory = [];
+        saveOrderHistory();
+        renderAll();
+        showToast('履歴をクリアしました', 'info');
+      }
+    });
+  }
 
-  document.getElementById('exportHistoryCsvBtn').addEventListener('click', exportHistoryCsv);
+  const exportCsvBtn = document.getElementById('exportHistoryCsvBtn');
+  if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportHistoryCsv);
 
-  document.getElementById('masterSearchInput').addEventListener('input', renderMasterSection);
+  const searchInput = document.getElementById('masterSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      renderMasterSection();
+    });
+  }
+
   document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(b => b.classList.remove('active'));
