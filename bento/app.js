@@ -640,24 +640,25 @@ function renderCateringOrderTally() {
 
 function renderStockSection() {
   const quickList = document.getElementById('quickStockAdjustList');
-  quickList.innerHTML = '';
-
-  todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean).forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'quick-stock-item';
-    div.innerHTML = `
-      <div>
-        <strong>${item.icon} ${item.name}</strong>
-        <div style="font-size:0.75rem; color:#747d8c;">${item.category}</div>
-      </div>
-      <div class="stock-control">
-        <button class="btn-qty" onclick="adjustStock('${item.id}', -1)">-</button>
-        <strong style="font-size:1.1rem; color:#d9480f; min-width:32px; text-align:center;">${item.stock}</strong>
-        <button class="btn-qty" onclick="adjustStock('${item.id}', 1)">+</button>
-      </div>
-    `;
-    quickList.appendChild(div);
-  });
+  if (quickList) {
+    quickList.innerHTML = '';
+    todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean).forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'quick-stock-item';
+      div.innerHTML = `
+        <div>
+          <strong>${item.icon} ${item.name}</strong>
+          <div style="font-size:0.75rem; color:#747d8c;">${item.category}</div>
+        </div>
+        <div class="stock-control">
+          <button class="btn-qty" onclick="adjustStock('${item.id}', -1)">-</button>
+          <strong style="font-size:1.1rem; color:#d9480f; min-width:32px; text-align:center;">${item.stock}</strong>
+          <button class="btn-qty" onclick="adjustStock('${item.id}', 1)">+</button>
+        </div>
+      `;
+      quickList.appendChild(div);
+    });
+  }
 
   const tbody = document.getElementById('orderHistoryTableBody');
   tbody.innerHTML = '';

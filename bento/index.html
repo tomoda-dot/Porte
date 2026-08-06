@@ -63,11 +63,8 @@
         <span class="badge-count">5品</span>
       </button>
       <button class="tab-btn" data-tab="porte-tab">
-        <span class="tab-icon">📋</span> ポルテ連携・注文受付
+        <span class="tab-icon">📋</span> 注文受付 ＆ 受付履歴
         <span class="badge-count pending" id="porteTabBadge">未受付 0</span>
-      </button>
-      <button class="tab-btn" data-tab="stock-tab">
-        <span class="tab-icon">📦</span> 在庫 ＆ 利用履歴
       </button>
       <button class="tab-btn" data-tab="master-tab">
         <span class="tab-icon">⚙️</span> 商品マスター・全在庫管理
@@ -109,21 +106,16 @@
         </div>
       </section>
 
-      <!-- タブ2: ポルテ連携・本日利用者一覧 ＆ 注文受付 -->
+      <!-- タブ2: 本日の注文受付 ＆ 受付履歴 -->
       <section id="porte-tab" class="tab-content">
         <div class="porte-control-header">
           <div class="porte-title-group">
-            <h2>📋 本日の利用者リスト ＆ 注文受付</h2>
-            <p>ポルテから自動取得した本日のご利用者様のご注文を記録します。</p>
-          </div>
-          <div class="porte-actions">
-            <button class="btn btn-primary" id="fetchPorteDbBtn" style="background: linear-gradient(135deg, #ff7e67 0%, #ff5252 100%);">
-              🔄 利用者更新
-            </button>
+            <h2>📋 本日の注文受付 ＆ 受付履歴</h2>
+            <p>本日のご利用者様のご注文登録および過去の注文履歴ログを管理できます。</p>
           </div>
         </div>
 
-        <div class="grid-2col">
+        <div class="grid-2col" style="margin-bottom: 24px;">
           <!-- 発注まとめ集計（配食業者用） -->
           <div class="card summary-card">
             <div class="card-header">
@@ -180,61 +172,39 @@
                     </tr>
                   </thead>
                   <tbody id="porteUserTableBody">
-                    <!-- CSVから読み込まれた行がレンダリングされます -->
+                    <!-- 利用者行 -->
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- タブ3: 在庫＆利用履歴 -->
-      <section id="stock-tab" class="tab-content">
-        <div class="section-title-row">
-          <div>
-            <h2>📦 リアルタイム在庫状況 ＆ 注文履歴</h2>
-            <p>各お弁当の在庫調整および過去の注文履歴ログの確認・CSV出力ができます。</p>
-          </div>
-          <button class="btn btn-secondary" id="exportHistoryCsvBtn">📥 注文履歴CSV出力</button>
-        </div>
-
-        <div class="stock-tab-grid">
-          <!-- 在庫クイック変更 -->
-          <div class="card">
-            <div class="card-header">
-              <h3>⚡ 本日5品の在庫クイック調整</h3>
-            </div>
-            <div class="card-body">
-              <div class="quick-stock-list" id="quickStockAdjustList">
-                <!-- JSレンダリング -->
-              </div>
-            </div>
-          </div>
-
-          <!-- 履歴ログ -->
-          <div class="card history-card">
-            <div class="card-header">
-              <h3>📜 注文・受付履歴ログ</h3>
+        <!-- 履歴ログ -->
+        <div class="card history-card">
+          <div class="card-header">
+            <h3>📜 注文・受付履歴ログ</h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-sm btn-outline" id="exportHistoryCsvBtn">📥 注文履歴CSV出力</button>
               <button class="btn btn-sm btn-danger-outline" id="clearTodayOrdersBtn">本日注文のクリア</button>
             </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>日時</th>
-                      <th>利用者名</th>
-                      <th>注文お弁当</th>
-                      <th>カテゴリ</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody id="orderHistoryTableBody">
-                    <!-- 履歴行 -->
-                  </tbody>
-                </table>
-              </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>日時</th>
+                    <th>利用者名</th>
+                    <th>注文お弁当</th>
+                    <th>カテゴリ</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="orderHistoryTableBody">
+                  <!-- 履歴行 -->
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
