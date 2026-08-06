@@ -26,7 +26,7 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'M PLUS Rounded 1c', 'Zen Maru Gothic', sans-serif;
+      font-family: 'Meiryo', 'メイリオ', 'Hiragino Kaku Gothic ProN', 'MS PGothic', sans-serif;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
@@ -655,9 +655,7 @@
         if (!bB) return -1;
         if (bA.stock > 0 && bB.stock <= 0) return -1;
         if (bA.stock <= 0 && bB.stock > 0) return 1;
-        const expA = getBentoEarliestExpDate(bA);
-        const expB = getBentoEarliestExpDate(bB);
-        return new Date(expA) - new Date(expB);
+        return 0;
       });
     }
 

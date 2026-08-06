@@ -110,7 +110,7 @@ function getBentoEarliestExpDate(bento) {
   return activeLots[0].expDate;
 }
 
-// 本日の5品を賞味期限の近い順（昇順）に並び替え
+// 本日の5品の配列整理（在庫ありを優先、賞味期限ソートは行わない）
 function sortTodaysMenuIdsByExpiration() {
   if (!todaysMenuIds || todaysMenuIds.length === 0) return;
   todaysMenuIds.sort((idA, idB) => {
@@ -121,10 +121,7 @@ function sortTodaysMenuIdsByExpiration() {
 
     if (bA.stock > 0 && bB.stock <= 0) return -1;
     if (bA.stock <= 0 && bB.stock > 0) return 1;
-
-    const expA = getBentoEarliestExpDate(bA);
-    const expB = getBentoEarliestExpDate(bB);
-    return new Date(expA) - new Date(expB);
+    return 0;
   });
 }
 
@@ -1222,9 +1219,24 @@ function setupEventListeners() {
         showToast('⚠️ 在庫がある商品がありません。商品マスターで在庫を補充してください。', 'warning');
         return;
       }
-      autoReplaceSoldOutMenu();
+
+      // 賞味期限関係なく、在庫あり商品からランダムに並び替え（シャッフル）
+      const shuffledAvailable = [...available].sort(() => Math.random() - 0.5);
+
+      let chosenIds = [];
+      if (shuffledAvailable.length >= 5) {
+        chosenIds = shuffledAvailable.slice(0, 5).map(b => b.id);
+      } else {
+        const chosenAvailable = [...shuffledAvailable];
+        const remainingMaster = bentoMaster.filter(b => !chosenAvailable.some(a => a.id === b.id)).sort(() => Math.random() - 0.5);
+        const chosenRemaining = remainingMaster.slice(0, 5 - chosenAvailable.length);
+        chosenIds = [...chosenAvailable, ...chosenRemaining].map(b => b.id);
+      }
+
+      todaysMenuIds = chosenIds;
+      saveTodaysMenu();
       renderAll();
-      showToast('🔄 完売品を賞味期限の短い順に自動で差し替えました！', 'success');
+      showToast('🎲 在庫のある商品の中から賞味期限関係なくランダムに5品を選出しました！', 'success');
     });
   }
 
