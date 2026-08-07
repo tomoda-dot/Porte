@@ -231,7 +231,33 @@ function loadData() {
   const todayKey = getTodayKey();
   const lastActiveDate = localStorage.getItem('bento_last_active_date');
   if (lastActiveDate && lastActiveDate !== todayKey) {
-    // 前日までの確定状況を保持したまま、本日の「未確定選択」状態をクリア
+    // 押し忘れ防止オートセーブ：前日の確定データが存在せず、選択中のお弁当がある場合は前日日付で自動確定保存
+    if (!dailyOrders[lastActiveDate] || dailyOrders[lastActiveDate].status !== 'CONFIRMED') {
+      const prevOrdered = porteUsers.filter(u => u.selectedBentoId);
+      if (prevOrdered.length > 0) {
+        const snapshot = prevOrdered.map(u => {
+          const bento = bentoMaster.find(b => b.id === u.selectedBentoId);
+          return {
+            userId: u.id,
+            userName: u.name,
+            userKana: u.kana || '',
+            bentoId: u.selectedBentoId,
+            bentoName: bento ? bento.name : '不明なお弁当',
+            bentoIcon: bento ? bento.icon : '🍱',
+            category: bento ? bento.category : '',
+            price: 500
+          };
+        });
+        dailyOrders[lastActiveDate] = {
+          status: 'CONFIRMED',
+          confirmedAt: `${lastActiveDate} 23:59:59 (日付跨ぎ自動保存)`,
+          orders: snapshot
+        };
+        saveDailyOrders();
+      }
+    }
+
+    // 本日の未確定選択状態をクリア
     porteUsers.forEach(u => {
       u.selectedBentoId = '';
     });
@@ -1136,12 +1162,20 @@ window.filterCategory = function(catKey) {
   renderMasterSection();
 };
 
+function toKatakana(str) {
+  return (str || '').replace(/[\u3041-\u3096]/g, ch =>
+    String.fromCharCode(ch.charCodeAt(0) + 0x60)
+  );
+}
+
 function renderMasterSection() {
   const container = document.getElementById('masterItemsGrid');
+  if (!container) return;
   container.innerHTML = '';
 
   const searchInput = document.getElementById('masterSearchInput');
-  const searchVal = (searchInput ? searchInput.value || '' : '').toLowerCase().trim();
+  const rawSearch = (searchInput ? searchInput.value || '' : '').trim().toLowerCase();
+  const searchKana = toKatakana(rawSearch);
 
   // 各カテゴリーの件数を集計＆ピルボタン表示更新
   const catCounts = { ALL: bentoMaster.length, '魚': 0, '豚肉': 0, '牛肉': 0, '鶏肉': 0, '和食・その他': 0 };
@@ -1200,9 +1234,23 @@ function matchCategoryItem(itemCategory, filterCategory) {
 
   let filtered = bentoMaster.filter(item => {
     ensureBentoLots(item);
-    const matchCat = matchCategoryItem(item.category, currentCategoryFilter);
-    const matchSearch = !searchVal || item.name.toLowerCase().includes(searchVal);
-    return matchCat && matchSearch;
+    
+    // 検索入力欄に文字がある場合は全商品から文字部分一致検索を優先
+    if (rawSearch) {
+      const nameLower = (item.name || '').toLowerCase();
+      const nameKana = toKatakana(nameLower);
+      const descLower = (item.desc || '').toLowerCase();
+      const descKana = toKatakana(descLower);
+      const catLower = (item.category || '').toLowerCase();
+
+      return nameLower.includes(rawSearch) || 
+             nameKana.includes(searchKana) || 
+             descLower.includes(rawSearch) || 
+             descKana.includes(searchKana) ||
+             catLower.includes(rawSearch);
+    }
+
+    return matchCategoryItem(item.category, currentCategoryFilter);
   });
 
   // テーブルソート実行
@@ -1947,8 +1995,10 @@ window.savePickFiveSelection = function() {
 
   const searchInput = document.getElementById('masterSearchInput');
   if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      renderMasterSection();
+    ['input', 'keyup', 'change', 'compositionend'].forEach(evtType => {
+      searchInput.addEventListener(evtType, () => {
+        renderMasterSection();
+      });
     });
   }
 
