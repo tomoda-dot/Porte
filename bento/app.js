@@ -53,7 +53,7 @@ let tableShowAll = false;
 let tempModalLots = [];
 
 // DOM ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initDate();
   loadData();
   setupTabs();
@@ -61,7 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initMonthlyMatrixMonthSelect();
   renderAll();
   
-  if (porteUsers.length === 0) {
+  // ページを開いた瞬間に自動的にPorte Supabase DBから最新利用者＆出欠データを自動取得
+  const { url, key } = getSupabaseCredentials();
+  if (url && key && typeof supabase !== 'undefined') {
+    await fetchPorteDbAttendance();
+    await syncFromSupabase();
+  } else if (porteUsers.length === 0) {
     loadSamplePorteData(false);
   }
 });
@@ -117,7 +122,7 @@ function getBentoEarliestExpDate(bento) {
   return activeLots[0].expDate;
 }
 
-// 本日の5品を賞味期限の近い順（昇順）に並び替え
+// 本日の5品の配列整理（在庫ありを優先、賞味期限ソートは行わない）
 function sortTodaysMenuIdsByExpiration() {
   if (!todaysMenuIds || todaysMenuIds.length === 0) return;
   todaysMenuIds.sort((idA, idB) => {
@@ -128,10 +133,7 @@ function sortTodaysMenuIdsByExpiration() {
 
     if (bA.stock > 0 && bB.stock <= 0) return -1;
     if (bA.stock <= 0 && bB.stock > 0) return 1;
-
-    const expA = getBentoEarliestExpDate(bA);
-    const expB = getBentoEarliestExpDate(bB);
-    return new Date(expA) - new Date(expB);
+    return 0;
   });
 }
 
@@ -241,12 +243,11 @@ function loadData() {
 }
 
 function saveMaster() {
-  localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
+  saveMasterToSupabase();
 }
 
 function saveTodaysMenu() {
-  sortTodaysMenuIdsByExpiration();
-  localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
+  saveTodaysMenuToSupabase();
 }
 
 function savePorteUsers() {
@@ -254,11 +255,131 @@ function savePorteUsers() {
 }
 
 function saveOrderHistory() {
-  localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
+  saveOrderHistoryToSupabase();
 }
 
 function saveDailyOrders() {
   localStorage.setItem('bento_daily_orders', JSON.stringify(dailyOrders));
+}
+
+// Supabase データベース同期機能 (複数端末間リアルタイム共有)
+async function syncFromSupabase() {
+  const { url, key } = getSupabaseCredentials();
+  if (!url || !key || typeof supabase === 'undefined') return;
+
+  try {
+    const SB = supabase.createClient(url, key);
+
+    // 1. 商品マスター & 在庫データ同期
+    const masterRes = await SB.from('bento_master').select('*');
+    if (masterRes.data && masterRes.data.length > 0) {
+      bentoMaster = masterRes.data.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        icon: item.icon,
+        stock: item.stock,
+        desc: item.description || item.desc || '',
+        lots: item.lots || []
+      }));
+      bentoMaster.forEach(b => ensureBentoLots(b));
+      localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
+    }
+
+    // 2. 本日の5品 メニューデータ同期
+    const todayRes = await SB.from('bento_todays_menu').select('*').eq('id', 'today').single();
+    if (todayRes.data && Array.isArray(todayRes.data.todays_ids) && todayRes.data.todays_ids.length >= 5) {
+      todaysMenuIds = todayRes.data.todays_ids;
+      localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
+    } else if (!todaysMenuIds || todaysMenuIds.length < 5) {
+      todaysMenuIds = pickBalancedTodaysMenu(true);
+      saveTodaysMenu();
+    }
+
+    // 3. 注文履歴 & 各利用者の選択お弁当同期
+    const ordersRes = await SB.from('bento_orders').select('*').order('created_at', { ascending: false }).limit(100);
+    if (ordersRes.data) {
+      orderHistory = ordersRes.data.map(o => ({
+        id: o.id,
+        date: o.order_date,
+        userName: o.user_name,
+        bentoId: o.bento_id,
+        bentoName: o.bento_name,
+        category: o.category
+      }));
+      localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
+
+      // 利用者が選んだお弁当の選択状態を全端末で同期
+      if (porteUsers && porteUsers.length > 0) {
+        porteUsers.forEach(u => {
+          const userLatestOrder = ordersRes.data.find(o => o.user_name === u.name);
+          if (userLatestOrder) {
+            u.selectedBentoId = userLatestOrder.bento_id;
+          }
+        });
+        localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+      }
+    }
+
+    renderAll();
+  } catch (err) {
+    // 静かに無視
+  }
+}
+
+async function saveMasterToSupabase() {
+  localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
+  const { url, key } = getSupabaseCredentials();
+  if (!url || !key || typeof supabase === 'undefined') return;
+  try {
+    const SB = supabase.createClient(url, key);
+    const rows = bentoMaster.map(b => ({
+      id: b.id,
+      name: b.name,
+      category: b.category,
+      icon: b.icon,
+      stock: b.stock,
+      description: b.desc || '',
+      lots: b.lots || []
+    }));
+    await SB.from('bento_master').upsert(rows);
+  } catch(e) {}
+}
+
+async function saveTodaysMenuToSupabase() {
+  sortTodaysMenuIdsByExpiration();
+  localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
+  const { url, key } = getSupabaseCredentials();
+  if (!url || !key || typeof supabase === 'undefined') return;
+  try {
+    const SB = supabase.createClient(url, key);
+    await SB.from('bento_todays_menu').upsert({
+      id: 'today',
+      todays_ids: todaysMenuIds,
+      updated_at: new Date().toISOString()
+    });
+  } catch(e) {}
+}
+
+async function saveOrderHistoryToSupabase() {
+  localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
+  const { url, key } = getSupabaseCredentials();
+  if (!url || !key || typeof supabase === 'undefined') return;
+  try {
+    const SB = supabase.createClient(url, key);
+    if (orderHistory.length > 0) {
+      const top = orderHistory[0];
+      await SB.from('bento_orders').upsert({
+        id: top.id,
+        user_name: top.userName,
+        bento_id: top.bentoId,
+        bento_name: top.bentoName,
+        category: top.category,
+        order_date: top.date,
+        created_at: new Date().toISOString()
+      });
+    }
+  } catch(e) {}
 }
 
 function autoReplaceSoldOutMenu() {
@@ -597,8 +718,7 @@ function renderTodaysMenu() {
       <span class="bento-cat-tag">${item.category}</span>
       <div class="bento-avatar-box">${item.icon}</div>
       <h3 class="bento-title">${item.name}</h3>
-      <p style="font-size:0.8rem; color:#747d8c; margin-bottom:4px;">${item.desc || ''}</p>
-      ${expBadgeText ? `<div style="font-size:0.78rem; font-weight:800; color:#d9480f; background:#fff4e6; border:1px solid #ffd8a8; padding:2px 8px; border-radius:10px; margin-bottom:8px;">${expBadgeText}</div>` : ''}
+      <p style="font-size:0.8rem; color:#747d8c; margin-bottom:8px;">${item.desc || ''}</p>
       
       <div class="bento-stock-bar">
         <div class="bento-stock-fill ${item.stock <= 3 ? 'low' : ''} ${item.stock <= 0 ? 'zero' : ''}" style="width: ${stockPercent}%;"></div>
@@ -911,24 +1031,25 @@ function renderCateringOrderTally() {
 
 function renderStockSection() {
   const quickList = document.getElementById('quickStockAdjustList');
-  quickList.innerHTML = '';
-
-  todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean).forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'quick-stock-item';
-    div.innerHTML = `
-      <div>
-        <strong>${item.icon} ${item.name}</strong>
-        <div style="font-size:0.75rem; color:#747d8c;">${item.category}</div>
-      </div>
-      <div class="stock-control">
-        <button class="btn-qty" onclick="adjustStock('${item.id}', -1)">-</button>
-        <strong style="font-size:1.1rem; color:#d9480f; min-width:32px; text-align:center;">${item.stock}</strong>
-        <button class="btn-qty" onclick="adjustStock('${item.id}', 1)">+</button>
-      </div>
-    `;
-    quickList.appendChild(div);
-  });
+  if (quickList) {
+    quickList.innerHTML = '';
+    todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean).forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'quick-stock-item';
+      div.innerHTML = `
+        <div>
+          <strong>${item.icon} ${item.name}</strong>
+          <div style="font-size:0.75rem; color:#747d8c;">${item.category}</div>
+        </div>
+        <div class="stock-control">
+          <button class="btn-qty" onclick="adjustStock('${item.id}', -1)">-</button>
+          <strong style="font-size:1.1rem; color:#d9480f; min-width:32px; text-align:center;">${item.stock}</strong>
+          <button class="btn-qty" onclick="adjustStock('${item.id}', 1)">+</button>
+        </div>
+      `;
+      quickList.appendChild(div);
+    });
+  }
 
   const tbody = document.getElementById('orderHistoryTableBody');
   tbody.innerHTML = '';
@@ -996,18 +1117,120 @@ window.cancelOrderHistory = function(index) {
   renderAll();
 };
 
+let currentMasterSortKey = 'default';
+let currentMasterSortOrder = 'asc';
+
+window.setMasterSort = function(key) {
+  if (currentMasterSortKey === key) {
+    currentMasterSortOrder = (currentMasterSortOrder === 'asc') ? 'desc' : 'asc';
+  } else {
+    currentMasterSortKey = key;
+    currentMasterSortOrder = (key === 'expDate' || key === 'stock' || key === 'isToday') ? 'desc' : 'asc';
+    if (key === 'expDate') currentMasterSortOrder = 'asc';
+  }
+  renderMasterSection();
+};
+
+window.filterCategory = function(catKey) {
+  currentCategoryFilter = catKey;
+  renderMasterSection();
+};
+
 function renderMasterSection() {
   const container = document.getElementById('masterItemsGrid');
   container.innerHTML = '';
 
-  const searchVal = (document.getElementById('masterSearchInput').value || '').toLowerCase();
+  const searchInput = document.getElementById('masterSearchInput');
+  const searchVal = (searchInput ? searchInput.value || '' : '').toLowerCase().trim();
 
-  const filtered = bentoMaster.filter(item => {
+  // 各カテゴリーの件数を集計＆ピルボタン表示更新
+  const catCounts = { ALL: bentoMaster.length, '魚': 0, '豚肉': 0, '牛肉': 0, '鶏肉': 0, '和食・その他': 0 };
+  bentoMaster.forEach(b => {
+    const cat = (b.category || '').trim();
+    if (cat.includes('魚')) catCounts['魚']++;
+    else if (cat.includes('豚')) catCounts['豚肉']++;
+    else if (cat.includes('牛')) catCounts['牛肉']++;
+    else if (cat.includes('鶏')) catCounts['鶏肉']++;
+    else catCounts['和食・その他']++;
+  });
+
+  const iconLabels = {
+    'ALL': 'すべて',
+    '魚': '🐟 魚料理',
+    '豚肉': '🐖 豚肉',
+    '牛肉': '🐂 牛肉',
+    '鶏肉': '🐓 鶏肉',
+    '和食・その他': '🍲 和食・中華・その他'
+  };
+
+  document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(btn => {
+    const catKey = btn.getAttribute('data-category');
+    const label = iconLabels[catKey] || catKey;
+    const count = catCounts[catKey] !== undefined ? catCounts[catKey] : 0;
+    btn.textContent = `${label} (${count})`;
+
+    if (catKey === currentCategoryFilter) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+function matchCategoryItem(itemCategory, filterCategory) {
+  if (!filterCategory || filterCategory === 'ALL') return true;
+  if (!itemCategory) return false;
+
+  const itemCat = itemCategory.trim();
+  const filterCat = filterCategory.trim();
+
+  if (itemCat === filterCat) return true;
+
+  if (filterCat.includes('魚') && itemCat.includes('魚')) return true;
+  if (filterCat.includes('豚') && itemCat.includes('豚')) return true;
+  if (filterCat.includes('牛') && itemCat.includes('牛')) return true;
+  if (filterCat.includes('鶏') && itemCat.includes('鶏')) return true;
+  
+  if ((filterCat.includes('和食') || filterCat.includes('その他') || filterCat.includes('中華')) &&
+      (itemCat.includes('和食') || itemCat.includes('その他') || itemCat.includes('中華') || itemCat.includes('エビ') || itemCat.includes('海老') || itemCat.includes('カレー'))) {
+    return true;
+  }
+
+  return false;
+}
+
+  let filtered = bentoMaster.filter(item => {
     ensureBentoLots(item);
-    const matchCat = currentCategoryFilter === 'ALL' || item.category === currentCategoryFilter;
-    const matchSearch = item.name.toLowerCase().includes(searchVal);
+    const matchCat = matchCategoryItem(item.category, currentCategoryFilter);
+    const matchSearch = !searchVal || item.name.toLowerCase().includes(searchVal);
     return matchCat && matchSearch;
   });
+
+  // テーブルソート実行
+  if (currentMasterSortKey !== 'default') {
+    filtered.sort((a, b) => {
+      let valA, valB;
+      if (currentMasterSortKey === 'category') {
+        valA = a.category || '';
+        valB = b.category || '';
+      } else if (currentMasterSortKey === 'name') {
+        valA = a.name || '';
+        valB = b.name || '';
+      } else if (currentMasterSortKey === 'stock') {
+        valA = a.stock || 0;
+        valB = b.stock || 0;
+      } else if (currentMasterSortKey === 'expDate') {
+        valA = getBentoEarliestExpDate(a);
+        valB = getBentoEarliestExpDate(b);
+      } else if (currentMasterSortKey === 'isToday') {
+        valA = todaysMenuIds.includes(a.id) ? 1 : 0;
+        valB = todaysMenuIds.includes(b.id) ? 1 : 0;
+      }
+
+      if (valA < valB) return currentMasterSortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return currentMasterSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
 
   document.getElementById('masterTotalCount').textContent = bentoMaster.length;
   const countBadge = document.getElementById('masterCountBadge');
@@ -1092,14 +1315,31 @@ function renderMasterSection() {
     `;
   });
 
+  const getSortIcon = (key) => {
+    if (currentMasterSortKey !== key) return '<span style="color:#adb5bd; font-size:0.75rem; margin-left:4px;">⇅</span>';
+    return currentMasterSortOrder === 'asc' 
+      ? '<span style="color:#d9480f; font-size:0.85rem; margin-left:4px; font-weight:900;">▲</span>' 
+      : '<span style="color:#d9480f; font-size:0.85rem; margin-left:4px; font-weight:900;">▼</span>';
+  };
+
   table.innerHTML = `
     <thead>
       <tr>
-        <th style="width: 120px;">カテゴリー</th>
-        <th style="width: 240px;">商品名</th>
-        <th style="width: 140px; text-align:center;">合計在庫数</th>
-        <th>既存在庫 ＆ 入荷分 ロット明細一覧</th>
-        <th style="width: 100px; text-align:center;">本日の5品</th>
+        <th style="width: 120px; cursor:pointer; user-select:none;" onclick="setMasterSort('category')" title="カテゴリーで並び替え">
+          カテゴリー ${getSortIcon('category')}
+        </th>
+        <th style="width: 240px; cursor:pointer; user-select:none;" onclick="setMasterSort('name')" title="商品名で並び替え">
+          商品名 ${getSortIcon('name')}
+        </th>
+        <th style="width: 140px; text-align:center; cursor:pointer; user-select:none;" onclick="setMasterSort('stock')" title="合計在庫数で並び替え">
+          合計在庫数 ${getSortIcon('stock')}
+        </th>
+        <th style="cursor:pointer; user-select:none;" onclick="setMasterSort('expDate')" title="賞味期限の近い順で並び替え">
+          既存在庫 ＆ 入荷分 ロット明細一覧 ${getSortIcon('expDate')}
+        </th>
+        <th style="width: 110px; text-align:center; cursor:pointer; user-select:none;" onclick="setMasterSort('isToday')" title="本日の5品で並び替え">
+          本日の5品 ${getSortIcon('isToday')}
+        </th>
         <th style="width: 110px; text-align:center;">操作</th>
       </tr>
     </thead>
@@ -1250,18 +1490,62 @@ function updateHeaderStats() {
   document.getElementById('headerOrderedCount').textContent = `${orderedUsers}食`;
 }
 
+function getSupabaseCredentials() {
+  const url = (window.SUPABASE_URL || localStorage.getItem('porte_supabase_url') || '').trim();
+  const key = (window.SUPABASE_KEY || localStorage.getItem('porte_supabase_key') || '').trim();
+  return { url, key };
+}
+
+function openSupabaseConfigModal() {
+  const { url, key } = getSupabaseCredentials();
+  const urlInput = document.getElementById('supabaseUrlInput');
+  const keyInput = document.getElementById('supabaseKeyInput');
+  if (urlInput) urlInput.value = url;
+  if (keyInput) keyInput.value = key;
+
+  const modal = document.getElementById('supabaseConfigModal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeSupabaseConfigModal() {
+  const modal = document.getElementById('supabaseConfigModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function handleSaveSupabaseConfig(e) {
+  e.preventDefault();
+  const url = document.getElementById('supabaseUrlInput').value.trim();
+  const key = document.getElementById('supabaseKeyInput').value.trim();
+
+  localStorage.setItem('porte_supabase_url', url);
+  localStorage.setItem('porte_supabase_key', key);
+  window.SUPABASE_URL = url;
+  window.SUPABASE_KEY = key;
+
+  closeSupabaseConfigModal();
+  showToast('💾 Supabase接続設定を保存しました！DBから読み込みます...', 'success');
+  fetchPorteDbAttendance();
+}
+
 // Porte Supabase DB から直接本日利用者＆本日の出欠（お弁当要不要）を自動取得
 async function fetchPorteDbAttendance() {
-  if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined') {
-    showToast('Supabase設定が見つかりません。サンプルデータをロードします。', 'info');
-    loadSamplePorteData(true);
+  const { url, key } = getSupabaseCredentials();
+
+  if (!url || !key) {
+    showToast('⚙️ Supabaseの接続設定（URL・APIキー）を入力してください。', 'warning');
+    openSupabaseConfigModal();
+    return;
+  }
+
+  if (typeof supabase === 'undefined') {
+    showToast('⚠️ Supabase SDKの読み込みに失敗しました。インターネット接続をご確認ください。', 'warning');
     return;
   }
 
   showToast('⚡ Porteデータベースから最新利用者を読み込み中...', 'info');
 
   try {
-    const SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const SB = supabase.createClient(url, key);
     
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -1270,6 +1554,11 @@ async function fetchPorteDbAttendance() {
       SB.from('利用者').select('*'),
       SB.from('出欠').select('*').eq('date', todayStr)
     ]);
+
+    if (userRes.error) {
+      console.warn('Porte DB Error:', userRes.error);
+      throw userRes.error;
+    }
 
     const attMap = {};
     if (attRes && attRes.data) {
@@ -1283,17 +1572,36 @@ async function fetchPorteDbAttendance() {
         const uId = String(u.id || '').trim();
         const r = attMap[uId];
         
+        // 欠席・お休み判定
+        const isAbsent = r ? (
+          r.status === '欠席' || 
+          r.status === '公休' || 
+          r.status === '調整休' || 
+          r.status === '欠勤' || 
+          r.status === 'お休み' || 
+          r.status === 'キャンセル' ||
+          String(r.status || '').includes('欠') ||
+          String(r.status || '').includes('休')
+        ) : (
+          u.status === '欠席' || u.status === 'お休み'
+        );
+
         const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? r.bento : u.bento;
         const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
 
-        const wantsBento = (curB === 'あり' || curMeal === true);
+        // 欠席・お休みの場合はお弁当対象外（wantsBento = false）
+        const wantsBento = !isAbsent && (curB === 'あり' || curMeal === true);
+
+        const noteText = (r && r.notes) ? r.notes : (u.note || u.特記事項 || '');
+        const fullNote = isAbsent ? (noteText ? `【欠席】${noteText}` : '【欠席】') : noteText;
 
         return {
           id: u.id || `P${idx+1}`,
           name: u.name || u.氏名 || '利用者',
           kana: u.kana || u.フリガナ || '',
           type: u.type || u.区分 || '通所',
-          note: u.note || u.特記事項 || (r ? r.notes : ''),
+          note: fullNote,
+          status: r ? (r.status || '出席') : '出席',
           wantsBento: wantsBento,
           selectedBentoId: ''
         };
@@ -1311,7 +1619,7 @@ async function fetchPorteDbAttendance() {
           selectedBentoId: ''
         }));
       } else {
-        loadSamplePorteData(true);
+        showToast('⚠️ テーブル内にデータが見つかりませんでした。', 'warning');
         return;
       }
     }
@@ -1321,8 +1629,8 @@ async function fetchPorteDbAttendance() {
     showToast(`⚡ Porte DBから${porteUsers.length}名の利用者データを読み込みました！（お弁当対象: ${bentoCount}名）`, 'success');
     renderAll();
   } catch (err) {
-    console.warn('Porte DB read error:', err);
-    loadSamplePorteData(true);
+    console.error('Porte DB read error:', err);
+    showToast(`❌ Supabase接続エラー: ${err.message || 'URL・APIキーをご確認ください'}`, 'warning');
   }
 }
 
@@ -1367,43 +1675,185 @@ function setupEventListeners() {
     });
   }
 
-  document.getElementById('fetchPorteDbBtn').addEventListener('click', fetchPorteDbAttendance);
+  const fetchBtn = document.getElementById('fetchPorteDbBtn');
+  if (fetchBtn) fetchBtn.addEventListener('click', fetchPorteDbAttendance);
 
-  document.getElementById('userSelectModalSearch').addEventListener('input', (e) => {
-    renderUserPickerList(e.target.value);
+  const refreshHeaderBtn = document.getElementById('refreshUsersHeaderBtn');
+  if (refreshHeaderBtn) refreshHeaderBtn.addEventListener('click', fetchPorteDbAttendance);
+
+  const userSearch = document.getElementById('userSelectModalSearch');
+  if (userSearch) {
+    userSearch.addEventListener('input', (e) => renderUserPickerList(e.target.value));
+  }
+
+  const closeUserModalBtn = document.getElementById('closeUserSelectForBentoModal');
+  if (closeUserModalBtn) closeUserModalBtn.addEventListener('click', closeUserSelectForBentoModal);
+
+  const cancelUserModalBtn = document.getElementById('cancelUserSelectForBentoBtn');
+  if (cancelUserModalBtn) cancelUserModalBtn.addEventListener('click', closeUserSelectForBentoModal);
+
+// 賞味期限の短さを最重視しつつ、同等期限内でのゆらぎ選出 ＆ 肉・魚・その他カテゴリーバランス調整
+function pickBalancedTodaysMenu(preferStockOnly = true) {
+  let pool = preferStockOnly ? bentoMaster.filter(b => b.stock > 0) : bentoMaster;
+  if (!pool || pool.length === 0) pool = [...bentoMaster];
+
+  // 1. 賞味期限（日数）に0〜2.5日のランダムゆらぎ（Jitter）を加算してスコア化
+  // 賞味期限が短いものが最優先されつつ、近い期限の商品同士で毎回ランダムな変化が出ます
+  const scored = pool.map(item => {
+    const earliestExp = getBentoEarliestExpDate(item);
+    const expTime = earliestExp !== '9999-12-31' ? new Date(earliestExp).getTime() : (Date.now() + 30 * 86400000);
+    const jitter = Math.random() * 2.5 * 86400000;
+    return { item, score: expTime + jitter };
   });
 
-  document.getElementById('closeUserSelectForBentoModal').addEventListener('click', closeUserSelectForBentoModal);
-  document.getElementById('cancelUserSelectForBentoBtn').addEventListener('click', closeUserSelectForBentoModal);
+  scored.sort((a, b) => a.score - b.score);
+  const candidates = scored.map(s => s.item);
 
-  document.getElementById('randomSelectBtn').addEventListener('click', () => {
-    const cards = document.querySelectorAll('.bento-card');
-    cards.forEach(c => c.classList.add('shuffling'));
+  // 2. カテゴリーバランス調整（魚・肉・その他をバランスよく抽出）
+  const selected = [];
+  const getCatType = (cat) => {
+    if (cat === '魚') return 'FISH';
+    if (cat === '豚肉' || cat === '牛肉' || cat === '鶏肉') return 'MEAT';
+    return 'OTHER';
+  };
 
-    setTimeout(() => {
-      const available = bentoMaster.filter(b => b.stock > 0);
-      available.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
+  // 魚、肉、その他からそれぞれ1品ずつ優先ピック
+  const fishItem = candidates.find(b => getCatType(b.category) === 'FISH');
+  if (fishItem) selected.push(fishItem);
 
-      let chosenIds = [];
-      if (available.length >= 5) {
-        chosenIds = available.slice(0, 5).map(b => b.id);
-      } else if (available.length > 0) {
-        const chosenAvailable = [...available];
-        const remainingMaster = bentoMaster.filter(b => !chosenAvailable.some(a => a.id === b.id));
-        remainingMaster.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
-        const chosenRemaining = remainingMaster.slice(0, 5 - available.length);
-        chosenIds = [...chosenAvailable, ...chosenRemaining].map(b => b.id);
-      } else {
-        chosenIds = [...bentoMaster].slice(0, 5).map(b => b.id);
+  const meatItem = candidates.find(b => getCatType(b.category) === 'MEAT' && !selected.includes(b));
+  if (meatItem) selected.push(meatItem);
+
+  const otherItem = candidates.find(b => getCatType(b.category) === 'OTHER' && !selected.includes(b));
+  if (otherItem) selected.push(otherItem);
+
+  // 残りの枠（計5品になるまで）をスコア（期限重視＋ゆらぎ）順で補充
+  for (let i = 0; i < candidates.length && selected.length < 5; i++) {
+    if (!selected.includes(candidates[i])) {
+      selected.push(candidates[i]);
+    }
+  }
+
+  // 万が一足りない場合はマスター全体から補填
+  if (selected.length < 5) {
+    for (let i = 0; i < bentoMaster.length && selected.length < 5; i++) {
+      if (!selected.includes(bentoMaster[i])) {
+        selected.push(bentoMaster[i]);
       }
+    }
+  }
 
-      todaysMenuIds = chosenIds;
-      saveTodaysMenu();
-      renderAll();
+  return selected.slice(0, 5).sort(() => Math.random() - 0.5).map(b => b.id);
+}
 
-      showToast('⏳ 賞味期限の近い順に優先して本日の5品を選出しました！', 'success');
-    }, 400);
+// 5品カスタム手動選択モーダル機能
+let tempPickFiveIds = [];
+
+window.openPickFiveModal = function() {
+  tempPickFiveIds = [...todaysMenuIds];
+  renderPickFiveGrid();
+  const modal = document.getElementById('pickFiveModal');
+  if (modal) modal.classList.add('active');
+};
+
+window.closePickFiveModal = function() {
+  const modal = document.getElementById('pickFiveModal');
+  if (modal) modal.classList.remove('active');
+};
+
+window.renderPickFiveGrid = function() {
+  const countEl = document.getElementById('selectedFiveCount');
+  if (countEl) countEl.textContent = tempPickFiveIds.length;
+
+  const container = document.getElementById('pickFiveItemsList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  bentoMaster.forEach(item => {
+    ensureBentoLots(item);
+    const isSelected = tempPickFiveIds.includes(item.id);
+    const earliestExp = getBentoEarliestExpDate(item);
+    const expText = earliestExp !== '9999-12-31' ? earliestExp : '未設定';
+
+    const card = document.createElement('div');
+    card.className = `pick-five-item-card ${isSelected ? 'selected' : ''}`;
+    card.style.cssText = `
+      border: 2px solid ${isSelected ? '#ff7e67' : '#e9ecef'};
+      background: ${isSelected ? '#fff5eb' : '#ffffff'};
+      border-radius: 14px;
+      padding: 12px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+      box-shadow: ${isSelected ? '0 4px 12px rgba(255, 126, 103, 0.18)' : 'none'};
+    `;
+
+    card.onclick = () => togglePickFiveItem(item.id);
+
+    card.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:1.6rem;">${item.icon || '🍱'}</span>
+        <div>
+          <div style="font-weight:800; font-size:0.95rem; color:#212529;">${item.name}</div>
+          <div style="font-size:0.78rem; color:#747d8c; margin-top:2px;">
+            <span class="cat-pill" style="font-size:0.7rem; padding:1px 6px;">${item.category}</span>
+            <span style="margin-left:6px;">在庫: <strong style="color:#d9480f;">${item.stock}食</strong></span>
+            <span style="margin-left:6px;">賞味期限: 📅 ${expText}</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <input type="checkbox" ${isSelected ? 'checked' : ''} style="width:20px; height:20px; accent-color:#ff7e67; pointer-events:none;">
+      </div>
+    `;
+
+    container.appendChild(card);
   });
+};
+
+window.togglePickFiveItem = function(bentoId) {
+  const index = tempPickFiveIds.indexOf(bentoId);
+  if (index >= 0) {
+    tempPickFiveIds.splice(index, 1);
+  } else {
+    if (tempPickFiveIds.length >= 5) {
+      showToast('⚠️ 本日のメニューは5品までしか選べません。先に別の商品の選択を解除してください。', 'warning');
+      return;
+    }
+    tempPickFiveIds.push(bentoId);
+  }
+  renderPickFiveGrid();
+};
+
+window.savePickFiveSelection = function() {
+  if (tempPickFiveIds.length !== 5) {
+    showToast(`⚠️ 本日のメニューはちょうど5品選んでください（現在: ${tempPickFiveIds.length}品選択中）`, 'warning');
+    return;
+  }
+
+  todaysMenuIds = [...tempPickFiveIds];
+  saveTodaysMenu();
+  closePickFiveModal();
+  renderAll();
+  showToast('✨ 本日のメニュー5品をカスタム更新しました！', 'success');
+};
+
+  const randomBtn = document.getElementById('randomSelectBtn');
+  if (randomBtn) {
+    randomBtn.addEventListener('click', () => {
+      const cards = document.querySelectorAll('.bento-card');
+      cards.forEach(c => c.classList.add('shuffling'));
+
+      setTimeout(() => {
+        todaysMenuIds = pickBalancedTodaysMenu(true);
+        saveTodaysMenu();
+        renderAll();
+        showToast('🍱 賞味期限の短い商品を優先し、魚・お肉のバランスよく本日の5品を選出しました！', 'success');
+      }, 400);
+    });
+  }
 
   const autoStockPickBtn = document.getElementById('autoStockPickBtn');
   if (autoStockPickBtn) {
@@ -1413,58 +1863,108 @@ function setupEventListeners() {
         showToast('⚠️ 在庫がある商品がありません。商品マスターで在庫を補充してください。', 'warning');
         return;
       }
-      autoReplaceSoldOutMenu();
+
+      // 賞味期限関係なく、在庫あり商品からランダムに並び替え（シャッフル）
+      const shuffledAvailable = [...available].sort(() => Math.random() - 0.5);
+
+      let chosenIds = [];
+      if (shuffledAvailable.length >= 5) {
+        chosenIds = shuffledAvailable.slice(0, 5).map(b => b.id);
+      } else {
+        const chosenAvailable = [...shuffledAvailable];
+        const remainingMaster = bentoMaster.filter(b => !chosenAvailable.some(a => a.id === b.id)).sort(() => Math.random() - 0.5);
+        const chosenRemaining = remainingMaster.slice(0, 5 - chosenAvailable.length);
+        chosenIds = [...chosenAvailable, ...chosenRemaining].map(b => b.id);
+      }
+
+      todaysMenuIds = chosenIds;
+      saveTodaysMenu();
       renderAll();
-      showToast('🔄 完売品を賞味期限の短い順に自動で差し替えました！', 'success');
+      showToast('🎲 在庫のある商品の中から賞味期限関係なくランダムに5品を選出しました！', 'success');
     });
   }
 
-  document.getElementById('customPickBtn').addEventListener('click', openPickFiveModal);
-  document.getElementById('closePickFiveModal').addEventListener('click', closePickFiveModal);
-  document.getElementById('cancelPickFiveBtn').addEventListener('click', closePickFiveModal);
-  document.getElementById('savePickFiveBtn').addEventListener('click', savePickFiveSelection);
+  const customPickBtn = document.getElementById('customPickBtn');
+  if (customPickBtn) customPickBtn.addEventListener('click', openPickFiveModal);
+  
+  const closePickModalBtn = document.getElementById('closePickFiveModal');
+  if (closePickModalBtn) closePickModalBtn.addEventListener('click', closePickFiveModal);
+  
+  const cancelPickModalBtn = document.getElementById('cancelPickFiveBtn');
+  if (cancelPickModalBtn) cancelPickModalBtn.addEventListener('click', closePickFiveModal);
+  
+  const savePickModalBtn = document.getElementById('savePickFiveBtn');
+  if (savePickModalBtn) savePickModalBtn.addEventListener('click', savePickFiveSelection);
 
-  document.getElementById('loadSamplePorteBtn').addEventListener('click', () => loadSamplePorteData(true));
+  const openConfigBtn = document.getElementById('openSupabaseConfigBtn');
+  if (openConfigBtn) openConfigBtn.addEventListener('click', openSupabaseConfigModal);
+
+  const closeConfigBtn = document.getElementById('closeSupabaseConfigModalBtn');
+  if (closeConfigBtn) closeConfigBtn.addEventListener('click', closeSupabaseConfigModal);
+
+  const cancelConfigBtn = document.getElementById('cancelSupabaseConfigBtn');
+  if (cancelConfigBtn) cancelConfigBtn.addEventListener('click', closeSupabaseConfigModal);
+
+  const configForm = document.getElementById('supabaseConfigForm');
+  if (configForm) configForm.addEventListener('submit', handleSaveSupabaseConfig);
 
   const csvInput = document.getElementById('porteCsvInput');
-  csvInput.addEventListener('change', handlePorteCsvUpload);
+  if (csvInput) csvInput.addEventListener('change', handlePorteCsvUpload);
 
   const dropZone = document.getElementById('csvDropZone');
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
-  });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files.length > 0) {
-      parsePorteCsvFile(e.dataTransfer.files[0]);
-    }
-  });
+  if (dropZone) {
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        parsePorteCsvFile(e.dataTransfer.files[0]);
+      }
+    });
+  }
 
-  document.getElementById('copyOrderSummaryBtn').addEventListener('click', copyCateringOrderTally);
+  const copySummaryBtn = document.getElementById('copyOrderSummaryBtn');
+  if (copySummaryBtn) copySummaryBtn.addEventListener('click', copyCateringOrderTally);
 
-  document.getElementById('clearTodayOrdersBtn').addEventListener('click', () => {
-    if (confirm('本日の注文履歴をクリアしますか？')) {
-      orderHistory = [];
-      saveOrderHistory();
-      renderAll();
-      showToast('履歴をクリアしました', 'info');
-    }
-  });
+  const clearTodayBtn = document.getElementById('clearTodayOrdersBtn');
+  if (clearTodayBtn) {
+    clearTodayBtn.addEventListener('click', () => {
+      if (confirm('本日の注文履歴をクリアしますか？')) {
+        orderHistory = [];
+        saveOrderHistory();
+        renderAll();
+        showToast('履歴をクリアしました', 'info');
+      }
+    });
+  }
 
-  document.getElementById('exportHistoryCsvBtn').addEventListener('click', exportHistoryCsv);
+  const exportCsvBtn = document.getElementById('exportHistoryCsvBtn');
+  if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportHistoryCsv);
 
-  document.getElementById('masterSearchInput').addEventListener('input', renderMasterSection);
-  document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentCategoryFilter = btn.getAttribute('data-category');
+  const searchInput = document.getElementById('masterSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
       renderMasterSection();
     });
-  });
+  }
+
+  const categoryPillsContainer = document.getElementById('categoryFilterPills');
+  if (categoryPillsContainer) {
+    categoryPillsContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('.pill-btn');
+      if (btn) {
+        const catKey = btn.getAttribute('data-category');
+        if (catKey) {
+          currentCategoryFilter = catKey;
+          renderMasterSection();
+        }
+      }
+    });
+  }
 
   document.getElementById('addNewBentoBtn').addEventListener('click', () => openEditBentoModal(null));
   document.getElementById('resetMasterBtn').addEventListener('click', () => {
@@ -1618,165 +2118,6 @@ window.deleteBento = function(id) {
     showToast('お弁当を削除しました', 'info');
   }
 };
-
-function loadSamplePorteData(showNotification = true) {
-  porteUsers = [
-    { id: 'P001', name: '岡村 芽衣', kana: 'オカムラ メイ', type: '通所A', note: 'アレルギーなし', wantsBento: true, selectedBentoId: '' },
-    { id: 'P002', name: '高島 直樹', kana: 'タカシマ ナオキ', type: '通所A', note: '持参弁当', wantsBento: false, selectedBentoId: '' },
-    { id: 'P003', name: '佐藤 花子', kana: 'サトウ ハナコ', type: '通所A', note: '減塩希望', wantsBento: true, selectedBentoId: '' },
-    { id: 'P004', name: '鈴木 一郎', kana: 'スズキ イチロウ', type: '通所B', note: '一口大カット', wantsBento: true, selectedBentoId: '' },
-    { id: 'P005', name: '高橋 恵子', kana: 'タカハシ ケイコ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' },
-    { id: 'P006', name: '田中 健二', kana: 'タナカ ケンジ', type: '通所A', note: '', wantsBento: true, selectedBentoId: '' }
-  ];
-  savePorteUsers();
-  if (showNotification) {
-    showToast('📂 ポルテのサンプル利用者データ（岡村様:お弁当要, 高島様:持参/なし）をセットしました！', 'success');
-  }
-  renderAll();
-}
-
-function handlePorteCsvUpload(e) {
-  if (e.target.files.length > 0) {
-    parsePorteCsvFile(e.target.files[0]);
-  }
-}
-
-function parsePorteCsvFile(file) {
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    const text = evt.target.result;
-    const lines = text.split(/\r\n|\n/);
-    const parsed = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      const cols = line.split(',');
-
-      if (i === 0 && (cols[0].includes('ID') || cols[0].includes('利用者'))) continue;
-
-      if (cols.length >= 2) {
-        const noteStr = (cols[5] || cols[4] || '').toString();
-        const noBento = noteStr.includes('持参') || noteStr.includes('なし') || noteStr.includes('不要');
-
-        parsed.push({
-          id: cols[0] || `P${parsed.length + 1}`,
-          name: cols[1] || '名前未設定',
-          kana: cols[2] || '',
-          type: cols[3] || '通所',
-          note: noteStr,
-          wantsBento: !noBento,
-          selectedBentoId: ''
-        });
-      }
-    }
-
-    if (parsed.length > 0) {
-      porteUsers = parsed;
-      savePorteUsers();
-      showToast(`📄 ポルテCSVから${parsed.length}名の利用者データを読み込みました！`, 'success');
-      renderAll();
-    } else {
-      showToast('CSVデータを読み込めませんでした。フォーマットをご確認ください。', 'info');
-    }
-  };
-  reader.readAsText(file, 'UTF-8');
-}
-
-function copyCateringOrderTally() {
-  const tally = {};
-  porteUsers.forEach(u => {
-    if (u.selectedBentoId) {
-      const b = bentoMaster.find(item => item.id === u.selectedBentoId);
-      const name = b ? b.name : '不明なお弁当';
-      tally[name] = (tally[name] || 0) + 1;
-    }
-  });
-
-  const keys = Object.keys(tally);
-  if (keys.length === 0) {
-    showToast('コピーする注文データがありません', 'info');
-    return;
-  }
-
-  let text = `【本日のお弁当発注リスト】\n日付: ${document.getElementById('currentDateBadge').textContent}\n---------------------\n`;
-  let total = 0;
-  keys.forEach(k => {
-    text += `・${k}: ${tally[k]}食\n`;
-    total += tally[k];
-  });
-  text += `---------------------\n合計: ${total}食`;
-
-  navigator.clipboard.writeText(text).then(() => {
-    showToast('📋 発注リストをクリップボードにコピーしました！', 'success');
-  });
-}
-
-function exportHistoryCsv() {
-  if (orderHistory.length === 0) {
-    showToast('出力する注文履歴がありません', 'info');
-    return;
-  }
-
-  let csv = "\uFEFF日時,利用者名,注文お弁当名,カテゴリー\n";
-  orderHistory.forEach(ord => {
-    csv += `"${ord.date}","${ord.userName}","${ord.bentoName}","${ord.category}"\n`;
-  });
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `bento_orders_${new Date().toISOString().slice(0,10)}.csv`;
-  link.click();
-  showToast('📥 注文履歴CSVを出力しました', 'success');
-}
-
-function openPickFiveModal() {
-  const list = document.getElementById('pickFiveItemsList');
-  list.innerHTML = '';
-
-  bentoMaster.forEach(item => {
-    const isChecked = todaysMenuIds.includes(item.id);
-    const isSoldOut = item.stock <= 0;
-
-    const div = document.createElement('label');
-    div.className = 'pick-five-item';
-    div.innerHTML = `
-      <input type="checkbox" value="${item.id}" ${isChecked ? 'checked' : ''} onchange="updatePickFiveCount()">
-      <span>${item.icon}</span>
-      <strong>${item.name}</strong>
-      ${isSoldOut ? '<span style="color:#ff4757; font-size:0.75rem; margin-left:6px; font-weight:700;">(完売)</span>' : `<span style="color:#2b8a3e; font-size:0.75rem; margin-left:6px;">(残${item.stock}食)</span>`}
-      <span style="font-size:0.8rem; color:#747d8c; margin-left:auto;">${item.category}</span>
-    `;
-    list.appendChild(div);
-  });
-
-  updatePickFiveCount();
-  document.getElementById('pickFiveModal').classList.add('active');
-}
-
-window.updatePickFiveCount = function() {
-  const checked = document.querySelectorAll('#pickFiveItemsList input[type="checkbox"]:checked');
-  document.getElementById('selectedFiveCount').textContent = checked.length;
-};
-
-function closePickFiveModal() {
-  document.getElementById('pickFiveModal').classList.remove('active');
-}
-
-function savePickFiveSelection() {
-  const checked = Array.from(document.querySelectorAll('#pickFiveItemsList input[type="checkbox"]:checked')).map(c => c.value);
-  if (checked.length !== 5) {
-    alert('本日のメニューはちょうど5品選択してください。（現在: ' + checked.length + '品）');
-    return;
-  }
-
-  todaysMenuIds = checked;
-  saveTodaysMenu();
-  closePickFiveModal();
-  renderAll();
-  showToast('🍱 本日の5品メニューを手動設定しました！', 'success');
-}
 
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
