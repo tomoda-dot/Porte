@@ -1661,11 +1661,17 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? String(r.bento).trim() : (u.bento ? String(u.bento).trim() : '');
         const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
 
-        // 本日の出欠予定(r)が存在し、欠席・お休みでない場合にお弁当対象(wantsBento = true)
-        const wantsBento = !!r && !isAbsent && (curB === 'あり' || curMeal === true || curB === '必要' || r.status === '出席');
+        // お弁当が必要（wantsBento = true）かの厳密判定：
+        // 本日の出欠予定(r)が存在し、欠席・お休みでなく、かつお弁当が「あり/必要/true」の場合のみ
+        let wantsBento = false;
+        if (r && !isAbsent) {
+          if (curB === 'あり' || curB === '必要' || curB === 'true' || curMeal === true || curMeal === 'あり' || curMeal === '必要') {
+            wantsBento = true;
+          }
+        }
 
         const noteText = (r && r.notes) ? r.notes : (u.note || u.特記事項 || '');
-        const fullNote = isAbsent ? (noteText ? `【本日お休み】${noteText}` : '【本日お休み】') : noteText;
+        const fullNote = isAbsent ? (noteText ? `【本日お休み】${noteText}` : '【本日お休み】') : (wantsBento ? noteText : (noteText ? `【お弁当不要】${noteText}` : '【お弁当不要】'));
 
         // 既存の選択中のお弁当IDを保護・マージ
         const existingUser = porteUsers.find(item => String(item.id).trim() === uId || String(item.name).trim() === String(u.name || u.氏名).trim());
