@@ -61,17 +61,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMonthlyMatrixMonthSelect();
   renderAll();
   
-  // ページを開いた瞬間に自動的にPorte DBから最新利用者＆出欠データを自動取得・更新
+  // ページを開いた瞬間に自動的にPorte DBから最新利用者＆出欠データを非同期取得して画面更新
   try {
     const { url, key } = getSupabaseCredentials();
     if (url && key && typeof supabase !== 'undefined') {
-      await fetchPorteDbAttendance(true); // サイレント自動更新
+      await fetchPorteDbAttendance(false); // 自動取得して結果をトースト表示＆レンダリング
       await syncFromSupabase();
     } else if (porteUsers.length === 0) {
       loadSamplePorteData(false);
     }
   } catch (e) {
-    console.warn('Auto fetch user data warning:', e);
+    console.warn('Auto fetch user data error:', e);
   }
 });
 
@@ -1663,6 +1663,10 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         const noteText = (r && r.notes) ? r.notes : (u.note || u.特記事項 || '');
         const fullNote = isAbsent ? (noteText ? `【欠席】${noteText}` : '【欠席】') : noteText;
 
+        // 既存の選択中のお弁当IDを保護・マージ
+        const existingUser = porteUsers.find(item => String(item.id).trim() === uId || String(item.name).trim() === String(u.name || u.氏名).trim());
+        const savedBentoId = existingUser ? (existingUser.selectedBentoId || '') : '';
+
         return {
           id: u.id || `P${idx+1}`,
           name: u.name || u.氏名 || '利用者',
@@ -1671,21 +1675,25 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           note: fullNote,
           status: r ? (r.status || '出席') : '出席',
           wantsBento: wantsBento,
-          selectedBentoId: ''
+          selectedBentoId: savedBentoId
         };
       });
     } else {
       const staffRes = await SB.from('スタッフ').select('*');
       if (staffRes.data && staffRes.data.length > 0) {
-        porteUsers = staffRes.data.map((s, idx) => ({
-          id: s.id || `P${idx+1}`,
-          name: s.name || s.username || '利用者',
-          kana: s.kana || '',
-          type: '通所',
-          note: s.note || '',
-          wantsBento: false,
-          selectedBentoId: ''
-        }));
+        porteUsers = staffRes.data.map((s, idx) => {
+          const sId = String(s.id || '').trim();
+          const existingUser = porteUsers.find(item => String(item.id).trim() === sId);
+          return {
+            id: s.id || `P${idx+1}`,
+            name: s.name || s.username || '利用者',
+            kana: s.kana || '',
+            type: '通所',
+            note: s.note || '',
+            wantsBento: false,
+            selectedBentoId: existingUser ? (existingUser.selectedBentoId || '') : ''
+          };
+        });
       } else {
         showToast('⚠️ テーブル内にデータが見つかりませんでした。', 'warning');
         return;
