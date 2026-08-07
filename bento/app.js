@@ -857,6 +857,11 @@ window.setMasterSort = function(key) {
   renderMasterSection();
 };
 
+window.filterCategory = function(catKey) {
+  currentCategoryFilter = catKey;
+  renderMasterSection();
+};
+
 function renderMasterSection() {
   const container = document.getElementById('masterItemsGrid');
   container.innerHTML = '';

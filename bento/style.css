@@ -1258,3 +1258,45 @@ body {
   width: 18px;
   height: 18px;
 }
+
+/* カテゴリー検索・選択ピルボタン */
+.category-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1px solid #ffd8a8;
+  background-color: #ffffff;
+  color: #d9480f;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pill-btn:hover {
+  background-color: #fff4e6;
+  border-color: #ffc078;
+  transform: translateY(-1px);
+}
+
+.pill-btn:active {
+  transform: translateY(0);
+}
+
+.pill-btn.active {
+  background: linear-gradient(135deg, #ff7e67 0%, #ff5252 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 12px rgba(255, 126, 103, 0.35);
+}

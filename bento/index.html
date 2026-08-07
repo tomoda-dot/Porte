@@ -227,12 +227,12 @@
         <!-- フィルター・検索バー -->
         <div class="master-filter-bar">
           <div class="category-pills" id="categoryFilterPills">
-            <button class="pill-btn active" data-category="ALL">すべて (30)</button>
-            <button class="pill-btn" data-category="魚">🐟 魚料理</button>
-            <button class="pill-btn" data-category="豚肉">🐖 豚肉</button>
-            <button class="pill-btn" data-category="牛肉">🐂 牛肉</button>
-            <button class="pill-btn" data-category="鶏肉">🐓 鶏肉</button>
-            <button class="pill-btn" data-category="和食・その他">🍲 和食・中華・その他</button>
+            <button type="button" class="pill-btn active" data-category="ALL" onclick="filterCategory('ALL')">すべて (30)</button>
+            <button type="button" class="pill-btn" data-category="魚" onclick="filterCategory('魚')">🐟 魚料理</button>
+            <button type="button" class="pill-btn" data-category="豚肉" onclick="filterCategory('豚肉')">🐖 豚肉</button>
+            <button type="button" class="pill-btn" data-category="牛肉" onclick="filterCategory('牛肉')">🐂 牛肉</button>
+            <button type="button" class="pill-btn" data-category="鶏肉" onclick="filterCategory('鶏肉')">🐓 鶏肉</button>
+            <button type="button" class="pill-btn" data-category="和食・その他" onclick="filterCategory('和食・その他')">🍲 和食・中華・その他</button>
           </div>
           <div class="search-box">
             <input type="text" id="masterSearchInput" placeholder="お弁当名で検索...">
