@@ -61,13 +61,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMonthlyMatrixMonthSelect();
   renderAll();
   
-  // ページを開いた瞬間に自動的にPorte Supabase DBから最新利用者＆出欠データを自動取得
-  const { url, key } = getSupabaseCredentials();
-  if (url && key && typeof supabase !== 'undefined') {
-    await fetchPorteDbAttendance();
-    await syncFromSupabase();
-  } else if (porteUsers.length === 0) {
-    loadSamplePorteData(false);
+  // ページを開いた瞬間に自動的にPorte DBから最新利用者＆出欠データを自動取得・更新
+  try {
+    const { url, key } = getSupabaseCredentials();
+    if (url && key && typeof supabase !== 'undefined') {
+      await fetchPorteDbAttendance(true); // サイレント自動更新
+      await syncFromSupabase();
+    } else if (porteUsers.length === 0) {
+      loadSamplePorteData(false);
+    }
+  } catch (e) {
+    console.warn('Auto fetch user data warning:', e);
   }
 });
 
@@ -1576,21 +1580,25 @@ function handleSaveSupabaseConfig(e) {
 }
 
 // Porte Supabase DB から直接本日利用者＆本日の出欠（お弁当要不要）を自動取得
-async function fetchPorteDbAttendance() {
+async function fetchPorteDbAttendance(isAutoLoad = false) {
   const { url, key } = getSupabaseCredentials();
 
   if (!url || !key) {
-    showToast('⚙️ Supabaseの接続設定（URL・APIキー）を入力してください。', 'warning');
-    openSupabaseConfigModal();
+    if (!isAutoLoad) {
+      showToast('⚙️ Supabaseの接続設定（URL・APIキー）を入力してください。', 'warning');
+      openSupabaseConfigModal();
+    }
     return;
   }
 
   if (typeof supabase === 'undefined') {
-    showToast('⚠️ Supabase SDKの読み込みに失敗しました。インターネット接続をご確認ください。', 'warning');
+    if (!isAutoLoad) showToast('⚠️ Supabase SDKの読み込みに失敗しました。インターネット接続をご確認ください。', 'warning');
     return;
   }
 
-  showToast('⚡ Porteデータベースから最新利用者を読み込み中...', 'info');
+  if (!isAutoLoad) {
+    showToast('⚡ Porteデータベースから最新利用者を読み込み中...', 'info');
+  }
 
   try {
     const SB = supabase.createClient(url, key);
