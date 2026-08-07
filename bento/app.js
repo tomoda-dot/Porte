@@ -1631,14 +1631,20 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
     const attMap = {};
     if (attRes && attRes.data) {
       attRes.data.forEach(a => {
-        if (a && a.userId) attMap[String(a.userId).trim()] = a;
+        if (a) {
+          if (a.userId) attMap[String(a.userId).trim()] = a;
+          if (a.user_id) attMap[String(a.user_id).trim()] = a;
+          if (a.name) attMap[String(a.name).trim()] = a;
+          if (a.userName) attMap[String(a.userName).trim()] = a;
+        }
       });
     }
 
     if (userRes.data && userRes.data.length > 0) {
       porteUsers = userRes.data.map((u, idx) => {
         const uId = String(u.id || '').trim();
-        const r = attMap[uId];
+        const uName = String(u.name || u.氏名 || '').trim();
+        const r = attMap[uId] || attMap[uName];
         
         // 欠席・お休み判定
         const isAbsent = r ? (
@@ -1650,18 +1656,16 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           r.status === 'キャンセル' ||
           String(r.status || '').includes('欠') ||
           String(r.status || '').includes('休')
-        ) : (
-          u.status === '欠席' || u.status === 'お休み'
-        );
+        ) : true; // 本日の出欠予定レコードが存在しない場合は「本日予定なし・お休み」と判定
 
-        const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? r.bento : u.bento;
+        const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? String(r.bento).trim() : (u.bento ? String(u.bento).trim() : '');
         const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
 
-        // 欠席・お休みの場合はお弁当対象外（wantsBento = false）
-        const wantsBento = !isAbsent && (curB === 'あり' || curMeal === true);
+        // 本日の出欠予定(r)が存在し、欠席・お休みでない場合にお弁当対象(wantsBento = true)
+        const wantsBento = !!r && !isAbsent && (curB === 'あり' || curMeal === true || curB === '必要' || r.status === '出席');
 
         const noteText = (r && r.notes) ? r.notes : (u.note || u.特記事項 || '');
-        const fullNote = isAbsent ? (noteText ? `【欠席】${noteText}` : '【欠席】') : noteText;
+        const fullNote = isAbsent ? (noteText ? `【本日お休み】${noteText}` : '【本日お休み】') : noteText;
 
         // 既存の選択中のお弁当IDを保護・マージ
         const existingUser = porteUsers.find(item => String(item.id).trim() === uId || String(item.name).trim() === String(u.name || u.氏名).trim());
