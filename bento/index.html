@@ -269,7 +269,7 @@
             <button type="button" class="pill-btn" data-category="和食・その他" onclick="filterCategory('和食・その他')">🍲 和食・中華・その他</button>
           </div>
           <div class="search-box">
-            <input type="text" id="masterSearchInput" placeholder="お弁当名で検索...">
+            <input type="search" id="masterSearchInput" placeholder="お弁当名・キーワードで検索..." autocomplete="off">
           </div>
         </div>
 
@@ -287,7 +287,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <h3 id="selectUserModalBentoTitle">🍱 誰のお弁当にしますか？</h3>
-        <button class="close-btn" id="closeUserSelectForBentoModal">&times;</button>
+        <button class="close-btn" id="closeUserSelectForBentoModal" onclick="closeUserSelectForBentoModal()">&times;</button>
       </div>
       <div class="modal-body">
         <p class="modal-subtitle">お弁当を選ぶご利用者様のお名前をタップしてください。</p>
@@ -305,7 +305,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="cancelUserSelectForBentoBtn">キャンセル</button>
+        <button class="btn btn-secondary" id="cancelUserSelectForBentoBtn" onclick="closeUserSelectForBentoModal()">キャンセル</button>
       </div>
     </div>
   </div>
@@ -315,7 +315,7 @@
     <div class="modal-card modal-lg">
       <div class="modal-header">
         <h3>⚙️ 本日のメニュー5品をカスタム選択</h3>
-        <button class="close-btn" id="closePickFiveModal">&times;</button>
+        <button class="close-btn" id="closePickFiveModal" onclick="closePickFiveModal()">&times;</button>
       </div>
       <div class="modal-body">
         <p>30品目の中から、本日メニュー表に表示するお弁当をちょうど5品選んでください。（選択中: <strong id="selectedFiveCount">0</strong> / 5）</p>
@@ -324,7 +324,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="cancelPickFiveBtn">キャンセル</button>
+        <button class="btn btn-secondary" id="cancelPickFiveBtn" onclick="closePickFiveModal()">キャンセル</button>
         <button class="btn btn-primary" id="savePickFiveBtn">本日のメニューに設定</button>
       </div>
     </div>
@@ -335,7 +335,7 @@
     <div class="modal-card modal-lg" style="max-width: 680px;">
       <div class="modal-header">
         <h3 id="bentoModalTitle">お弁当・在庫・入荷管理</h3>
-        <button class="close-btn" id="closeBentoEditModal">&times;</button>
+        <button class="close-btn" id="closeBentoEditModal" onclick="closeEditBentoModal()">&times;</button>
       </div>
       <form id="bentoForm">
         <div class="modal-body">
@@ -389,7 +389,7 @@
             🗑️ このお弁当を削除
           </button>
           <div style="display:flex; gap:12px; margin-left:auto;">
-            <button type="button" class="btn btn-secondary" id="cancelBentoEditBtn">キャンセル</button>
+            <button type="button" class="btn btn-secondary" id="cancelBentoEditBtn" onclick="closeEditBentoModal()">キャンセル</button>
             <button type="submit" class="btn btn-primary">保存する 💾</button>
           </div>
         </div>
@@ -402,7 +402,7 @@
     <div class="modal-card" style="max-width: 520px;">
       <div class="modal-header">
         <h3 id="addLotModalTitle">📦 入荷・賞味期限の追加</h3>
-        <button class="close-btn" id="closeAddLotModalBtn">&times;</button>
+        <button class="close-btn" id="closeAddLotModalBtn" onclick="closeAddLotModal()">&times;</button>
       </div>
       <div class="modal-body">
         <p id="addLotBentoName" style="font-size:1.1rem; font-weight:800; color:#d9480f; margin-bottom:16px;">タラのトマトソース弁当</p>
@@ -426,7 +426,7 @@
           </div>
 
           <div class="modal-footer" style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
-            <button type="button" class="btn btn-outline" id="cancelAddLotModalBtn">キャンセル</button>
+            <button type="button" class="btn btn-outline" id="cancelAddLotModalBtn" onclick="closeAddLotModal()">キャンセル</button>
             <button type="submit" class="btn btn-primary">入荷・賞味期限を登録 💾</button>
           </div>
         </form>
@@ -439,7 +439,7 @@
     <div class="modal-card" style="max-width: 540px;">
       <div class="modal-header">
         <h3>⚡ Porte Supabase DB 接続設定</h3>
-        <button class="close-btn" id="closeSupabaseConfigModalBtn">&times;</button>
+        <button class="close-btn" id="closeSupabaseConfigModalBtn" onclick="closeSupabaseConfigModal()">&times;</button>
       </div>
       <form id="supabaseConfigForm">
         <div class="modal-body">
@@ -462,7 +462,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="cancelSupabaseConfigBtn">キャンセル</button>
+          <button type="button" class="btn btn-secondary" id="cancelSupabaseConfigBtn" onclick="closeSupabaseConfigModal()">キャンセル</button>
           <button type="submit" class="btn btn-primary">設定を保存 💾</button>
         </div>
       </form>

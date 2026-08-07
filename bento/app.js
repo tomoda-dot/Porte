@@ -1172,6 +1172,12 @@ function toKatakana(str) {
   );
 }
 
+function toHiragana(str) {
+  return (str || '').replace(/[\u30a1-\u30f6]/g, ch =>
+    String.fromCharCode(ch.charCodeAt(0) - 0x60)
+  );
+}
+
 function renderMasterSection() {
   const container = document.getElementById('masterItemsGrid');
   if (!container) return;
@@ -1180,6 +1186,7 @@ function renderMasterSection() {
   const searchInput = document.getElementById('masterSearchInput');
   const rawSearch = (searchInput ? searchInput.value || '' : '').trim().toLowerCase();
   const searchKana = toKatakana(rawSearch);
+  const searchHira = toHiragana(rawSearch);
 
   // 各カテゴリーの件数を集計＆ピルボタン表示更新
   const catCounts = { ALL: bentoMaster.length, '魚': 0, '豚肉': 0, '牛肉': 0, '鶏肉': 0, '和食・その他': 0 };
@@ -1239,21 +1246,26 @@ function matchCategoryItem(itemCategory, filterCategory) {
   let filtered = bentoMaster.filter(item => {
     ensureBentoLots(item);
     
-    // 検索入力欄に文字がある場合は全商品から文字部分一致検索を優先
-    if (rawSearch) {
+    // 検索窓に文字がある場合（1文字以上入力時）：全30品目から部分一致リアルタイム検索
+    if (rawSearch.length > 0) {
       const nameLower = (item.name || '').toLowerCase();
       const nameKana = toKatakana(nameLower);
+      const nameHira = toHiragana(nameLower);
       const descLower = (item.desc || '').toLowerCase();
       const descKana = toKatakana(descLower);
+      const descHira = toHiragana(descLower);
       const catLower = (item.category || '').toLowerCase();
 
       return nameLower.includes(rawSearch) || 
              nameKana.includes(searchKana) || 
+             nameHira.includes(searchHira) || 
              descLower.includes(rawSearch) || 
              descKana.includes(searchKana) ||
+             descHira.includes(searchHira) ||
              catLower.includes(rawSearch);
     }
 
+    // 文字が空（削除時）：カテゴリー選択に応じた全件を即座に復元・全件表示
     return matchCategoryItem(item.category, currentCategoryFilter);
   });
 
@@ -1559,10 +1571,10 @@ function openSupabaseConfigModal() {
   if (modal) modal.classList.add('active');
 }
 
-function closeSupabaseConfigModal() {
+window.closeSupabaseConfigModal = function() {
   const modal = document.getElementById('supabaseConfigModal');
   if (modal) modal.classList.remove('active');
-}
+};
 
 function handleSaveSupabaseConfig(e) {
   e.preventDefault();
@@ -2003,7 +2015,7 @@ window.savePickFiveSelection = function() {
 
   const searchInput = document.getElementById('masterSearchInput');
   if (searchInput) {
-    ['input', 'keyup', 'change', 'compositionend'].forEach(evtType => {
+    ['input', 'keyup', 'change', 'search', 'compositionend', 'compositionupdate'].forEach(evtType => {
       searchInput.addEventListener(evtType, () => {
         renderMasterSection();
       });
@@ -2069,6 +2081,21 @@ window.savePickFiveSelection = function() {
       }
     });
   }
+
+  // 暗転背景タップ時およびEscapeキー押下でモーダルを閉じる共通安全ガード
+  document.querySelectorAll('.modal-overlay').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    }
+  });
 }
 
 function openEditBentoModal(id) {
@@ -2110,9 +2137,10 @@ function openEditBentoModal(id) {
   modal.classList.add('active');
 }
 
-function closeEditBentoModal() {
-  document.getElementById('bentoEditModal').classList.remove('active');
-}
+window.closeEditBentoModal = function() {
+  const modal = document.getElementById('bentoEditModal');
+  if (modal) modal.classList.remove('active');
+};
 
 function handleSaveBentoForm(e) {
   e.preventDefault();
