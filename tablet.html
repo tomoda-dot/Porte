@@ -8,6 +8,101 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase-config.js"></script>
 <script src="supabase-adapter.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--pri:#3d5a3e;--bg:#f7f4f0;--card:#fff;--bdr:#e0d6cf;--sub:#8a7a6a;--grn:#2e7d32;--acc:#c07830;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#333;min-height:100vh;font-size:15px;}
+
+/* ログイン */
+#pg-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:#fff;border-radius:16px;padding:36px 28px;width:100%;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,.1);}
+.login-logo{text-align:center;margin-bottom:24px;}
+.login-logo .ico{font-size:44px;display:block;}
+.login-logo h1{font-size:20px;font-weight:700;color:var(--pri);margin-top:8px;}
+.f label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px;margin-top:14px;}
+.f input,.f select{width:100%;padding:12px 14px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px;background:#fff;}
+.f input:focus,.f select:focus{outline:none;border-color:var(--pri);}
+#btn-login{width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;margin-top:18px;}
+#login-err{color:#c62828;font-size:13px;text-align:center;margin-top:8px;min-height:16px;}
+
+/* メイン */
+#pg-main{display:none;min-height:100vh;}
+#pg-loading{display:none;text-align:center;padding:80px 20px;color:var(--sub);}
+.spin{width:32px;height:32px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 12px;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+/* ヘッダー */
+header{background:var(--pri);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.hd-title{font-size:18px;font-weight:700;}
+.hd-staff{font-size:13px;opacity:.8;}
+#btn-logout{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 14px;border-radius:16px;font-size:13px;cursor:pointer;}
+
+/* メインコンテンツ */
+.main-inner{max-width:900px;margin:0 auto;padding:20px 16px;}
+
+/* セレクター行削除（サイドバーに統合）*/
+.selector-row{display:none;}
+
+/* カード */
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.card-title{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:16px;display:flex;align-items:center;gap:6px;}
+
+/* グリッド */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* フォーム */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;background:#fff;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--pri);}
+.field textarea{resize:vertical;min-height:90px;}
+.field .hint{font-size:11px;color:var(--sub);margin-top:4px;}
+
+/* 実働時間 */
+.work-time-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--pri);}
+
+/* 保存ボタン */
+.save-bar{position:sticky;bottom:0;background:rgba(247,244,240,.95);backdrop-filter:blur(8px);padding:14px 20px;display:flex;gap:12px;justify-content:flex-end;border-top:1px solid var(--bdr);}
+#btn-save{padding:14px 40px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;}
+#btn-save:disabled{opacity:.6;cursor:not-allowed;}
+#btn-cancel{padding:14px 24px;background:#fff;color:var(--sub);border:1.5px solid var(--bdr);border-radius:10px;font-size:15px;cursor:pointer;}
+
+/* 状態バッジ */
+.status-opts{display:flex;gap:8px;flex-wrap:wrap;}
+.status-opt{flex:1;min-width:80px;padding:10px 4px;border:2px solid var(--bdr);border-radius:8px;background:#fff;color:var(--sub);font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
+.status-opt.on{border-color:var(--pri);background:var(--pri);color:#fff;}
+.status-opt.on.absent{border-color:#c62828;background:#c62828;}
+.status-opt.on.other{border-color:var(--acc);background:var(--acc);}
+
+/* 完了メッセージ */
+#pg-done{display:none;text-align:center;padding:60px 20px;}
+.done-ico{font-size:64px;display:block;margin-bottom:16px;}
+#btn-next{padding:14px 40px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:20px;}
+
+/* レイアウト */
+#layout{display:flex;height:calc(100vh - 54px);}
+#sidebar{width:220px;min-width:180px;background:#fff;border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden;}
+#sidebar-header{padding:12px 14px;border-bottom:1px solid var(--bdr);background:var(--bg);}
+#sidebar-header .date-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+#sidebar-header input[type=date]{flex:1;padding:6px 8px;border:1.5px solid var(--bdr);border-radius:6px;font-size:12px;}
+#sidebar-header .search-box{width:100%;padding:7px 10px;border:1.5px solid var(--bdr);border-radius:6px;font-size:13px;}
+#user-list{flex:1;overflow-y:auto;padding:6px 0;}
+.user-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid #f5f0ea;font-size:13px;display:flex;flex-direction:column;gap:2px;}
+.user-item:hover{background:#f5f0ea;}
+.user-item.active{background:var(--pri);color:#fff;}
+.user-item .u-name{font-weight:700;}
+.user-item .u-kana{font-size:11px;opacity:.7;}
+.user-item .u-badge{font-size:10px;margin-top:2px;}
+.u-badge.saved{color:var(--grn);font-weight:700;}
+.user-item.active .u-badge.saved{color:#a5d6a7;}
+#content-area{flex:1;overflow-y:auto;padding:20px;}
+
+@media(max-width:700px){
+  #sidebar{width:160px;}
+  .grid2,.grid3{grid-template-columns:1fr;}
+}
+</style>
 </head>
 <body>
 
