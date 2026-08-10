@@ -6505,9 +6505,9 @@ async function renderStaffAttendance(){
           }else if(shiftPlan==='有給（午後半休）'){
             h+='<td style="font-size:10px;cursor:pointer;color:#0288d1;opacity:0.5" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">有給PM</td>';
           }else if(shiftPlan==='休'){
-            h+='<td style="text-align:center;color:#ccc;font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">休</td>';
+            h+='<td style="color:#ccc;font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">休</td>';
           }else{
-            h+='<td style="color:#ddd;text-align:center;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">−</td>';
+            h+='<td style="color:#ddd;font-size:10px;cursor:pointer" onclick="editStaffAtt(\''+s.id+'\',\''+esc(s.name)+'\',\''+ds+'\')">−</td>';
           }
         }
       });
