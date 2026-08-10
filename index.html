@@ -948,8 +948,6 @@ async function openCalAttM(uid, ds){
     var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',content:'',mood:'普通',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
     if(u){
-      if(!att.startTime)att.startTime=u.scheduleStart||'10:00';
-      if(!att.endTime && att.status==='予定')att.endTime=u.scheduleEnd||'16:00';
       if(!att.bento)att.bento=u.bento||'なし';
       if(!att.pickup)att.pickup=u.pickup||'なし';
     }
@@ -1089,8 +1087,6 @@ async function openAttDailyM(uid, ds){
     var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',content:'',mood:'普通',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
     if(u){
-      if(!att.startTime)att.startTime=u.scheduleStart||'10:00';
-      if(!att.endTime && att.status==='予定')att.endTime=u.scheduleEnd||'16:00';
       if(!att.bento)att.bento=u.bento||'なし';
       if(!att.pickup)att.pickup=u.pickup||'なし';
     }
@@ -7916,6 +7912,7 @@ async function loadClosedCal(ym){
         }
       }
       await gas('setClosedDays',ym,closed);
+      clearCache('getClosedDays');
     }
     _closedDaysCache[ym]=closed;
     renderClosedCal(ym,closed);
@@ -7982,7 +7979,10 @@ async function toggleClosedDay(ym,ds){
   if(idx>=0){closed.splice(idx,1);}else{closed.push(ds);}
   _closedDaysCache[ym]=closed;
   renderClosedCal(ym,closed);
-  try{await gas('setClosedDays',ym,closed);}catch(e){await cAlert('保存失敗');}
+  try{
+    await gas('setClosedDays',ym,closed);
+    clearCache('getClosedDays');
+  }catch(e){await cAlert('保存失敗');}
 }
 
 function getJPHolidays(y,m){
