@@ -7,108 +7,7 @@
 <title>日報入力 | ひとつぎ</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase-config.js"></script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-:root{--pri:#3d5a3e;--bg:#f7f4f0;--card:#fff;--bdr:#e0d6cf;--sub:#8a7a6a;--grn:#2e7d32;--acc:#c07830;}
-body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#333;min-height:100vh;font-size:15px;}
-
-/* ログイン */
-#pg-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
-.login-box{background:#fff;border-radius:16px;padding:36px 28px;width:100%;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,.1);}
-.login-logo{text-align:center;margin-bottom:24px;}
-.login-logo .ico{font-size:44px;display:block;}
-.login-logo h1{font-size:20px;font-weight:700;color:var(--pri);margin-top:8px;}
-.f label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px;margin-top:14px;}
-.f input,.f select{width:100%;padding:12px 14px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px;background:#fff;}
-.f input:focus,.f select:focus{outline:none;border-color:var(--pri);}
-#btn-login{width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;margin-top:18px;}
-#login-err{color:#c62828;font-size:13px;text-align:center;margin-top:8px;min-height:16px;}
-
-/* メイン */
-#pg-main{display:none;min-height:100vh;}
-#pg-loading{display:none;text-align:center;padding:80px 20px;color:var(--sub);}
-.spin{width:32px;height:32px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 12px;}
-@keyframes sp{to{transform:rotate(360deg);}}
-
-/* ヘッダー */
-header{background:var(--pri);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
-.hd-title{font-size:18px;font-weight:700;}
-.hd-staff{font-size:13px;opacity:.8;}
-#btn-logout{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 14px;border-radius:16px;font-size:13px;cursor:pointer;}
-
-/* メインコンテンツ */
-.main-inner{max-width:900px;margin:0 auto;padding:20px 16px;}
-
-/* セレクター行 */
-.selector-row{display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;}
-.selector-row .f{flex:1;min-width:160px;margin:0;}
-.selector-row label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px;}
-.selector-row select,.selector-row input{width:100%;padding:10px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;background:#fff;}
-
-/* カード */
-.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);}
-.card-title{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:16px;display:flex;align-items:center;gap:6px;}
-
-/* グリッド */
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
-
-/* フォーム */
-.field{margin-bottom:14px;}
-.field label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:5px;}
-.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;background:#fff;}
-.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--pri);}
-.field textarea{resize:vertical;min-height:90px;}
-.field .hint{font-size:11px;color:var(--sub);margin-top:4px;}
-
-/* 実働時間 */
-.work-time-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--pri);}
-
-/* 保存ボタン */
-.save-bar{position:sticky;bottom:0;background:rgba(247,244,240,.95);backdrop-filter:blur(8px);padding:14px 20px;display:flex;gap:12px;justify-content:flex-end;border-top:1px solid var(--bdr);}
-#btn-save{padding:14px 40px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;}
-#btn-save:disabled{opacity:.6;cursor:not-allowed;}
-#btn-cancel{padding:14px 24px;background:#fff;color:var(--sub);border:1.5px solid var(--bdr);border-radius:10px;font-size:15px;cursor:pointer;}
-
-/* 状態バッジ */
-.status-opts{display:flex;gap:8px;flex-wrap:wrap;}
-.status-opt{flex:1;min-width:80px;padding:10px 4px;border:2px solid var(--bdr);border-radius:8px;background:#fff;color:var(--sub);font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
-.status-opt.on{border-color:var(--pri);background:var(--pri);color:#fff;}
-.status-opt.on.absent{border-color:#c62828;background:#c62828;}
-.status-opt.on.other{border-color:var(--acc);background:var(--acc);}
-
-/* 完了メッセージ */
-#pg-done{display:none;text-align:center;padding:60px 20px;}
-.done-ico{font-size:64px;display:block;margin-bottom:16px;}
-#btn-next{padding:14px 40px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:20px;}
-
-/* レイアウト */
-#layout{display:flex;height:calc(100vh - 54px);}
-#sidebar{width:220px;min-width:180px;background:#fff;border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden;}
-#sidebar-header{padding:12px 14px;border-bottom:1px solid var(--bdr);background:var(--bg);}
-#sidebar-header .date-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
-#sidebar-header input[type=date]{flex:1;padding:6px 8px;border:1.5px solid var(--bdr);border-radius:6px;font-size:12px;}
-#sidebar-header .search-box{width:100%;padding:7px 10px;border:1.5px solid var(--bdr);border-radius:6px;font-size:13px;}
-#user-list{flex:1;overflow-y:auto;padding:6px 0;}
-.user-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid #f5f0ea;font-size:13px;display:flex;flex-direction:column;gap:2px;}
-.user-item:hover{background:#f5f0ea;}
-.user-item.active{background:var(--pri);color:#fff;}
-.user-item .u-name{font-weight:700;}
-.user-item .u-kana{font-size:11px;opacity:.7;}
-.user-item .u-badge{font-size:10px;margin-top:2px;}
-.u-badge.saved{color:var(--grn);font-weight:700;}
-.user-item.active .u-badge.saved{color:#a5d6a7;}
-#content-area{flex:1;overflow-y:auto;padding:20px;}
-
-/* セレクター行削除（サイドバーに統合）*/
-.selector-row{display:none;}
-
-/* カード等はそのまま */
-@media(max-width:700px){
-  #sidebar{width:160px;}
-  .grid2,.grid3{grid-template-columns:1fr;}
-}
-</style>
+<script src="supabase-adapter.js"></script>
 </head>
 <body>
 
@@ -166,108 +65,7 @@ header{background:var(--pri);color:#fff;padding:14px 20px;display:flex;align-ite
     <button id="btn-load" style="display:none"></button>
 
     <!-- 入力フォーム -->
-    <div id="form-area" style="display:none">
-      <div id="user-date-label" style="font-size:16px;font-weight:700;color:var(--pri);margin-bottom:16px"></div>
-
-      <!-- 出欠・送迎設定 -->
-      <div class="card">
-        <div class="card-title">🕐 出欠・送迎設定</div>
-        <div class="field">
-          <label>状態</label>
-          <div class="status-opts">
-            <button class="status-opt on" data-val="出席" onclick="setStatus(this)">出席</button>
-            <button class="status-opt absent" data-val="欠席" onclick="setStatus(this)">欠席</button>
-            <button class="status-opt other" data-val="体調不良" onclick="setStatus(this)">体調不良</button>
-            <button class="status-opt other" data-val="早退" onclick="setStatus(this)">早退</button>
-            <button class="status-opt other" data-val="遅刻" onclick="setStatus(this)">遅刻</button>
-          </div>
-        </div>
-        <div class="grid2">
-          <div class="field">
-            <label>出勤時間</label>
-            <input type="time" id="f-start">
-          </div>
-          <div class="field">
-            <label>退勤時間</label>
-            <input type="time" id="f-end">
-          </div>
-        </div>
-        <div class="grid3">
-          <div class="field">
-            <label>休憩時間</label>
-            <select id="f-break">
-              <option value="0">なし</option>
-              <option value="30">30分</option>
-              <option value="60" selected>60分（標準）</option>
-              <option value="90">90分</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>お弁当</label>
-            <select id="f-bento">
-              <option value="なし">なし</option>
-              <option value="あり">あり</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>送迎</label>
-            <select id="f-transport">
-              <option value="なし">なし</option>
-              <option value="往復">往復</option>
-              <option value="往路">往路のみ</option>
-              <option value="復路">復路のみ</option>
-            </select>
-          </div>
-        </div>
-        <div class="field">
-          <label>出欠備考（欠席理由など）</label>
-          <textarea id="f-att-notes" placeholder="欠席理由や連絡事項を記入..."></textarea>
-        </div>
-      </div>
-
-      <!-- 日報・作業記録 -->
-      <div class="card">
-        <div class="card-title" style="justify-content:space-between">
-          <span>📝 日報・作業記録</span>
-          <span class="work-time-badge" id="work-time-badge">実働: 0.0時間</span>
-        </div>
-        <div class="grid2">
-          <div class="field">
-            <label>作業(AM)</label>
-            <select id="f-work-am"><option value="">-- 選択 --</option></select>
-          </div>
-          <div class="field">
-            <label>作業(PM)</label>
-            <select id="f-work-pm"><option value="">-- 選択 --</option></select>
-          </div>
-        </div>
-        <div class="field">
-          <label>作業内容</label>
-          <div style="display:flex;gap:8px;margin-bottom:6px">
-            <select id="f-template" style="flex:1;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;font-size:13px">
-              <option value="">📋 テンプレートから入力...</option>
-            </select>
-            <button onclick="applyTemplate()" style="padding:8px 14px;background:var(--bg);border:1.5px solid var(--bdr);border-radius:8px;font-size:13px;cursor:pointer">適用</button>
-          </div>
-          <textarea id="f-content" placeholder="本日の作業実績や様子を記入..." style="min-height:120px"></textarea>
-        </div>
-        <div class="field">
-          <label>体調</label>
-          <select id="f-condition">
-            <option value="普通">普通</option>
-            <option value="良好">良好</option>
-            <option value="不良">不良</option>
-            <option value="要観察">要観察</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 保存バー -->
-      <div class="save-bar">
-        <button id="btn-cancel">キャンセル</button>
-        <button id="btn-save">💾 出欠・日報を保存</button>
-      </div>
-    </div>
+    <div id="form-area" style="display:none"></div>
 
     <!-- 完了メッセージ -->
     <div id="pg-done">
@@ -281,10 +79,11 @@ header{background:var(--pri);color:#fff;padding:14px 20px;display:flex;align-ite
   </div><!-- /layout -->
 <script>
 'use strict';
-var SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var ME = null;
 var USERS = [], WORK_TYPES = [], TEMPLATES = [], SETTINGS = {};
 var CURRENT_STATUS = '出席';
+var SAVED_DATES = {};
+var ATTENDANCE_CACHE = {};
 
 // ─── ユーティリティ ─────────────────────
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -300,11 +99,13 @@ function fmtDateJP(s){
 }
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function el(id){ return document.getElementById(id); }
-function show(id){ el(id).style.display='block'; }
-function hide(id){ el(id).style.display='none'; }
+function show(id){ var e=el(id); if(e)e.style.display='block'; }
+function hide(id){ var e=el(id); if(e)e.style.display='none'; }
 
 function calcWorkTime(){
-  var s=el('f-start').value, e=el('f-end').value, b=parseInt(el('f-break').value)||0;
+  var sInput = el('f-start'), eInput = el('f-end'), bInput = el('f-break');
+  if(!sInput || !eInput) return 0;
+  var s=sInput.value, e=eInput.value, b=parseInt(bInput?bInput.value:'60')||0;
   if(!s||!e)return 0;
   var sp=s.split(':'), ep=e.split(':');
   var mins=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1])-b;
@@ -313,7 +114,8 @@ function calcWorkTime(){
 
 function updateWorkTimeBadge(){
   var h=calcWorkTime();
-  el('work-time-badge').textContent='実働: '+h+'時間';
+  var b=el('work-time-badge');
+  if(b) b.textContent='実働: '+h+'時間';
 }
 
 // ─── ログイン ─────────────────────────
@@ -324,10 +126,17 @@ el('btn-login').onclick = async function(){
   if(!id||!pw){err.textContent='IDとパスワードを入力してください';return;}
   btn.disabled=true; btn.textContent='確認中...';
   try{
-    var r=await SB.from('スタッフ').select('*').eq('loginId',id).eq('password',pw).limit(1);
-    if(r.error)throw r.error;
-    if(!r.data||!r.data.length){err.textContent='IDまたはパスワードが違います';return;}
-    ME=r.data[0];
+    var staffList=await gas('getStaff');
+    var found=null;
+    if(staffList && Array.isArray(staffList)){
+      for(var i=0; i<staffList.length; i++){
+        if(String(staffList[i].loginId||'').trim()===id && String(staffList[i].password||'').trim()===pw){
+          found=staffList[i]; break;
+        }
+      }
+    }
+    if(!found){err.textContent='IDまたはパスワードが違います';return;}
+    ME=found;
     try{sessionStorage.setItem('tb_me',JSON.stringify(ME));}catch(e){}
     await boot();
   }catch(e){ err.textContent='エラー: '+(e.message||String(e)); }
@@ -346,19 +155,16 @@ async function boot(){
   el('pg-login').style.display='none';
   hide('pg-main'); show('pg-loading');
   try{
-    // 並行データ取得
     var results=await Promise.all([
-      SB.from('利用者').select('*'),
-      SB.from('作業種別').select('*'),
-      SB.from('日報テンプレート').select('*'),
-      SB.from('設定').select('key,value')
+      gas('getUsers'),
+      gas('getWorkTypes'),
+      gas('getTemplates'),
+      gas('getSettings')
     ]);
-    // 全利用者をそのまま使用（フィルタなし）
-    USERS=results[0].data||[];
-    console.log('[tablet] 利用者数:', USERS.length, USERS.map(function(u){return u.name;}));
-    WORK_TYPES=results[1].data||[];
-    TEMPLATES=results[2].data||[];
-    results[3].data&&results[3].data.forEach(function(r){SETTINGS[r.key]=r.value;});
+    USERS=results[0]||[];
+    WORK_TYPES=results[1]||[];
+    TEMPLATES=results[2]||[];
+    SETTINGS=results[3]||{};
 
     // UI構築
     el('hd-staff').textContent=ME.name||'';
@@ -398,6 +204,7 @@ async function boot(){
 // ─── UI構築 ──────────────────────────
 function buildUserSelect(){
   var sel=el('sel-user');
+  if(!sel)return;
   sel.innerHTML='<option value="">-- 利用者を選択 --</option>';
   USERS.forEach(function(u){
     var opt=document.createElement('option');
@@ -407,18 +214,14 @@ function buildUserSelect(){
   });
 }
 
-// 保存済みキャッシュ（{userId: true}）
-var SAVED_DATES={};
-var ATTENDANCE_CACHE={};
-
 async function fetchAttendanceForDate(date){
   if(!date)return;
   try{
-    var r=await SB.from('出欠').select('*').eq('date',date);
+    var attList=await gas('getAttendanceByDate', date);
     var map={};
-    if(r.data&&Array.isArray(r.data)){
-      r.data.forEach(function(a){
-        if(a&&a.userId) map[String(a.userId).trim()]=a;
+    if(attList && Array.isArray(attList)){
+      attList.forEach(function(a){
+        if(a && a.userId) map[String(a.userId).trim()]=a;
       });
     }
     ATTENDANCE_CACHE[date]=map;
@@ -435,7 +238,7 @@ function isScheduledToday(user, date){
   var uKey=String(user.id||'').trim();
   var att=attMap[uKey];
   if(att && (att.status==='調整休'||att.status==='欠席'||att.status==='体調不良'||att.status==='通院')){
-    return false; // 調整休・欠席等は本日の予定者から絶対除外
+    return false;
   }
   var sd=(user.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
   if(sd.length===0)return false;
@@ -456,19 +259,21 @@ async function renderUserList(){
   var list=USERS.filter(function(u){
     if(u.userStatus==='利用終了')return false;
     if(!kw)return true;
-    return(u.name||'').indexOf(kw)>=0||(u.kana||'').indexOf(kw)>=0;
+    return(u.name||'').indexOf(kw)>=0||(u.kana||'').indexOf(kw)>=0||(u.furigana||'').indexOf(kw)>=0;
   });
 
   var scheduled=list.filter(function(u){return isScheduledToday(u,date);});
   var others=list.filter(function(u){return !isScheduledToday(u,date);});
 
   function makeItem(u){
-    var isActive=u.id===curId;
+    var isActive=String(u.id)===String(curId);
     var isSaved=SAVED_DATES[u.id+'_'+date];
     var att=attMap[String(u.id||'').trim()];
     var badge='';
     if(att && ['欠席','体調不良','通院'].indexOf(att.status)>=0){
       badge='<span class="u-badge" style="color:#c62828;font-weight:700">❌ '+esc(att.status)+'</span>';
+    }else if(att && ['出席','遅刻','早退'].indexOf(att.status)>=0){
+      badge='<span class="u-badge saved">✅ 入力済</span>';
     }else if(isSaved){
       badge='<span class="u-badge saved">✅ 入力済</span>';
     }
@@ -490,13 +295,18 @@ async function renderUserList(){
   el('user-list').innerHTML=html||'<p style="padding:16px;color:var(--sub);font-size:12px">該当者なし</p>';
 }
 
+function resolveWtId(v){
+  if(!v || v==='none' || v==='なし' || v==='作業なし') return 'none';
+  var found=WORK_TYPES.find(function(w){return String(w.id)===String(v) || w.name===v;});
+  return found ? found.id : v;
+}
+
 async function selectUser(userId){
   el('sel-user').value=userId;
   renderUserList();
-  // 自動で読み込む
   var date=el('sel-date').value;
   if(!date){alert('日付を選択してください');return;}
-  var user=USERS.find(function(u){return u.id===userId;});
+  var user=USERS.find(function(u){return String(u.id)===String(userId);});
   if(!user)return;
   hide('pg-empty');
   hide('pg-done');
@@ -504,17 +314,21 @@ async function selectUser(userId){
   el('form-area').innerHTML='<p style="text-align:center;padding:40px;color:var(--sub)">読み込み中...</p>';
 
   try{
-    var attR=await SB.from('出欠').select('*').eq('userId',userId).eq('date',date).limit(1);
-    var repR=await SB.from('日報').select('*').eq('userId',userId).eq('date',date).limit(1);
-    var att=attR.data&&attR.data.length?attR.data[0]:null;
-    var rep=repR.data&&repR.data.length?repR.data[0]:null;
+    var attList=await gas('getAttendanceByDate', date);
+    var repList=await gas('getDailyByDate', date);
+    var att=(attList && Array.isArray(attList)) ? attList.find(function(a){ return String(a.userId)===String(userId); }) : null;
+    var rep=(repList && Array.isArray(repList)) ? repList.find(function(d){ return String(d.userId)===String(userId); }) : null;
 
     el('form-area').innerHTML=buildFormHTML();
 
     // イベント再設定
-    el('f-start').oninput=updateWorkTimeBadge;
-    el('f-end').oninput=updateWorkTimeBadge;
-    el('f-break').onchange=updateWorkTimeBadge;
+    var startInput = el('f-start');
+    var endInput = el('f-end');
+    var breakInput = el('f-break');
+    if(startInput) startInput.oninput=updateWorkTimeBadge;
+    if(endInput) endInput.oninput=updateWorkTimeBadge;
+    if(breakInput) breakInput.onchange=updateWorkTimeBadge;
+
     buildWorkTypeSelect();
     buildTemplateSelect();
 
@@ -524,25 +338,41 @@ async function selectUser(userId){
       b.classList.remove('on');
       if(b.getAttribute('data-val')===CURRENT_STATUS)b.classList.add('on');
     });
-    el('f-start').value=att?att.startTime||'':'';
-    el('f-end').value=att?att.endTime||'':'';
-    el('f-break').value=(att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?String(att.breakMin):'60';
-    el('f-bento').value=att?(att.meal?'あり':'なし'):'なし';
-    el('f-transport').value=att?(att.pickup&&att.dropoff?'往復':att.pickup?'往路':att.dropoff?'復路':'なし'):'なし';
-    el('f-att-notes').value=att?att.notes||'':'';
-    function resolveWtId(v){
-      if(!v || v==='none' || v==='なし' || v==='作業なし') return 'none';
-      var found=WORK_TYPES.find(function(w){return w.id===v || w.name===v;});
-      return found ? found.id : v;
-    }
-    var rawAm=rep?(rep.workAM||rep.workTypeId):att?att.workTypeId:'';
-    var rawPm=rep?(rep.workPM||rep.workTypeIdPm):att?(att.workTypeIdPm||att.workTypeId):'';
+    if(startInput) startInput.value = att ? att.startTime||'' : '';
+    if(endInput) endInput.value = att ? att.endTime||'' : '';
+    if(breakInput) breakInput.value = (att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='') ? String(att.breakMin) : '60';
 
-    el('f-work-am').value=resolveWtId(rawAm);
-    el('f-work-pm').value=resolveWtId(rawPm);
-    el('f-content').value=rep?rep.content||'':'';
-    el('f-condition').value=rep?(rep.condition||rep.mood||'普通'):'普通';
-    el('user-date-label').textContent=esc(user.name)+' — '+fmtDateJP(date);
+    // お弁当
+    var bentoVal = 'なし';
+    if(att){
+      if(att.bento === 'あり' || att.bento === '1' || att.meal === true || att.meal === 'true') bentoVal = 'あり';
+    }
+    if(el('f-bento')) el('f-bento').value = bentoVal;
+
+    // 送迎
+    var transportVal = 'なし';
+    if(att && att.pickup){
+      var pStr = String(att.pickup);
+      if(pStr === '往復' || pStr === 'あり' || (att.pickup && att.dropoff)) transportVal = '往復';
+      else if(pStr.indexOf('往')>=0 || pStr.indexOf('迎')>=0) transportVal = '往路';
+      else if(pStr.indexOf('復')>=0 || pStr.indexOf('送')>=0) transportVal = '復路';
+      else if(pStr === 'true' || att.pickup === true) transportVal = '往復';
+    }
+    if(el('f-transport')) el('f-transport').value = transportVal;
+    if(el('f-att-notes')) el('f-att-notes').value = att ? att.notes||'' : '';
+
+    // 作業種別 AM / PM
+    var rawAm = rep ? (rep.workTypeId || rep.workAM) : (att ? att.workTypeId : '');
+    var rawPm = rep ? (rep.workTypeIdPm || rep.workPM) : (att ? (att.workTypeIdPm || att.workTypeId) : '');
+
+    if(el('f-work-am')) el('f-work-am').value = resolveWtId(rawAm);
+    if(el('f-work-pm')) el('f-work-pm').value = resolveWtId(rawPm);
+
+    if(el('f-content')) el('f-content').value = rep ? rep.content||'' : '';
+    if(el('f-condition')) el('f-condition').value = rep ? (rep.condition || rep.mood || '普通') : '普通';
+
+    var labelEl = el('user-date-label');
+    if(labelEl) labelEl.textContent = esc(user.name) + ' — ' + fmtDateJP(date);
     updateWorkTimeBadge();
   }catch(e){
     el('form-area').innerHTML='<p style="color:#c62828;padding:20px">読み込みエラー: '+esc(e.message||String(e))+'</p>';
@@ -597,12 +427,15 @@ function buildWorkTypeSelect(){
   WORK_TYPES.forEach(function(w){
     opts+='<option value="'+esc(w.id)+'">'+esc(w.name)+'</option>';
   });
-  el('f-work-am').innerHTML=opts;
-  el('f-work-pm').innerHTML=opts;
+  var amEl = el('f-work-am');
+  var pmEl = el('f-work-pm');
+  if(amEl) amEl.innerHTML=opts;
+  if(pmEl) pmEl.innerHTML=opts;
 }
 
 function buildTemplateSelect(){
   var sel=el('f-template');
+  if(!sel)return;
   sel.innerHTML='<option value="">📋 テンプレートから入力...</option>';
   TEMPLATES.forEach(function(t){
     var opt=document.createElement('option');
@@ -630,8 +463,6 @@ function applyTemplate(){
   el('f-template').value='';
 }
 
-// ─── 読み込み（サイドバーから自動実行） ───
-
 // ─── キャンセル ──────────────────────
 function cancelForm(){
   hide('form-area');
@@ -651,65 +482,50 @@ async function saveForm(){
     var transport=el('f-transport').value;
     var selAm=el('f-work-am').value;
     var selPm=el('f-work-pm').value;
-    var wtAmObj=WORK_TYPES.find(function(w){return w.id===selAm;});
-    var wtPmObj=WORK_TYPES.find(function(w){return w.id===selPm;});
     var amTypeId=(selAm&&selAm!=='none')?selAm:null;
     var pmTypeId=(selPm&&selPm!=='none')?selPm:null;
 
     var userObj=USERS.find(function(u){return String(u.id)===String(userId);});
+
     // 出欠データ
     var attData={
-      userId:userId, date:date,
-      status:CURRENT_STATUS,
-      startTime:el('f-start').value,
-      endTime:el('f-end').value,
-      breakMin:(el('f-break')&&el('f-break').value!=='')?parseInt(el('f-break').value):60,
-      workTypeId:amTypeId,
-      workTypeIdPm:pmTypeId,
-      bento:el('f-bento').value==='あり'?'あり':'なし',
-      bentoPaymentMethod:userObj?(userObj.bentoPaymentMethod||'工賃払い'):'工賃払い',
-      meal:el('f-bento').value==='あり',
-      pickup:transport==='往復'||transport==='往路',
-      dropoff:transport==='往復'||transport==='復路',
-      notes:el('f-att-notes').value
+      userId: userId,
+      date: date,
+      status: CURRENT_STATUS,
+      startTime: el('f-start').value || null,
+      endTime: el('f-end').value || null,
+      breakMin: (el('f-break')&&el('f-break').value!=='')?parseInt(el('f-break').value):60,
+      workTypeId: amTypeId,
+      workTypeIdPm: pmTypeId,
+      bento: el('f-bento').value==='あり'?'あり':'なし',
+      bentoPaymentMethod: userObj ? (userObj.bentoPaymentMethod || '工賃払い') : '工賃払い',
+      pickup: transport,
+      notes: el('f-att-notes').value || null
     };
-    // upsert（既存があれば更新、なければ追加）
-    var attEx=await SB.from('出欠').select('id').eq('userId',userId).eq('date',date).limit(1);
-    if(attEx.data&&attEx.data.length){
-      attData.id=attEx.data[0].id;
-      await SB.from('出欠').update(attData).eq('id',attData.id);
-    }else{
-      attData.id='a'+Date.now()+Math.random().toString(36).substr(2,4);
-      await SB.from('出欠').insert(attData);
-    }
 
     // 日報データ
     var repData={
-      userId:userId, date:date,
-      workTypeId:amTypeId,
-      workTypeIdPm:pmTypeId,
-      workAM:selAm==='none'?'なし':(wtAmObj?wtAmObj.name:selAm),
-      workPM:selPm==='none'?'なし':(wtPmObj?wtPmObj.name:selPm),
-      content:el('f-content').value,
-      condition:el('f-condition').value,
-      mood:el('f-condition').value,
-      staffId:ME.id, staffName:ME.name
+      userId: userId,
+      date: date,
+      workTypeId: amTypeId,
+      workTypeIdPm: pmTypeId,
+      content: el('f-content').value || '',
+      condition: el('f-condition').value || '普通',
+      mood: el('f-condition').value || '普通',
+      notes: el('f-content').value || null
     };
-    var repEx=await SB.from('日報').select('id').eq('userId',userId).eq('date',date).limit(1);
-    if(repEx.data&&repEx.data.length){
-      repData.id=repEx.data[0].id;
-      await SB.from('日報').update(repData).eq('id',repData.id);
-    }else{
-      repData.id='d'+Date.now()+Math.random().toString(36).substr(2,4);
-      await SB.from('日報').insert(repData);
-    }
+
+    await Promise.all([
+      gas('upsertAttendance', attData),
+      gas('upsertDailyReport', repData)
+    ]);
 
     // 完了表示
     SAVED_DATES[userId+'_'+date]=true;
     if(!ATTENDANCE_CACHE[date]) ATTENDANCE_CACHE[date]={};
     ATTENDANCE_CACHE[date][String(userId)]=attData;
     await renderUserList();
-    var user=USERS.find(function(u){return u.id===userId;});
+    var user=USERS.find(function(u){return String(u.id)===String(userId);});
     el('done-msg').textContent=(user?user.name:'')+' の日報を保存しました';
     hide('form-area');
     show('pg-done');
@@ -719,7 +535,7 @@ async function saveForm(){
   }finally{
     btn.disabled=false;btn.textContent='💾 出欠・日報を保存';
   }
-};
+}
 
 // ─── 次の利用者 ──────────────────────
 el('btn-next').onclick=function(){
