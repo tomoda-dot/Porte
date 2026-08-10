@@ -435,8 +435,16 @@ async function _calcOptimalRoute(userIds,pattern,targetArriveTime){
     }
   }
   var totalMin=ordered.length*10+15;var drivingMin=ordered.length*8;
-  // 到着目標時刻（着）から逆算して出発時刻（発）を求める
-  var arriveTime=targetArriveTime || (pattern==='morning'?'09:30':'17:00');
+  // 到着目標時刻（着）から逆算して出発時刻（発）を求める（ご利用者様のサービス提供時間を優先）
+  var arriveTime=targetArriveTime;
+  if(!arriveTime){
+    if(ordered.length>0){
+      var u0=ordered[0];
+      arriveTime=pattern==='morning'?(u0.scheduleStart||'09:30'):(u0.scheduleEnd||'17:00');
+    }else{
+      arriveTime=pattern==='morning'?'09:30':'17:00';
+    }
+  }
   var ap=arriveTime.split(':');
   var arrMin=Number(ap[0])*60+Number(ap[1]||0);
   var depMin=Math.max(0, arrMin - totalMin);
