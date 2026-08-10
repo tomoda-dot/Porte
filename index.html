@@ -4421,10 +4421,10 @@ function renderRouteCards(){
         '<span>👥 <b>'+uNames.length+'</b>名</span>'+
         (r.totalMinutes?'<span>⏱ 合計: <b>'+r.totalMinutes+'分</b>（走行'+r.drivingMinutes+'分+乗降'+(uNames.length*5)+'分）</span>':'')+
       '</div>'+
-      // 出発・到着時間
-      (r.departTime||r.arriveTime?'<div style="display:flex;gap:16px;margin-bottom:12px;font-size:12px">'+
-        (r.departTime?'<span style="background:'+(r.pattern==='morning'?'#fff3e0':'#e3f2fd')+';padding:3px 10px;border-radius:6px;font-weight:600">🕐 出発: <b>'+esc(r.departTime)+'</b></span>':'')+
-        (r.arriveTime?'<span style="background:'+(r.pattern==='morning'?'#e8f5e9':'#fff3e0')+';padding:3px 10px;border-radius:6px;font-weight:600">🏢 '+( r.pattern==='morning'?'事業所着':'戻り')+': <b>'+esc(r.arriveTime)+'</b></span>':'')+
+      // 出発・到着時間（着時刻を主軸に表示）
+      (r.departTime||r.arriveTime?'<div style="display:flex;gap:12px;margin-bottom:12px;font-size:12px;align-items:center">'+
+        (r.arriveTime?'<span style="background:'+(r.pattern==='morning'?'#e8f5e9':'#fff3e0')+';color:'+(r.pattern==='morning'?'#2e7d32':'#e65100')+';padding:4px 12px;border-radius:6px;font-weight:700;font-size:13px">🏢 '+(r.pattern==='morning'?'事業所着（着）':'戻り着（着）')+': <b>'+esc(r.arriveTime)+'</b></span>':'')+
+        (r.departTime?'<span style="background:#f5f5f5;color:#555;padding:4px 10px;border-radius:6px;font-weight:600">🕐 出発（発）: <b>'+esc(r.departTime)+'</b></span>':'')+
       '</div>':'')+
 
       // ルート順序
@@ -4452,20 +4452,24 @@ function openNewRoute(){
     '<div class="grid2">'+
       '<div class="field"><label>送迎パターン</label>'+
         '<div style="display:flex;gap:12px;margin-top:4px">'+
-          '<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="nr-pat" value="morning" checked> 🌅 朝</label>'+
-          '<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="nr-pat" value="evening"> 🌆 夕</label>'+
+          '<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="nr-pat" value="morning" checked onchange="document.getElementById(\'nr-arr\').value=\'09:30\'"> 🌅 朝</label>'+
+          '<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="nr-pat" value="evening" onchange="document.getElementById(\'nr-arr\').value=\'17:00\'"> 🌆 夕</label>'+
         '</div></div>'+
+      '<div class="field"><label>到着目標時刻（着） *</label><input type="time" id="nr-arr" value="09:30" style="width:100%"></div>'+
+    '</div>'+
+    '<div class="grid2">'+
       '<div class="field"><label>車両</label><select id="nr-vh" style="width:100%"><option value="">選択してください</option>'+
         S.vehicles.map(function(v){return'<option value="'+v.id+'">'+esc(v.name)+' ('+esc(v.type||'')+' / 定員'+esc(v.capacity||'')+'名)</option>';}).join('')+
       '</select></div>'+
-    '</div>'+
-    '<div class="grid2">'+
       '<div class="field"><label>運転スタッフ</label><select id="nr-st" style="width:100%"><option value="">選択</option>'+
         S.staff.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('')+
       '</select></div>'+
+    '</div>'+
+    '<div class="grid2">'+
       '<div class="field"><label>添乗スタッフ</label><select id="nr-at" style="width:100%"><option value="">なし</option>'+
         S.staff.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('')+
       '</select></div>'+
+      '<div></div>'+
     '</div>'+
 
     '<div class="field"><label>利用者選択 <button class="bg" onclick="nrSelPickup()" style="font-size:10px;padding:2px 8px;margin-left:6px">送迎ありのみ</button><button class="bg" onclick="nrClear()" style="font-size:10px;padding:2px 8px;margin-left:4px">クリア</button></label>'+
@@ -4501,6 +4505,9 @@ async function saveNewRoute(doCalc){
   if(ids.length===0){await cAlert('利用者を選択してください');return;}
 
   var pattern=document.querySelector('input[name="nr-pat"]:checked').value;
+  var targetArr=document.getElementById('nr-arr')?document.getElementById('nr-arr').value:'';
+  if(!targetArr)targetArr=pattern==='morning'?'09:30':'17:00';
+
   var rec={
     date:tDate, pattern:pattern,
     vehicleId:document.getElementById('nr-vh').value,
@@ -4508,24 +4515,33 @@ async function saveNewRoute(doCalc){
     attendant:document.getElementById('nr-at').value,
     userIds:ids.join(','), userNames:names.join(','),
     routeOrder:'', totalMinutes:'', drivingMinutes:'', mapsUrl:'',
+    arriveTime:targetArr, departTime:'',
     notes:document.getElementById('nr-notes').value
   };
 
   if(doCalc&&ids.length<=8){
     try{
-      var r=await gas('calcOptimalRoute',ids,pattern);
+      var r=await gas('calcOptimalRoute',ids,pattern,targetArr);
       rec.routeOrder=r.orderedUsers.map(function(u){return u.name;}).join(',');
       rec.totalMinutes=String(r.totalMinutes);
       rec.drivingMinutes=String(r.drivingMinutes);
-      // GoogleマップURL生成
       rec.mapsUrl=buildMapsUrl(r);
       rec.staticMapUrl=r.staticMapUrl||'';
-      // userIds/Namesも最適化順に並び替え
+      rec.departTime=r.departTime||'';
+      rec.arriveTime=r.arriveTime||targetArr;
       rec.userIds=r.orderedUsers.map(function(u){return u.id;}).join(',');
       rec.userNames=r.orderedUsers.map(function(u){return u.name;}).join(',');
     }catch(e){
       if(!await cConfirm('ルート計算に失敗しました: '+e+'\n\n計算せずに保存しますか？'))return;
     }
+  }else{
+    var totalMin=ids.length*10+15;
+    rec.totalMinutes=String(totalMin);
+    rec.drivingMinutes=String(ids.length*8);
+    var ap=targetArr.split(':');
+    var arrMin=Number(ap[0])*60+Number(ap[1]||0);
+    var depMin=Math.max(0, arrMin - totalMin);
+    rec.departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
   }
 
   try{
@@ -4550,12 +4566,15 @@ async function recalcRoute(idx){
   if(ids.length===0){await cAlert('利用者がいません');return;}
   if(ids.length>8){await cAlert('8名以下に絞ってください');return;}
   try{
-    var result=await gas('calcOptimalRoute',ids,r.pattern||'morning');
+    var targetArr=r.arriveTime || (r.pattern==='morning'?'09:30':'17:00');
+    var result=await gas('calcOptimalRoute',ids,r.pattern||'morning',targetArr);
     r.routeOrder=result.orderedUsers.map(function(u){return u.name;}).join(',');
     r.totalMinutes=String(result.totalMinutes);
     r.drivingMinutes=String(result.drivingMinutes);
     r.mapsUrl=buildMapsUrl(result);
     r.staticMapUrl=result.staticMapUrl||'';
+    r.departTime=result.departTime||'';
+    r.arriveTime=result.arriveTime||targetArr;
     r.userIds=result.orderedUsers.map(function(u){return u.id;}).join(',');
     r.userNames=result.orderedUsers.map(function(u){return u.name;}).join(',');
     await gas('updateRouteRecord',r);
@@ -4573,12 +4592,15 @@ function editRoute(idx){
     '<div class="modal-hd"><h3>ルート編集</h3><button class="modal-close" onclick="closeModal(\'t-modal\')">✕</button></div>'+
     '<div class="grid2">'+
       '<div class="field"><label>送迎パターン</label><div style="display:flex;gap:12px;margin-top:4px">'+
-        '<label style="cursor:pointer"><input type="radio" name="er-pat" value="morning"'+(r.pattern==='morning'?' checked':'')+'> 🌅 朝</label>'+
-        '<label style="cursor:pointer"><input type="radio" name="er-pat" value="evening"'+(r.pattern!=='morning'?' checked':'')+'> 🌆 夕</label></div></div>'+
-      '<div class="field"><label>車両</label><select id="er-vh" style="width:100%"><option value="">選択</option>'+S.vehicles.map(function(v){return'<option value="'+v.id+'"'+(r.vehicleId===v.id?' selected':'')+'>'+esc(v.name)+'</option>';}).join('')+'</select></div></div>'+
+        '<label style="cursor:pointer"><input type="radio" name="er-pat" value="morning"'+(r.pattern==='morning'?' checked':'')+' onchange="document.getElementById(\'er-arr\').value=\'09:30\'"> 🌅 朝</label>'+
+        '<label style="cursor:pointer"><input type="radio" name="er-pat" value="evening"'+(r.pattern!=='morning'?' checked':'')+' onchange="document.getElementById(\'er-arr\').value=\'17:00\'"> 🌆 夕</label></div></div>'+
+      '<div class="field"><label>到着目標時刻（着） *</label><input type="time" id="er-arr" value="'+(r.arriveTime||(r.pattern==='morning'?'09:30':'17:00'))+'" style="width:100%"></div></div>'+
     '<div class="grid2">'+
-      '<div class="field"><label>運転スタッフ</label><select id="er-st" style="width:100%"><option value="">選択</option>'+S.staff.filter(function(s){return _isStaffActive(s)||(r.staffId&&r.staffId===s.id);}).map(function(s){return'<option value="'+s.id+'"'+(r.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
-      '<div class="field"><label>添乗スタッフ</label><select id="er-at" style="width:100%"><option value="">なし</option>'+S.staff.filter(function(s){return _isStaffActive(s)||(r.attendant&&r.attendant===s.id);}).map(function(s){return'<option value="'+s.id+'"'+(r.attendant===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div></div>'+
+      '<div class="field"><label>車両</label><select id="er-vh" style="width:100%"><option value="">選択</option>'+S.vehicles.map(function(v){return'<option value="'+v.id+'"'+(r.vehicleId===v.id?' selected':'')+'>'+esc(v.name)+'</option>';}).join('')+'</select></div>'+
+      '<div class="field"><label>運転スタッフ</label><select id="er-st" style="width:100%"><option value="">選択</option>'+S.staff.filter(function(s){return _isStaffActive(s)||(r.staffId&&r.staffId===s.id);}).map(function(s){return'<option value="'+s.id+'"'+(r.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div></div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>添乗スタッフ</label><select id="er-at" style="width:100%"><option value="">なし</option>'+S.staff.filter(function(s){return _isStaffActive(s)||(r.attendant&&r.attendant===s.id);}).map(function(s){return'<option value="'+s.id+'"'+(r.attendant===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
+      '<div></div></div>'+
     '<div class="field"><label>乗車順（ドラッグで並び替え）</label>'+
       '<div id="er-sortable" style="background:var(--bg);border-radius:8px;padding:6px;min-height:40px">'+
       selIds.map(function(id,i){
@@ -4613,7 +4635,6 @@ function initSortable(containerId){
   });
   container.addEventListener('dragend',function(){
     if(dragEl)dragEl.style.opacity='1';dragEl=null;
-    // 番号を振り直し
     var items=container.querySelectorAll('.er-item');
     items.forEach(function(item,i){item.querySelector('span').textContent=i+1;});
   });
@@ -4625,21 +4646,34 @@ async function saveEditRoute(id,idx){
   var ids=[],names=[];
   items.forEach(function(item){var uid=item.getAttribute('data-id');ids.push(uid);var u=S.users.find(function(x){return x.id===uid;});if(u)names.push(u.name);});
   var r=tRoutes[idx];
-  r.pattern=document.querySelector('input[name="er-pat"]:checked').value;
+  var pattern=document.querySelector('input[name="er-pat"]:checked').value;
+  var targetArr=document.getElementById('er-arr')?document.getElementById('er-arr').value:'';
+  if(!targetArr)targetArr=pattern==='morning'?'09:30':'17:00';
+  r.pattern=pattern;
+  r.arriveTime=targetArr;
   r.vehicleId=document.getElementById('er-vh').value;
   r.staffId=document.getElementById('er-st').value;
   r.attendant=document.getElementById('er-at').value;
   r.userIds=ids.join(',');r.userNames=names.join(',');
   r.routeOrder=names.join(',');
   r.notes=document.getElementById('er-notes').value;
-  // 並び替えた順番でルート再計算
   if(ids.length>0&&ids.length<=8){
     try{
-      var result=await gas('calcFixedOrderRoute',ids,r.pattern);
+      var result=await gas('calcFixedOrderRoute',ids,r.pattern,targetArr);
       r.totalMinutes=String(result.totalMinutes);
       r.drivingMinutes=String(result.drivingMinutes);
       r.mapsUrl=buildMapsUrl(result);
+      r.departTime=result.departTime||'';
+      r.arriveTime=result.arriveTime||targetArr;
     }catch(e){/* ルート計算失敗でも保存は続行 */}
+  }else{
+    var totalMin=ids.length*10+15;
+    r.totalMinutes=String(totalMin);
+    r.drivingMinutes=String(ids.length*8);
+    var ap=targetArr.split(':');
+    var arrMin=Number(ap[0])*60+Number(ap[1]||0);
+    var depMin=Math.max(0, arrMin - totalMin);
+    r.departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
   }
   try{await gas('updateRouteRecord',r);closeModal('t-modal');loadRoutes();}catch(e){await cAlert('保存失敗');}finally{unlockUI();}
 }

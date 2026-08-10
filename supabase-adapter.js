@@ -162,9 +162,20 @@ async function gas(fn){
 
   switch(fn){
     // ── 利用者 ──
-    case 'getUsers': return _getAll('利用者');
-    case 'addUser': a1.id=_genId('u');return _add('利用者',a1);
-    case 'updateUser': return _update('利用者',a1);
+    case 'getUsers':
+      var _uList=await _getAll('利用者');
+      var _uSet=await _getSettings();
+      return _uList.map(function(u){
+        u.bentoPaymentMethod=u.bentoPaymentMethod||_uSet['bentoPay_'+u.id]||'工賃払い';
+        return u;
+      });
+    case 'addUser':
+      a1.id=_genId('u');
+      if(a1.bentoPaymentMethod)await _updateSetting('bentoPay_'+a1.id,a1.bentoPaymentMethod);
+      return _add('利用者',a1);
+    case 'updateUser':
+      if(a1.bentoPaymentMethod)await _updateSetting('bentoPay_'+a1.id,a1.bentoPaymentMethod);
+      return _update('利用者',a1);
     case 'deleteUser': return _del('利用者',a1);
 
     // ── スタッフ ──
@@ -384,8 +395,8 @@ async function gas(fn){
 
     // ── ルート計算（Maps API不要版：概算+Googleマップリンク）──
     case 'calcSmartRoutes': return _calcSmartRoutes(a1,a2,a3);
-    case 'calcOptimalRoute': return _calcOptimalRoute(a1,a2);
-    case 'calcFixedOrderRoute': return _calcFixedOrderRoute(a1,a2);
+    case 'calcOptimalRoute': return _calcOptimalRoute(a1,a2,a3);
+    case 'calcFixedOrderRoute': return _calcFixedOrderRoute(a1,a2,a3);
 
     // ── メール送信（要Edge Function → 後日対応）──
     case 'sendPlanEmail':
@@ -411,7 +422,7 @@ function _buildMapsUrl(facilityAddr,users,pattern){
   return base+parts.join('/');
 }
 
-async function _calcOptimalRoute(userIds,pattern){
+async function _calcOptimalRoute(userIds,pattern,targetArriveTime){
   var allUsers=await _getAll('利用者');var settings=await _getSettings();
   var facilityAddr=settings.facilityAddress||settings.address||'大阪府豊中市小曽根1丁目10-23';
   var ordered=[];
@@ -424,11 +435,18 @@ async function _calcOptimalRoute(userIds,pattern){
     }
   }
   var totalMin=ordered.length*10+15;var drivingMin=ordered.length*8;
-  return{orderedUsers:ordered,totalMinutes:totalMin,drivingMinutes:drivingMin,mapsUrl:_buildMapsUrl(facilityAddr,ordered,pattern)};
+  // 到着目標時刻（着）から逆算して出発時刻（発）を求める
+  var arriveTime=targetArriveTime || (pattern==='morning'?'09:30':'17:00');
+  var ap=arriveTime.split(':');
+  var arrMin=Number(ap[0])*60+Number(ap[1]||0);
+  var depMin=Math.max(0, arrMin - totalMin);
+  var departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
+
+  return{orderedUsers:ordered,totalMinutes:totalMin,drivingMinutes:drivingMin,mapsUrl:_buildMapsUrl(facilityAddr,ordered,pattern),departTime:departTime,arriveTime:arriveTime};
 }
 
-async function _calcFixedOrderRoute(userIds,pattern){
-  return _calcOptimalRoute(userIds,pattern);
+async function _calcFixedOrderRoute(userIds,pattern,targetArriveTime){
+  return _calcOptimalRoute(userIds,pattern,targetArriveTime);
 }
 
 async function _calcSmartRoutes(userIds,pattern,date){
@@ -441,8 +459,8 @@ async function _calcSmartRoutes(userIds,pattern,date){
     if(!u)continue;
     var addr=(u.prefecture||'')+(u.city||'')+(u.address||'');if(!addr||addr.length<3)continue;
     var rec=null;for(var ai=0;ai<att.length;ai++){if(String(att[ai].userId)===String(u.id)){rec=att[ai];break;}}
-    var sTime=(rec&&rec.startTime)?rec.startTime:(u.scheduleStart||'10:00');
-    var eTime=(rec&&rec.endTime)?rec.endTime:(u.scheduleEnd||'16:00');
+    var sTime=(rec&&rec.startTime)?rec.startTime:(u.scheduleStart||'09:30');
+    var eTime=(rec&&rec.endTime)?rec.endTime:(u.scheduleEnd||'16:30');
     var timeKey=pattern==='morning'?sTime:eTime;
     var tp=timeKey.split(':');var timeMin=Number(tp[0])*60+Number(tp[1]||0);
     candidates.push({id:u.id,name:u.name,address:addr,startTime:sTime,endTime:eTime,timeKey:timeKey,timeMin:timeMin});
@@ -453,26 +471,19 @@ async function _calcSmartRoutes(userIds,pattern,date){
   var trips=[];var cur=[candidates[0]];
   for(var ci=1;ci<candidates.length;ci++){
     var diff=candidates[ci].timeMin-candidates[ci-1].timeMin;
-    // 前の人との時間差が30分以内なら同じ便
     if(diff<=30){cur.push(candidates[ci]);}
     else{trips.push(cur);cur=[candidates[ci]];}
   }
   trips.push(cur);
-  // 各トリップの結果
+  // 各トリップの結果（常に「着時刻」を基準に出発時刻を逆算）
   var results=[];
   for(var ti=0;ti<trips.length;ti++){
     var trip=trips[ti];var routeMin=trip.length*10+15;
     var targetMin=trip[0].timeMin;
-    var departTime,arriveTime;
-    if(pattern==='morning'){
-      var depMin=targetMin-routeMin;if(depMin<0)depMin=0;
-      departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
-      arriveTime=trip[0].timeKey;
-    }else{
-      departTime=trip[0].timeKey;
-      var arrMin=targetMin+routeMin;
-      arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
-    }
+    var arriveTime=trip[0].timeKey;
+    var depMin=targetMin-routeMin;if(depMin<0)depMin=0;
+    var departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
+
     results.push({tripIndex:ti+1,users:trip,
       userIds:trip.map(function(t){return t.id;}),
       userNames:trip.map(function(t){return t.name;}),
@@ -486,12 +497,16 @@ async function _calcSmartRoutes(userIds,pattern,date){
   return{trips:results,pattern:pattern,facilityAddress:facilityAddr};
 }
 // ═══ 帳票計算ヘルパー ═══
-function _calcNetH(rec){
-  if(!rec.startTime||!rec.endTime)return 0;
-  var sp=String(rec.startTime).split(':'),ep=String(rec.endTime).split(':');
-  var rawMin=Math.max(0,Number(ep[0])*60+Number(ep[1])-Number(sp[0])*60-Number(sp[1])-(Number(rec.breakMin)||0));
-  var totalMin=Math.floor(rawMin/30)*30;
-  return totalMin/60;
+function _calcNetH(rec,user){
+  if(rec.actualHours!==undefined && rec.actualHours!==null && rec.actualHours!==''){
+    return Math.max(0, Number(rec.actualHours));
+  }
+  function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
+  var sSch=(user&&user.scheduleStart)?String(user.scheduleStart):(rec.scheduleStart?String(rec.scheduleStart):'10:00');
+  var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):(rec.scheduleEnd?String(rec.scheduleEnd):'16:00');
+  var brk=(rec.breakMin!==undefined&&rec.breakMin!==null&&rec.breakMin!=='')?Number(rec.breakMin):60;
+  var rawMin=Math.max(0, toMin(eSch)-toMin(sSch)-brk);
+  return rawMin/60;
 }
 function _findWt(wts,amId,pmId){
   var wtAm=null,wtPm=null;
@@ -501,8 +516,8 @@ function _findWt(wts,amId,pmId){
   else if(wtAm&&!wtPm)wtPm=wtAm;
   return{am:wtAm,pm:wtPm};
 }
-function _calcRecWage(rec,wts){
-  var netH=_calcNetH(rec);if(netH<=0)return{netH:0,wage:0};
+function _calcRecWage(rec,wts,user){
+  var netH=_calcNetH(rec,user);if(netH<=0)return{netH:0,wage:0};
   var wt=_findWt(wts,rec.workTypeId||'',(rec.workTypeIdPm&&String(rec.workTypeIdPm)!=='')?rec.workTypeIdPm:rec.workTypeId||'');
   if(!wt.am||String(wt.am.id)===String(wt.pm.id)){return{netH:netH,wage:netH*(wt.am?Number(wt.am.rate):0)};}
   var half=netH/2;return{netH:netH,wage:half*(Number(wt.am.rate)||0)+half*(Number(wt.pm.rate)||0)};
@@ -537,12 +552,11 @@ async function _calcAttendanceList(ym){
     if(recs.length===0)return;
     var tServiceMin=0,tWM=0,tBM=0,tW=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
     recs.forEach(function(rec){
-      if(!rec.startTime||!rec.endTime)return;
-      var netH=_calcNetH(rec);
+      var netH=_calcNetH(rec,user);
       var sMin=Math.round(netH*60);
-      var sp=String(rec.startTime).split(':'),ep=String(rec.endTime).split(':');
+      var sp=String(rec.startTime||'10:00').split(':'),ep=String(rec.endTime||'16:00').split(':');
       var wm=Number(ep[0])*60+Number(ep[1])-Number(sp[0])*60-Number(sp[1]);var brk=Number(rec.breakMin)||0;
-      tServiceMin+=sMin;tWM+=wm;tBM+=brk;tW+=_calcRecWage(rec,wts).wage;
+      tServiceMin+=sMin;tWM+=wm;tBM+=brk;tW+=_calcRecWage(rec,wts,user).wage;
       if(_isBento(rec)){
         bc++;
         var pm=rec.bentoPaymentMethod||user.bentoPaymentMethod||'工賃払い';
@@ -577,7 +591,7 @@ async function _calcWageDetailPerUser(ym){
     if(recs.length===0)return;
     var byWt={},bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
     recs.forEach(function(rec){
-      var netH=_calcNetH(rec);if(netH<=0)return;
+      var netH=_calcNetH(rec,user);if(netH<=0)return;
       var wt=_findWt(wts,rec.workTypeId||'',(rec.workTypeIdPm&&String(rec.workTypeIdPm)!=='')?rec.workTypeIdPm:rec.workTypeId||'');
       if(!wt.am||String(wt.am.id)===String(wt.pm.id)){
         var nm=wt.am?wt.am.name:'未設定';var rt=wt.am?Number(wt.am.rate):0;
@@ -641,7 +655,7 @@ async function _calcWorkTypeSummary(ym){
     var byWt={},uWD=new Array(dim).fill(0),uHD=new Array(dim).fill(0),uWT=0,uHT=0,uWC=0;
     recs.forEach(function(rec){
       var day=Number(String(rec.date).split('-')[2]);if(day<1||day>dim)return;
-      var netH=_calcNetH(rec);if(netH<=0)return;
+      var netH=_calcNetH(rec,user);if(netH<=0)return;
       var wt=_findWt(wts,rec.workTypeId||'',(rec.workTypeIdPm&&String(rec.workTypeIdPm)!=='')?rec.workTypeIdPm:rec.workTypeId||'');
       if(!wt.am||String(wt.am.id)===String(wt.pm.id)){
         var nm=wt.am?wt.am.name:'未設定';var rt=wt.am?Number(wt.am.rate):0;
@@ -653,7 +667,7 @@ async function _calcWorkTypeSummary(ym){
           byWt[n].wageByDay[day-1]+=hh*r;byWt[n].hoursByDay[day-1]+=hh;byWt[n].wageTotal+=hh*r;byWt[n].hoursTotal+=hh;byWt[n].count++;
         });
       }
-      var wage=_calcRecWage(rec,wts).wage;
+      var wage=_calcRecWage(rec,wts,user).wage;
       uWD[day-1]+=wage;uHD[day-1]+=netH;uWT+=wage;uHT+=netH;uWC++;
       gWD[day-1]+=wage;gHD[day-1]+=netH;gWT+=wage;gHT+=netH;gWC++;
     });
@@ -728,7 +742,7 @@ async function _calcAnnualWageDetail(fiscalYear){
       var att=attByMonth[ym]||[];
       var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
       var days=recs.length,hours=0,wage=0;
-      recs.forEach(function(rec){var cw=_calcRecWage(rec,wts);hours+=cw.netH;wage+=cw.wage;});
+      recs.forEach(function(rec){var cw=_calcRecWage(rec,wts,user);hours+=cw.netH;wage+=cw.wage;});
       monthData.push({ym:ym,days:days,hours:Math.round(hours*100)/100,wage:Math.round(wage)});
       yearDays+=days;yearHours+=hours;yearWage+=wage;
     });
