@@ -5277,12 +5277,23 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
   }else if(eT==='monthly'){
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     showLoading('e-c','月次明細を集計中...');
-    var attRes=await Promise.all([cachedGas('getAttendance',eM),cachedGas('getClosedDays',eM)]);var att=attRes[0],closedDays=attRes[1]||[];var d=S.users.map(function(u){var r=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});var h=0,w=0,bc=0;r.forEach(function(a){var cw=calcWage(a,u);h+=cw.h;w+=cw.wage;if(a.bento&&String(a.bento)!=='0'&&String(a.bento)!=='false'&&String(a.bento)!==''&&String(a.bento)!=='なし')bc++;});var kk=checkKaikin(u,att,eM,closedDays);var bonus=kk.kaikin?KAIKIN_BONUS:0;var bd=bc*bentoPrice;return{n:u.name,d:r.length,h:h,w:w,kk:kk.kaikin,bonus:bonus,bc:bc,bd:bd,total:w+bonus-bd};}).filter(function(x){return x.d>0;});
+    var attRes=await Promise.all([cachedGas('getAttendance',eM),cachedGas('getClosedDays',eM)]);var att=attRes[0],closedDays=attRes[1]||[];
+    var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
+    var d=S.users.map(function(u){
+      var r=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
+      var h=0,w=0,bc=0;
+      r.forEach(function(a){var cw=calcWage(a,u);h+=cw.h;w+=cw.wage;if(a.bento&&String(a.bento)!=='0'&&String(a.bento)!=='false'&&String(a.bento)!==''&&String(a.bento)!=='なし')bc++;});
+      var kk=checkKaikin(u,att,eM,closedDays);
+      var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
+      var bonus=alResult.total;
+      var bd=bc*bentoPrice;
+      return{n:u.name,d:r.length,h:h,w:w,kk:kk.kaikin,bonus:bonus,bc:bc,bd:bd,total:w+bonus-bd};
+    }).filter(function(x){return x.d>0;});
     var grandWage=d.reduce(function(s,x){return s+Math.round(x.w);},0);
     var grandBonus=d.reduce(function(s,x){return s+x.bonus;},0);
     var grandBento=d.reduce(function(s,x){return s+x.bd;},0);
     var grandTotal=d.reduce(function(s,x){return s+Math.round(x.total);},0);
-    document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">'+fmtMonth(eM)+' 工賃明細書</span></div><p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'　　皆勤手当: ¥'+KAIKIN_BONUS.toLocaleString()+'/月　弁当代: ¥'+bentoPrice.toLocaleString()+'/食</p>'+
+    document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">'+fmtMonth(eM)+' 工賃明細書</span></div><p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'　　手当設定準拠　　弁当代: ¥'+bentoPrice.toLocaleString()+'/食</p>'+
       '<table><thead><tr><th>No.</th><th>氏名</th><th>日数</th><th>時間</th><th style="text-align:right">工賃</th><th style="text-align:center">皆勤</th><th style="text-align:right">手当</th><th style="text-align:right">弁当代</th><th style="text-align:right">合計</th></tr></thead><tbody>'+
       d.map(function(x,i){return'<tr><td>'+(i+1)+'</td><td>'+esc(x.n)+'</td><td>'+x.d+'日</td><td>'+x.h.toFixed(1)+'h</td><td style="text-align:right">¥'+Math.round(x.w).toLocaleString()+'</td><td style="text-align:center">'+(x.kk?'🏆':'−')+'</td><td style="text-align:right">'+(x.bonus>0?'¥'+x.bonus.toLocaleString():'−')+'</td><td style="text-align:right;color:#c00">'+(x.bd>0?'-¥'+x.bd.toLocaleString():'−')+'</td><td style="text-align:right;font-weight:700">¥'+Math.round(x.total).toLocaleString()+'</td></tr>';}).join('')+
       '</tbody>'+(d.length>0?'<tfoot><tr style="font-weight:700;background:var(--bg)"><td colspan="4">合計</td><td style="text-align:right">¥'+grandWage.toLocaleString()+'</td><td></td><td style="text-align:right">¥'+grandBonus.toLocaleString()+'</td><td style="text-align:right;color:#c00">'+(grandBento>0?'-¥'+grandBento.toLocaleString():'−')+'</td><td style="text-align:right">¥'+grandTotal.toLocaleString()+'</td></tr></tfoot>':'')+'</table>';
