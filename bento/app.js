@@ -308,54 +308,52 @@ async function syncFromSupabase() {
   try {
     const SB = supabase.createClient(url, key);
 
-    // 1. 商品マスター & 在庫データ同期
-    const masterRes = await SB.from('bento_master').select('*');
-    if (masterRes.data && masterRes.data.length > 0) {
-      bentoMaster = masterRes.data.map(item => ({
-        id: item.id,
-        name: item.name,
-        category: item.category,
-        icon: item.icon,
-        stock: item.stock,
-        desc: item.description || item.desc || '',
-        lots: item.lots || []
-      }));
-      bentoMaster.forEach(b => ensureBentoLots(b));
-      localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
-    }
-
-    // 2. 本日の5品 メニューデータ同期
-    const todayRes = await SB.from('bento_todays_menu').select('*').eq('id', 'today').single();
-    if (todayRes.data && Array.isArray(todayRes.data.todays_ids) && todayRes.data.todays_ids.length >= 5) {
-      todaysMenuIds = todayRes.data.todays_ids;
-      localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
-    } else if (!todaysMenuIds || todaysMenuIds.length < 5) {
-      todaysMenuIds = pickBalancedTodaysMenu(true);
-      saveTodaysMenu();
-    }
-
-    // 3. 注文履歴 & 各利用者の選択お弁当同期
-    const ordersRes = await SB.from('bento_orders').select('*').order('created_at', { ascending: false }).limit(100);
-    if (ordersRes.data) {
-      orderHistory = ordersRes.data.map(o => ({
-        id: o.id,
-        date: o.order_date,
-        userName: o.user_name,
-        bentoId: o.bento_id,
-        bentoName: o.bento_name,
-        category: o.category
-      }));
-      localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
-
-      // 利用者が選んだお弁当の選択状態を全端末で同期
-      if (porteUsers && porteUsers.length > 0) {
-        porteUsers.forEach(u => {
-          const userLatestOrder = ordersRes.data.find(o => o.user_name === u.name);
-          if (userLatestOrder) {
-            u.selectedBentoId = userLatestOrder.bento_id;
-          }
-        });
-        localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+    // 設定テーブルから商品マスター＆入荷ロットデータを一括読み込み（全端末共有）
+    const settingsRes = await SB.from('設定').select('*').in('key', ['bento_master', 'bento_todays_menu', 'bento_order_history']);
+    if (settingsRes.data && settingsRes.data.length > 0) {
+      settingsRes.data.forEach(item => {
+        if (item.key === 'bento_master' && item.value) {
+          try {
+            const parsed = JSON.parse(item.value);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              bentoMaster = parsed;
+              bentoMaster.forEach(b => ensureBentoLots(b));
+              localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
+            }
+          } catch(e) {}
+        } else if (item.key === 'bento_todays_menu' && item.value) {
+          try {
+            const parsed = JSON.parse(item.value);
+            if (Array.isArray(parsed) && parsed.length >= 5) {
+              todaysMenuIds = parsed;
+              localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
+            }
+          } catch(e) {}
+        } else if (item.key === 'bento_order_history' && item.value) {
+          try {
+            const parsed = JSON.parse(item.value);
+            if (Array.isArray(parsed)) {
+              orderHistory = parsed;
+              localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
+            }
+          } catch(e) {}
+        }
+      });
+    } else {
+      // フォールバック: カスタムテーブルから読み込み
+      const masterRes = await SB.from('bento_master').select('*');
+      if (masterRes.data && masterRes.data.length > 0) {
+        bentoMaster = masterRes.data.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          icon: item.icon,
+          stock: item.stock,
+          desc: item.description || item.desc || '',
+          lots: item.lots || []
+        }));
+        bentoMaster.forEach(b => ensureBentoLots(b));
+        localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
       }
     }
 
@@ -371,6 +369,12 @@ async function saveMasterToSupabase() {
   if (!url || !key || typeof supabase === 'undefined') return;
   try {
     const SB = supabase.createClient(url, key);
+    // 確実に他端末と共有できるよう「設定」テーブルへ保存
+    await SB.from('設定').upsert({
+      key: 'bento_master',
+      value: JSON.stringify(bentoMaster)
+    });
+
     const rows = bentoMaster.map(b => ({
       id: b.id,
       name: b.name,
@@ -391,6 +395,11 @@ async function saveTodaysMenuToSupabase() {
   if (!url || !key || typeof supabase === 'undefined') return;
   try {
     const SB = supabase.createClient(url, key);
+    await SB.from('設定').upsert({
+      key: 'bento_todays_menu',
+      value: JSON.stringify(todaysMenuIds)
+    });
+
     await SB.from('bento_todays_menu').upsert({
       id: 'today',
       todays_ids: todaysMenuIds,
@@ -405,6 +414,11 @@ async function saveOrderHistoryToSupabase() {
   if (!url || !key || typeof supabase === 'undefined') return;
   try {
     const SB = supabase.createClient(url, key);
+    await SB.from('設定').upsert({
+      key: 'bento_order_history',
+      value: JSON.stringify(orderHistory)
+    });
+
     if (orderHistory.length > 0) {
       const top = orderHistory[0];
       await SB.from('bento_orders').upsert({
