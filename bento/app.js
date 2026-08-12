@@ -167,12 +167,20 @@ function deductBentoStockFIFO(bento, count = 1) {
 
 function addBentoStockLot(bento, qty, expDate, type = 'ARRIVED') {
   ensureBentoLots(bento);
-  bento.lots.push({
-    id: 'lot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-    type: type,
-    qty: parseInt(qty, 10) || 0,
-    expDate: expDate
-  });
+  const addQty = parseInt(qty, 10) || 0;
+  if (addQty <= 0) return;
+
+  const existingLot = (bento.lots || []).find(l => l.type === type && l.expDate === expDate);
+  if (existingLot) {
+    existingLot.qty += addQty;
+  } else {
+    bento.lots.push({
+      id: 'lot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      type: type,
+      qty: addQty,
+      expDate: expDate
+    });
+  }
   bento.lots.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
   recalculateBentoTotalStock(bento);
 }
@@ -971,13 +979,6 @@ window.assignUserBento = function(userIndex, newBentoId) {
 
   if (oldBentoId === newBentoId) return;
 
-  if (oldBentoId) {
-    const oldBento = bentoMaster.find(b => b.id === oldBentoId);
-    if (oldBento) {
-      addBentoStockLot(oldBento, 1, getOffsetDateStr(7), 'STOCK');
-    }
-  }
-
   if (newBentoId) {
     const newBento = bentoMaster.find(b => b.id === newBentoId);
     if (newBento) {
@@ -988,7 +989,6 @@ window.assignUserBento = function(userIndex, newBentoId) {
         return;
       }
 
-      deductBentoStockFIFO(newBento, 1);
       user.wantsBento = true;
 
       if (!todaysMenuIds.includes(newBento.id)) {
@@ -2013,6 +2013,74 @@ window.savePickFiveSelection = function() {
     });
   }
 
+function copyCateringOrderTally() {
+  const tally = {};
+  porteUsers.forEach(u => {
+    if (u.selectedBentoId) {
+      const b = bentoMaster.find(item => item.id === u.selectedBentoId);
+      const name = b ? b.name : '不明なお弁当';
+      tally[name] = (tally[name] || 0) + 1;
+    }
+  });
+
+  const keys = Object.keys(tally);
+  if (keys.length === 0) {
+    showToast('コピーする発注内容がありません', 'info');
+    return;
+  }
+
+  let text = `【本日(${getTodayKey()})のお弁当発注集計】\n`;
+  let total = 0;
+  keys.forEach(k => {
+    text += `・${k}: ${tally[k]}食\n`;
+    total += tally[k];
+  });
+  text += `合計: ${total}食`;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('📋 発注リストをクリップボードにコピーしました！', 'success');
+    }).catch(() => {
+      showToast('コピーに失敗しました', 'warning');
+    });
+  } else {
+    showToast(text, 'info');
+  }
+}
+
+function exportHistoryCsv() {
+  if (!orderHistory || orderHistory.length === 0) {
+    showToast('出力する注文履歴データがありません', 'info');
+    return;
+  }
+  let csv = '日時,利用者名,注文お弁当,カテゴリ\n';
+  orderHistory.forEach(ord => {
+    csv += `"${ord.date}","${ord.userName}","${ord.bentoName}","${ord.category}"\n`;
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bento_orders_${getTodayKey()}.csv`;
+  a.click();
+  showToast('📥 注文履歴CSVを出力しました', 'success');
+}
+
+function handlePorteCsvUpload(e) {
+  if (e.target.files && e.target.files.length > 0) {
+    parsePorteCsvFile(e.target.files[0]);
+  }
+}
+
+function parsePorteCsvFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    showToast('CSVファイルを読み込みました', 'success');
+  };
+  reader.readAsText(file);
+}
+
   const copySummaryBtn = document.getElementById('copyOrderSummaryBtn');
   if (copySummaryBtn) copySummaryBtn.addEventListener('click', copyCateringOrderTally);
 
@@ -2092,10 +2160,27 @@ window.savePickFiveSelection = function() {
       const item = bentoMaster.find(b => b.id === bentoId);
       if (item) {
         addBentoStockLot(item, qty, expDate, 'ARRIVED');
+        
+        // 入荷によって在庫が復活した場合、本日の5品に未登録であれば自動追加・復元
+        if (!todaysMenuIds.includes(item.id)) {
+          if (todaysMenuIds.length < 5) {
+            todaysMenuIds.push(item.id);
+          } else {
+            const zeroStockIdx = todaysMenuIds.findIndex(id => {
+              const b = bentoMaster.find(x => x.id === id);
+              return !b || b.stock <= 0;
+            });
+            if (zeroStockIdx >= 0) {
+              todaysMenuIds[zeroStockIdx] = item.id;
+            }
+          }
+          saveTodaysMenu();
+        }
+
         saveMaster();
         renderAll();
         closeAddLotModal();
-        showToast(`🚚 『${item.name}』に ${expDate} 期限 ${qty}食 の新規入荷分を追加しました！`, 'success');
+        showToast(`🚚 『${item.name}』に ${expDate} 期限 ${qty}食 の新規入荷分を追加・保存しました！`, 'success');
       }
     });
   }
