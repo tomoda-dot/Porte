@@ -4733,9 +4733,18 @@ async function saveNewRoute(doCalc){
 
 function buildMapsUrl(r){
   var base='https://www.google.com/maps/dir/';
-  var parts=[encodeURIComponent(r.facilityAddress)];
-  r.orderedUsers.forEach(function(u){parts.push(encodeURIComponent(u.address));});
-  parts.push(encodeURIComponent(r.facilityAddress));
+  var fac = (r && r.facilityAddress && String(r.facilityAddress).trim()!=='undefined') ? r.facilityAddress : ((S.settings && (S.settings.facilityAddress || S.settings.address)) || '大阪府豊中市小曽根1丁目10-23');
+  var parts=[encodeURIComponent(fac)];
+  var users = (r && r.orderedUsers) || [];
+  if(users.length === 0 && r && r.userIds) {
+    var ids = (r.userIds||'').split(',').filter(Boolean);
+    users = ids.map(function(id){ return S.users.find(function(u){ return u.id===id; }) || {}; });
+  }
+  users.forEach(function(u){
+    var a = u.address || ((u.prefecture||'')+(u.city||'')+(u.address||''));
+    if(a && String(a).trim()!=='undefined') parts.push(encodeURIComponent(a));
+  });
+  parts.push(encodeURIComponent(fac));
   return base+parts.join('/');
 }
 
