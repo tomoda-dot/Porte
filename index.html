@@ -4447,6 +4447,13 @@ async function bulkPresent(){
   var recs=sch.map(function(u){return{userId:u.id,date:attDate,status:'出席',startTime:u.scheduleStart||'10:00',endTime:u.scheduleEnd||'16:00',workTypeId:wtId,workTypeIdPm:wtId,breakMin:60,notes:''};});
   if(!lockUI())return;try{await gas('bulkAddAttendance',recs);S.dashboard=null;clearCache('getAttendance');clearCache('getAttendanceByDate');loadAtt();}catch(e){await cAlert('失敗');}
 }
+
+function calcUserStopSubtext(r, index, totalStops, u) {
+  var sStart = u ? (u.scheduleStart || '10:00') : '10:00';
+  var sEnd = u ? (u.scheduleEnd || '16:00') : '16:00';
+  return 'サービス提供時間 ' + sStart + '〜' + sEnd;
+}
+
 // ═══ 送迎管理（日別ルート管理） ═══
 var tDate=today(),tRoutes=[],tSubTab='daily';
 
@@ -4516,27 +4523,25 @@ function renderRouteCards(){
         '<div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--pri);color:#fff;border-radius:12px;font-size:11px;font-weight:600">🏢 事業所</div>'+
         ((r.routeOrder||'').split(',').filter(function(x){return x;}).map(function(name,i){
           var u = S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
-          var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
-          var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
-          var timeStr = '到着 ' + (r.pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
+          var totalStops = (r.routeOrder||r.userNames||'').split(',').filter(function(x){return x;}).length;
+          var timeStr = calcUserStopSubtext(r, i, totalStops, u);
           return' <span style="color:var(--sub)">→</span> <div style="display:inline-flex;flex-direction:column;align-items:flex-start;padding:4px 10px;background:#fff;border:1.5px solid var(--bdr);border-radius:10px;font-size:11px;vertical-align:middle">'+
             '<div style="display:flex;align-items:center;gap:4px">'+
               '<span style="background:var(--acc);color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+(i+1)+'</span> '+
               '<span style="font-weight:600;color:var(--txt)">'+esc(name)+'</span>'+
             '</div>'+
-            '<div style="font-size:10px;color:var(--sub);margin-top:2px;padding-left:22px;white-space:nowrap">'+esc(timeStr)+'</div>'+
+            (timeStr ? '<div style="font-size:10px;color:var(--sub);margin-top:2px;padding-left:22px;white-space:nowrap">'+esc(timeStr)+'</div>' : '')+
           '</div>';
         }).join('')||uNames.map(function(name,i){
           var u = S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
-          var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
-          var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
-          var timeStr = '到着 ' + (r.pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
+          var totalStops = uNames.length;
+          var timeStr = calcUserStopSubtext(r, i, totalStops, u);
           return' <span style="color:var(--sub)">→</span> <div style="display:inline-flex;flex-direction:column;align-items:flex-start;padding:4px 10px;background:#fff;border:1.5px solid var(--bdr);border-radius:10px;font-size:11px;vertical-align:middle">'+
             '<div style="display:flex;align-items:center;gap:4px">'+
               '<span style="background:var(--acc);color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+(i+1)+'</span> '+
               '<span style="font-weight:600;color:var(--txt)">'+esc(name)+'</span>'+
             '</div>'+
-            '<div style="font-size:10px;color:var(--sub);margin-top:2px;padding-left:22px;white-space:nowrap">'+esc(timeStr)+'</div>'+
+            (timeStr ? '<div style="font-size:10px;color:var(--sub);margin-top:2px;padding-left:22px;white-space:nowrap">'+esc(timeStr)+'</div>' : '')+
           '</div>';
         }).join(''))+
         ' <span style="color:var(--sub)">→</span> <div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--pri);color:#fff;border-radius:12px;font-size:11px;font-weight:600">🏢 事業所</div>'+
@@ -4854,10 +4859,8 @@ function printSingleRoute(idx){
   h+='<div class="route-visual">🏢 事業所';
   names.forEach(function(name,i){
     var u=S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
-    var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
-    var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
-    var timeStr = '到着 ' + (r.pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
-    h+=' → <b>('+(i+1)+') '+esc(name)+' <span style="font-size:11px;font-weight:normal;color:#555">['+esc(timeStr)+']</span></b>';
+    var timeStr = calcUserStopSubtext(r, i, names.length, u);
+    h+=' → <b>('+(i+1)+') '+esc(name)+(timeStr?' <span style="font-size:11px;font-weight:normal;color:#555">['+esc(timeStr)+']</span>':'')+'</b>';
   });
   h+=' → 🏢 事業所</div>';
 
@@ -4868,10 +4871,8 @@ function printSingleRoute(idx){
     var u=S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
     var addr=u?((u.prefecture||'')+(u.city||'')+(u.address||'')):'';
     var phone=u?(u.contact||''):'';
-    var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
-    var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
-    var timeStr = '到着 ' + (r.pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
-    h+='<tr><td style="text-align:center;font-weight:700;font-size:16px">'+(i+1)+'</td><td style="font-weight:700;font-size:16px">'+esc(name)+'<div style="font-size:11px;color:#555;font-weight:normal;margin-top:2px">'+esc(timeStr)+'</div></td><td style="font-size:13px">'+esc(addr)+'</td><td style="font-size:14px;letter-spacing:1px;white-space:nowrap">'+esc(phone)+'</td><td class="check-col">☐</td><td class="check-col">☐</td><td></td></tr>';
+    var timeStr = calcUserStopSubtext(r, i, names.length, u);
+    h+='<tr><td style="text-align:center;font-weight:700;font-size:16px">'+(i+1)+'</td><td style="font-weight:700;font-size:16px">'+esc(name)+(timeStr?'<div style="font-size:11px;color:#555;font-weight:normal;margin-top:2px">'+esc(timeStr)+'</div>':'')+'</td><td style="font-size:13px">'+esc(addr)+'</td><td style="font-size:14px;letter-spacing:1px;white-space:nowrap">'+esc(phone)+'</td><td class="check-col">☐</td><td class="check-col">☐</td><td></td></tr>';
   });
   h+='</tbody></table>';
   if(r.notes)h+='<div style="margin-top:6px;font-size:11px;color:#666">備考: '+esc(r.notes)+'</div>';
@@ -4958,10 +4959,8 @@ async function printRoutesByPattern(pattern){
     printHtml+='<div class="route-visual">🏢 事業所';
     names.forEach(function(name,i){
       var u=S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
-      var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
-      var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
-      var timeStr = '到着 ' + (pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
-      printHtml+=' → <b>('+(i+1)+') '+esc(name)+' <span style="font-size:10px;font-weight:normal;color:#555">['+esc(timeStr)+']</span></b>';
+      var timeStr = calcUserStopSubtext(r, i, names.length, u);
+      printHtml+=' → <b>('+(i+1)+') '+esc(name)+(timeStr?' <span style="font-size:10px;font-weight:normal;color:#555">['+esc(timeStr)+']</span>':'')+'</b>';
     });
     printHtml+=' → 🏢 事業所</div>';
 
@@ -4979,10 +4978,8 @@ async function printRoutesByPattern(pattern){
       var u=S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
       var addr=u?((u.prefecture||'')+(u.city||'')+(u.address||'')):'';
       var phone=u?(u.contact||''):'';
-      var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
-      var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
-      var timeStr = '到着 ' + (pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
-      printHtml+='<tr><td style="text-align:center;font-weight:700">'+(i+1)+'</td><td style="font-weight:700">'+esc(name)+'<div style="font-size:10px;color:#666;font-weight:normal;margin-top:1px">'+esc(timeStr)+'</div></td><td style="font-size:11px">'+esc(addr)+'</td><td style="font-size:11px;white-space:nowrap">'+esc(phone)+'</td><td class="check-col">☐</td><td class="check-col">☐</td><td></td></tr>';
+      var timeStr = calcUserStopSubtext(r, i, names.length, u);
+      printHtml+='<tr><td style="text-align:center;font-weight:700">'+(i+1)+'</td><td style="font-weight:700">'+esc(name)+(timeStr?'<div style="font-size:10px;color:#666;font-weight:normal;margin-top:1px">'+esc(timeStr)+'</div>':'')+'</td><td style="font-size:11px">'+esc(addr)+'</td><td style="font-size:11px;white-space:nowrap">'+esc(phone)+'</td><td class="check-col">☐</td><td class="check-col">☐</td><td></td></tr>';
     });
     printHtml+='</tbody></table>';
     printHtml+='</div>';
