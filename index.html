@@ -189,6 +189,12 @@ var SESSION_KEY='porte_session';
 function getSession(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY));}catch(e){return null;}}
 function setSession(staff){sessionStorage.setItem(SESSION_KEY,JSON.stringify(staff));}
 function clearSession(){sessionStorage.removeItem(SESSION_KEY);}
+function isAdminUser(sess){
+  var s = sess || getSession() || {};
+  var n = String(s.name || '');
+  var r = String(s.role || '');
+  return n.indexOf('友田') >= 0 || r === '管理者' || s.isAdmin === true;
+}
 
 function showLogin(){
   document.getElementById('app').className='';
@@ -1832,16 +1838,19 @@ function openPlanSubForm(userId,planId,type){
   h+='<p style="font-size:12px;color:var(--sub);margin-bottom:12px">計画適用開始: <b>'+fmtDate(p.startDate)+'</b>　|　利用者: <b>'+esc(p.userName||'')+'</b></p>';
 
   if(type==='consent'){
+    var _sess = getSession() || {};
+    var canReuseSign = isAdminUser(_sess);
     h+='<div class="field"><label>同意日</label><input type="date" id="ps-consentDate" value="'+(p.consentDate||'')+'" style="width:240px"></div>';
     h+='<div class="section-title" style="margin-top:12px">署名</div>';
     h+='<p style="font-size:11px;color:var(--sub);margin-bottom:8px">説明を受けた上で同意致します。</p>';
+    var reuseBtn = canReuseSign ? '<button onclick="applyAttendanceSign(\''+userId+'\')" style="font-size:11px;background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:600">📋 出勤サインを流用</button>' : '';
     if(p.signatureUrl){
       h+='<div id="ps-sign-existing" style="margin-bottom:12px"><div style="font-size:12px;color:var(--sub);margin-bottom:4px">✅ 署名済み</div>';
       h+='<img src="'+p.signatureUrl+'" style="border:2px solid #ddd;border-radius:10px;max-width:100%;max-height:160px;background:#fafafa">';
-      h+='<div style="margin-top:6px"><button onclick="document.getElementById(\'ps-sign-existing\').style.display=\'none\';document.getElementById(\'ps-sign-new\').style.display=\'block\';window._psSignCleared=true;setTimeout(initPsSign,50);" style="font-size:11px;background:#f5f0ea;border:1px solid #ddd;border-radius:6px;padding:3px 10px;cursor:pointer">署名をやり直す</button></div></div>';
+      h+='<div style="margin-top:6px;display:flex;gap:8px">'+reuseBtn+'<button onclick="document.getElementById(\'ps-sign-existing\').style.display=\'none\';document.getElementById(\'ps-sign-new\').style.display=\'block\';window._psSignCleared=true;setTimeout(initPsSign,50);" style="font-size:11px;background:#f5f0ea;border:1px solid #ddd;border-radius:6px;padding:3px 10px;cursor:pointer">手書きで署名をやり直す</button></div></div>';
       h+='<div id="ps-sign-new" style="display:none">';
     }else{h+='<div id="ps-sign-new">';}
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;color:#888">サインエリアにサインしてください</span><button onclick="clearPsSign()" style="font-size:11px;background:#f5f0ea;border:1px solid #ddd;border-radius:6px;padding:3px 10px;cursor:pointer">やり直す</button></div>';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;color:#888">サインエリアにサインしてください</span><div style="display:flex;gap:6px">'+reuseBtn+'<button onclick="clearPsSign()" style="font-size:11px;background:#f5f0ea;border:1px solid #ddd;border-radius:6px;padding:3px 10px;cursor:pointer">やり直す</button></div></div>';
     h+='<canvas id="ps-sign-canvas" style="border:2px solid #ddd;border-radius:10px;width:100%;height:160px;touch-action:none;cursor:crosshair;background:#fafafa"></canvas></div>';
   }else if(type==='final'){
     // 本計画：原案からコピーした状態で表示（finalCreateDateが未設定なら確認モーダルを出す）
@@ -1875,6 +1884,77 @@ function initPsSign(){
   _psSignCanvas.onpointerleave=function(){_psSignDrawing=false;};
 }
 function clearPsSign(){if(!_psSignCanvas)return;_psSignCtx.clearRect(0,0,_psSignCanvas.width,_psSignCanvas.height);_psSignDrawn=false;}
+
+async function applyAttendanceSign(userId){
+  var _sess = getSession() || {};
+  if(!isAdminUser(_sess)){
+    await cAlert('出勤サインの流用は管理者（友田または管理者権限）のみ利用可能です。');
+    return;
+  }
+  try{
+    if(!lockUI()) return;
+    var allAtt = await cachedGas('getAttendance');
+    var atts = (allAtt||[]).filter(function(a){ return String(a.userId)===String(userId) && a.signature && String(a.signature).trim()!==''; });
+    atts.sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
+    
+    if(atts.length === 0){
+      unlockUI();
+      await cAlert('この利用者の出勤時サインが見つかりませんでした。\nタイムカードまたは出欠管理で出勤サインが記録されているかご確認ください。');
+      return;
+    }
+    
+    var targetRec = atts[0];
+    if(atts.length > 1){
+      unlockUI();
+      var optText = atts.slice(0, 10).map(function(a, idx){
+        return (idx + 1) + '. ' + fmtDate(a.date) + ' の出勤サイン';
+      }).join('\n');
+      var selStr = prompt('出勤サインの記録が複数あります。使用する番号を入力してください (1〜' + Math.min(atts.length, 10) + '):\n\n' + optText, '1');
+      if(!selStr) return;
+      var selIdx = parseInt(selStr, 10) - 1;
+      if(isNaN(selIdx) || selIdx < 0 || selIdx >= atts.length){
+        await cAlert('無効な番号です');
+        return;
+      }
+      targetRec = atts[selIdx];
+      if(!lockUI()) return;
+    }
+    
+    var sigData = targetRec.signature;
+    var existingDiv = document.getElementById('ps-sign-existing');
+    var newDiv = document.getElementById('ps-sign-new');
+    if(existingDiv) existingDiv.style.display = 'none';
+    if(newDiv) newDiv.style.display = 'block';
+    
+    if(!_psSignCanvas){
+      initPsSign();
+    }
+    
+    var img = new Image();
+    img.onload = function(){
+      if(!_psSignCanvas) initPsSign();
+      var rect = _psSignCanvas.getBoundingClientRect();
+      _psSignCtx.clearRect(0, 0, _psSignCanvas.width, _psSignCanvas.height);
+      _psSignCtx.drawImage(img, 0, 0, rect.width, rect.height);
+      _psSignDrawn = true;
+      window._psSignCleared = false;
+      
+      var cdInput = document.getElementById('ps-consentDate');
+      if(cdInput && !cdInput.value){
+        cdInput.value = targetRec.date;
+      }
+      unlockUI();
+    };
+    img.onerror = function(){
+      unlockUI();
+      cAlert('サイン画像の読み込みに失敗しました。');
+    };
+    img.src = sigData;
+  }catch(e){
+    unlockUI();
+    await cAlert('エラーが発生しました: ' + e);
+  }
+}
 async function savePlanSub(userId,planId,type){
   if(!lockUI())return;
   var obj={id:planId};

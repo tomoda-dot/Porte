@@ -249,7 +249,8 @@ function isTomoda(staff){
   if(!staff) return false;
   var n = String(staff.name || '');
   var l = String(staff.loginId || '');
-  return n.indexOf('友田') >= 0 || l.toLowerCase().indexOf('tomoda') >= 0;
+  var r = String(staff.role || '');
+  return n.indexOf('友田') >= 0 || l.toLowerCase().indexOf('tomoda') >= 0 || r === '管理者';
 }
 
 // ─── ユーティリティ ──────────────────
