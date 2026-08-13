@@ -4432,12 +4432,32 @@ function renderRouteCards(){
       '</div>':'')+
 
       // ルート順序
-      '<div style="font-size:12px">'+
+      '<div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
         '<div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--pri);color:#fff;border-radius:12px;font-size:11px;font-weight:600">🏢 事業所</div>'+
         ((r.routeOrder||'').split(',').filter(function(x){return x;}).map(function(name,i){
-          return' <span style="color:var(--sub)">→</span> <div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#fff;border:1.5px solid var(--bdr);border-radius:12px;font-size:11px"><span style="background:var(--acc);color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+(i+1)+'</span> '+esc(name)+'</div>';
+          var u = S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
+          var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
+          var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
+          var timeStr = '到着 ' + (r.pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
+          return' <span style="color:var(--sub)">→</span> <div style="display:inline-flex;flex-direction:column;align-items:flex-start;padding:4px 10px;background:#fff;border:1.5px solid var(--bdr);border-radius:10px;font-size:11px;vertical-align:middle">'+
+            '<div style="display:flex;align-items:center;gap:4px">'+
+              '<span style="background:var(--acc);color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+(i+1)+'</span> '+
+              '<span style="font-weight:600;color:var(--txt)">'+esc(name)+'</span>'+
+            '</div>'+
+            '<div style="font-size:10px;color:var(--sub);margin-top:2px;padding-left:22px;white-space:nowrap">'+esc(timeStr)+'</div>'+
+          '</div>';
         }).join('')||uNames.map(function(name,i){
-          return' <span style="color:var(--sub)">→</span> <div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#fff;border:1.5px solid var(--bdr);border-radius:12px;font-size:11px"><span style="background:var(--acc);color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+(i+1)+'</span> '+esc(name)+'</div>';
+          var u = S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
+          var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
+          var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
+          var timeStr = '到着 ' + (r.pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
+          return' <span style="color:var(--sub)">→</span> <div style="display:inline-flex;flex-direction:column;align-items:flex-start;padding:4px 10px;background:#fff;border:1.5px solid var(--bdr);border-radius:10px;font-size:11px;vertical-align:middle">'+
+            '<div style="display:flex;align-items:center;gap:4px">'+
+              '<span style="background:var(--acc);color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+(i+1)+'</span> '+
+              '<span style="font-weight:600;color:var(--txt)">'+esc(name)+'</span>'+
+            '</div>'+
+            '<div style="font-size:10px;color:var(--sub);margin-top:2px;padding-left:22px;white-space:nowrap">'+esc(timeStr)+'</div>'+
+          '</div>';
         }).join(''))+
         ' <span style="color:var(--sub)">→</span> <div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--pri);color:#fff;border-radius:12px;font-size:11px;font-weight:600">🏢 事業所</div>'+
       '</div>'+
@@ -4752,17 +4772,26 @@ function printSingleRoute(idx){
   '</div>';
 
   h+='<div class="route-visual">🏢 事業所';
-  names.forEach(function(name,i){h+=' → <b>('+(i+1)+') '+esc(name)+'</b>';});
+  names.forEach(function(name,i){
+    var u=S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
+    var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
+    var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
+    var timeStr = '到着 ' + (r.pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
+    h+=' → <b>('+(i+1)+') '+esc(name)+' <span style="font-size:11px;font-weight:normal;color:#555">['+esc(timeStr)+']</span></b>';
+  });
   h+=' → 🏢 事業所</div>';
 
   if(r.mapsUrl){h+='<div style="display:flex;align-items:center;gap:15px;margin-bottom:12px;padding:8px;background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1)"><img src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&ecc=L&data='+encodeURIComponent(r.mapsUrl)+'" style="width:180px;height:180px;border:1px solid #ccc;border-radius:4px"><div style="font-size:12px;color:#444;line-height:1.6"><b>📱 スマホでQRを読み取ると<br>Googleマップでルートを確認できます</b><br><br><span style="color:#666;font-size:11px">※うまく読み込めない場合は、<br>スマホを少し離して明るい場所で<br>お試しください。</span></div></div>';}
 
   h+='<table><thead><tr><th style="width:40px">順</th><th>氏名</th><th>住所</th><th>連絡先</th><th class="check-col">乗車✓</th><th class="check-col">降車✓</th><th style="width:80px">備考</th></tr></thead><tbody>';
   names.forEach(function(name,i){
-    var u=S.users.find(function(x){return x.id===uIds[i];});
+    var u=S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
     var addr=u?((u.prefecture||'')+(u.city||'')+(u.address||'')):'';
     var phone=u?(u.contact||''):'';
-    h+='<tr><td style="text-align:center;font-weight:700;font-size:16px">'+(i+1)+'</td><td style="font-weight:700;font-size:16px">'+esc(name)+'</td><td style="font-size:13px">'+esc(addr)+'</td><td style="font-size:14px;letter-spacing:1px;white-space:nowrap">'+esc(phone)+'</td><td class="check-col">☐</td><td class="check-col">☐</td><td></td></tr>';
+    var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
+    var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
+    var timeStr = '到着 ' + (r.pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
+    h+='<tr><td style="text-align:center;font-weight:700;font-size:16px">'+(i+1)+'</td><td style="font-weight:700;font-size:16px">'+esc(name)+'<div style="font-size:11px;color:#555;font-weight:normal;margin-top:2px">'+esc(timeStr)+'</div></td><td style="font-size:13px">'+esc(addr)+'</td><td style="font-size:14px;letter-spacing:1px;white-space:nowrap">'+esc(phone)+'</td><td class="check-col">☐</td><td class="check-col">☐</td><td></td></tr>';
   });
   h+='</tbody></table>';
   if(r.notes)h+='<div style="margin-top:6px;font-size:11px;color:#666">備考: '+esc(r.notes)+'</div>';
@@ -4848,7 +4877,11 @@ async function printRoutesByPattern(pattern){
 
     printHtml+='<div class="route-visual">🏢 事業所';
     names.forEach(function(name,i){
-      printHtml+=' → <b>('+(i+1)+') '+esc(name)+'</b>';
+      var u=S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
+      var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
+      var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
+      var timeStr = '到着 ' + (pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
+      printHtml+=' → <b>('+(i+1)+') '+esc(name)+' <span style="font-size:10px;font-weight:normal;color:#555">['+esc(timeStr)+']</span></b>';
     });
     printHtml+=' → 🏢 事業所</div>';
 
@@ -4863,10 +4896,13 @@ async function printRoutesByPattern(pattern){
     printHtml+='<div style="flex:1;min-width:0">';
     printHtml+='<table><thead><tr><th style="width:36px">順</th><th>氏名</th><th>住所</th><th>連絡先</th><th class="check-col">乗車✓</th><th class="check-col">降車✓</th><th style="width:60px">備考</th></tr></thead><tbody>';
     names.forEach(function(name,i){
-      var u=S.users.find(function(x){return x.id===uIds[i];});
+      var u=S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
       var addr=u?((u.prefecture||'')+(u.city||'')+(u.address||'')):'';
       var phone=u?(u.contact||''):'';
-      printHtml+='<tr><td style="text-align:center;font-weight:700">'+(i+1)+'</td><td style="font-weight:700">'+esc(name)+'</td><td style="font-size:11px">'+esc(addr)+'</td><td style="font-size:11px;white-space:nowrap">'+esc(phone)+'</td><td class="check-col">☐</td><td class="check-col">☐</td><td></td></tr>';
+      var sStart = u ? (u.scheduleStart||'10:00') : '10:00';
+      var sEnd = u ? (u.scheduleEnd||'16:00') : '16:00';
+      var timeStr = '到着 ' + (pattern==='morning'?sStart:sEnd) + ' (' + sStart + '〜' + sEnd + ')';
+      printHtml+='<tr><td style="text-align:center;font-weight:700">'+(i+1)+'</td><td style="font-weight:700">'+esc(name)+'<div style="font-size:10px;color:#666;font-weight:normal;margin-top:1px">'+esc(timeStr)+'</div></td><td style="font-size:11px">'+esc(addr)+'</td><td style="font-size:11px;white-space:nowrap">'+esc(phone)+'</td><td class="check-col">☐</td><td class="check-col">☐</td><td></td></tr>';
     });
     printHtml+='</tbody></table>';
     printHtml+='</div>';
