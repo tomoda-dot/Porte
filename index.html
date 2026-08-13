@@ -4750,6 +4750,8 @@ async function recalcRoute(idx){
     r.routeOrder=result.orderedUsers.map(function(u){return u.name;}).join(',');
     r.totalMinutes=String(result.totalMinutes);
     r.drivingMinutes=String(result.drivingMinutes);
+    r.departTime=result.departTime||r.departTime;
+    r.arriveTime=result.arriveTime||r.arriveTime;
     r.mapsUrl=buildMapsUrl(result);
     r.staticMapUrl=result.staticMapUrl||'';
     r.userIds=result.orderedUsers.map(function(u){return u.id;}).join(',');
@@ -4772,6 +4774,9 @@ function editRoute(idx){
         '<label style="cursor:pointer"><input type="radio" name="er-pat" value="morning"'+(r.pattern==='morning'?' checked':'')+'> 🌅 朝</label>'+
         '<label style="cursor:pointer"><input type="radio" name="er-pat" value="evening"'+(r.pattern!=='morning'?' checked':'')+'> 🌆 夕</label></div></div>'+
       '<div class="field"><label>車両</label><select id="er-vh" style="width:100%"><option value="">選択</option>'+S.vehicles.map(function(v){return'<option value="'+v.id+'"'+(r.vehicleId===v.id?' selected':'')+'>'+esc(v.name)+'</option>';}).join('')+'</select></div></div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>出発時刻（事業所発）</label><input type="time" id="er-dep" value="'+esc(r.departTime||'')+'" style="width:100%"></div>'+
+      '<div class="field"><label>'+(r.pattern==='morning'?'事業所着時刻':'事業所戻り時刻')+'</label><input type="time" id="er-arr" value="'+esc(r.arriveTime||'')+'" style="width:100%"></div></div>'+
     '<div class="grid2">'+
       '<div class="field"><label>運転スタッフ</label><select id="er-st" style="width:100%"><option value="">選択</option>'+S.staff.filter(function(s){return _isStaffActive(s)||(r.staffId&&r.staffId===s.id);}).map(function(s){return'<option value="'+s.id+'"'+(r.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
       '<div class="field"><label>添乗スタッフ</label><select id="er-at" style="width:100%"><option value="">なし</option>'+S.staff.filter(function(s){return _isStaffActive(s)||(r.attendant&&r.attendant===s.id);}).map(function(s){return'<option value="'+s.id+'"'+(r.attendant===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div></div>'+
@@ -4825,6 +4830,8 @@ async function saveEditRoute(id,idx){
   r.vehicleId=document.getElementById('er-vh').value;
   r.staffId=document.getElementById('er-st').value;
   r.attendant=document.getElementById('er-at').value;
+  var manualDep=document.getElementById('er-dep')?document.getElementById('er-dep').value:'';
+  var manualArr=document.getElementById('er-arr')?document.getElementById('er-arr').value:'';
   r.userIds=ids.join(',');r.userNames=names.join(',');
   r.routeOrder=names.join(',');
   r.notes=document.getElementById('er-notes').value;
@@ -4834,8 +4841,16 @@ async function saveEditRoute(id,idx){
       var result=await gas('calcFixedOrderRoute',ids,r.pattern);
       r.totalMinutes=String(result.totalMinutes);
       r.drivingMinutes=String(result.drivingMinutes);
+      r.departTime=manualDep || result.departTime || r.departTime;
+      r.arriveTime=manualArr || result.arriveTime || r.arriveTime;
       r.mapsUrl=buildMapsUrl(result);
-    }catch(e){/* ルート計算失敗でも保存は続行 */}
+    }catch(e){
+      if(manualDep) r.departTime=manualDep;
+      if(manualArr) r.arriveTime=manualArr;
+    }
+  }else{
+    if(manualDep) r.departTime=manualDep;
+    if(manualArr) r.arriveTime=manualArr;
   }
   try{await gas('updateRouteRecord',r);closeModal('t-modal');loadRoutes();}catch(e){await cAlert('保存失敗');}finally{unlockUI();}
 }
