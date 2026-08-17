@@ -273,14 +273,15 @@ function doLogout(){
 }
 
 async function loadAll(){
-  // セッションチェック
   if(!getSession()){showLogin();return;}
   try{
-    // Phase1: 必須データだけ先に取得してUIを即表示
-    var init=await gas('getInitialData');
+    var initPromise = gas('getInitialData');
+    var timeoutPromise = new Promise(function(_, reject){
+      setTimeout(function(){ reject(new Error('通信タイムアウト: サーバーからの応答がありません。ネットワーク接続をご確認ください。')); }, 8000);
+    });
+    var init = await Promise.race([initPromise, timeoutPromise]);
     S.users=init.users||[];S.workTypes=init.workTypes||[];S.settings=init.settings||{};S.staff=init.staff||[];
     S.ready=true;render();
-    // Phase2: 残りのデータをバックグラウンドで取得
     gas('getDeferredData').then(function(def){
       S.vehicles=def.vehicles||[];S.templates=def.templates||[];S.trials=def.trials||[];
     }).catch(function(){});
@@ -288,9 +289,17 @@ async function loadAll(){
       S.dashboard=db;if(S.dashboard)S.dashboard.date=today();
       if(S.tab==='dashboard')renderTab();
     }).catch(function(){});
-    // Phase3: シフト→スタッフ出欠 自動反映（バックグラウンド）
     autoApplyTodayShift().catch(function(){});
-  }catch(e){document.getElementById('app').innerHTML='<div class="loading"><div style="font-size:36px">⚠️</div><div>データ読み込みエラーです</div><div style="font-size:11px;color:#999;margin-top:8px">'+String(e)+'</div><button class="bp" onclick="location.reload()" style="margin-top:12px">再読み込み</button></div>';}
+  }catch(e){
+    document.getElementById('app').innerHTML=
+      '<div class="loading"><div style="font-size:36px">⚠️</div>' +
+      '<div style="font-size:16px;font-weight:700;margin-top:10px">データ読み込みエラー</div>' +
+      '<div style="font-size:12px;color:var(--sub);margin:8px 0 16px;max-width:320px;text-align:center">'+esc(e.message||String(e))+'</div>' +
+      '<div style="display:flex;gap:10px">' +
+        '<button class="bg" onclick="clearSession();location.reload()" style="font-size:12px;padding:8px 16px">ログアウトしてログインし直す</button>' +
+        '<button class="bp" onclick="location.reload()" style="font-size:12px;padding:8px 16px">再読み込み</button>' +
+      '</div></div>';
+  }
 }
 
 var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['bmi','⚖️','BMI測定管理'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];

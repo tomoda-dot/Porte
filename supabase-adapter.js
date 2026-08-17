@@ -353,6 +353,17 @@ async function gas(fn){
     case 'updateRouteRecord': return _update('送迎ルート',a1);
     case 'deleteRouteRecord': return _del('送迎ルート',a1);
 
+    // ── BMI測定管理 ──
+    case 'getBmiRecords': return a1?_getLike('BMI測定','date',a1):_getAll('BMI測定');
+    case 'saveBmiRecord':
+      if(a1.id){ a1.updatedAt=new Date().toISOString(); return _update('BMI測定',a1); }
+      var ym = (a1.date||'').slice(0,7);
+      var allBmi = await _getAll('BMI測定');
+      var existing = allBmi.find(function(b){ return String(b.userId)===String(a1.userId) && String(b.date||'').startsWith(ym); });
+      if(existing){ a1.id = existing.id; a1.updatedAt=new Date().toISOString(); return _update('BMI測定',a1); }
+      a1.id = _genId('bmi'); a1.createdAt = new Date().toISOString(); return _add('BMI測定',a1);
+    case 'deleteBmiRecord': return _del('BMI測定',a1);
+
     // ── サイン保存 ──
     case 'saveSignatureForDate':
       // a1=userId, a2=date, a3=signatureDataUrl
@@ -398,9 +409,9 @@ async function gas(fn){
     case 'calcOptimalRoute': return _calcOptimalRoute(a1,a2,a3);
     case 'calcFixedOrderRoute': return _calcFixedOrderRoute(a1,a2,a3);
 
-    // ── メール送信（要Edge Function → 後日対応）──
+    // ── メール送信（クライアント側メールソフト連携/コピー対応）──
     case 'sendPlanEmail':
-      throw new Error('メール送信はSupabase Edge Functionで別途対応が必要です');
+      return { success: true, method: 'client' };
 
     // ── アプリURL ──
     case 'getAppUrl': return window.location.origin+window.location.pathname;
@@ -416,13 +427,42 @@ console.log('✅ Supabaseアダプター読み込み完了');
 // ═══ ルート計算ヘルパー（Maps API不要版）═══
 function _buildMapsUrl(facilityAddr,users,pattern){
   var base='https://www.google.com/maps/dir/';
-  var parts=[encodeURIComponent(facilityAddr)];
-  for(var i=0;i<users.length;i++)parts.push(encodeURIComponent(users[i].address));
-  if(pattern==='morning')parts.push(encodeURIComponent(facilityAddr));
+  var fac = (facilityAddr && String(facilityAddr).trim()!=='undefined') ? facilityAddr : '大阪府豊中市小曽根1丁目10-23';
+  var parts=[encodeURIComponent(fac)];
+  for(var i=0;i<users.length;i++){
+    var a = users[i].address || ((users[i].prefecture||'')+(users[i].city||'')+(users[i].address||''));
+    if(a && String(a).trim()!=='undefined') parts.push(encodeURIComponent(a));
+  }
+  parts.push(encodeURIComponent(fac));
   return base+parts.join('/');
 }
 
+<<<<<<< HEAD
 async function _calcOptimalRoute(userIds,pattern,targetArriveTime){
+=======
+function _estimateRouteMinutes(ordered) {
+  if(!ordered || ordered.length===0) return { totalMinutes: 60, drivingMinutes: 50, oneWayMinutes: 30 };
+  var maxOneWay = 10;
+  for(var i=0; i<ordered.length; i++) {
+    var addr = String(ordered[i].address || '');
+    var m = 10;
+    if(addr.indexOf('箕面') >= 0 || addr.indexOf('池田') >= 0) {
+      m = 30; // 箕面・池田エリアは片道30分
+    } else if(addr.indexOf('千里') >= 0 || addr.indexOf('少路') >= 0 || addr.indexOf('緑丘') >= 0 || addr.indexOf('東豊中') >= 0 || addr.indexOf('吹田') >= 0) {
+      m = 20; // 豊中北部・吹田エリアは片道20分
+    } else if(addr.indexOf('小曽根') >= 0 || addr.indexOf('庄内') >= 0 || addr.indexOf('服部') >= 0 || addr.indexOf('曽根') >= 0) {
+      m = 10; // 事業所周辺（小曽根・庄内・服部）は片道10分
+    }
+    if(m > maxOneWay) maxOneWay = m;
+  }
+  var drivingMin = (ordered.length === 1) ? (maxOneWay * 2) : (maxOneWay * 2 + (ordered.length - 1) * 5);
+  var pickupMin = ordered.length * 5;
+  var totalMin = drivingMin + pickupMin;
+  return { totalMinutes: totalMin, drivingMinutes: drivingMin, oneWayMinutes: maxOneWay };
+}
+
+async function _calcOptimalRoute(userIds,pattern,targetTime){
+>>>>>>> dd756c8 (Fix startup hang and add BMI management feature)
   var allUsers=await _getAll('利用者');var settings=await _getSettings();
   var facilityAddr=settings.facilityAddress||settings.address||'大阪府豊中市小曽根1丁目10-23';
   var ordered=[];
@@ -430,27 +470,36 @@ async function _calcOptimalRoute(userIds,pattern,targetArriveTime){
     for(var j=0;j<allUsers.length;j++){
       if(String(allUsers[j].id)===String(userIds[i])){
         var u=allUsers[j];var addr=(u.prefecture||'')+(u.city||'')+(u.address||'');
-        ordered.push({id:u.id,name:u.name,address:addr});break;
+        ordered.push({id:u.id,name:u.name,address:addr,scheduleStart:u.scheduleStart,scheduleEnd:u.scheduleEnd});break;
       }
     }
   }
-  var totalMin=ordered.length*10+15;var drivingMin=ordered.length*8;
-  // 到着目標時刻（着）から逆算して出発時刻（発）を求める（ご利用者様のサービス提供時間を優先）
-  var arriveTime=targetArriveTime;
-  if(!arriveTime){
-    if(ordered.length>0){
-      var u0=ordered[0];
-      arriveTime=pattern==='morning'?(u0.scheduleStart||'09:30'):(u0.scheduleEnd||'17:00');
-    }else{
-      arriveTime=pattern==='morning'?'09:30':'17:00';
-    }
-  }
-  var ap=arriveTime.split(':');
-  var arrMin=Number(ap[0])*60+Number(ap[1]||0);
-  var depMin=Math.max(0, arrMin - totalMin);
-  var departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
+  var timeInfo=_estimateRouteMinutes(ordered);
+  var totalMin=timeInfo.totalMinutes, drivingMin=timeInfo.drivingMinutes, oneWay=timeInfo.oneWayMinutes;
+  var departTime='', arriveTime='';
 
-  return{orderedUsers:ordered,totalMinutes:totalMin,drivingMinutes:drivingMin,mapsUrl:_buildMapsUrl(facilityAddr,ordered,pattern),departTime:departTime,arriveTime:arriveTime};
+  if(pattern==='morning'){
+    // 朝：ご自宅お迎え時刻（u.scheduleStart 例: 09:10）を基準に、
+    // 事業所発 ＝ 09:10 - 片道時間(30分) ＝ 08:40
+    // 事業所着 ＝ 08:40 + 合計所要時間(60分) ＝ 09:40
+    var pickupTime = targetArriveTime || (ordered[0]?(ordered[0].scheduleStart||'09:10'):'09:10');
+    var pp = pickupTime.split(':');
+    var pickupMin = Number(pp[0])*60 + Number(pp[1]||0);
+    var depMin = Math.max(0, pickupMin - oneWay);
+    var arrMin = depMin + totalMin;
+
+    departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
+    arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
+  }else{
+    // 夕：サービス終了（scheduleEnd 例: 16:30）に事業所発
+    departTime=targetArriveTime || (ordered[0]?(ordered[0].scheduleEnd||'16:30'):'16:30');
+    var dp=departTime.split(':');
+    var depMin=Number(dp[0])*60+Number(dp[1]||0);
+    var arrMin=depMin + totalMin;
+    arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
+  }
+
+  return{orderedUsers:ordered,totalMinutes:totalMin,drivingMinutes:drivingMin,facilityAddress:facilityAddr,mapsUrl:_buildMapsUrl(facilityAddr,ordered,pattern),departTime:departTime,arriveTime:arriveTime};
 }
 
 async function _calcFixedOrderRoute(userIds,pattern,targetArriveTime){
@@ -466,9 +515,14 @@ async function _calcSmartRoutes(userIds,pattern,date){
     var u=null;for(var j=0;j<allUsers.length;j++){if(String(allUsers[j].id)===String(userIds[i])){u=allUsers[j];break;}}
     if(!u)continue;
     var addr=(u.prefecture||'')+(u.city||'')+(u.address||'');if(!addr||addr.length<3)continue;
+<<<<<<< HEAD
     var rec=null;for(var ai=0;ai<att.length;ai++){if(String(att[ai].userId)===String(u.id)){rec=att[ai];break;}}
     var sTime=(rec&&rec.startTime)?rec.startTime:(u.scheduleStart||'09:30');
     var eTime=(rec&&rec.endTime)?rec.endTime:(u.scheduleEnd||'16:30');
+=======
+    var sTime=u.scheduleStart||'09:10';
+    var eTime=u.scheduleEnd||'16:30';
+>>>>>>> dd756c8 (Fix startup hang and add BMI management feature)
     var timeKey=pattern==='morning'?sTime:eTime;
     var tp=timeKey.split(':');var timeMin=Number(tp[0])*60+Number(tp[1]||0);
     candidates.push({id:u.id,name:u.name,address:addr,startTime:sTime,endTime:eTime,timeKey:timeKey,timeMin:timeMin});
@@ -486,17 +540,41 @@ async function _calcSmartRoutes(userIds,pattern,date){
   // 各トリップの結果（常に「着時刻」を基準に出発時刻を逆算）
   var results=[];
   for(var ti=0;ti<trips.length;ti++){
+<<<<<<< HEAD
     var trip=trips[ti];var routeMin=trip.length*10+15;
     var targetMin=trip[0].timeMin;
     var arriveTime=trip[0].timeKey;
     var depMin=targetMin-routeMin;if(depMin<0)depMin=0;
     var departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
+=======
+    var trip=trips[ti];
+    var timeInfo=_estimateRouteMinutes(trip);
+    var routeMin=timeInfo.totalMinutes;
+    var drivingMin=timeInfo.drivingMinutes;
+    var oneWay=timeInfo.oneWayMinutes;
+    var departTime='', arriveTime='';
+    if(pattern==='morning'){
+      // 朝：ご自宅お迎え時刻基準
+      var pickupTime=trip[0].timeKey||'09:10';
+      var pMin=Number(pickupTime.split(':')[0])*60+Number(pickupTime.split(':')[1]||0);
+      var depMin=Math.max(0, pMin - oneWay);
+      var arrMin=depMin + routeMin;
+      departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
+      arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
+    }else{
+      // 夕：事業所発
+      departTime=trip[0].timeKey||'16:30';
+      var depMin=Number(departTime.split(':')[0])*60+Number(departTime.split(':')[1]||0);
+      var arrMin=depMin + routeMin;
+      arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
+    }
+>>>>>>> dd756c8 (Fix startup hang and add BMI management feature)
 
     results.push({tripIndex:ti+1,users:trip,
       userIds:trip.map(function(t){return t.id;}),
       userNames:trip.map(function(t){return t.name;}),
       departTime:departTime,arriveTime:arriveTime,
-      totalMinutes:routeMin,drivingMinutes:trip.length*8,
+      totalMinutes:routeMin,drivingMinutes:drivingMin,
       facilityAddress:facilityAddr,
       mapsUrl:_buildMapsUrl(facilityAddr,trip,pattern),
       timeSlots:trip.map(function(t){return{name:t.name,time:pattern==='morning'?t.startTime:t.endTime};})
@@ -554,6 +632,9 @@ function _checkKaikin(user,allAtt,ym){
 async function _calcAttendanceList(ym){
   var us=await _getAll('利用者');var wts=await _getAll('作業種別');var att=await _getLike('出欠','date',ym);
   var settings=await _getSettings();var bentoPrice=Number(settings.bentoPrice)||100;var KAIKIN_BONUS=3000;
+  var configuredAls=[];
+  try{configuredAls=JSON.parse(settings.allowances||'[]');}catch(e){}
+  var activeAls=configuredAls.filter(function(a){return a.enabled!==false;});
   var result=[];
   us.forEach(function(user){
     var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
@@ -573,7 +654,24 @@ async function _calcAttendanceList(ym){
         else bcDeduct++;
       }
     });
-    var net=Math.max(0,tWM-tBM);var kk=_checkKaikin(user,att,ym);var bonus=kk.kaikin?KAIKIN_BONUS:0;
+    var net=Math.max(0,tWM-tBM);var kk=_checkKaikin(user,att,ym);
+    var bonus=0;
+    if(activeAls.length>0){
+      activeAls.forEach(function(a){
+        var match=false;
+        if(a.condition==='kaikin'){match=kk.kaikin;}
+        else if(a.condition==='seikin'){match=!kk.kaikin&&kk.ng<=2&&kk.ok>0;}
+        else if(a.condition==='all'){match=recs.length>0;}
+        else if(a.condition==='birthday'){
+          if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
+        }
+        else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
+        else if(a.condition==='no_pickup'){match=recs.length>0&&(String(user.pickup||'')!=='あり'&&String(user.pickup||'')!=='往復');}
+        if(match){bonus+=Number(a.amount)||0;}
+      });
+    }else{
+      if(kk.kaikin) bonus=KAIKIN_BONUS;
+    }
     result.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',days:recs.length,workMin:tServiceMin,breakMin:tBM,netMin:net,avgNetMin:recs.length>0?Math.round(tServiceMin/recs.length):0,bonus:bonus,wage:Math.round(tW),bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,total:Math.round(tW)+bonus-bcDeduct*bentoPrice});
   });
   return{users:result,bentoPrice:bentoPrice};
