@@ -95,10 +95,25 @@ tr:hover td{background:var(--hov)}
 .login-error{background:#ffebee;color:#c62828;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
 @media(max-width:768px){.side{width:52px}.side-hd{font-size:9px;padding:12px 4px}.side nav button span.lbl{display:none}.side nav button{justify-content:center;padding:10px 0}.main{padding:14px 12px}.grid2,.grid3{grid-template-columns:1fr}.modal{width:98vw}.cal td{height:100px;padding:4px}.cal .day-info{font-size:10px}.cal .day-badge{font-size:9px;padding:1px 5px}}
 </style>
+<script>
+window.onerror = function(msg, url, line, col, error) {
+  var app = document.getElementById('app');
+  if (app && (!app.className || app.className.indexOf('app') < 0)) {
+    var errText = String(msg || '');
+    app.innerHTML = '<div class="loading"><div style="font-size:36px">⚠️</div>' +
+      '<div style="font-size:16px;font-weight:700;margin-top:10px">システム読み込みエラー</div>' +
+      '<div style="font-size:12px;color:var(--sub);margin:8px 0 16px;max-width:340px;text-align:center">スクリプトエラーを検知しました<br>(' + (errText.replace(/</g,'&lt;')) + ')</div>' +
+      '<div style="display:flex;gap:10px">' +
+        '<button class="bg" onclick="localStorage.clear();sessionStorage.clear();location.reload()" style="font-size:12px;padding:8px 16px">キャッシュをクリアして再起動</button>' +
+        '<button class="bp" onclick="location.reload()" style="font-size:12px;padding:8px 16px">再読み込み</button>' +
+      '</div></div>';
+  }
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="supabase-config.js"></script>
-<script src="kokuho-receipt-generator.js?v=20260728"></script>
-<script src="supabase-adapter.js?v=20260728"></script>
+<script src="supabase-config.js?v=20260817_v5"></script>
+<script src="kokuho-receipt-generator.js?v=20260817_v5"></script>
+<script src="supabase-adapter.js?v=20260817_v5"></script>
 </head>
 <title>就労継続支援B型 管理ソフト「Porte」</title>
 <body>
