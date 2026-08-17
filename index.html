@@ -111,9 +111,9 @@ window.onerror = function(msg, url, line, col, error) {
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="supabase-config.js?v=20260817_v6"></script>
-<script src="kokuho-receipt-generator.js?v=20260817_v6"></script>
-<script src="supabase-adapter.js?v=20260817_v6"></script>
+<script src="supabase-config.js?v=20260817_v7"></script>
+<script src="kokuho-receipt-generator.js?v=20260817_v7"></script>
+<script src="supabase-adapter.js?v=20260817_v7"></script>
 </head>
 <title>就労継続支援B型 管理ソフト「Porte」</title>
 <body>
@@ -4588,8 +4588,14 @@ function _getBmiStatusPill(bmi) {
 
 function _isMealAdditionTarget(u) {
   if (!u) return false;
-  var val = String(u.mealAddition || u.mealAdd || u.meal || '').trim();
-  return val === 'あり' || val === '対象' || val === 'true' || u.mealAdditionTarget === true;
+  var bento = String(u.bento || '').trim();
+  var mealAdd = String(u.mealAddition || u.mealAdd || u.meal || u.bentoAddition || '').trim();
+  if (bento === 'あり' || bento === '対象' || bento === '1' || bento === 'true') return true;
+  if (mealAdd === 'あり' || mealAdd === '対象' || mealAdd === '1' || mealAdd === 'true') return true;
+  if (u.mealAdditionTarget === true || u.mealTarget === true) return true;
+  if (bento !== '' && bento !== 'なし' && bento !== '0' && bento !== 'false') return true;
+  if (mealAdd !== '' && mealAdd !== 'なし' && mealAdd !== '0' && mealAdd !== 'false') return true;
+  return false;
 }
 
 async function renderBmi(c) {
@@ -4608,7 +4614,7 @@ function _drawBmiView(c) {
   if (!c) c = document.getElementById('content');
   if (!c) return;
 
-  var activeUsers = S.users.filter(function(u) { return isUserActive(u, _bmiYm + '-01'); });
+  var activeUsers = S.users.filter(function(u) { return isUserActive(u, _bmiYm + '-31'); });
 
   // フィルタ処理
   var targetUsers = activeUsers.filter(function(u) {
