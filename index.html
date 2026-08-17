@@ -111,9 +111,9 @@ window.onerror = function(msg, url, line, col, error) {
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="supabase-config.js?v=20260817_v5"></script>
-<script src="kokuho-receipt-generator.js?v=20260817_v5"></script>
-<script src="supabase-adapter.js?v=20260817_v5"></script>
+<script src="supabase-config.js?v=20260817_v6"></script>
+<script src="kokuho-receipt-generator.js?v=20260817_v6"></script>
+<script src="supabase-adapter.js?v=20260817_v6"></script>
 </head>
 <title>就労継続支援B型 管理ソフト「Porte」</title>
 <body>
@@ -183,6 +183,7 @@ function showLoading(el,msg){
 }
 var S={tab:'dashboard',users:[],staff:[],workTypes:[],settings:{},dashboard:null,ready:false,attSubTab:'daily',attUserId:'',attMonth:'',dailySubTab:'daily',dailyUserId:'',dailyMonth:'',vehicles:[],templates:[],calAtt:null,calTemp:null,trials:[]};
 var today=function(){var n=new Date();n.setMinutes(n.getMinutes()+n.getTimezoneOffset()+540);return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');};
+var nowYM=function(){var n=new Date();n.setMinutes(n.getMinutes()+n.getTimezoneOffset()+540);return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');};
 var fmtDate=function(d){if(!d||d==='undefined')return'';var p=String(d).split('-');if(p.length<3)return'';return p[0]+'/'+String(parseInt(p[1]))+'/'+String(parseInt(p[2]));};
 var fmtMonth=function(m){var p=m.split('-');return p[0]+'年'+parseInt(p[1])+'月';};
 var weekday=function(d){var p=String(d).split('-');return['日','月','火','水','木','金','土'][new Date(Number(p[0]),Number(p[1])-1,Number(p[2])).getDay()];};
