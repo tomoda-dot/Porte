@@ -4536,13 +4536,8 @@ async function bulkPresent(){
 }
 
 function calcUserStopSubtext(r, index, totalStops, u) {
-  var sStart = u ? (u.scheduleStart || '09:30') : '09:30';
+  var sStart = u ? (u.scheduleStart || '09:10') : '09:10';
   var sEnd = u ? (u.scheduleEnd || '16:30') : '16:30';
-  if (r.pattern === 'morning' && r.arriveTime) {
-    sStart = r.arriveTime;
-  } else if (r.pattern === 'evening' && r.departTime) {
-    sEnd = r.departTime;
-  }
   return 'サービス提供時間 ' + sStart + '〜' + sEnd;
 }
 
