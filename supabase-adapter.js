@@ -437,9 +437,6 @@ function _buildMapsUrl(facilityAddr,users,pattern){
   return base+parts.join('/');
 }
 
-<<<<<<< HEAD
-async function _calcOptimalRoute(userIds,pattern,targetArriveTime){
-=======
 function _estimateRouteMinutes(ordered) {
   if(!ordered || ordered.length===0) return { totalMinutes: 60, drivingMinutes: 50, oneWayMinutes: 30 };
   var maxOneWay = 10;
@@ -462,7 +459,6 @@ function _estimateRouteMinutes(ordered) {
 }
 
 async function _calcOptimalRoute(userIds,pattern,targetTime){
->>>>>>> dd756c8 (Fix startup hang and add BMI management feature)
   var allUsers=await _getAll('利用者');var settings=await _getSettings();
   var facilityAddr=settings.facilityAddress||settings.address||'大阪府豊中市小曽根1丁目10-23';
   var ordered=[];
@@ -515,14 +511,8 @@ async function _calcSmartRoutes(userIds,pattern,date){
     var u=null;for(var j=0;j<allUsers.length;j++){if(String(allUsers[j].id)===String(userIds[i])){u=allUsers[j];break;}}
     if(!u)continue;
     var addr=(u.prefecture||'')+(u.city||'')+(u.address||'');if(!addr||addr.length<3)continue;
-<<<<<<< HEAD
-    var rec=null;for(var ai=0;ai<att.length;ai++){if(String(att[ai].userId)===String(u.id)){rec=att[ai];break;}}
-    var sTime=(rec&&rec.startTime)?rec.startTime:(u.scheduleStart||'09:30');
-    var eTime=(rec&&rec.endTime)?rec.endTime:(u.scheduleEnd||'16:30');
-=======
     var sTime=u.scheduleStart||'09:10';
     var eTime=u.scheduleEnd||'16:30';
->>>>>>> dd756c8 (Fix startup hang and add BMI management feature)
     var timeKey=pattern==='morning'?sTime:eTime;
     var tp=timeKey.split(':');var timeMin=Number(tp[0])*60+Number(tp[1]||0);
     candidates.push({id:u.id,name:u.name,address:addr,startTime:sTime,endTime:eTime,timeKey:timeKey,timeMin:timeMin});
@@ -540,13 +530,6 @@ async function _calcSmartRoutes(userIds,pattern,date){
   // 各トリップの結果（常に「着時刻」を基準に出発時刻を逆算）
   var results=[];
   for(var ti=0;ti<trips.length;ti++){
-<<<<<<< HEAD
-    var trip=trips[ti];var routeMin=trip.length*10+15;
-    var targetMin=trip[0].timeMin;
-    var arriveTime=trip[0].timeKey;
-    var depMin=targetMin-routeMin;if(depMin<0)depMin=0;
-    var departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
-=======
     var trip=trips[ti];
     var timeInfo=_estimateRouteMinutes(trip);
     var routeMin=timeInfo.totalMinutes;
@@ -568,7 +551,6 @@ async function _calcSmartRoutes(userIds,pattern,date){
       var arrMin=depMin + routeMin;
       arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
     }
->>>>>>> dd756c8 (Fix startup hang and add BMI management feature)
 
     results.push({tripIndex:ti+1,users:trip,
       userIds:trip.map(function(t){return t.id;}),
