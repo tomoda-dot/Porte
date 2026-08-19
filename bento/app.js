@@ -1008,22 +1008,7 @@ window.toggleUserBentoWant = function(userIndex) {
   showToast(`${user.name} 様のお弁当注文希望を切り替えました`, 'info');
 };
 
-window.resetAllStockToDefault = function(defaultQty = 10) {
-  if (confirm(`全商品の在庫数を【${defaultQty}食】に一括リセットしますか？\n（個別に設定した在庫数・ロットがすべて${defaultQty}食に修正されます）`)) {
-    bentoMaster.forEach(b => {
-      b.lots = [{
-        id: 'lot_' + Date.now() + '_' + b.id,
-        type: 'STOCK',
-        qty: defaultQty,
-        expDate: getOffsetDateStr(7)
-      }];
-      b.stock = defaultQty;
-    });
-    saveMaster();
-    renderAll();
-    showToast(`✅ 全商品の在庫数を【${defaultQty}食】に一括リセットしました！`, 'success');
-  }
-};
+
 
 window.assignUserBento = function(userIndex, newBentoId) {
   const user = porteUsers[userIndex];
