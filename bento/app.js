@@ -298,6 +298,19 @@ function saveOrderHistory() {
 
 function saveDailyOrders() {
   localStorage.setItem('bento_daily_orders', JSON.stringify(dailyOrders));
+  saveDailyOrdersToSupabase();
+}
+
+async function saveDailyOrdersToSupabase() {
+  const { url, key } = getSupabaseCredentials();
+  if (!url || !key || typeof supabase === 'undefined') return;
+  try {
+    const SB = supabase.createClient(url, key);
+    await SB.from('設定').upsert({
+      key: 'bento_daily_orders',
+      value: JSON.stringify(dailyOrders)
+    });
+  } catch(e) {}
 }
 
 // Supabase データベース同期機能 (複数端末間リアルタイム共有)
@@ -309,7 +322,7 @@ async function syncFromSupabase() {
     const SB = supabase.createClient(url, key);
 
     // 設定テーブルから商品マスター＆入荷ロットデータを一括読み込み（全端末共有）
-    const settingsRes = await SB.from('設定').select('*').in('key', ['bento_master', 'bento_todays_menu', 'bento_order_history']);
+    const settingsRes = await SB.from('設定').select('*').in('key', ['bento_master', 'bento_todays_menu', 'bento_order_history', 'bento_daily_orders']);
     if (settingsRes.data && settingsRes.data.length > 0) {
       settingsRes.data.forEach(item => {
         if (item.key === 'bento_master' && item.value) {
@@ -335,6 +348,14 @@ async function syncFromSupabase() {
             if (Array.isArray(parsed)) {
               orderHistory = parsed;
               localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
+            }
+          } catch(e) {}
+        } else if (item.key === 'bento_daily_orders' && item.value) {
+          try {
+            const parsed = JSON.parse(item.value);
+            if (parsed && typeof parsed === 'object') {
+              dailyOrders = Object.assign({}, parsed, dailyOrders);
+              localStorage.setItem('bento_daily_orders', JSON.stringify(dailyOrders));
             }
           } catch(e) {}
         }
@@ -987,11 +1008,36 @@ window.toggleUserBentoWant = function(userIndex) {
   showToast(`${user.name} 様のお弁当注文希望を切り替えました`, 'info');
 };
 
+window.resetAllStockToDefault = function(defaultQty = 10) {
+  if (confirm(`全商品の在庫数を【${defaultQty}食】に一括リセットしますか？\n（個別に設定した在庫数・ロットがすべて${defaultQty}食に修正されます）`)) {
+    bentoMaster.forEach(b => {
+      b.lots = [{
+        id: 'lot_' + Date.now() + '_' + b.id,
+        type: 'STOCK',
+        qty: defaultQty,
+        expDate: getOffsetDateStr(7)
+      }];
+      b.stock = defaultQty;
+    });
+    saveMaster();
+    renderAll();
+    showToast(`✅ 全商品の在庫数を【${defaultQty}食】に一括リセットしました！`, 'success');
+  }
+};
+
 window.assignUserBento = function(userIndex, newBentoId) {
   const user = porteUsers[userIndex];
+  if (!user) return;
   const oldBentoId = user.selectedBentoId;
 
   if (oldBentoId === newBentoId) return;
+
+  if (oldBentoId) {
+    const oldBento = bentoMaster.find(b => b.id === oldBentoId);
+    if (oldBento) {
+      addBentoStockLot(oldBento, 1, getOffsetDateStr(7), 'STOCK');
+    }
+  }
 
   if (newBentoId) {
     const newBento = bentoMaster.find(b => b.id === newBentoId);
@@ -1004,6 +1050,7 @@ window.assignUserBento = function(userIndex, newBentoId) {
       }
 
       user.wantsBento = true;
+      deductBentoStockFIFO(newBento, 1);
 
       if (!todaysMenuIds.includes(newBento.id)) {
         const replaceableIndex = todaysMenuIds.findIndex(id => {
@@ -1670,16 +1717,15 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           r.status === 'キャンセル' ||
           String(r.status || '').includes('欠') ||
           String(r.status || '').includes('休')
-        ) : true; // 本日の出欠予定レコードが存在しない場合は「本日予定なし・お休み」と判定
+        ) : false;
 
         const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? String(r.bento).trim() : (u.bento ? String(u.bento).trim() : '');
         const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
 
-        // お弁当が必要（wantsBento = true）かの厳密判定：
-        // 本日の出欠予定(r)が存在し、欠席・お休みでなく、かつお弁当が「あり/必要/true」の場合のみ
+        // お弁当が必要（wantsBento = true）かの判定：
         let wantsBento = false;
-        if (r && !isAbsent) {
-          if (curB === 'あり' || curB === '必要' || curB === 'true' || curMeal === true || curMeal === 'あり' || curMeal === '必要') {
+        if (!isAbsent) {
+          if (curB === 'あり' || curB === '必要' || curB === 'true' || curB === '1' || curMeal === true || curMeal === 'あり' || curMeal === '必要') {
             wantsBento = true;
           }
         }
