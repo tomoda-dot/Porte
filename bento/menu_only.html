@@ -204,29 +204,25 @@
       border-radius: 16px;
     }
 
-    .bento-icon-box {
-      width: 110px;
-      height: 110px;
-      background: radial-gradient(circle, #fff3bf 0%, #fff0f6 100%);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 4.2rem;
-      margin: 32px 0 16px 0;
-      box-shadow: inset 0 2px 6px rgba(0,0,0,0.06);
-    }
-
     .bento-title {
-      font-size: 1.4rem;
+      font-size: 1.35rem;
       font-weight: 900;
       color: #212529;
       line-height: 1.35;
+      margin-top: 34px;
       margin-bottom: 10px;
       min-height: 3.6rem;
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 8px;
+    }
+
+    .bento-title-icon {
+      font-size: 1.8rem;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
     }
 
     .bento-desc {
@@ -235,21 +231,6 @@
       line-height: 1.4;
       margin-bottom: 16px;
       min-height: 2.6rem;
-    }
-
-    .stock-chip {
-      background: #f1f3f5;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 0.95rem;
-      font-weight: 800;
-      color: #495057;
-      margin-bottom: 16px;
-    }
-
-    .stock-chip strong {
-      color: #e64980;
-      font-size: 1.15rem;
     }
 
     .selected-users-list {
@@ -682,13 +663,8 @@
         card.innerHTML = `
           <span class="card-num-badge">第 ${index + 1} 案</span>
           <span class="card-cat-badge">${item.category}</span>
-          <div class="bento-icon-box">${item.icon}</div>
-          <h2 class="bento-title">${item.name}</h2>
+          <h2 class="bento-title"><span class="bento-title-icon">${item.icon}</span> ${item.name}</h2>
           <p class="bento-desc">${item.desc || ''}</p>
-
-          <div class="stock-chip">
-            ${isSoldOut ? '<span style="color:#ff4757;">完売いたしました</span>' : `残り <strong>${item.stock}</strong> 食`}
-          </div>
 
           <div class="selected-users-list">
             ${usersHtml || '<span style="font-size:0.8rem; color:#adb5bd;">まだ選ばれていません</span>'}
