@@ -34,6 +34,10 @@
           <span>お弁当決定:</span>
           <strong id="headerOrderedCount">0食</strong>
         </div>
+        <div class="stat-badge total-stock-badge" style="background: linear-gradient(135deg, #e6fcf5 0%, #c3fae8 100%); border: 2px solid #63e6be; color: #0ca678; border-radius: 16px; padding: 6px 14px; font-weight: 800; font-size: 0.9rem; display: flex; align-items: center; gap: 4px;">
+          <span>📦 現在の総在庫数:</span>
+          <strong id="headerTotalStockCount" style="color: #0ca678; font-size: 1.15rem; font-weight: 900;">0食</strong>
+        </div>
         <button class="btn btn-primary" id="refreshUsersHeaderBtn" style="font-weight:900; font-size:0.95rem; border-radius:16px; padding:8px 18px; background: linear-gradient(135deg, #ff7e67 0%, #ff5252 100%); border:none; box-shadow:0 4px 12px rgba(255, 82, 82, 0.35); color:#fff; cursor:pointer; display:flex; align-items:center; gap:6px;">
           🔄 利用者更新
         </button>
@@ -248,7 +252,7 @@
       <section id="master-tab" class="tab-content">
         <div class="master-header-row">
           <div>
-            <h2>⚙️ 商品マスター ＆ 全在庫・賞味期限管理 （全<span id="masterTotalCount">30</span>品目）</h2>
+            <h2>⚙️ 商品マスター ＆ 全在庫・賞味期限管理 （全<span id="masterTotalCount">30</span>品目 / 総在庫: <span id="masterTotalStockText" style="color:#d9480f; font-weight:900;">0</span>食）</h2>
             <p>全商品の在庫数および入荷ロット別の賞味期限を一括管理できます。</p>
           </div>
           <div class="action-buttons">

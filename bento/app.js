@@ -1621,6 +1621,16 @@ function updateHeaderStats() {
 
   document.getElementById('headerUserCount').textContent = `${totalUsers}名 (全${porteUsers.length}名)`;
   document.getElementById('headerOrderedCount').textContent = `${orderedUsers}食`;
+
+  const totalStock = bentoMaster.reduce((sum, item) => sum + (parseInt(item.stock, 10) || 0), 0);
+  const stockEl = document.getElementById('headerTotalStockCount');
+  if (stockEl) {
+    stockEl.textContent = `${totalStock}食`;
+  }
+  const masterStockEl = document.getElementById('masterTotalStockText');
+  if (masterStockEl) {
+    masterStockEl.textContent = totalStock;
+  }
 }
 
 function getSupabaseCredentials() {
