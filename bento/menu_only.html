@@ -517,36 +517,36 @@
   <script>
     // 30品目 初期マスターデータ（完全独立保持）
     const DEFAULT_30_BENTO = [
-      { id: 'b01', name: 'タラのトマトソース弁当', category: '魚', icon: '🐟', stock: 10, desc: 'ふっくらタラをコク旨トマトソースで煮込みました。' },
-      { id: 'b02', name: 'アジの南蛮漬け弁当', category: '魚', icon: '🐟', stock: 10, desc: 'さっぱり酸味が食欲をそそる特製南蛮だれ。' },
-      { id: 'b03', name: 'タラの白醤油焼き弁当', category: '魚', icon: '🐟', stock: 10, desc: '白醤油のやさしい風味が上品な和風弁当。' },
-      { id: 'b04', name: '豚肉の生姜焼き弁当', category: '豚肉', icon: '🐖', stock: 12, desc: '生姜の香りが引き立つジューシーな一番人気！' },
-      { id: 'b05', name: 'サバの味噌だれがけ弁当', category: '魚', icon: '🐟', stock: 10, desc: '濃厚でコクのある味噌だれがサバの旨みを引き立てます。' },
-      { id: 'b06', name: 'レバニラ炒め弁当', category: '豚肉', icon: '🐖', stock: 8, desc: 'スタミナ満点！しゃきしゃきニラと特製ダレ。' },
-      { id: 'b07', name: '鶏肉の山賊焼き弁当', category: '鶏肉', icon: '🐓', stock: 10, desc: 'ニンニク醤油が香ばしい長野名物の山賊焼き。' },
-      { id: 'b08', name: '鶏肉とインゲンの味噌ダレ焼き弁当', category: '鶏肉', icon: '🐓', stock: 10, desc: '甘辛い味噌ダレと彩り豊かなインゲンがベストマッチ。' },
-      { id: 'b09', name: '豚肉とチンゲン菜の塩ダレ炒め弁当', category: '豚肉', icon: '🐖', stock: 10, desc: '旨塩ダレでさっぱり仕上げたヘルシーな一品。' },
-      { id: 'b10', name: '豚ロース肉と長葱のコチュジャン炒め弁当', category: '豚肉', icon: '🐖', stock: 10, desc: 'ほんのりピリ辛コチュジャンが後を引く美味しさ。' },
-      { id: 'b11', name: 'ポークトマト煮弁当', category: '豚肉', icon: '🐖', stock: 10, desc: 'やわらか豚肉をじっくりトマトで煮込みました。' },
-      { id: 'b12', name: '豚肉の甘辛炒め弁当', category: '豚肉', icon: '🐖', stock: 10, desc: 'ご飯が進む甘辛醤油ダレの定番人気。' },
-      { id: 'b13', name: 'すき焼き風煮弁当', category: '牛肉', icon: '🐂', stock: 10, desc: '甘辛いすき焼きダレが染み込んだ満足感たっぷりの煮物。' },
-      { id: 'b14', name: '牛肉のオイスター炒め弁当', category: '牛肉', icon: '🐂', stock: 10, desc: 'オイスターソースの深いコクと豊かな風味。' },
-      { id: 'b15', name: '鶏の唐揚げ弁当', category: '鶏肉', icon: '🐓', stock: 15, desc: '外はカリッと中はジューシーなみんな大好き唐揚げ。' },
-      { id: 'b16', name: '鶏肉のレモンクリーム弁当', category: '鶏肉', icon: '🐓', stock: 10, desc: 'さわやかなレモンの香りとクリーミーなソース。' },
-      { id: 'b17', name: 'ホッケのみりん焼き弁当', category: '魚', icon: '🐟', stock: 10, desc: '脂ののったホッケをほんのり甘いみりん干し風に。' },
-      { id: 'b18', name: 'アジの塩焼き弁当', category: '魚', icon: '🐟', stock: 10, desc: 'シンプルだからこそ魚の旨味が際立つ塩焼き。' },
-      { id: 'b19', name: '野菜たっぷりエビマヨ弁当', category: '和食・その他', icon: '🦐', stock: 10, desc: 'プリプリ海老やまろやかマヨソース。' },
-      { id: 'b20', name: '海老としめじの玉子とじ弁当', category: '和食・その他', icon: '🦐', stock: 10, desc: 'ふんわり優しい玉子で包んだお出汁の効いたお弁当。' },
-      { id: 'b21', name: '若鶏の利休焼き弁当', category: '鶏肉', icon: '🐓', stock: 10, desc: '香ばしいゴマの香りが広がる伝統和風メニュー。' },
-      { id: 'b22', name: '牛肉と茄子の麻婆ソース弁当', category: '牛肉', icon: '🐂', stock: 10, desc: 'ジューシーな茄子と牛肉のピリ辛本格麻婆。' },
-      { id: 'b23', name: '野菜たっぷりキーマカレー弁当', category: '和食・その他', icon: '🍛', stock: 10, desc: 'スパイス香るマイルドで食べやすいキーマカレー。' },
-      { id: 'b24', name: '韓国風焼肉炒め弁当', category: '牛肉', icon: '🐂', stock: 10, desc: '特製プルコギダレで炒めたしっかり味付けのお肉。' },
-      { id: 'b25', name: '鶏の照焼き弁当', category: '鶏肉', icon: '🐓', stock: 12, desc: '照り照りの甘辛タレが絡む定番の照り焼き。' },
-      { id: 'b26', name: 'チリソースミートボール弁当', category: '和食・その他', icon: '🧆', stock: 10, desc: '甘辛チリソースが食欲を刺激するミートボール。' },
-      { id: 'b27', name: 'ズッキーニとチキンのトマト煮込み弁当', category: '鶏肉', icon: '🐓', stock: 10, desc: '彩り野菜とチキンのヘルシーな地中海風煮込み。' },
-      { id: 'b28', name: '回鍋肉弁当', category: '豚肉', icon: '🐖', stock: 10, desc: 'シャキシャキキャベツと豚肉の甜麺醤炒め。' },
-      { id: 'b29', name: '家常豆腐弁当', category: '和食・その他', icon: '🍲', stock: 10, desc: '香ばしく揚げた豆腐と野菜の和風あんかけ煮込み。' },
-      { id: 'b30', name: '牛肉きのこの甘辛炒め弁当', category: '牛肉', icon: '🐂', stock: 10, desc: 'たっぷりのきのこ風味と牛肉の甘辛和風炒め。' }
+      { id: 'b01', name: 'タラのトマトソース弁当', category: '魚', icon: '🐟', stock: 0, desc: 'ふっくらタラをコク旨トマトソースで煮込みました。' },
+      { id: 'b02', name: 'アジの南蛮漬け弁当', category: '魚', icon: '🐟', stock: 0, desc: 'さっぱり酸味が食欲をそそる特製南蛮だれ。' },
+      { id: 'b03', name: 'タラの白醤油焼き弁当', category: '魚', icon: '🐟', stock: 0, desc: '白醤油のやさしい風味が上品な和風弁当。' },
+      { id: 'b04', name: '豚肉の生姜焼き弁当', category: '豚肉', icon: '🐖', stock: 0, desc: '生姜の香りが引き立つジューシーな一番人気！' },
+      { id: 'b05', name: 'サバの味噌だれがけ弁当', category: '魚', icon: '🐟', stock: 0, desc: '濃厚でコクのある味噌だれがサバの旨みを引き立てます。' },
+      { id: 'b06', name: 'レバニラ炒め弁当', category: '豚肉', icon: '🐖', stock: 0, desc: 'スタミナ満点！しゃきしゃきニラと特製ダレ。' },
+      { id: 'b07', name: '鶏肉の山賊焼き弁当', category: '鶏肉', icon: '🐓', stock: 0, desc: 'ニンニク醤油が香ばしい長野名物の山賊焼き。' },
+      { id: 'b08', name: '鶏肉とインゲンの味噌ダレ焼き弁当', category: '鶏肉', icon: '🐓', stock: 0, desc: '甘辛い味噌ダレと彩り豊かなインゲンがベストマッチ。' },
+      { id: 'b09', name: '豚肉とチンゲン菜の塩ダレ炒め弁当', category: '豚肉', icon: '🐖', stock: 0, desc: '旨塩ダレでさっぱり仕上げたヘルシーな一品。' },
+      { id: 'b10', name: '豚ロース肉と長葱のコチュジャン炒め弁当', category: '豚肉', icon: '🐖', stock: 0, desc: 'ほんのりピリ辛コチュジャンが後を引く美味しさ。' },
+      { id: 'b11', name: 'ポークトマト煮弁当', category: '豚肉', icon: '🐖', stock: 0, desc: 'やわらか豚肉をじっくりトマトで煮込みました。' },
+      { id: 'b12', name: '豚肉の甘辛炒め弁当', category: '豚肉', icon: '🐖', stock: 0, desc: 'ご飯が進む甘辛醤油ダレの定番人気。' },
+      { id: 'b13', name: 'すき焼き風煮弁当', category: '牛肉', icon: '🐂', stock: 0, desc: '甘辛いすき焼きダレが染み込んだ満足感たっぷりの煮物。' },
+      { id: 'b14', name: '牛肉のオイスター炒め弁当', category: '牛肉', icon: '🐂', stock: 0, desc: 'オイスターソースの深いコクと豊かな風味。' },
+      { id: 'b15', name: '鶏の唐揚げ弁当', category: '鶏肉', icon: '🐓', stock: 0, desc: '外はカリッと中はジューシーなみんな大好き唐揚げ。' },
+      { id: 'b16', name: '鶏肉のレモンクリーム弁当', category: '鶏肉', icon: '🐓', stock: 0, desc: 'さわやかなレモンの香りとクリーミーなソース。' },
+      { id: 'b17', name: 'ホッケのみりん焼き弁当', category: '魚', icon: '🐟', stock: 0, desc: '脂ののったホッケをほんのり甘いみりん干し風に。' },
+      { id: 'b18', name: 'アジの塩焼き弁当', category: '魚', icon: '🐟', stock: 0, desc: 'シンプルだからこそ魚の旨味が際立つ塩焼き。' },
+      { id: 'b19', name: '野菜たっぷりエビマヨ弁当', category: '和食・その他', icon: '🦐', stock: 0, desc: 'プリプリ海老やまろやかマヨソース。' },
+      { id: 'b20', name: '海老としめじの玉子とじ弁当', category: '和食・その他', icon: '🦐', stock: 0, desc: 'ふんわり優しい玉子で包んだお出汁の効いたお弁当。' },
+      { id: 'b21', name: '若鶏の利休焼き弁当', category: '鶏肉', icon: '🐓', stock: 0, desc: '香ばしいゴマの香りが広がる伝統和風メニュー。' },
+      { id: 'b22', name: '牛肉と茄子の麻婆ソース弁当', category: '牛肉', icon: '🐂', stock: 0, desc: 'ジューシーな茄子と牛肉のピリ辛本格麻婆。' },
+      { id: 'b23', name: '野菜たっぷりキーマカレー弁当', category: '和食・その他', icon: '🍛', stock: 0, desc: 'スパイス香るマイルドで食べやすいキーマカレー。' },
+      { id: 'b24', name: '韓国風焼肉炒め弁当', category: '牛肉', icon: '🐂', stock: 0, desc: '特製プルコギダレで炒めたしっかり味付けのお肉。' },
+      { id: 'b25', name: '鶏の照焼き弁当', category: '鶏肉', icon: '🐓', stock: 0, desc: '照り照りの甘辛タレが絡む定番の照り焼き。' },
+      { id: 'b26', name: 'チリソースミートボール弁当', category: '和食・その他', icon: '🧆', stock: 0, desc: '甘辛チリソースが食欲を刺激するミートボール。' },
+      { id: 'b27', name: 'ズッキーニとチキンのトマト煮込み弁当', category: '鶏肉', icon: '🐓', stock: 0, desc: '彩り野菜とチキンのヘルシーな地中海風煮込み。' },
+      { id: 'b28', name: '回鍋肉弁当', category: '豚肉', icon: '🐖', stock: 0, desc: 'シャキシャキキャベツと豚肉の甜麺醤炒め。' },
+      { id: 'b29', name: '家常豆腐弁当', category: '和食・その他', icon: '🍲', stock: 0, desc: '香ばしく揚げた豆腐と野菜の和風あんかけ煮込み。' },
+      { id: 'b30', name: '牛肉きのこの甘辛炒め弁当', category: '牛肉', icon: '🐂', stock: 0, desc: 'たっぷりのきのこ風味と牛肉の甘辛和風炒め。' }
     ];
 
     let bentoMaster = [];
@@ -576,10 +576,9 @@
     function loadClientData() {
       const savedMaster = localStorage.getItem('bento_master');
       if (savedMaster) {
-        try { bentoMaster = JSON.parse(savedMaster); } catch(e) { bentoMaster = [...DEFAULT_30_BENTO]; }
+        try { bentoMaster = JSON.parse(savedMaster); } catch(e) { bentoMaster = JSON.parse(JSON.stringify(DEFAULT_30_BENTO)); }
       } else {
         bentoMaster = JSON.parse(JSON.stringify(DEFAULT_30_BENTO));
-        localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
       }
 
       const savedTodays = localStorage.getItem('bento_todays_menu');
@@ -587,15 +586,13 @@
         try { todaysMenuIds = JSON.parse(savedTodays); } catch(e) { todaysMenuIds = bentoMaster.slice(0, 5).map(b => b.id); }
       } else {
         todaysMenuIds = bentoMaster.slice(0, 5).map(b => b.id);
-        localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
       }
 
       const savedUsers = localStorage.getItem('bento_porte_users');
       if (savedUsers) {
-        try { porteUsers = JSON.parse(savedUsers); } catch(e) { porteUsers = getFallbackUsers(); }
+        try { porteUsers = JSON.parse(savedUsers); } catch(e) { porteUsers = []; }
       } else {
-        porteUsers = getFallbackUsers();
-        localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+        porteUsers = [];
       }
 
       autoReplaceSoldOutMenu();

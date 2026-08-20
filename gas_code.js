@@ -9,7 +9,7 @@ var HEADERS = {
     'recipientNumber','supportStartDate','supportEndDate','supportDays','category',
     'scheduleDays','scheduleStart','scheduleEnd','bento','pickup',
     'enrollDate','endDate','userStatus','notes'],
-  '出欠': ['id','userId','date','status','startTime','endTime','breakMin','workTypeId','notes'],
+  '出欠': ['id','userId','date','status','startTime','endTime','breakMin','workTypeId','workTypeIdPm','notes','actualHours'],
   '日報': ['id','userId','date','workTypeId','content','mood','notes'],
   '送迎': ['id','userId','date','pickupTime','dropoffTime','driver','route','notes'],
   '作業種別': ['id','name','rate'],
