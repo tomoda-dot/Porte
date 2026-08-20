@@ -1037,9 +1037,11 @@ window.assignUserBento = function(userIndex, newBentoId) {
         saveTodaysMenu();
       }
 
+      const now = new Date();
+      const mStr = (now.getMonth() + 1) + '/' + now.getDate() + ' ' + new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
       orderHistory.unshift({
         id: 'ord_' + Date.now(),
-        date: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+        date: mStr,
         userName: user.name,
         bentoId: newBento.id,
         bentoName: newBento.name,
@@ -1122,9 +1124,17 @@ function renderStockSection() {
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#747d8c;">注文履歴はありません。</td></tr>`;
   } else {
     orderHistory.slice(0, 30).forEach((ord, index) => {
+      let dateDisp = ord.date || '';
+      if (dateDisp && dateDisp.indexOf('/') < 0 && dateDisp.indexOf('-') < 0 && ord.id) {
+        const ts = parseInt(String(ord.id).replace('ord_', ''), 10);
+        if (!isNaN(ts) && ts > 1000000000000) {
+          const d = new Date(ts);
+          dateDisp = `${d.getMonth() + 1}/${d.getDate()} ${ord.date}`;
+        }
+      }
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${ord.date}</td>
+        <td style="font-size:0.85rem; font-weight:700; color:#495057;">${dateDisp}</td>
         <td><strong>${ord.userName}</strong></td>
         <td>${ord.bentoName}</td>
         <td><span class="pill-btn" style="font-size:0.75rem;">${ord.category}</span></td>
