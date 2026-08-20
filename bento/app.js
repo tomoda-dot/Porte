@@ -678,7 +678,32 @@ function renderMonthlyMatrix() {
           const shortName = (userOrder.bentoName || '').slice(0, 5);
           cellContent = `<span class="matrix-cell-chip" title="${userOrder.bentoName}">${icon} ${shortName}</span>`;
         }
-      } else if (isToday) {
+      }
+      
+      // 未確定日のバックアップ復元表示 (注文履歴ログから検索)
+      if (cellContent.indexOf('matrix-cell-chip') < 0) {
+        const histMatch = orderHistory.find(ord => {
+          if (ord.userName !== u.name && ord.userId !== u.id) return false;
+          let ordDateStr = '';
+          if (ord.id) {
+            const ts = parseInt(String(ord.id).replace('ord_', ''), 10);
+            if (!isNaN(ts) && ts > 1000000000000) {
+              const d = new Date(ts);
+              ordDateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            }
+          }
+          return ordDateStr === dayKey;
+        });
+        if (histMatch) {
+          monthTotalCount++;
+          const bento = bentoMaster.find(b => b.id === histMatch.bentoId);
+          const icon = bento ? bento.icon : '🍱';
+          const shortName = (histMatch.bentoName || '').slice(0, 5);
+          cellContent = `<span class="matrix-cell-chip" style="background:#f3f0ff; border-color:#d0bfff; color:#6741d9;" title="履歴より復元: ${histMatch.bentoName}">${icon} ${shortName}</span>`;
+        }
+      }
+
+      if (cellContent.indexOf('matrix-cell-chip') < 0 && isToday) {
         const currentUser = porteUsers.find(item => item.id === u.id);
         if (currentUser && currentUser.selectedBentoId) {
           const bento = bentoMaster.find(b => b.id === currentUser.selectedBentoId);
