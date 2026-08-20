@@ -381,7 +381,7 @@ async function renderDashboard(c){
     var curB=(r&&r.bento)?r.bento:u.bento;
     var curP=(r&&r.pickup)?r.pickup:u.pickup;
     if(curB==='あり')bc++;
-    if(curP==='あり')pc++;
+    if(curP && curP !== 'なし' && curP !== '0' && curP !== 'false') pc++;
   });
 
   // スケジュール変更（出欠記録ベース）
@@ -690,9 +690,21 @@ async function renderDashboard(c){
       var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
       var isAdj=r&&r.status==='調整休';
       var bIcon='−',pIcon='−';
-      if(isAb){bIcon=b==='あり'?'<span style="color:var(--red)">❌</span>':'−';pIcon=p==='あり'?'<span style="color:var(--red)">❌</span>':'−';}
+      var pStr=String(p||'').trim();
+      var hasP = pStr && pStr !== 'なし' && pStr !== '0' && pStr !== 'false';
+      if(isAb){
+        bIcon=b==='あり'?'<span style="color:var(--red)">❌</span>':'−';
+        pIcon=hasP?'<span style="color:var(--red)">❌</span>':'−';
+      }
       else if(isAdj){bIcon='−';pIcon='−';}
-      else{bIcon=b==='あり'?'🍱':'−';pIcon=p==='あり'?'🚐':'−';}
+      else{
+        bIcon=b==='あり'?'🍱':'−';
+        if(!hasP) pIcon='−';
+        else if(pStr==='往路'||pStr==='行き'||pStr==='行きだけ') pIcon='<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700">🚐往</span>';
+        else if(pStr==='復路'||pStr==='帰り'||pStr==='帰りだけ') pIcon='<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700">🚐復</span>';
+        else if(pStr==='往復') pIcon='<span title="送迎: 往復" style="color:#2e7d32;font-weight:700">🚐往復</span>';
+        else pIcon='🚐';
+      }
       var stLabel = (r && r.status !== '調整休') ? '<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>' : (isTmp?'<span style="color:var(--acc);font-weight:700;font-size:11px">★臨時</span>':'<span style="color:var(--sub)">-</span>');
       var actual = (r && r.startTime) ? r.startTime+'〜'+(r.endTime||'--:--') : '-';
       return'<tr'+(isTmp?' style="background:#fffbf0"':((isAb||isAdj)?' style="opacity:.6"':''))+'>'+
@@ -953,8 +965,17 @@ function renderDD(ds){
     var bIcon='−',pIcon='−';
     if(curB==='あり')bIcon=isAb?'<span style="color:var(--red)">❌</span>':'🍱';
     else if(u.bento==='あり'&&curB==='なし')bIcon='<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
-    if(curP==='あり')pIcon=isAb?'<span style="color:var(--red)">❌</span>':'🚐';
-    else if(u.pickup==='あり'&&curP==='なし')pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
+    var pStr=String(curP||'').trim();
+    var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
+    var uHasP=u.pickup&&u.pickup!=='なし'&&u.pickup!=='0'&&u.pickup!=='false';
+    if(hasP){
+      if(isAb) pIcon='<span style="color:var(--red)">❌</span>';
+      else if(pStr==='往路'||pStr==='行き'||pStr==='行きだけ') pIcon='<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700">🚐往</span>';
+      else if(pStr==='復路'||pStr==='帰り'||pStr==='帰りだけ') pIcon='<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700">🚐復</span>';
+      else if(pStr==='往復') pIcon='<span title="送迎: 往復" style="color:#2e7d32;font-weight:700">🚐往復</span>';
+      else pIcon='🚐';
+    }
+    else if(uHasP&&curP==='なし')pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
     return'<tr style="cursor:pointer;'+(isTmp?'background:#fffbf0':'')+'" onclick="openCalAttM(\''+u.id+'\',\''+ds+'\')" onmouseover="this.style.background=\'#f5f0ea\'" onmouseout="this.style.background=\''+(isTmp?'#fffbf0':'')+'\'">'+ 
       '<td>'+esc(u.name)+(isTmp?'<span style="font-size:10px;color:var(--acc);margin-left:4px">★臨時</span>':'')+'</td>'+
       '<td>'+timeDisp+'</td><td>'+bIcon+'</td><td>'+pIcon+'</td><td>'+stLabel+'</td><td>'+esc(staffName(u.staffId))+'</td>'+
@@ -998,7 +1019,12 @@ async function openCalAttM(uid, ds){
       '<div class="field"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><label style="margin-bottom:0">退勤時間</label><button type="button" class="bg" id="adm-e-clear" onclick="document.getElementById(\'adm-e\').value=\'\';updateAdmAH();" style="font-size:10px;padding:1px 6px;line-height:1.2;cursor:pointer" title="退勤時間を未確定(利用中)の状態に戻します">未確定にする</button></div><input type="time" id="adm-e" value="'+att.endTime+'" style="width:100%" onchange="updateAdmAH()"></div></div>'+
       '<div class="grid3"><div class="field"><label>お弁当</label><select id="adm-b" style="width:100%"><option'+(att.bento==='あり'?' selected':'')+'>あり</option><option'+(att.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
       '<div class="field"><label>支払方法</label><select id="adm-bp" style="width:100%"><option value="工賃払い"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod)||'工賃払い')==='工賃払い'?' selected':'')+'>工賃払い</option><option value="当日"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod))==='当日'?' selected':'')+'>当日</option><option value="月末締め翌月払い"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod))==='月末締め翌月払い'?' selected':'')+'>翌月払い</option></select></div>'+
-      '<div class="field"><label>送迎</label><select id="adm-p" style="width:100%"><option'+(att.pickup==='あり'?' selected':'')+'>あり</option><option'+(att.pickup!=='あり'?' selected':'')+'>なし</option></select></div></div>'+
+      '<div class="field"><label>送迎</label><select id="adm-p" style="width:100%">'+
+        '<option value="なし"'+(att.pickup==='なし'||!att.pickup?' selected':'')+'>なし</option>'+
+        '<option value="往復"'+(att.pickup==='往復'||att.pickup==='あり'||att.pickup==='必要'?' selected':'')+'>往復</option>'+
+        '<option value="往路"'+(att.pickup==='往路'||att.pickup==='行き'?' selected':'')+'>往路（行きのみ）</option>'+
+        '<option value="復路"'+(att.pickup==='復路'||att.pickup==='帰り'?' selected':'')+'>復路（帰りのみ）</option>'+
+      '</select></div></div>'+
       '<div class="field"><label>工賃算定時間（調整） <span style="font-weight:normal;font-size:11px;color:var(--sub)">※早帰り・延長時に指定</span></label><input type="number" step="0.1" min="0" max="24" id="adm-ah" value="'+(att.actualHours!=null?att.actualHours:'')+'" placeholder="自動算定 (サービス提供時間)" style="width:100%" onchange="updateAdmAH()" oninput="updateAdmAH()"></div>'+
       '<div class="field"><label>備考（変更理由）</label><textarea id="adm-an" rows="2" style="width:100%" placeholder="変更理由や連絡事項を記入...">'+esc(att.notes||'')+'</textarea></div>'+
       '<div style="display:none"><select id="adm-brk"><option value="'+((att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?att.breakMin:60)+'"></option></select><select id="adm-wt"><option value="'+(dWt?dWt.id:'')+'"></option></select><select id="adm-wtp"><option value="'+(dWt?dWt.id:'')+'"></option></select><textarea id="adm-content">'+esc(rep.content||'')+'</textarea><select id="adm-m"><option>'+esc(rep.mood||'普通')+'</option></select><textarea id="adm-dn">'+esc(rep.notes||'')+'</textarea></div>'+
@@ -1597,7 +1623,12 @@ function openUserModal(u){
     '<div class="field"><label>利用時間（終了）</label><input type="time" id="uf-tend" value="'+(d.scheduleEnd||'16:00')+'" style="width:100%"></div></div>'+
     '<div class="grid3"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%"><option'+(d.bento==='あり'?' selected':'')+'>あり</option><option'+(d.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
     '<div class="field"><label>お弁当支払方法</label><select id="uf-bento-pay" style="width:100%"><option value="工賃払い"'+(d.bentoPaymentMethod==='工賃払い'||!d.bentoPaymentMethod?' selected':'')+'>工賃払い</option><option value="当日"'+(d.bentoPaymentMethod==='当日'?' selected':'')+'>当日払い</option><option value="月末締め翌月払い"'+(d.bentoPaymentMethod==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option></select></div>'+
-    '<div class="field"><label>送迎</label><select id="uf-pickup" style="width:100%"><option'+(d.pickup==='あり'?' selected':'')+'>あり</option><option'+(d.pickup!=='あり'?' selected':'')+'>なし</option></select></div></div></div>';
+    '<div class="field"><label>送迎</label><select id="uf-pickup" style="width:100%">'+
+      '<option value="なし"'+(d.pickup==='なし'||!d.pickup?' selected':'')+'>なし</option>'+
+      '<option value="往復"'+(d.pickup==='往復'||d.pickup==='あり'||d.pickup==='必要'?' selected':'')+'>往復</option>'+
+      '<option value="往路"'+(d.pickup==='往路'||d.pickup==='行き'?' selected':'')+'>往路（行きのみ）</option>'+
+      '<option value="復路"'+(d.pickup==='復路'||d.pickup==='帰り'?' selected':'')+'>復路（帰りのみ）</option>'+
+    '</select></div></div></div>';
 
   // 利用後の進路（基本情報内）
   html+='<div class="card" style="margin-bottom:12px"><div class="section-title" style="margin-top:0">利用後の進路</div>'+
@@ -3695,7 +3726,12 @@ function openTrialModal(t){
       '</div>'+
       '<div class="grid3">'+
         '<div class="field"><label>お弁当</label><select id="tr-bento" style="width:100%"><option'+(d.bento==='あり'?' selected':'')+'>あり</option><option'+(d.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
-        '<div class="field"><label>送迎</label><select id="tr-pickup" style="width:100%"><option'+(d.pickup==='あり'?' selected':'')+'>あり</option><option'+(d.pickup!=='あり'?' selected':'')+'>なし</option></select></div>'+
+        '<div class="field"><label>送迎</label><select id="tr-pickup" style="width:100%">'+
+          '<option value="なし"'+(d.pickup==='なし'||!d.pickup?' selected':'')+'>なし</option>'+
+          '<option value="往復"'+(d.pickup==='往復'||d.pickup==='あり'||d.pickup==='必要'?' selected':'')+'>往復</option>'+
+          '<option value="往路"'+(d.pickup==='往路'||d.pickup==='行き'?' selected':'')+'>往路（行きのみ）</option>'+
+          '<option value="復路"'+(d.pickup==='復路'||d.pickup==='帰り'?' selected':'')+'>復路（帰りのみ）</option>'+
+        '</select></div>'+
         '<div class="field"><label>連絡先</label><input id="tr-contact" value="'+esc(d.contact||'')+'" style="width:100%"></div>'+
       '</div>'+
     '</div>'+
@@ -4333,8 +4369,17 @@ async function renderAttTbl(){
       }else{
         if(curB==='あり'){bIcon=isAb?'<span style="color:var(--red)">❌</span>':'🍱';}
         else if(r&&r.bento==='なし'&&u.bento==='あり'){bIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
-        if(curP==='あり'){pIcon=isAb?'<span style="color:var(--red)">❌</span>':'🚐';}
-        else if(r&&r.pickup==='なし'&&u.pickup==='あり'){pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
+        var pStr=String(curP||'').trim();
+        var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
+        var uHasP=u.pickup&&u.pickup!=='なし'&&u.pickup!=='0'&&u.pickup!=='false';
+        if(hasP){
+          if(isAb) pIcon='<span style="color:var(--red)">❌</span>';
+          else if(pStr==='往路'||pStr==='行き') pIcon='<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700">🚐往</span>';
+          else if(pStr==='復路'||pStr==='帰り') pIcon='<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700">🚐復</span>';
+          else if(pStr==='往復') pIcon='<span title="送迎: 往復" style="color:#2e7d32;font-weight:700">🚐往復</span>';
+          else pIcon='🚐';
+        }
+        else if(r&&r.pickup==='なし'&&uHasP){pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
       }
       var repContent='-';
       var moodDisp='-';
@@ -4441,10 +4486,17 @@ function renderAttMonthlyTbl(){
       }else if(user.bento==='あり'&&curB==='なし'){
         bIcon='<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
       }
-      if(curP==='あり'){
-        pIcon=isAb?'<span style="color:var(--red)">❌</span>':'🚐';
+      var pStr=String(curP||'').trim();
+      var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
+      var uHasP=user.pickup&&user.pickup!=='なし'&&user.pickup!=='0'&&user.pickup!=='false';
+      if(hasP){
+        if(isAb) pIcon='<span style="color:var(--red)">❌</span>';
+        else if(pStr==='往路'||pStr==='行き') pIcon='<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700">🚐往</span>';
+        else if(pStr==='復路'||pStr==='帰り') pIcon='<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700">🚐復</span>';
+        else if(pStr==='往復') pIcon='<span title="送迎: 往復" style="color:#2e7d32;font-weight:700">🚐往復</span>';
+        else pIcon='🚐';
         if(!isAb)pickupCount++;
-      }else if(user.pickup==='あり'&&curP==='なし'){
+      }else if(uHasP&&curP==='なし'){
         pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
       }
       notes=r.notes||'';
@@ -4454,7 +4506,15 @@ function renderAttMonthlyTbl(){
         status='予定';
         timeDisp=(user.scheduleStart||'10:00')+'〜'+(user.scheduleEnd||'16:00');
         if(user.bento==='あり'){bIcon='🍱';bentoCount++;}
-        if(user.pickup==='あり'){pIcon='🚐';pickupCount++;}
+        var uPStr=String(user.pickup||'').trim();
+        var uHasP=uPStr&&uPStr!=='なし'&&uPStr!=='0'&&uPStr!=='false';
+        if(uHasP){
+          if(uPStr==='往路'||uPStr==='行き') pIcon='<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700">🚐往</span>';
+          else if(uPStr==='復路'||uPStr==='帰り') pIcon='<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700">🚐復</span>';
+          else if(uPStr==='往復') pIcon='<span title="送迎: 往復" style="color:#2e7d32;font-weight:700">🚐往復</span>';
+          else pIcon='🚐';
+          pickupCount++;
+        }
         statCounts['予定']++;
       }else{
         status='-';
