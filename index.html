@@ -88,7 +88,7 @@ tr:hover td{background:var(--hov)}
 .cal-nav button{background:var(--pri);color:#fff;padding:6px 14px;font-size:13px}
 .cal-nav .cal-month{font-size:18px;font-weight:700;min-width:160px;text-align:center}
 
-@media print{.no-print{display:none!important}body.printing-modal #content > .card,body.printing-modal .card,body:has(.overlay) #content > .card,body:has(.overlay) .card,body:has(.overlay) .hd-row,#content:has(.overlay) > .card,#content:has(.overlay) > .hd-row{display:none!important}.overlay{position:static!important;background:none!important;display:block!important;padding:0!important;margin:0!important;overflow:visible!important;height:auto!important;max-height:none!important}.modal{box-shadow:none!important;border:none!important;width:100%!important;max-width:100%!important;padding:0!important;margin:0!important;max-height:none!important;height:auto!important;overflow:visible!important}.trial-report-paper{overflow:visible!important;height:auto!important;max-height:none!important;page-break-inside:auto!important}.tr-page-break{page-break-before:always!important;break-before:page!important;margin-top:0!important}body{background:#fff;margin:0;padding:0;overflow:visible!important;height:auto!important}#pr-form input[type=number]{-moz-appearance:textfield;appearance:textfield;border:none!important;background:transparent!important;box-shadow:none!important;outline:none!important}#pr-form input[type=number]::-webkit-outer-spin-button,#pr-form input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}.sr-page{page-break-after:always;page-break-inside:avoid;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.sr-page:last-child{page-break-after:auto;break-after:auto}.sr-page table{width:100%!important;table-layout:fixed}.irp-page{page-break-after:always;break-after:page}.irp-page:last-child{page-break-after:auto;break-after:auto}.wd-page{page-break-after:always;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.side,.hd-row{display:none!important}.main{padding:0!important;margin:0!important;overflow:visible!important;height:auto!important}#content,.card{overflow:visible!important;max-height:none!important;height:auto!important}.wd-screen{display:none!important}.wd-print{display:block!important}@page{margin:6mm}}
+@media print{.no-print{display:none!important}body.printing-modal #content > .card,body.printing-modal .card,body:has(.overlay) #content > .card,body:has(.overlay) .card,body:has(.overlay) .hd-row,#content:has(.overlay) > .card,#content:has(.overlay) > .hd-row{display:none!important}.overlay{position:static!important;background:none!important;display:block!important;padding:0!important;margin:0!important;overflow:visible!important;height:auto!important;max-height:none!important}.modal{box-shadow:none!important;border:none!important;width:100%!important;max-width:100%!important;padding:0!important;margin:0!important;max-height:none!important;height:auto!important;overflow:visible!important}.trial-report-paper{overflow:visible!important;height:auto!important;max-height:none!important;page-break-inside:auto!important}.tr-page-break{page-break-before:always!important;break-before:page!important;margin-top:0!important}html,body,.app{background:#fff;margin:0;padding:0;overflow:visible!important;height:auto!important;display:block!important;position:static!important}#pr-form input[type=number]{-moz-appearance:textfield;appearance:textfield;border:none!important;background:transparent!important;box-shadow:none!important;outline:none!important}#pr-form input[type=number]::-webkit-outer-spin-button,#pr-form input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}.sr-page{page-break-after:always!important;break-after:page!important;page-break-inside:avoid!important;break-inside:avoid!important;margin:0 auto!important;padding:0!important;max-width:680px!important;width:680px!important;box-sizing:border-box}.sr-page:last-child{page-break-after:auto!important;break-after:auto!important}.sr-page table{width:100%!important;table-layout:fixed}.irp-page{page-break-after:always;break-after:page}.irp-page:last-child{page-break-after:auto;break-after:auto}.wd-page{page-break-after:always;break-after:page;margin:0;padding:0!important;max-width:100%!important;width:100%!important}.side,.hd-row{display:none!important}.main{padding:0!important;margin:0!important;overflow:visible!important;height:auto!important;display:block!important}#content,.card{overflow:visible!important;max-height:none!important;height:auto!important;display:block!important}.wd-screen{display:none!important}.wd-print{display:block!important}@page{margin:6mm}}
 .spin{width:20px;height:20px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:sp .6s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
 .login-box{background:#fff;border-radius:16px;box-shadow:0 4px 32px rgba(0,0,0,.12);padding:40px 36px;width:360px;max-width:90vw}
@@ -6755,19 +6755,47 @@ function renderServiceRecord(sr,fn){
 }
 
 function printSR(all){
+  var sr=window._srData;
+  if(!sr||!sr.users||sr.users.length===0){
+    cAlert('印刷するデータがありません');
+    return;
+  }
+  var selIdx=window._srIdx!=null?window._srIdx:-1;
+  var usersToPrint=[];
   if(all){
-    window._srPrintAll=true;
-    renderServiceRecord(window._srData,(S.settings.facilityName||'事業所'));
-    setTimeout(function(){
-      window.print();
-      // 印刷後に1人表示に戻す
-      setTimeout(function(){
-        window._srPrintAll=false;
-        renderServiceRecord(window._srData,(S.settings.facilityName||'事業所'));
-      },500);
-    },300);
+    usersToPrint=sr.users;
+  } else if(selIdx>=0 && selIdx<sr.users.length){
+    usersToPrint=[sr.users[selIdx]];
   } else {
-    window.print();
+    cAlert('印刷する利用者を選択してください');
+    return;
+  }
+
+  var printHtml='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="google" content="notranslate"><title>就労継続支援提供実績記録票</title><style>'+
+    '@page { size: A4 portrait; margin: 6mm 6mm; } '+
+    '*, *::before, *::after { box-sizing: border-box; } '+
+    'html, body { margin: 0; padding: 0; background: #fff; font-family: "MS 明朝", "Hiragino Mincho ProN", serif; } '+
+    '.sr-page { page-break-after: always !important; break-after: page !important; page-break-inside: avoid !important; break-inside: avoid !important; width: 680px; margin: 0 auto; padding: 0; font-size: 8.5px; line-height: 1.2; box-sizing: border-box; } '+
+    '.sr-page:last-child { page-break-after: auto !important; break-after: auto !important; } '+
+    'table { width: 100%; border-collapse: collapse; table-layout: fixed; } '+
+    '@media print { body { padding: 0; } .sr-page { width: 100% !important; max-width: 680px !important; margin: 0 auto !important; page-break-after: always !important; break-after: page !important; } .sr-page:last-child { page-break-after: auto !important; break-after: auto !important; } } '+
+    '</style></head><body>';
+
+  for(var i=0; i<usersToPrint.length; i++){
+    printHtml += renderOne(usersToPrint[i]);
+  }
+
+  printHtml += '<script>window.onload=function(){ setTimeout(function(){ window.print(); }, 300); };<\/script></body></html>';
+
+  var win = window.open('', '_blank');
+  if(win){
+    win.document.write(printHtml);
+    win.document.close();
+    win.focus();
+  } else {
+    window._srPrintAll = all;
+    renderServiceRecord(sr, (S.settings.facilityName || '事業所'));
+    setTimeout(function(){ window.print(); }, 200);
   }
 }
 
