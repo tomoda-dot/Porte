@@ -121,6 +121,11 @@ window.onerror = function(msg, url, line, col, error) {
 <script>
 // ─── データキャッシュ ───
 var _cache={};
+function isPickupUser(val){
+  if(!val)return false;
+  var s=String(val).trim();
+  return s!==''&&s!=='なし'&&s!=='0'&&s!=='false'&&s!=='自力'&&s!=='不要';
+}
 function cachedGas(fn){
   var args=Array.prototype.slice.call(arguments,1);
   var key=fn+'|'+JSON.stringify(args);
@@ -1215,7 +1220,7 @@ async function openAttDailyM(uid, ds){
       '    </div>'+
       '    <div class="grid2">'+
       '      <div class="field"><label>お弁当</label><select id="adm-b" style="width:100%"><option'+(att.bento==='あり'?' selected':'')+'>あり</option><option'+(att.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
-      '      <div class="field"><label>送迎</label><select id="adm-p" style="width:100%"><option'+(att.pickup==='あり'?' selected':'')+'>あり</option><option'+(att.pickup!=='あり'?' selected':'')+'>なし</option></select></div>'+
+      '      <div class="field"><label>送迎</label><select id="adm-p" style="width:100%"><option value="なし"'+(att.pickup==='なし'||!att.pickup?' selected':'')+'>なし</option><option value="往復"'+(att.pickup==='往復'||att.pickup==='あり'||att.pickup==='必要'?' selected':'')+'>往復</option><option value="往路"'+(att.pickup==='往路'||att.pickup==='行き'?' selected':'')+'>往路（行きのみ）</option><option value="復路"'+(att.pickup==='復路'||att.pickup==='帰り'?' selected':'')+'>復路（帰りのみ）</option></select></div>'+
       '    </div>'+
       '    <div class="field" style="margin-top:14px">'+
       '      <label>出欠備考 (予定変更や欠席理由など)</label>'+
@@ -3689,7 +3694,7 @@ function renderTrials(c){
       return '<tr><td style="font-weight:700;white-space:nowrap">'+fmtDate(t.date)+'</td><td style="white-space:nowrap">'+esc(t.time||'')+'</td>'+
       '<td style="font-weight:600;color:var(--pri);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(t.name)+'">'+esc(t.name)+'</td>'+
       '<td style="text-align:center;white-space:nowrap"><span class="badge" style="background:'+(t.type==='体験'?'var(--acc)':'#1565c0')+'">'+esc(t.type||'見学')+'</span></td>'+
-      '<td style="text-align:center">'+(t.bento==='あり'?'🍱':'−')+'</td><td style="text-align:center">'+(t.pickup==='あり'?'🚐':'−')+'</td>'+
+      '<td style="text-align:center">'+(t.bento==='あり'?'🍱':'−')+'</td><td style="text-align:center">'+(isPickupUser(t.pickup)?'🚐':'−')+'</td>'+
       '<td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(t.contact||'')+'">'+esc(t.contact||'')+'</td>'+
       '<td style="white-space:nowrap">'+esc(t.status||'予定')+'</td>'+
       '<td style="font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(rep.notes||'')+'">'+esc(rep.notes||'−')+'</td>'+
@@ -4126,7 +4131,7 @@ function openTrialReportModal(t){
         '</tr>'+
         '<tr>'+
           '<th style="background:#f0f4f0;border:1px solid #777;padding:6px 10px;text-align:center">送 迎 利 用</th>'+
-          '<td style="border:1px solid #777;padding:6px 10px">'+(t.pickup === 'あり' ? 'あり' : 'なし')+'</td>'+
+          '<td style="border:1px solid #777;padding:6px 10px">'+(isPickupUser(t.pickup) ? 'あり' : 'なし')+'</td>'+
           '<th style="background:#f0f4f0;border:1px solid #777;padding:6px 10px;text-align:center">食 事 利 用</th>'+
           '<td style="border:1px solid #777;padding:6px 10px">'+(t.bento === 'あり' ? 'あり' : 'なし')+'</td>'+
         '</tr>'+
@@ -5128,7 +5133,7 @@ function openNewRoute(){
         var addr=(u.prefecture||'')+(u.city||'')+(u.address||'');
         var hasAddr=addr.length>=3;
         var isSchDay=u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;
-        var isPickup=u.pickup==='あり';
+        var isPickup=isPickupUser(u.pickup);
         return'<label style="display:flex;align-items:center;gap:5px;font-size:12px;padding:5px 7px;background:#fff;border-radius:6px;cursor:pointer;border:1.5px solid '+(isSchDay?'var(--pri)':'var(--bdr)')+';opacity:'+(hasAddr?'1':'.5')+'">'+
           '<input type="checkbox" class="nr-cb" value="'+u.id+'"'+(isSchDay&&isPickup&&hasAddr?' checked':'')+(!hasAddr?' disabled':'')+'>'+
           '<span>'+esc(u.name)+(isSchDay?'<span style="font-size:9px;color:var(--grn);margin-left:2px">予定日</span>':'')+(isPickup?'<span style="font-size:9px;color:var(--acc);margin-left:2px">送迎</span>':'')+'</span></label>';
@@ -5140,7 +5145,7 @@ function openNewRoute(){
     '</div></div>';
 }
 
-function nrSelPickup(){document.querySelectorAll('.nr-cb').forEach(function(cb){if(!cb.disabled){var u=S.users.find(function(x){return x.id===cb.value;});cb.checked=u&&u.pickup==='あり';}});}
+function nrSelPickup(){document.querySelectorAll('.nr-cb').forEach(function(cb){if(!cb.disabled){var u=S.users.find(function(x){return x.id===cb.value;});cb.checked=u&&isPickupUser(u.pickup);}});}
 function nrClear(){document.querySelectorAll('.nr-cb').forEach(function(cb){cb.checked=false;});}
 
 async function saveNewRoute(doCalc){
@@ -5341,7 +5346,7 @@ async function autoGenRoutes(){
     if(r&&['欠席','体調不良','通院','調整休'].indexOf(r.status)>=0)return false;
     // 出欠記録で送迎が明示的に「なし」ならスキップ
     var curP=(r&&r.pickup)?r.pickup:u.pickup;
-    return curP==='あり';
+    return isPickupUser(curP);
   });
   // 臨時利用者も含む
   try{var tempUsers=await gas('getTempByDate',tDate);
@@ -5350,7 +5355,7 @@ async function autoGenRoutes(){
       if(u&&!au.find(function(x){return x.id===u.id;})){
         var r2=dayAtt.find(function(a){return String(a.userId)===String(u.id);});
         var curP2=(r2&&r2.pickup)?r2.pickup:u.pickup;
-        if(curP2==='あり')au.push(u);
+        if(isPickupUser(curP2))au.push(u);
       }
     });
   }catch(e){}
@@ -7911,7 +7916,7 @@ function calcAllowances(user,att,ym,kaikinResult){
       if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
     }
     else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
-    else if(a.condition==='no_pickup'){match=recs.length>0&&String(user.pickup||'')!=='あり';}
+    else if(a.condition==='no_pickup'){match=recs.length>0&&!isPickupUser(user.pickup);}
     else if(a.condition==='custom'){
       // カスタム手当は手動選択。_customAllowanceMapに設定があればマッチ
       var key=user.id+'_'+a.name;

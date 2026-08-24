@@ -648,7 +648,7 @@ async function _calcAttendanceList(ym){
           if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
         }
         else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
-        else if(a.condition==='no_pickup'){match=recs.length>0&&(String(user.pickup||'')!=='あり'&&String(user.pickup||'')!=='往復');}
+        else if(a.condition==='no_pickup'){match=recs.length>0&&!_isPickupUser(user.pickup);}
         if(match){bonus+=Number(a.amount)||0;}
       });
     }else{
@@ -657,6 +657,12 @@ async function _calcAttendanceList(ym){
     result.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',days:recs.length,workMin:tServiceMin,breakMin:tBM,netMin:net,avgNetMin:recs.length>0?Math.round(tServiceMin/recs.length):0,bonus:bonus,wage:Math.round(tW),bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,total:Math.round(tW)+bonus-bcDeduct*bentoPrice});
   });
   return{users:result,bentoPrice:bentoPrice};
+}
+
+function _isPickupUser(val){
+  if(!val)return false;
+  var s=String(val).trim();
+  return s!==''&&s!=='なし'&&s!=='0'&&s!=='false'&&s!=='自力'&&s!=='不要';
 }
 
 async function _calcWageDetailPerUser(ym){
@@ -711,7 +717,7 @@ async function _calcWageDetailPerUser(ym){
           if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
         }
         else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
-        else if(a.condition==='no_pickup'){match=recs.length>0&&String(user.pickup||'')!=='あり';}
+        else if(a.condition==='no_pickup'){match=recs.length>0&&!_isPickupUser(user.pickup);}
         if(match){
           var amt=Number(a.amount)||0;
           bonus+=amt;
