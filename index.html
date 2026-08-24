@@ -6622,43 +6622,43 @@ function printWD(all){
 // ═══ 提供実績記録票 1人分描画 ═══
 function renderServiceRecordOneUser(u, sr){
   var B='border:1px solid #000;';
-  var c='<div class="sr-page" style="page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid;font-family:\'MS 明朝\',\'Hiragino Mincho ProN\',serif;font-size:8.5px;width:100%;max-width:680px;margin:0 auto;line-height:1.2">';
+  var c='<div class="sr-page" style="page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid;font-family:\'MS 明朝\',\'Hiragino Mincho ProN\',serif;font-size:9px;width:100%;max-width:680px;margin:0 auto;line-height:1.3">';
   // (様式17) 右上
   c+='<div style="text-align:right;font-size:8px;margin-bottom:0">（様式17）</div>';
   // 年月（左寄せ）＋ タイトル（センタリング）
-  c+='<table style="width:100%;border-collapse:collapse;margin-bottom:2px"><tr>';
-  c+='<td style="width:25%;font-size:8.5px;vertical-align:bottom">'+esc(sr.reiwa)+'</td>';
-  c+='<td style="width:50%;text-align:center;font-size:13px;font-weight:700;letter-spacing:2px">就労継続支援提供実績記録票</td>';
+  c+='<table style="width:100%;border-collapse:collapse;margin-bottom:4px"><tr>';
+  c+='<td style="width:25%;font-size:9px;vertical-align:bottom">'+esc(sr.reiwa)+'</td>';
+  c+='<td style="width:50%;text-align:center;font-size:14px;font-weight:700;letter-spacing:2px">就労継続支援提供実績記録票</td>';
   c+='<td style="width:25%"></td>';
   c+='</tr></table>';
   // 上部情報：1つのテーブルで6列構成（左4列＋右2列）
   c+='<table style="width:100%;border-collapse:collapse;margin-bottom:0">';
   // 行1: 受給者証番号 | 値 | 氏名ラベル | 氏名 | 事業所番号ラベル | 事業所番号値
   c+='<tr>';
-  c+='<td style="'+B+'padding:3px 4px;width:12%;font-size:8px;line-height:1.3">受給者証<br>番　　　号</td>';
-  c+='<td style="'+B+'padding:3px 4px;width:18%;font-size:9.5px">'+esc(u.recipientNumber)+'</td>';
-  c+='<td style="'+B+'padding:3px 4px;width:14%;font-size:8px;text-align:center">支給決定障害者氏名</td>';
-  c+='<td style="'+B+'padding:3px 4px;width:20%;font-size:9.5px">'+esc(u.name)+'</td>';
-  c+='<td style="'+B+'padding:3px 4px;width:12%;font-size:8px">事業所番号</td>';
-  c+='<td style="'+B+'padding:3px 4px;width:24%;font-size:8.5px">'+esc(sr.facilityNumber)+'</td>';
+  c+='<td style="'+B+'padding:4px 4px;width:12%;font-size:8px;line-height:1.3">受給者証<br>番　　　号</td>';
+  c+='<td style="'+B+'padding:4px 4px;width:18%;font-size:10px">'+esc(u.recipientNumber)+'</td>';
+  c+='<td style="'+B+'padding:4px 4px;width:14%;font-size:8px;text-align:center">支給決定障害者氏名</td>';
+  c+='<td style="'+B+'padding:4px 4px;width:20%;font-size:10px">'+esc(u.name)+'</td>';
+  c+='<td style="'+B+'padding:4px 4px;width:12%;font-size:8px">事業所番号</td>';
+  c+='<td style="'+B+'padding:4px 4px;width:24%;font-size:9px">'+esc(sr.facilityNumber)+'</td>';
   c+='</tr>';
   // 行2: 契約支給量 | 値(colspan3) | 事業者及びその事業所ラベル | 事業所名
   c+='<tr>';
-  c+='<td style="'+B+'padding:3px 4px;font-size:8px">契約支給量</td>';
-  c+='<td colspan="3" style="'+B+'padding:3px 4px;font-size:9.5px">'+esc(u.contractDays)+'</td>';
-  c+='<td style="'+B+'padding:3px 3px;font-size:7px;line-height:1.2">事業者及び<br>その事業所</td>';
-  c+='<td style="'+B+'padding:3px 4px;font-size:8px">'+esc(sr.facilityName)+'</td>';
+  c+='<td style="'+B+'padding:4px 4px;font-size:8px">契約支給量</td>';
+  c+='<td colspan="3" style="'+B+'padding:4px 4px;font-size:10px">'+esc(u.contractDays)+'</td>';
+  c+='<td style="'+B+'padding:4px 3px;font-size:7px;line-height:1.2">事業者及び<br>その事業所</td>';
+  c+='<td style="'+B+'padding:4px 4px;font-size:8px">'+esc(sr.facilityName)+'</td>';
   c+='</tr>';
   c+='</table>';
   // === メインテーブル ===
-  c+='<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-top:4px">';
+  c+='<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-top:6px">';
   // ヘッダ行1
   c+='<tr>';
-  c+='<th rowspan="3" style="'+B+'padding:1px;width:28px;font-size:8px;font-weight:400;text-align:center">日付</th>';
-  c+='<th rowspan="3" style="'+B+'padding:1px;width:24px;font-size:8px;font-weight:400;text-align:center">曜日</th>';
-  c+='<th colspan="10" style="'+B+'padding:1px;font-size:8.5px;font-weight:400;text-align:center">サービス提供実績</th>';
-  c+='<th rowspan="3" style="'+B+'padding:1px;width:30px;font-size:7px;font-weight:400;text-align:center">利用者<br>確認印</th>';
-  c+='<th rowspan="3" style="'+B+'padding:1px;width:30px;font-size:8px;font-weight:400;text-align:center">備考</th>';
+  c+='<th rowspan="3" style="'+B+'padding:2px 1px;width:28px;font-size:8px;font-weight:400;text-align:center">日付</th>';
+  c+='<th rowspan="3" style="'+B+'padding:2px 1px;width:24px;font-size:8px;font-weight:400;text-align:center">曜日</th>';
+  c+='<th colspan="10" style="'+B+'padding:2px 1px;font-size:9px;font-weight:400;text-align:center">サービス提供実績</th>';
+  c+='<th rowspan="3" style="'+B+'padding:2px 1px;width:30px;font-size:7px;font-weight:400;text-align:center">利用者<br>確認印</th>';
+  c+='<th rowspan="3" style="'+B+'padding:2px 1px;width:30px;font-size:8px;font-weight:400;text-align:center">備考</th>';
   c+='</tr>';
   // ヘッダ行2
   c+='<tr>';
@@ -6677,16 +6677,16 @@ function renderServiceRecordOneUser(u, sr){
   c+='<th style="'+B+'padding:0;width:20px;font-size:8px;font-weight:400;text-align:center">往</th>';
   c+='<th style="'+B+'padding:0;width:20px;font-size:8px;font-weight:400;text-align:center">復</th>';
   c+='</tr>';
-  // 日別行（常に31行。17.5px固定でA4にぴったり納める）
+  // 日別行（常に31行。20.5pxでA4縦長にバランス良く納める）
   for(var di=0;di<31;di++){
     var d=di<u.days.length?u.days[di]:null;
     var day=d?d.day:'';
     var dow=d?d.dow:'';
     var dwC=dow==='日'?'color:#c00;':dow==='土'?'color:#00c;':'';
     c+='<tr>';
-    c+='<td style="'+B+'text-align:center;padding:0;height:17.5px;font-size:8.5px">'+day+'</td>';
-    c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px;'+dwC+'">'+dow+'</td>';
-    c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px">'+(d&&d.status?d.status:'')+'</td>';
+    c+='<td style="'+B+'text-align:center;padding:0;height:20.5px;font-size:9px">'+day+'</td>';
+    c+='<td style="'+B+'text-align:center;padding:0;font-size:9px;'+dwC+'">'+dow+'</td>';
+    c+='<td style="'+B+'text-align:center;padding:0;font-size:9px">'+(d&&d.status?d.status:'')+'</td>';
     c+='<td style="'+B+'text-align:center;padding:0;font-size:8px">'+(d&&d.startTime?d.startTime:'')+'</td>';
     c+='<td style="'+B+'text-align:center;padding:0;font-size:8px">'+(d&&d.endTime?d.endTime:'')+'</td>';
     c+='<td style="'+B+'text-align:center;padding:0;font-size:8px">'+(d&&d.pickup?'1':'')+'</td>';
@@ -6696,14 +6696,14 @@ function renderServiceRecordOneUser(u, sr){
     c+='<td style="'+B+'padding:0"></td>';
     c+='<td style="'+B+'padding:0"></td>';
     c+='<td style="'+B+'padding:0"></td>';
-    c+='<td style="'+B+'text-align:center;padding:0;cursor:pointer" onclick="openSignModal(\''+u.id+'\',\''+esc(u.name)+'\','+di+')" title="クリックでサイン">'+(d&&d.signUrl?'<img src="'+d.signUrl+'" style="width:24px;height:auto;max-height:16px;object-fit:contain">':'<span style="font-size:7px;color:#ccc">✎</span>')+'</td>';
+    c+='<td style="'+B+'text-align:center;padding:0;cursor:pointer" onclick="openSignModal(\''+u.id+'\',\''+esc(u.name)+'\','+di+')" title="クリックでサイン">'+(d&&d.signUrl?'<img src="'+d.signUrl+'" style="width:24px;height:auto;max-height:18px;object-fit:contain">':'<span style="font-size:7px;color:#ccc">✎</span>')+'</td>';
     c+='<td style="'+B+'padding:0 2px;font-size:7px">'+(d&&d.notes?d.notes:'')+'</td>';
     c+='</tr>';
   }
   // 合計行
   c+='<tr style="font-weight:700">';
-  c+='<td colspan="2" style="'+B+'text-align:center;padding:0;font-size:8px;height:18px">合計</td>';
-  c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px">'+u.totalDays+'</td>';
+  c+='<td colspan="2" style="'+B+'text-align:center;padding:0;font-size:8.5px;height:21px">合計</td>';
+  c+='<td style="'+B+'text-align:center;padding:0;font-size:9px">'+u.totalDays+'</td>';
   c+='<td colspan="2" style="'+B+'padding:0"></td>';
   c+='<td style="'+B+'text-align:center;padding:0;font-size:8px">'+u.pickupCount+'回</td>';
   c+='<td style="'+B+'text-align:center;padding:0;font-size:8px">'+u.dropoffCount+'回</td>';
@@ -6717,16 +6717,16 @@ function renderServiceRecordOneUser(u, sr){
   c+='</tr>';
   c+='</table>';
   // 下部：初期加算等
-  c+='<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-top:4px"><tr>';
-  c+='<td style="'+B+'padding:3px 4px;font-size:8px;width:10%">初期加算</td>';
-  c+='<td style="'+B+'padding:3px 4px;font-size:8px;width:10%">利用開始日</td>';
-  c+='<td style="'+B+'padding:3px 4px;font-size:8.5px;width:16%">'+esc(u.startDate)+'</td>';
-  c+='<td style="'+B+'padding:3px 4px;font-size:8px;width:8%">30日目</td>';
-  c+='<td style="'+B+'padding:3px 4px;font-size:8.5px;width:16%"></td>';
-  c+='<td style="'+B+'padding:3px 4px;font-size:8px;width:12%">当月算定日数</td>';
-  c+='<td style="'+B+'padding:3px 4px;font-size:8.5px;width:10%"></td>';
+  c+='<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-top:6px"><tr>';
+  c+='<td style="'+B+'padding:4px 4px;font-size:8px;width:10%">初期加算</td>';
+  c+='<td style="'+B+'padding:4px 4px;font-size:8px;width:10%">利用開始日</td>';
+  c+='<td style="'+B+'padding:4px 4px;font-size:9px;width:16%">'+esc(u.startDate)+'</td>';
+  c+='<td style="'+B+'padding:4px 4px;font-size:8px;width:8%">30日目</td>';
+  c+='<td style="'+B+'padding:4px 4px;font-size:9px;width:16%"></td>';
+  c+='<td style="'+B+'padding:4px 4px;font-size:8px;width:12%">当月算定日数</td>';
+  c+='<td style="'+B+'padding:4px 4px;font-size:9px;width:10%"></td>';
   c+='</tr></table>';
-  c+='<div style="text-align:right;margin-top:2px;font-size:8px">　枚中　枚</div>';
+  c+='<div style="text-align:right;margin-top:3px;font-size:8px">　枚中　枚</div>';
   c+='</div>';
   return c;
 }
