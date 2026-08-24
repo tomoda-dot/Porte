@@ -6105,122 +6105,117 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
         }
         var total2=wsMode==='wage'?Math.round(wt.wageTotal):wt.hoursTotal;
         var avg=wt.count>0?(wsMode==='wage'?Math.round(wt.wageTotal/wt.count):Math.round(wt.hoursTotal/wt.count*100)/100):0;
-        bodyHtml+='<td style="text-align:right;font-size:11px">'+(wsMode==='wage'?total2.toLocaleString():total2.toFixed(2))+'</td>';
-        bodyHtml+='<td style="text-align:right;font-size:11px">'+wt.count+'</td>';
-        bodyHtml+='<td style="text-align:right;font-size:11px">'+(wsMode==='wage'?avg.toLocaleString():avg.toFixed(2))+'</td></tr>';
-      });
-      // 計行
-      bodyHtml+='<tr style="font-weight:700;background:var(--bg)"><td style="font-size:10px">（計）</td>';
-      for(var dd4=0;dd4<dim;dd4++){
-        var val2=wsMode==='wage'?u.wageByDay[dd4]:u.hoursByDay[dd4];
-        bodyHtml+='<td style="text-align:right;font-size:10px;padding:1px 3px">'+(val2>0?(wsMode==='wage'?Math.round(val2).toLocaleString():val2.toFixed(1)):'')+'</td>';
-      }
-      var ut=wsMode==='wage'?u.wageTotal:u.hoursTotal;
-      var ua=u.workCount>0?(wsMode==='wage'?Math.round(u.wageTotal/u.workCount):Math.round(u.hoursTotal/u.workCount*100)/100):0;
-      bodyHtml+='<td style="text-align:right;font-size:11px">'+(wsMode==='wage'?ut.toLocaleString():ut.toFixed(2))+'</td>';
-      bodyHtml+='<td style="text-align:right;font-size:11px">'+u.workCount+'</td>';
-      bodyHtml+='<td style="text-align:right;font-size:11px">'+(wsMode==='wage'?ua.toLocaleString():ua.toFixed(2))+'</td></tr>';
-    });
-    // 全体合計行
-    bodyHtml+='<tr style="font-weight:700;background:#e8e0d8"><td colspan="2">合計</td><td>（計）</td>';
-    for(var dd5=0;dd5<dim;dd5++){
-      var val3=wsMode==='wage'?ws.grandWageByDay[dd5]:ws.grandHoursByDay[dd5];
-      bodyHtml+='<td style="text-align:right;font-size:10px;padding:1px 3px">'+(val3>0?(wsMode==='wage'?Math.round(val3).toLocaleString():val3.toFixed(1)):'')+'</td>';
-    }
-    var gt2=wsMode==='wage'?ws.grandWageTotal:ws.grandHoursTotal;
-    var ga=ws.grandWorkCount>0?(wsMode==='wage'?Math.round(ws.grandWageTotal/ws.grandWorkCount):Math.round(ws.grandHoursTotal/ws.grandWorkCount*100)/100):0;
-    bodyHtml+='<td style="text-align:right">'+(wsMode==='wage'?gt2.toLocaleString():gt2.toFixed(2))+'</td>';
-    bodyHtml+='<td style="text-align:right">'+ws.grandWorkCount+'</td>';
-    bodyHtml+='<td style="text-align:right">'+(wsMode==='wage'?ga.toLocaleString():ga.toFixed(2))+'</td></tr>';
-    document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">作業別集計表（'+(wsMode==='wage'?'工賃':'稼働時間')+'）　'+fmtMonth(eM)+'</span></div>'+
-      '<p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'</p>'+tabHtml+
-      '<div style="overflow:auto"><table style="font-size:12px;white-space:nowrap;border-collapse:collapse"><thead>'+hdrD+hdrW+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
-  } else if(eT==='wageDetail'){
-    // 工賃明細書（個人別）- キャッシュ判定
-    if(!window._wdData||window._wdMonth!==eM){
-      showLoading('e-c','データを集計中...');
-      var wd=await gas('getWageDetailPerUser',eM);
-      window._wdData=wd;window._wdMonth=eM;window._wdFn=fn;
-    }
-    var wd=window._wdData;
-    if(wd.users.length===0){
-      document.getElementById('e-c').innerHTML='<p style="color:var(--sub);text-align:center;padding:30px">この月の出勤データがありません</p>';
-    } else {
-      renderWageDetail(wd,fn);
-    }
-  } else if(eT==='serviceRecord'){
-    // 提供実績記録票 - キャッシュ判定
-    if(!window._srData||window._srMonth!==eM){
-      showLoading('e-c','データを集計中...');
-      var sr=await gas('getServiceRecordData',eM);
-      window._srData=sr;window._srMonth=eM;
-    }
-    var sr=window._srData;
-    if(sr.users.length===0){
-      document.getElementById('e-c').innerHTML='<p style="color:var(--sub);text-align:center;padding:30px">この月の出勤データがありません</p>';
-    } else {
-      renderServiceRecord(sr,fn);
-    }
-  } else if(eT==='utilization'){
-    showLoading('e-c','稼働率を集計中（15ヶ月分）...');
-    var ud=await gas('getUtilizationData',eM);
-    renderUtilization(ud);
-  } else if(eT==='invoice'||eT==='receipt'||eT==='proxyReceipt'){
-    var activeUsers=S.users.slice().sort(function(a,b){var ae=a.userStatus==='利用終了'?1:0;var be=b.userStatus==='利用終了'?1:0;return ae-be;});
-    var userSelHtml='<div class="no-print" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">';
-    userSelHtml+='<select id="eU-sel" onchange="window._eUid=this.value;loadE()" style="padding:5px 10px;font-size:13px;border:1px solid #ccc;border-radius:6px">';
-    userSelHtml+='<option value="">利用者を選択</option>';
-    activeUsers.forEach(function(u){
-      var lbl=esc(u.name)+(u.userStatus==='利用終了'?' (終了)':'');
-      userSelHtml+='<option value="'+u.id+'"'+(window._eUid===u.id?' selected':'')+'>'+lbl+'</option>';
-    });
-    userSelHtml+='</select>';
-    userSelHtml+='<button class="bp" onclick="window.print()" style="font-size:11px;padding:3px 10px">🖨 この利用者を印刷</button>';
-    userSelHtml+='<button class="bg" onclick="printAllIRP()" style="font-size:11px;padding:3px 10px">🖨 全員分を印刷</button>';
-    userSelHtml+='</div>';
-    var uid=window._eUid||'';
-    if(!uid){document.getElementById('e-c').innerHTML=userSelHtml+'<div style="text-align:center;padding:40px;color:var(--sub)">利用者を選択してください</div>';return;}
-    showLoading('e-c','データを読み込み中...');
-    var u=S.users.find(function(x){return x.id===uid;});
-    var att=await cachedGas('getAttendance',eM);
-    var bentoPrice=Number(S.settings.bentoPrice)||100;
-    var recs=att.filter(function(a){return String(a.userId)===uid&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
-    var tW=0,tH=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
-    recs.forEach(function(r){
-      var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
-      if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
-        bc++;
-        var pm=r.bentoPaymentMethod||u.bentoPaymentMethod||'工賃払い';
-        if(pm==='当日')bcDaily++;
-        else if(pm==='月末締め翌月払い')bcNext++;
-        else bcDeduct++;
-      }
-    });
-    var kk=checkKaikin(u,att,eM);
-    var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
-    var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
-    var bonus=alResult.total;
-    var bd=bcDeduct*bentoPrice;
-    var bdNext=bcNext*bentoPrice;
-    var total=Math.round(tW)+bonus-bd;
-    var ym=eM.split('-');var yStr=ym[0];var mStr=parseInt(ym[1]);
-    var fNum=S.settings.facilityNumber||'';
-    var fName=S.settings.facilityName||'';
-    var compName=S.settings.companyName||'';
-    var fType=S.settings.facilityType||'就労継続支援B型';
-
-    if(eT==='invoice'){
-      document.getElementById('e-c').innerHTML=userSelHtml+renderOneInvoice(u,recs,bcNext,bdNext,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
-
-    }else if(eT==='receipt'){
-      document.getElementById('e-c').innerHTML=userSelHtml+renderOneReceipt(u,recs,tW,tH,bcDeduct,bd,bonus,total,alResult,yStr,mStr,compName,fName,fNum,fType);
-
-    }else if(eT==='proxyReceipt'){
-      // 代理受領通知書（編集・保存対応）
-      // 配布月=eM → サービス提供月=eM-1 → 受領日=eM+1の15日(土日→翌平日)
-      var emP=eM.split('-');var emY=parseInt(emP[0]);var emM=parseInt(emP[1]);
-      var defSY=emM===1?emY-1:emY;var defSM=emM===1?12:emM-1;
-      var serviceYM=defSY+'-'+(defSM<10?'0'+defSM:defSM);
+      // ═══ 提供実績記録票 1人分描画 ═══
+function renderServiceRecordOneUser(u, sr){
+  var B='border:1px solid #000;';
+  var c='<div class="sr-page" style="page-break-after:always;break-after:page;page-break-inside:avoid;break-inside:avoid;font-family:\'MS 明朝\',\'Hiragino Mincho ProN\',serif;font-size:9.5px;width:100%;max-width:680px;margin:0 auto;line-height:1.3">';
+  // (様式17) 右上
+  c+='<div style="text-align:right;font-size:8.5px;margin-bottom:2px">（様式17）</div>';
+  // 年月（左寄せ）＋ タイトル（センタリング）
+  c+='<table style="width:100%;border-collapse:collapse;margin-bottom:6px"><tr>';
+  c+='<td style="width:25%;font-size:9.5px;vertical-align:bottom">'+esc(sr.reiwa)+'</td>';
+  c+='<td style="width:50%;text-align:center;font-size:14px;font-weight:700;letter-spacing:2px">就労継続支援提供実績記録票</td>';
+  c+='<td style="width:25%"></td>';
+  c+='</tr></table>';
+  // 上部情報：1つのテーブルで6列構成（左4列＋右2列）
+  c+='<table style="width:100%;border-collapse:collapse;margin-bottom:0">';
+  // 行1: 受給者証番号 | 値 | 氏名ラベル | 氏名 | 事業所番号ラベル | 事業所番号値
+  c+='<tr>';
+  c+='<td style="'+B+'padding:5px 4px;width:12%;font-size:8.5px;line-height:1.3">受給者証<br>番　　　号</td>';
+  c+='<td style="'+B+'padding:5px 4px;width:18%;font-size:10px">'+esc(u.recipientNumber)+'</td>';
+  c+='<td style="'+B+'padding:5px 4px;width:14%;font-size:8.5px;text-align:center">支給決定障害者氏名</td>';
+  c+='<td style="'+B+'padding:5px 4px;width:20%;font-size:10px">'+esc(u.name)+'</td>';
+  c+='<td style="'+B+'padding:5px 4px;width:12%;font-size:8.5px">事業所番号</td>';
+  c+='<td style="'+B+'padding:5px 4px;width:24%;font-size:9.5px">'+esc(sr.facilityNumber)+'</td>';
+  c+='</tr>';
+  // 行2: 契約支給量 | 値(colspan3) | 事業者及びその事業所ラベル | 事業所名
+  c+='<tr>';
+  c+='<td style="'+B+'padding:5px 4px;font-size:8.5px">契約支給量</td>';
+  c+='<td colspan="3" style="'+B+'padding:5px 4px;font-size:10px">'+esc(u.contractDays)+'</td>';
+  c+='<td style="'+B+'padding:5px 3px;font-size:7.5px;line-height:1.2">事業者及び<br>その事業所</td>';
+  c+='<td style="'+B+'padding:5px 4px;font-size:8.5px">'+esc(sr.facilityName)+'</td>';
+  c+='</tr>';
+  c+='</table>';
+  // === メインテーブル ===
+  c+='<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-top:8px">';
+  // ヘッダ行1
+  c+='<tr>';
+  c+='<th rowspan="3" style="'+B+'padding:2px 1px;width:28px;font-size:8.5px;font-weight:400;text-align:center">日付</th>';
+  c+='<th rowspan="3" style="'+B+'padding:2px 1px;width:24px;font-size:8.5px;font-weight:400;text-align:center">曜日</th>';
+  c+='<th colspan="10" style="'+B+'padding:2px 1px;font-size:9.5px;font-weight:400;text-align:center">サービス提供実績</th>';
+  c+='<th rowspan="3" style="'+B+'padding:2px 1px;width:30px;font-size:7.5px;font-weight:400;text-align:center">利用者<br>確認印</th>';
+  c+='<th rowspan="3" style="'+B+'padding:2px 1px;width:30px;font-size:8.5px;font-weight:400;text-align:center">備考</th>';
+  c+='</tr>';
+  // ヘッダ行2
+  c+='<tr>';
+  c+='<th rowspan="2" style="'+B+'padding:1px;width:34px;font-size:7.5px;font-weight:400;text-align:center">サービス<br>提供の<br>状況</th>';
+  c+='<th rowspan="2" style="'+B+'padding:1px;width:50px;font-size:8.5px;font-weight:400;text-align:center">開始時間</th>';
+  c+='<th rowspan="2" style="'+B+'padding:1px;width:50px;font-size:8.5px;font-weight:400;text-align:center">終了時間</th>';
+  c+='<th colspan="2" style="'+B+'padding:0;font-size:7.5px;font-weight:400;text-align:center">送迎加算</th>';
+  c+='<th rowspan="2" style="'+B+'padding:0;width:26px;font-size:6.5px;font-weight:400;text-align:center">訪問支援<br>特別加算<br>時間数</th>';
+  c+='<th rowspan="2" style="'+B+'padding:0;width:24px;font-size:6.5px;font-weight:400;text-align:center">食事提供<br>加算</th>';
+  c+='<th rowspan="2" style="'+B+'padding:0;width:24px;font-size:6.5px;font-weight:400;text-align:center">医療連携<br>体制加算</th>';
+  c+='<th rowspan="2" style="'+B+'padding:0;width:24px;font-size:6.5px;font-weight:400;text-align:center">体験利用<br>支援加算</th>';
+  c+='<th rowspan="2" style="'+B+'padding:0;width:24px;font-size:6.5px;font-weight:400;text-align:center">施設外<br>支援</th>';
+  c+='</tr>';
+  // ヘッダ行3 (往/復)
+  c+='<tr>';
+  c+='<th style="'+B+'padding:0;width:20px;font-size:8.5px;font-weight:400;text-align:center">往</th>';
+  c+='<th style="'+B+'padding:0;width:20px;font-size:8.5px;font-weight:400;text-align:center">復</th>';
+  c+='</tr>';
+  // 日別行（常に31行。25pxでA4全体にゆったり縦に伸ばす）
+  for(var di=0;di<31;di++){
+    var d=di<u.days.length?u.days[di]:null;
+    var day=d?d.day:'';
+    var dow=d?d.dow:'';
+    var dwC=dow==='日'?'color:#c00;':dow==='土'?'color:#00c;':'';
+    c+='<tr>';
+    c+='<td style="'+B+'text-align:center;padding:0;height:25px;font-size:9.5px">'+day+'</td>';
+    c+='<td style="'+B+'text-align:center;padding:0;font-size:9.5px;'+dwC+'">'+dow+'</td>';
+    c+='<td style="'+B+'text-align:center;padding:0;font-size:9.5px">'+(d&&d.status?d.status:'')+'</td>';
+    c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px">'+(d&&d.startTime?d.startTime:'')+'</td>';
+    c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px">'+(d&&d.endTime?d.endTime:'')+'</td>';
+    c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px">'+(d&&d.pickup?'1':'')+'</td>';
+    c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px">'+(d&&d.dropoff?'1':'')+'</td>';
+    c+='<td style="'+B+'padding:0"></td>';
+    c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px">'+(d&&d.meal?'1':'')+'</td>';
+    c+='<td style="'+B+'padding:0"></td>';
+    c+='<td style="'+B+'padding:0"></td>';
+    c+='<td style="'+B+'padding:0"></td>';
+    c+='<td style="'+B+'text-align:center;padding:0;cursor:pointer" onclick="openSignModal(\''+u.id+'\',\''+esc(u.name)+'\','+di+')" title="クリックでサイン">'+(d&&d.signUrl?'<img src="'+d.signUrl+'" style="width:24px;height:auto;max-height:22px;object-fit:contain">':'<span style="font-size:8px;color:#ccc">✎</span>')+'</td>';
+    c+='<td style="'+B+'padding:0 2px;font-size:7.5px">'+(d&&d.notes?d.notes:'')+'</td>';
+    c+='</tr>';
+  }
+  // 合計行
+  c+='<tr style="font-weight:700">';
+  c+='<td colspan="2" style="'+B+'text-align:center;padding:0;font-size:9px;height:25px">合計</td>';
+  c+='<td style="'+B+'text-align:center;padding:0;font-size:9.5px">'+u.totalDays+'</td>';
+  c+='<td colspan="2" style="'+B+'padding:0"></td>';
+  c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px">'+u.pickupCount+'回</td>';
+  c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px">'+u.dropoffCount+'回</td>';
+  c+='<td style="'+B+'padding:0"></td>';
+  c+='<td style="'+B+'text-align:center;padding:0;font-size:8.5px">'+u.mealCount+'回</td>';
+  c+='<td style="'+B+'padding:0"></td>';
+  c+='<td style="'+B+'padding:0"></td>';
+  c+='<td style="'+B+'padding:0;font-size:6.5px;text-align:center">施設外<br>支援</td>';
+  c+='<td style="'+B+'padding:0;font-size:7.5px;text-align:center">当月<br>累計</td>';
+  c+='<td style="'+B+'padding:0;font-size:7.5px;text-align:center">日<br>日/180日</td>';
+  c+='</tr>';
+  c+='</table>';
+  // 下部：初期加算等
+  c+='<table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-top:8px"><tr>';
+  c+='<td style="'+B+'padding:5px 4px;font-size:8.5px;width:10%">初期加算</td>';
+  c+='<td style="'+B+'padding:5px 4px;font-size:8.5px;width:10%">利用開始日</td>';
+  c+='<td style="'+B+'padding:5px 4px;font-size:9.5px;width:16%">'+esc(u.startDate)+'</td>';
+  c+='<td style="'+B+'padding:5px 4px;font-size:8.5px;width:8%">30日目</td>';
+  c+='<td style="'+B+'padding:5px 4px;font-size:9.5px;width:16%"></td>';
+  c+='<td style="'+B+'padding:5px 4px;font-size:8.5px;width:12%">当月算定日数</td>';
+  c+='<td style="'+B+'padding:5px 4px;font-size:9.5px;width:10%"></td>';
+  c+='</tr></table>';
+  c+='<div style="text-align:right;margin-top:4px;font-size:8.5px">　枚中　枚</div>';
+  c+='</div>';
+  return c;
+}defSM<10?'0'+defSM:defSM);
       var rdY2=emM===12?emY+1:emY;var rdM2=emM===12?1:emM+1;
       var rdYM=rdY2+'-'+(rdM2<10?'0'+rdM2:rdM2);
       var rdClosed=[];try{rdClosed=await gas('getClosedDays',rdYM);}catch(e){}
