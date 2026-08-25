@@ -98,23 +98,43 @@ function _shiftBg(s){return s==='早番'?'#fff3e0':(s==='日勤'?'#e8f5e9':(s===
 
 // --- 利用者モード ---
 async function getTimecardUsers(){
-  var r1=await sb.from('利用者').select('*');var users=r1.data||[];
-  var today2=_today();var dow2=_dow();
-  var r2=await sb.from('出欠').select('*').eq('date',today2);var att=r2.data||[];
+  var today2=_today();var dow2=_dow();var ym=today2.substring(0,7);
+  var p=await Promise.all([
+    sb.from('利用者').select('*'),
+    sb.from('出欠').select('*').eq('date',today2),
+    sb.from('設定').select('value').eq('key','closedDays_'+ym).limit(1)
+  ]);
+  var users=p[0].data||[];
+  var att=p[1].data||[];
+  var closedRow=(p[2].data&&p[2].data.length>0)?p[2].data[0]:null;
+  var closedDays=[];
+  if(closedRow&&closedRow.value){
+    try{closedDays=JSON.parse(closedRow.value);}catch(e){}
+  }
+  var isTodayClosed=closedDays.indexOf(today2)>=0;
+
   var result=[];
   users.forEach(function(u){
     if(u.userStatus==='利用終了')return;
     if(u.enrollDate&&u.enrollDate>today2)return;
     if(u.endDate&&u.endDate<today2)return;
-    var isScheduled=u.scheduleDays&&u.scheduleDays.indexOf(dow2)>=0;
     var rec=null;att.forEach(function(a){if(String(a.userId)===String(u.id))rec=a;});
+
+    var isOffStatus=rec&&['欠席','体調不良','通院','調整休','お休み','公休','無断欠席'].indexOf(rec.status)>=0;
+    var dayMatch=u.scheduleDays&&u.scheduleDays.indexOf(dow2)>=0;
+    var isScheduled=!isTodayClosed&&!isOffStatus&&dayMatch;
+
     result.push({id:u.id,name:u.name,furigana:u.furigana||'',
       scheduleStart:u.scheduleStart||'10:00',scheduleEnd:u.scheduleEnd||'16:00',
       bento:u.bento||'なし',pickup:u.pickup||'なし',
-      isScheduled:isScheduled,clockedIn:rec&&rec.startTime?true:false,
-      clockedOut:rec&&rec.endTime?true:false,startTime:rec?rec.startTime:'',endTime:rec?rec.endTime:''});
+      isScheduled:isScheduled,
+      isOffStatus:isOffStatus,
+      status:rec?rec.status:'',
+      clockedIn:rec&&rec.startTime?true:false,
+      clockedOut:rec&&rec.endTime?true:false,
+      startTime:rec?rec.startTime:'',endTime:rec?rec.endTime:''});
   });
-  return{users:result,date:today2,dow:dow2};
+  return{users:result,date:today2,dow:dow2,isTodayClosed:isTodayClosed};
 }
 
 // --- スタッフモード ---
@@ -232,9 +252,16 @@ async function loadData(){
 
 // --- 利用者グリッド ---
 function renderUserGrid(){
+  if(TCData.isTodayClosed){
+    document.getElementById('main').innerHTML='<div class="msg" style="font-size:18px;font-weight:700;color:#5d4037;padding:60px 20px">本日は事業所休業日（閉所日）です ☕</div>';
+    return;
+  }
   var users=TCData.users.filter(function(u){return u.isScheduled||u.clockedIn;});
   users.sort(function(a,b){return(a.furigana||a.name).localeCompare(b.furigana||b.name,'ja');});
-  if(users.length===0){document.getElementById('main').innerHTML='<div class="msg">本日の予定者がいません</div>';return;}
+  if(users.length===0){
+    document.getElementById('main').innerHTML='<div class="msg" style="font-size:18px;font-weight:700;color:#5d4037;padding:60px 20px">本日の出勤予定者がいません（全員お休み）🌴</div>';
+    return;
+  }
   var html='<div class="user-grid">';
   users.forEach(function(u){
     var cls='user-card',statusHtml='';
