@@ -20,13 +20,13 @@ tr:hover td{background:var(--hov)}
 .bp{background:var(--pri);color:#fff}.ba{background:var(--acc);color:#fff}.br{background:var(--red);color:#fff}
 .bg{background:transparent;color:var(--pri);border:1.5px solid var(--bdr)}
 .badge{display:inline-block;padding:2px 9px;border-radius:11px;font-size:10px;font-weight:600;color:#fff}
-.app{display:flex;height:100vh;overflow:hidden}
-.side{width:200px;background:var(--pri);color:#fff;display:flex;flex-direction:column;flex-shrink:0;height:100vh;max-height:100vh;overflow:hidden}
+.app{display:flex;height:100vh;height:100dvh;overflow:hidden}
+.side{width:200px;background:var(--pri);color:#fff;display:flex;flex-direction:column;flex-shrink:0;height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;overflow-y:auto}
+.side::-webkit-scrollbar{width:4px}
+.side::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:2px}
 .side-hd{padding:16px 12px;border-bottom:1px solid rgba(255,255,255,.15);text-align:center;font-size:12px;font-weight:700;line-height:1.6;flex-shrink:0}
-.side nav{flex:1;padding:4px 0;overflow-y:auto;min-height:0}
-.side nav::-webkit-scrollbar{width:4px}
-.side nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:2px}
-.side-ft{padding:10px 12px;border-top:1px solid rgba(255,255,255,.15);flex-shrink:0;background:var(--pri)}
+.side nav{padding:4px 0;flex-shrink:0}
+.side-ft{padding:10px 12px;border-top:1px solid rgba(255,255,255,.15);flex-shrink:0;background:var(--pri);margin-top:auto}
 .side nav button{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:transparent;color:#fff;border-radius:0;font-size:12px;text-align:left;border-left:3px solid transparent}
 .side nav button:hover{background:rgba(255,255,255,.08)}
 .side nav button.act{background:rgba(255,255,255,.15);border-left-color:#fff}
