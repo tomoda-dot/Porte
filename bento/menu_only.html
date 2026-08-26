@@ -481,8 +481,13 @@
       <div id="modalBentoTitle" class="modal-title">🍱 『タラのトマトソース弁当』</div>
       <div class="modal-sub">どなたのご注文にしますか？お名前をタップしてください</div>
 
+      <div style="display:flex; justify-content:center; gap:10px; margin-bottom:18px; flex-wrap:wrap;">
+        <button id="modalFilterBentoOnly" style="padding:8px 20px; border-radius:20px; border:2px solid #ff7e67; background:#fff5eb; color:#d9480f; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter(false)">🍱 お弁当対象者</button>
+        <button id="modalFilterShowAll" style="padding:8px 20px; border-radius:20px; border:2px solid #ced4da; background:#fff; color:#495057; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter(true)">👔 スタッフ・全員から選択</button>
+      </div>
+
       <div class="modal-user-grid" id="modalUserGrid">
-        <!-- 利用者名リスト -->
+        <!-- 利用者・スタッフ名リスト -->
       </div>
 
       <button class="btn-modal-close" onclick="closeUserModal()">戻る</button>
@@ -690,26 +695,59 @@
       document.getElementById('userModal').classList.add('active');
     }
 
+    let modalFilterShowAll = false;
+
+    function setModalFilter(showAll) {
+      modalFilterShowAll = showAll;
+      const bentoBtn = document.getElementById('modalFilterBentoOnly');
+      const allBtn = document.getElementById('modalFilterShowAll');
+      if (bentoBtn && allBtn) {
+        if (showAll) {
+          allBtn.style.borderColor = '#ff7e67';
+          allBtn.style.background = '#fff5eb';
+          allBtn.style.color = '#d9480f';
+          bentoBtn.style.borderColor = '#ced4da';
+          bentoBtn.style.background = '#fff';
+          bentoBtn.style.color = '#495057';
+        } else {
+          bentoBtn.style.borderColor = '#ff7e67';
+          bentoBtn.style.background = '#fff5eb';
+          bentoBtn.style.color = '#d9480f';
+          allBtn.style.borderColor = '#ced4da';
+          allBtn.style.background = '#fff';
+          allBtn.style.color = '#495057';
+        }
+      }
+      renderModalUsers();
+    }
+
     function renderModalUsers() {
       const grid = document.getElementById('modalUserGrid');
       grid.innerHTML = '';
 
-      const users = porteUsers.filter(u => u.wantsBento !== false);
+      const users = porteUsers.filter(u => modalFilterShowAll || u.wantsBento !== false);
 
       if (users.length === 0) {
-        grid.innerHTML = `<p style="grid-column:1/-1; padding:20px; font-weight:700; color:#868e96;">本日お弁当を注文されるご利用者様が登録されていません。</p>`;
+        grid.innerHTML = `<p style="grid-column:1/-1; padding:20px; font-weight:700; color:#868e96;">対象の方が登録されていません。上部の「👔 スタッフ・全員から選択」ボタンをお試しください。</p>`;
         return;
       }
 
       users.forEach(u => {
         const isChosenThis = u.selectedBentoId === currentBentoId;
         const currentChoice = u.selectedBentoId ? bentoMaster.find(b => b.id === u.selectedBentoId) : null;
+        const isStaff = u.type === '👔 スタッフ' || String(u.name).includes('👔');
 
         const btn = document.createElement('button');
         btn.className = `user-btn ${isChosenThis ? 'chosen' : ''}`;
+        if (isStaff) {
+          btn.style.cssText = isChosenThis ? 'background:#e6fcf5; border-color:#63e6be; color:#0ca678;' : 'background:#eef7ff; border-color:#91c7ff; color:#1864ab;';
+        }
         btn.innerHTML = `
-          <span>👤 ${u.name} 様</span>
-          <span style="font-size:0.9rem; opacity:0.8;">
+          <div style="text-align:left;">
+            <span>${isStaff ? '' : '👤 '}${u.name}${isStaff ? '' : ' 様'}</span>
+            ${u.wantsBento === false ? '<span style="font-size:0.75rem; background:#e9ecef; color:#495057; padding:2px 6px; border-radius:6px; margin-left:6px; font-weight:700;">追加可能</span>' : ''}
+          </div>
+          <span style="font-size:0.9rem; opacity:0.8; flex-shrink:0;">
             ${isChosenThis ? '✅ 選択中' : (currentChoice ? `(変更: ${currentChoice.icon})` : '選ぶ ➔')}
           </span>
         `;
