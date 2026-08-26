@@ -1070,25 +1070,77 @@ function openUserSelectForBentoModal(bentoItemOrId) {
   }
 }
 
+let adminModalFilterMode = 'bentoOnly';
+
+window.setAdminModalFilterMode = function(mode) {
+  adminModalFilterMode = mode;
+  modalShowAll = (mode === 'showAll');
+
+  const bentoBtn = document.getElementById('modalFilterBentoOnlyBtn');
+  const allBtn = document.getElementById('modalFilterShowAllBtn');
+  const staffBtn = document.getElementById('modalFilterStaffBtn');
+
+  if (bentoBtn) bentoBtn.classList.toggle('active', mode === 'bentoOnly');
+  if (allBtn) allBtn.classList.toggle('active', mode === 'showAll');
+  if (staffBtn) staffBtn.classList.toggle('active', mode === 'staff');
+
+  const searchVal = document.getElementById('userSelectModalSearch') ? document.getElementById('userSelectModalSearch').value : '';
+  renderUserPickerList(searchVal);
+};
+
+window.toggleModalShowAll = function(showAll) {
+  setAdminModalFilterMode(showAll ? 'showAll' : 'bentoOnly');
+};
+
 function renderUserPickerList(searchQuery) {
   const listContainer = document.getElementById('userPickerList');
+  if (!listContainer) return;
   listContainer.innerHTML = '';
 
-  const q = searchQuery.toLowerCase();
+  const q = (searchQuery || '').toLowerCase();
 
-  const filtered = porteUsers.filter(u => {
-    const isTarget = modalShowAll || (u.wantsBento !== false) || u.selectedBentoId;
-    const matchQuery = u.name.toLowerCase().includes(q) || (u.kana && u.kana.toLowerCase().includes(q)) || u.id.toLowerCase().includes(q);
-    return isTarget && matchQuery;
+  let targetList = [];
+
+  if (adminModalFilterMode === 'staff') {
+    targetList = porteUsers.filter(u => u.type === '👔 スタッフ' || u.isStaff || String(u.name).includes('👔'));
+    if (targetList.length === 0 && window.porteStaffList && window.porteStaffList.length > 0) {
+      targetList = window.porteStaffList.map(s => ({
+        id: s.id || ('staff_' + s.name),
+        name: s.name,
+        type: '👔 スタッフ',
+        isStaff: true,
+        wantsBento: true,
+        selectedBentoId: null
+      }));
+    }
+  } else if (adminModalFilterMode === 'showAll') {
+    targetList = porteUsers.filter(u => u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
+  } else {
+    // bentoOnly
+    targetList = porteUsers.filter(u => (u.type !== '👔 スタッフ' && !String(u.name).includes('👔')) && (modalShowAll || u.wantsBento !== false || u.selectedBentoId));
+  }
+
+  const filtered = targetList.filter(u => {
+    const matchQuery = u.name.toLowerCase().includes(q) || (u.kana && u.kana.toLowerCase().includes(q)) || String(u.id).toLowerCase().includes(q);
+    return matchQuery;
   });
 
   if (filtered.length === 0) {
-    listContainer.innerHTML = `
-      <div style="text-align:center; padding:24px; color:#747d8c;">
-        <p style="margin-bottom:8px;">該当するお弁当対象者様が見つかりません。</p>
-        <button class="btn btn-sm btn-outline" onclick="toggleModalShowAll(true)">👥 全通所者から急遽追加する</button>
-      </div>
-    `;
+    if (adminModalFilterMode === 'staff') {
+      listContainer.innerHTML = `
+        <div style="text-align:center; padding:24px; color:#747d8c;">
+          <p style="margin-bottom:12px; font-weight:700;">該当するスタッフが見つかりません。</p>
+          <button class="btn btn-sm btn-pop" style="background:linear-gradient(135deg, #1864ab, #228be6); border:none; font-weight:800;" onclick="addNewStaffUserQuick()">👔 スタッフ名を入力して注文登録</button>
+        </div>
+      `;
+    } else {
+      listContainer.innerHTML = `
+        <div style="text-align:center; padding:24px; color:#747d8c;">
+          <p style="margin-bottom:8px;">該当するお弁当対象者様が見つかりません。</p>
+          <button class="btn btn-sm btn-outline" onclick="setAdminModalFilterMode('showAll')">👥 全ご利用者様を表示</button>
+        </div>
+      `;
+    }
     return;
   }
 
@@ -1096,13 +1148,17 @@ function renderUserPickerList(searchQuery) {
     const isChosenThis = u.selectedBentoId === currentSelectingBentoId;
     const currentChoice = u.selectedBentoId ? bentoMaster.find(b => b.id === u.selectedBentoId) : null;
     const isSuddenAdd = u.wantsBento === false;
+    const isStaff = u.type === '👔 スタッフ' || u.isStaff || String(u.name).includes('👔');
 
     const div = document.createElement('div');
     div.className = `user-picker-item ${isChosenThis ? 'selected' : ''}`;
+    if (isStaff) {
+      div.style.cssText = 'background:#eef7ff; border:1.5px solid #91c7ff; border-radius:14px; padding:12px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;';
+    }
     div.innerHTML = `
-      <div class="user-picker-info">
-        <span class="user-picker-name">
-          ${u.name} <small style="color:#868e96; font-size:0.8rem;">(${u.kana || ''})</small>
+      <div class="user-picker-info" style="text-align:left;">
+        <span class="user-picker-name" style="${isStaff ? 'color:#1864ab; font-weight:900;' : ''}">
+          ${isStaff ? '👔 ' : ''}${u.name.replace('👔', '').trim()}${isStaff ? ' スタッフ' : ''} <small style="color:#868e96; font-size:0.8rem;">(${u.kana || ''})</small>
           ${isSuddenAdd ? '<span style="background:#fff0f6; color:#e64980; font-size:0.75rem; padding:2px 8px; border-radius:10px; margin-left:6px; font-weight:800;">急遽追加</span>' : ''}
         </span>
         <span class="user-picker-sub">
@@ -1111,7 +1167,7 @@ function renderUserPickerList(searchQuery) {
         </span>
       </div>
       <div>
-        <button class="btn btn-sm ${isChosenThis ? 'btn-secondary' : 'btn-primary'}" onclick="confirmAssignUserForBento('${u.id}')">
+        <button class="btn btn-sm ${isChosenThis ? 'btn-secondary' : (isStaff ? 'btn-pop' : 'btn-primary')}" style="${isStaff && !isChosenThis ? 'background:linear-gradient(135deg, #1864ab, #228be6); border:none; font-weight:800;' : ''}" onclick="confirmAssignUserForBento('${u.id || u.name}')">
           ${isChosenThis ? '選択済み' : (isSuddenAdd ? '急遽お弁当を追加 ➕' : (currentChoice ? '変更する' : 'この人に決定 🎯'))}
         </button>
       </div>
@@ -1120,16 +1176,21 @@ function renderUserPickerList(searchQuery) {
   });
 }
 
-window.toggleModalShowAll = function(showAll) {
-  modalShowAll = showAll;
-  document.getElementById('modalFilterBentoOnlyBtn').classList.toggle('active', !showAll);
-  document.getElementById('modalFilterShowAllBtn').classList.toggle('active', showAll);
-  renderUserPickerList(document.getElementById('userSelectModalSearch').value);
-};
-
 window.confirmAssignUserForBento = function(userId) {
-  const userIndex = porteUsers.findIndex(u => u.id === userId);
-  if (userIndex < 0 || !currentSelectingBentoId) return;
+  let userIndex = porteUsers.findIndex(u => u.id === userId || u.name === userId);
+  if (userIndex < 0) {
+    const userObj = {
+      id: 'staff_' + Date.now(),
+      name: String(userId).replace('👔', '').trim(),
+      type: '👔 スタッフ',
+      isStaff: true,
+      wantsBento: true,
+      selectedBentoId: null
+    };
+    porteUsers.push(userObj);
+    userIndex = porteUsers.length - 1;
+  }
+  if (!currentSelectingBentoId) return;
 
   const user = porteUsers[userIndex];
   
@@ -1142,7 +1203,7 @@ window.confirmAssignUserForBento = function(userId) {
   const bentoItem = bentoMaster.find(b => b.id === currentSelectingBentoId);
 
   closeUserSelectForBentoModal();
-  showToast(`🎉 ${user.name} 様のお弁当を『${bentoItem.name}』に登録しました！`, 'success');
+  showToast(`🎉 ${user.name} 様のお弁当を『${bentoItem ? bentoItem.name : ''}』に登録しました！`, 'success');
 };
 
 window.closeUserSelectForBentoModal = function() {

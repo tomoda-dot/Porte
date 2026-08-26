@@ -299,10 +299,11 @@
         <p class="modal-subtitle">お弁当を選ぶご利用者様のお名前をタップしてください。</p>
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-          <input type="text" id="userSelectModalSearch" placeholder="氏名またはフリガナで検索..." class="form-control" style="max-width:240px;">
-          <div class="pill-switch">
-            <button class="pill-btn active" id="modalFilterBentoOnlyBtn">🍱 お弁当注文ありの方のみ</button>
-            <button class="pill-btn" id="modalFilterShowAllBtn">👥 通所者全員を表示</button>
+          <input type="text" id="userSelectModalSearch" placeholder="氏名またはフリガナで検索..." class="form-control" style="max-width:220px;">
+          <div class="pill-switch" style="display:flex; gap:4px; flex-wrap:wrap;">
+            <button class="pill-btn active" id="modalFilterBentoOnlyBtn" onclick="setAdminModalFilterMode('bentoOnly')">🍱 本日の利用対象者</button>
+            <button class="pill-btn" id="modalFilterShowAllBtn" onclick="setAdminModalFilterMode('showAll')">👥 全ご利用者様を表示</button>
+            <button class="pill-btn" id="modalFilterStaffBtn" onclick="setAdminModalFilterMode('staff')">👔 スタッフを表示</button>
           </div>
         </div>
 
