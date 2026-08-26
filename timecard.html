@@ -64,12 +64,12 @@ canvas{border:2px solid #ddd;border-radius:10px;width:100%;height:200px;touch-ac
 </style>
 </head>
 <body>
-<div class="header" id="hd-container" ondblclick="toggleFullscreen()" title="ダブルタップ（またはクリック）で全画面表示切替">
+<div class="header" id="hd-container" title="「⏰ タイムカード」を1回タップ、またはヘッダーをダブルタップで全画面切替">
   <div class="header-left"></div>
-  <div class="header-center" id="hd-title-box" onclick="toggleFullscreen()" style="cursor:pointer" title="ダブルタップ（またはクリック）で全画面表示切替">
+  <div class="header-center" id="hd-title-box" onclick="triggerFsSafe()" style="cursor:pointer" title="タップで全画面切替">
     <h1>⏰ タイムカード</h1>
   </div>
-  <div class="header-right" id="hd-right-box" onclick="toggleFullscreen()" style="cursor:pointer" title="ダブルタップ（またはクリック）で全画面表示切替">
+  <div class="header-right" id="hd-right-box" onclick="triggerFsSafe()" style="cursor:pointer" title="タップで全画面切替">
     <div class="date" id="hd-date"></div>
     <div class="clock" id="hd-clock"></div>
   </div>
@@ -267,19 +267,43 @@ document.addEventListener('webkitfullscreenchange',updateFsState);
 document.addEventListener('mozfullscreenchange',updateFsState);
 document.addEventListener('MSFullscreenChange',updateFsState);
 
-// タブレット用ダブルタップ動作
+// ── 信頼性の高い全画面切替処理（押しミス防止・600ms＆位置ずれ50px許容） ──
+var isFsToggling=false;
+function triggerFsSafe(){
+  if(isFsToggling)return;
+  isFsToggling=true;
+  toggleFullscreen();
+  setTimeout(function(){isFsToggling=false;},450);
+}
+
 (function(){
-  var lastTap=0;
+  var lastTapTime=0,lastTapX=0,lastTapY=0;
   document.addEventListener('DOMContentLoaded',function(){
     var hd=document.getElementById('hd-container');
     if(!hd)return;
-    hd.addEventListener('touchend',function(e){
-      var now=new Date().getTime();
-      if(now-lastTap<350&&now-lastTap>0){
-        e.preventDefault();
-        toggleFullscreen();
+    hd.addEventListener('touchstart',function(e){
+      if(e.touches&&e.touches.length===1){
+        var touch=e.touches[0];
+        var now=new Date().getTime();
+        var timeDiff=now-lastTapTime;
+        var distX=Math.abs(touch.clientX-lastTapX);
+        var distY=Math.abs(touch.clientY-lastTapY);
+
+        if(timeDiff>0&&timeDiff<600&&distX<50&&distY<50){
+          e.preventDefault();
+          triggerFsSafe();
+          lastTapTime=0;
+        }else{
+          lastTapTime=now;
+          lastTapX=touch.clientX;
+          lastTapY=touch.clientY;
+        }
       }
-      lastTap=now;
+    },{passive:false});
+
+    hd.addEventListener('dblclick',function(e){
+      e.preventDefault();
+      triggerFsSafe();
     });
   });
 })();
