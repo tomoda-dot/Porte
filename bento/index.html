@@ -92,6 +92,9 @@
             <a href="menu_only.html" target="_blank" class="btn btn-pop" style="text-decoration:none; background: linear-gradient(135deg, #ff7e67, #ff5252);">
               📱 ご利用者様用メニュー画面を表示 (全画面)
             </a>
+            <button class="btn btn-pop" id="staffSpecialMenuBtn" style="background: linear-gradient(135deg, #1864ab, #228be6); color:#fff; border:none; font-weight:900;" onclick="openStaffAllMenuModalAdmin()">
+              👔 スタッフ特権（全30品から注文）
+            </button>
             <button class="btn btn-pop" id="randomSelectBtn">
               <span class="btn-sparkle">🎲</span> 本日の5品をランダム選出！
             </button>
@@ -469,6 +472,27 @@
           <button type="submit" class="btn btn-primary">設定を保存 💾</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- スタッフ特権 全30品メニュー選択モーダル（管理画面用） -->
+  <div class="modal-overlay" id="staffMenuModalAdmin">
+    <div class="modal-card modal-lg" style="max-width: 880px;">
+      <div class="modal-header">
+        <h3 style="color:#1864ab;">👔 スタッフ特権注文（全30品目から選択）</h3>
+        <button class="close-btn" onclick="closeStaffAllMenuModalAdmin()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom:14px; font-weight:700; color:#495057;">
+          本日の5品以外のメニューも含め、全30品の中からスタッフの方のお好きなお弁当を選択できます。
+        </p>
+        <div id="staffMenuGridAdmin" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; max-height:50vh; overflow-y:auto; padding:10px; border:1px solid #e9ecef; border-radius:14px; background:#f8f9fa;">
+          <!-- JSで全30品目を表示 -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeStaffAllMenuModalAdmin()">閉じる</button>
+      </div>
     </div>
   </div>
 

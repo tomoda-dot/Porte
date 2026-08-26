@@ -774,6 +774,60 @@ function renderProgressBar() {
   document.getElementById('progressFill').style.width = `${percent}%`;
 }
 
+window.quickOrderBento = function(bentoId) {
+  const item = bentoMaster.find(b => b.id === bentoId);
+  if (!item || item.stock <= 0) {
+    showToast('在庫がありません', 'info');
+    return;
+  }
+
+  if (porteUsers.length === 0) {
+    showToast('本日利用者のデータがありません。先にポルテデータを読み込んでください。', 'info');
+    return;
+  }
+
+  openUserSelectForBentoModal(bentoId);
+};
+
+window.openStaffAllMenuModalAdmin = function() {
+  const modal = document.getElementById('staffMenuModalAdmin');
+  const grid = document.getElementById('staffMenuGridAdmin');
+  if (!modal || !grid) return;
+  grid.innerHTML = '';
+
+  bentoMaster.forEach(item => {
+    const isSoldOut = item.stock <= 0;
+    const card = document.createElement('div');
+    card.style.cssText = `background:#fff; border:1.5px solid ${isSoldOut ? '#e9ecef' : '#bac8ff'}; border-radius:14px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; opacity:${isSoldOut ? 0.6 : 1};`;
+    card.innerHTML = `
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:0.75rem; background:#d0ebff; color:#1864ab; padding:2px 8px; border-radius:10px; font-weight:800;">${item.category}</span>
+          <span style="font-size:0.8rem; font-weight:700; color:#495057;">在庫: ${item.stock}</span>
+        </div>
+        <div style="font-weight:800; font-size:0.95rem; color:#212529; margin-bottom:4px;">${item.icon} ${item.name}</div>
+        <div style="font-size:0.75rem; color:#666; margin-bottom:8px; line-height:1.3;">${item.desc || ''}</div>
+      </div>
+      <button class="btn btn-sm ${isSoldOut ? 'btn-outline' : 'btn-pop'}" style="width:100%; padding:6px; font-weight:800; font-size:0.85rem;" ${isSoldOut ? 'disabled' : ''} onclick="onChooseStaffSpecialBentoAdmin('${item.id}')">
+        ${isSoldOut ? '完売' : 'このお弁当を選ぶ 🍱'}
+      </button>
+    `;
+    grid.appendChild(card);
+  });
+
+  modal.classList.add('active');
+};
+
+window.closeStaffAllMenuModalAdmin = function() {
+  const modal = document.getElementById('staffMenuModalAdmin');
+  if (modal) modal.classList.remove('active');
+};
+
+window.onChooseStaffSpecialBentoAdmin = function(bentoId) {
+  closeStaffAllMenuModalAdmin();
+  openUserSelectForBentoModal(bentoId);
+};
+
 // 1. 本日の5品 メニュー表示（賞味期限の短い順で描画）
 function renderTodaysMenu() {
   autoReplaceSoldOutMenu();
