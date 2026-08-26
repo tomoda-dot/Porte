@@ -57,13 +57,19 @@ canvas{border:2px solid #ddd;border-radius:10px;width:100%;height:200px;touch-ac
 .success-overlay .msg-sub{font-size:14px;color:#888;margin-top:12px}
 .spin{width:24px;height:24px;border:3px solid #ddd;border-top-color:#5d4037;border-radius:50%;animation:sp .6s linear infinite;margin:0 auto}
 @keyframes sp{to{transform:rotate(360deg)}}
+.btn-fs{background:rgba(255,255,255,.18);color:#fff;border:1.5px solid rgba(255,255,255,.35);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:4px}
+.btn-fs:hover{background:rgba(255,255,255,.32);transform:scale(1.03)}
+.btn-fs:active{transform:scale(0.96)}
 .loading-center{display:flex;flex-direction:column;align-items:center;gap:10px;padding:40px;color:#888}
 </style>
 </head>
 <body>
 <div class="header">
   <div><h1>⏰ タイムカード</h1><div class="date" id="hd-date"></div></div>
-  <div class="clock" id="hd-clock"></div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <button onclick="toggleFullscreen()" class="btn-fs" id="btn-fs" title="全画面表示の切り替え">🖥️ 全画面</button>
+    <div class="clock" id="hd-clock"></div>
+  </div>
 </div>
 <div class="tabs">
   <button id="tab-user" class="act" onclick="switchMode('user')">👥 利用者</button>
@@ -226,6 +232,34 @@ async function clockOut(userId){
 // --- 時計 ---
 function updateClock(){var d=new Date();document.getElementById('hd-clock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');}
 setInterval(updateClock,1000);updateClock();
+
+// --- 全画面表示 ---
+function toggleFullscreen(){
+  try{
+    if(!document.fullscreenElement&&!document.webkitFullscreenElement){
+      var docEl=document.documentElement;
+      if(docEl.requestFullscreen)docEl.requestFullscreen();
+      else if(docEl.webkitRequestFullscreen)docEl.webkitRequestFullscreen();
+      else if(docEl.msRequestFullscreen)docEl.msRequestFullscreen();
+      else alert('お使いのブラウザは全画面表示に対応していません');
+    }else{
+      if(document.exitFullscreen)document.exitFullscreen();
+      else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+      else if(document.msExitFullscreen)document.msExitFullscreen();
+    }
+  }catch(e){alert('全画面切替エラー: '+e);}
+}
+function updateFsButton(){
+  var btn=document.getElementById('btn-fs');
+  if(!btn)return;
+  if(document.fullscreenElement||document.webkitFullscreenElement){
+    btn.innerHTML='✕ 全画面解除';
+  }else{
+    btn.innerHTML='🖥️ 全画面';
+  }
+}
+document.addEventListener('fullscreenchange',updateFsButton);
+document.addEventListener('webkitfullscreenchange',updateFsButton);
 
 // --- タブ切替 ---
 function switchMode(mode){
