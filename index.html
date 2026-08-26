@@ -23,7 +23,9 @@ tr:hover td{background:var(--hov)}
 .app{display:flex;height:100vh;overflow:hidden}
 .side{width:200px;background:var(--pri);color:#fff;display:flex;flex-direction:column;flex-shrink:0}
 .side-hd{padding:16px 12px;border-bottom:1px solid rgba(255,255,255,.15);text-align:center;font-size:12px;font-weight:700;line-height:1.6}
-.side nav{flex:1;padding:4px 0}
+.side nav{flex:1;padding:4px 0;overflow-y:auto;min-height:0}
+.side nav::-webkit-scrollbar{width:4px}
+.side nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:2px}
 .side nav button{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:transparent;color:#fff;border-radius:0;font-size:12px;text-align:left;border-left:3px solid transparent}
 .side nav button:hover{background:rgba(255,255,255,.08)}
 .side nav button.act{background:rgba(255,255,255,.15);border-left-color:#fff}
