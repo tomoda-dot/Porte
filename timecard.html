@@ -7,17 +7,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Noto Sans JP',sans-serif;background:#f5f0ea;color:#333;min-height:100vh;overflow-x:hidden;user-select:none;-webkit-user-select:none}
-.header{background:linear-gradient(135deg,#5d4037,#8d6e63);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;transition:padding .2s}
-:root:fullscreen .header,
-:fullscreen .header,
-:-webkit-full-screen .header,
-:-moz-full-screen .header,
-:-ms-fullscreen .header,
-.is-fullscreen .header,
-body.is-fullscreen .header{padding-top:75px!important;padding-bottom:20px!important}
-.header h1{font-size:20px;letter-spacing:2px}
-.header .date{font-size:15px;opacity:0.9}
-.header .clock{font-size:28px;font-weight:900;letter-spacing:1px}
+.header{background:linear-gradient(135deg,#5d4037,#8d6e63);color:#fff;padding:16px 24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+.header-left{display:flex;align-items:center;justify-content:flex-start}
+.header-center{text-align:center}
+.header-center h1{font-size:22px;letter-spacing:2px;font-weight:900}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:center}
+.header-right .date{font-size:13px;opacity:0.9;margin-bottom:2px;font-weight:600}
+.header-right .clock{font-size:26px;font-weight:900;letter-spacing:1px;line-height:1.1}
 .tabs{display:flex;gap:0;margin:0;background:#fff;border-bottom:2px solid #e0d6cf}
 .tabs button{flex:1;padding:12px;border:none;background:none;font-size:15px;font-weight:700;cursor:pointer;color:#999;border-bottom:3px solid transparent}
 .tabs button.act{color:#5d4037;border-bottom-color:#5d4037}
@@ -72,9 +68,14 @@ canvas{border:2px solid #ddd;border-radius:10px;width:100%;height:200px;touch-ac
 </head>
 <body>
 <div class="header">
-  <div><h1>⏰ タイムカード</h1><div class="date" id="hd-date"></div></div>
-  <div style="display:flex;align-items:center;gap:14px">
+  <div class="header-left">
     <button onclick="toggleFullscreen()" class="btn-fs" id="btn-fs" title="全画面表示の切り替え">🖥️ 全画面</button>
+  </div>
+  <div class="header-center">
+    <h1>⏰ タイムカード</h1>
+  </div>
+  <div class="header-right">
+    <div class="date" id="hd-date"></div>
     <div class="clock" id="hd-clock"></div>
   </div>
 </div>
