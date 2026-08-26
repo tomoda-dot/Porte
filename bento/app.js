@@ -1058,7 +1058,10 @@ function openUserSelectForBentoModal(bentoItemOrId) {
   if (titleEl) titleEl.textContent = `🍱 『${bentoItem.name}』を誰の注文にしますか？`;
   
   const searchEl = document.getElementById('userSelectModalSearch');
-  if (searchEl) searchEl.value = '';
+  if (searchEl) {
+    searchEl.value = '';
+    searchEl.oninput = (e) => renderUserPickerList(e.target.value);
+  }
   
   renderUserPickerList('');
   const modal = document.getElementById('userSelectForBentoModal');
@@ -1080,12 +1083,15 @@ window.setAdminModalFilterMode = function(mode) {
   const allBtn = document.getElementById('modalFilterShowAllBtn');
   const staffBtn = document.getElementById('modalFilterStaffBtn');
 
-  if (bentoBtn) bentoBtn.classList.toggle('active', mode === 'bentoOnly');
-  if (allBtn) allBtn.classList.toggle('active', mode === 'showAll');
-  if (staffBtn) staffBtn.classList.toggle('active', mode === 'staff');
+  const activeCss = 'padding:8px 16px; border-radius:20px; border:2px solid #ff7e67; background:#fff5eb; color:#d9480f; font-weight:800; font-size:0.95rem; cursor:pointer;';
+  const staffActiveCss = 'padding:8px 16px; border-radius:20px; border:2px solid #91c7ff; background:#eef7ff; color:#1864ab; font-weight:800; font-size:0.95rem; cursor:pointer;';
+  const inactiveCss = 'padding:8px 16px; border-radius:20px; border:2px solid #ced4da; background:#fff; color:#495057; font-weight:800; font-size:0.95rem; cursor:pointer;';
 
-  const searchVal = document.getElementById('userSelectModalSearch') ? document.getElementById('userSelectModalSearch').value : '';
-  renderUserPickerList(searchVal);
+  if (bentoBtn) bentoBtn.style.cssText = (mode === 'bentoOnly' ? activeCss : inactiveCss);
+  if (allBtn) allBtn.style.cssText = (mode === 'showAll' ? activeCss : inactiveCss);
+  if (staffBtn) staffBtn.style.cssText = (mode === 'staff' ? staffActiveCss : inactiveCss);
+
+  renderUserPickerList('');
 };
 
 window.toggleModalShowAll = function(showAll) {
