@@ -924,11 +924,11 @@ function renderStaffPickerList(searchQuery) {
     div.style.cssText = 'background:#eef7ff; border:1.5px solid #91c7ff; border-radius:14px; padding:12px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;';
     div.innerHTML = `
       <div style="text-align:left;">
-        <div class="user-picker-name" style="color:#1864ab; font-weight:900; font-size:1.05rem;">👔 ${s.name.replace('👔', '').trim()} スタッフ</div>
+        <div class="user-picker-name" style="color:#1864ab; font-weight:900; font-size:1.05rem;">👔 ${s.name.replace('👔', '').replace('スタッフ', '').trim()}</div>
         <div class="user-picker-sub" style="font-size:0.8rem; color:#495057;">${currentChoice ? `現在選択: ${currentChoice.icon} ${currentChoice.name}` : '未選択'}</div>
       </div>
       <button class="btn btn-sm btn-pop" style="background:linear-gradient(135deg, #1864ab, #228be6); border:none; font-weight:800;">
-        ${isChosenThis ? '✅ 選択中' : 'このスタッフに決定 ➔'}
+        ${isChosenThis ? '✅ 選択中' : '決定'}
       </button>
     `;
     div.onclick = () => selectStaffOrder(s.id || s.name);
