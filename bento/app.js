@@ -844,16 +844,16 @@ function renderTodaysMenu() {
   }
 
   let tableHtml = `
-    <div style="background:#fff; border-radius:18px; border:1.5px solid #e9ecef; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
-      <table class="data-table" style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+    <div style="background:#fff; border-radius:18px; border:1.5px solid #e9ecef; overflow-x:auto; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+      <table class="data-table" style="width:100%; min-width:680px; border-collapse:collapse; font-size:0.95rem;">
         <thead>
           <tr style="background:#fff4e6; color:#d9480f; border-bottom:2px solid #ffd8a8; font-weight:800;">
-            <th style="padding:12px 14px; width:75px; text-align:center;">枠</th>
-            <th style="padding:12px 14px; width:110px;">カテゴリ</th>
-            <th style="padding:12px 14px;">お弁当名</th>
-            <th style="padding:12px 14px; width:100px; text-align:center;">残在庫</th>
-            <th style="padding:12px 14px;">本日選択された方</th>
-            <th style="padding:12px 14px; width:130px; text-align:center;">操作</th>
+            <th style="padding:12px 14px; width:75px; text-align:center; white-space:nowrap;">枠</th>
+            <th style="padding:12px 14px; width:110px; white-space:nowrap;">カテゴリ</th>
+            <th style="padding:12px 14px; white-space:nowrap;">お弁当名</th>
+            <th style="padding:12px 14px; width:100px; text-align:center; white-space:nowrap;">残在庫</th>
+            <th style="padding:12px 14px; white-space:nowrap;">本日選択された方</th>
+            <th style="padding:12px 14px; width:130px; text-align:center; white-space:nowrap;">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -1948,6 +1948,9 @@ function setupEventListeners() {
 
   const refreshHeaderBtn = document.getElementById('refreshUsersHeaderBtn');
   if (refreshHeaderBtn) refreshHeaderBtn.addEventListener('click', fetchPorteDbAttendance);
+
+  const staffSpecialBtn = document.getElementById('staffSpecialMenuBtn');
+  if (staffSpecialBtn) staffSpecialBtn.addEventListener('click', openStaffAllMenuModalAdmin);
 
   const userSearch = document.getElementById('userSelectModalSearch');
   if (userSearch) {
