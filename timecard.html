@@ -7,7 +7,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Noto Sans JP',sans-serif;background:#f5f0ea;color:#333;min-height:100vh;overflow-x:hidden;user-select:none;-webkit-user-select:none}
-.header{background:linear-gradient(135deg,#5d4037,#8d6e63);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+.header{background:linear-gradient(135deg,#5d4037,#8d6e63);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;transition:padding .2s}
+:fullscreen .header,
+:-webkit-full-screen .header,
+:-moz-full-screen .header,
+:-ms-fullscreen .header,
+body.is-fullscreen .header{padding-top:44px!important;padding-bottom:20px!important}
 .header h1{font-size:20px;letter-spacing:2px}
 .header .date{font-size:15px;opacity:0.9}
 .header .clock{font-size:28px;font-weight:900;letter-spacing:1px}
@@ -251,11 +256,13 @@ function toggleFullscreen(){
 }
 function updateFsButton(){
   var btn=document.getElementById('btn-fs');
-  if(!btn)return;
-  if(document.fullscreenElement||document.webkitFullscreenElement){
-    btn.innerHTML='✕ 全画面解除';
+  var isFs=!!(document.fullscreenElement||document.webkitFullscreenElement);
+  if(isFs){
+    document.body.classList.add('is-fullscreen');
+    if(btn)btn.innerHTML='✕ 全画面解除';
   }else{
-    btn.innerHTML='🖥️ 全画面';
+    document.body.classList.remove('is-fullscreen');
+    if(btn)btn.innerHTML='🖥️ 全画面';
   }
 }
 document.addEventListener('fullscreenchange',updateFsButton);
