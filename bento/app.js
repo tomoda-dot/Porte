@@ -839,7 +839,134 @@ window.closeStaffAllMenuModalAdmin = function() {
 window.onChooseStaffSpecialBentoAdmin = function(bentoId) {
   closeStaffAllMenuModalAdmin();
   const item = bentoMaster.find(b => b.id === bentoId);
-  openUserSelectForBentoModal(item || bentoId);
+  openStaffSelectForBentoModal(item || bentoId);
+};
+
+let currentStaffSelectingBentoId = null;
+
+window.openStaffSelectForBentoModal = function(bentoItemOrId) {
+  let bentoItem = typeof bentoItemOrId === 'string' ? bentoMaster.find(b => b.id === bentoItemOrId) : bentoItemOrId;
+  if (!bentoItem) bentoItem = { id: String(bentoItemOrId), name: 'お弁当' };
+  currentStaffSelectingBentoId = bentoItem.id;
+
+  const titleEl = document.getElementById('selectStaffModalBentoTitle');
+  if (titleEl) titleEl.textContent = `👔 『${bentoItem.name}』をどのスタッフの注文にしますか？`;
+
+  const searchEl = document.getElementById('staffSelectModalSearch');
+  if (searchEl) {
+    searchEl.value = '';
+    searchEl.oninput = (e) => renderStaffPickerList(e.target.value);
+  }
+
+  renderStaffPickerList('');
+
+  const modal = document.getElementById('staffSelectForBentoModal');
+  if (modal) {
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    modal.style.pointerEvents = 'auto';
+  }
+};
+
+window.closeStaffSelectForBentoModal = function() {
+  const modal = document.getElementById('staffSelectForBentoModal');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+    modal.style.opacity = '0';
+    modal.style.pointerEvents = 'none';
+  }
+  currentStaffSelectingBentoId = null;
+};
+
+function renderStaffPickerList(searchQuery) {
+  const listContainer = document.getElementById('staffPickerList');
+  if (!listContainer) return;
+  listContainer.innerHTML = '';
+
+  const q = (searchQuery || '').toLowerCase();
+
+  let staffList = porteUsers.filter(u => u.type === '👔 スタッフ' || u.isStaff || String(u.name).includes('👔'));
+
+  if (staffList.length === 0 && window.porteStaffList && window.porteStaffList.length > 0) {
+    staffList = window.porteStaffList.map(s => ({
+      id: s.id || ('staff_' + s.name),
+      name: s.name,
+      type: '👔 スタッフ',
+      isStaff: true,
+      wantsBento: true,
+      selectedBentoId: null
+    }));
+  }
+
+  const filtered = staffList.filter(s => {
+    const matchQuery = s.name.toLowerCase().includes(q) || (s.id && String(s.id).toLowerCase().includes(q));
+    return matchQuery;
+  });
+
+  if (filtered.length === 0) {
+    listContainer.innerHTML = `
+      <div style="text-align:center; padding:24px; color:#747d8c;">
+        <p style="margin-bottom:12px; font-weight:700;">スタッフの登録データが見つかりません。</p>
+        <button class="btn btn-sm btn-pop" style="background:linear-gradient(135deg, #1864ab, #228be6); border:none; font-weight:800;" onclick="addNewStaffUserQuick()">👔 スタッフ名を入力して注文登録</button>
+      </div>
+    `;
+    return;
+  }
+
+  filtered.forEach(s => {
+    const isChosenThis = s.selectedBentoId === currentStaffSelectingBentoId;
+    const currentChoice = s.selectedBentoId ? bentoMaster.find(b => b.id === s.selectedBentoId) : null;
+
+    const div = document.createElement('div');
+    div.className = `user-picker-item ${isChosenThis ? 'selected' : ''}`;
+    div.style.cssText = 'background:#eef7ff; border:1.5px solid #91c7ff; border-radius:14px; padding:12px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;';
+    div.innerHTML = `
+      <div style="text-align:left;">
+        <div class="user-picker-name" style="color:#1864ab; font-weight:900; font-size:1.05rem;">👔 ${s.name.replace('👔', '').trim()} スタッフ</div>
+        <div class="user-picker-sub" style="font-size:0.8rem; color:#495057;">${currentChoice ? `現在選択: ${currentChoice.icon} ${currentChoice.name}` : '未選択'}</div>
+      </div>
+      <button class="btn btn-sm btn-pop" style="background:linear-gradient(135deg, #1864ab, #228be6); border:none; font-weight:800;">
+        ${isChosenThis ? '✅ 選択中' : 'このスタッフに決定 ➔'}
+      </button>
+    `;
+    div.onclick = () => selectStaffOrder(s.id || s.name);
+    listContainer.appendChild(div);
+  });
+}
+
+window.selectStaffOrder = function(staffIdOrName) {
+  let user = porteUsers.find(u => u.id === staffIdOrName || u.name === staffIdOrName);
+  if (!user) {
+    user = {
+      id: 'staff_' + Date.now(),
+      name: staffIdOrName.replace('👔', '').trim(),
+      type: '👔 スタッフ',
+      isStaff: true,
+      wantsBento: true,
+      selectedBentoId: null
+    };
+    porteUsers.push(user);
+  }
+
+  const bento = bentoMaster.find(b => b.id === currentStaffSelectingBentoId);
+  if (!bento) return;
+
+  user.selectedBentoId = bento.id;
+  user.type = '👔 スタッフ';
+
+  closeStaffSelectForBentoModal();
+  renderPorteSection();
+  renderTodaysMenu();
+  savePorteData();
+  showToast(`🎉 ${user.name} スタッフのお弁当を『${bento.name}』に登録しました！`, 'success');
+};
+
+window.addNewStaffUserQuick = function() {
+  const name = prompt('お弁当を注文するスタッフのお名前を入力してください:');
+  if (!name || !name.trim()) return;
+  selectStaffOrder(name.trim());
 };
 
 // 1. 本日の5品 メニュー表示（賞味期限の短い順で描画）
