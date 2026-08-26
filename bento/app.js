@@ -779,57 +779,63 @@ function renderTodaysMenu() {
   autoReplaceSoldOutMenu();
   sortTodaysMenuIdsByExpiration();
 
-  const grid = document.getElementById('todaysMenuGrid');
-  grid.innerHTML = '';
+  const container = document.getElementById('todaysMenuGrid');
+  container.innerHTML = '';
 
   const items = todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean);
 
+  if (items.length === 0) {
+    container.innerHTML = `<p style="padding:20px; color:#868e96;">本日のメニューが設定されていません</p>`;
+    return;
+  }
+
+  let tableHtml = `
+    <div style="background:#fff; border-radius:18px; border:1.5px solid #e9ecef; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+      <table class="data-table" style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+        <thead>
+          <tr style="background:#fff4e6; color:#d9480f; border-bottom:2px solid #ffd8a8; font-weight:800;">
+            <th style="padding:12px 14px; width:75px; text-align:center;">枠</th>
+            <th style="padding:12px 14px; width:110px;">カテゴリ</th>
+            <th style="padding:12px 14px;">お弁当名</th>
+            <th style="padding:12px 14px; width:100px; text-align:center;">残在庫</th>
+            <th style="padding:12px 14px;">本日選択された方</th>
+            <th style="padding:12px 14px; width:130px; text-align:center;">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
   items.forEach((item, index) => {
     const isSoldOut = item.stock <= 0;
-    const stockPercent = Math.min(100, Math.max(0, (item.stock / 15) * 100));
-
-    const earliestExp = getBentoEarliestExpDate(item);
-    const expBadgeText = earliestExp !== '9999-12-31' ? `⏳ 賞味期限: ${earliestExp}` : '';
-
     const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id);
-    let userTagsHtml = '';
-    chosenUsers.forEach(u => {
-      userTagsHtml += `<span class="user-tag">👤 ${u.name}</span>`;
-    });
+    let userNamesHtml = chosenUsers.map(u => `<span style="background:#fff0f6; border:1px solid #ffdeeb; color:#c2255c; padding:2px 8px; border-radius:12px; font-size:0.85rem; font-weight:700; display:inline-block; margin:2px;">${u.name}</span>`).join(' ');
+    if (!userNamesHtml) userNamesHtml = '<span style="color:#adb5bd; font-size:0.85rem;">(未選択)</span>';
 
-    const card = document.createElement('div');
-    card.className = `bento-card ${isSoldOut ? 'sold-out' : ''}`;
-    card.innerHTML = `
-      <span class="bento-number-badge">第 ${index + 1} 案</span>
-      <span class="bento-cat-tag">${item.category}</span>
-      <div class="bento-avatar-box">${item.icon}</div>
-      <h3 class="bento-title">${item.name}</h3>
-      <p style="font-size:0.8rem; color:#747d8c; margin-bottom:8px;">${item.desc || ''}</p>
-      
-      <div class="bento-stock-bar">
-        <div class="bento-stock-fill ${item.stock <= 3 ? 'low' : ''} ${item.stock <= 0 ? 'zero' : ''}" style="width: ${stockPercent}%;"></div>
-      </div>
-      <div class="bento-stock-text">
-        ${isSoldOut ? '<span style="color:#ff4757; font-weight:800;">完売いたしました</span>' : `残り <strong>${item.stock}</strong> 食`}
-      </div>
-
-      <div class="bento-selected-users">
-        ${userTagsHtml || '<span style="font-size:0.75rem; color:#adb5bd;">選択した方はまだいません</span>'}
-      </div>
-
-      <button class="bento-order-btn" ${isSoldOut ? 'disabled' : ''} onclick="quickOrderBento('${item.id}')">
-        ${isSoldOut ? '売り切れ' : 'このお弁当を選ぶ 🍱'}
-      </button>
-
-      ${isSoldOut ? `
-        <div class="sold-out-overlay">
-          <div class="sold-out-stamp">完売御礼</div>
-        </div>
-      ` : ''}
+    tableHtml += `
+      <tr style="border-bottom:1px solid #f1f3f5; background:${index % 2 === 0 ? '#fff' : '#fafafa'};">
+        <td style="padding:12px 14px; text-align:center; font-weight:800; color:#d9480f;">第 ${index + 1} 案</td>
+        <td style="padding:12px 14px;"><span style="background:#e7f5ff; color:#1971c2; padding:3px 10px; border-radius:14px; font-size:0.8rem; font-weight:800;">${item.category}</span></td>
+        <td style="padding:12px 14px; font-weight:800; color:#212529;">${item.icon} ${item.name}</td>
+        <td style="padding:12px 14px; text-align:center;">
+          ${isSoldOut ? '<span style="color:#ff4757; font-weight:900;">完売</span>' : `<span style="font-weight:900; color:#2b8a3e;">${item.stock} 食</span>`}
+        </td>
+        <td style="padding:12px 14px;">${userNamesHtml}</td>
+        <td style="padding:12px 14px; text-align:center;">
+          <button class="btn btn-sm ${isSoldOut ? 'btn-outline' : 'btn-pop'}" style="padding:4px 12px; font-size:0.85rem; font-weight:800;" ${isSoldOut ? 'disabled' : ''} onclick="quickOrderBento('${item.id}')">
+            ${isSoldOut ? '完売' : '注文登録 🍱'}
+          </button>
+        </td>
+      </tr>
     `;
-
-    grid.appendChild(card);
   });
+
+  tableHtml += `
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  container.innerHTML = tableHtml;
 }
 
 window.quickOrderBento = function(bentoId) {
