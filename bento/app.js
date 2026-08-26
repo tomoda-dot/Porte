@@ -1152,31 +1152,36 @@ function renderUserPickerList(searchQuery) {
   filtered.forEach(u => {
     const isChosenThis = u.selectedBentoId === currentSelectingBentoId;
     const currentChoice = u.selectedBentoId ? bentoMaster.find(b => b.id === u.selectedBentoId) : null;
-    const isSuddenAdd = u.wantsBento === false;
     const isStaff = u.type === '👔 スタッフ' || u.isStaff || String(u.name).includes('👔');
 
-    const div = document.createElement('div');
-    div.className = `user-picker-item ${isChosenThis ? 'selected' : ''}`;
-    if (isStaff) {
-      div.style.cssText = 'background:#eef7ff; border:1.5px solid #91c7ff; border-radius:14px; padding:12px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;';
-    }
-    div.innerHTML = `
-      <div class="user-picker-info" style="text-align:left;">
-        <span class="user-picker-name" style="${isStaff ? 'color:#1864ab; font-weight:900;' : ''}">
-          ${isStaff ? '👔 ' : ''}${u.name.replace('👔', '').trim()}${isStaff ? ' スタッフ' : ''} <small style="color:#868e96; font-size:0.8rem;">(${u.kana || ''})</small>
-          ${isSuddenAdd ? '<span style="background:#fff0f6; color:#e64980; font-size:0.75rem; padding:2px 8px; border-radius:10px; margin-left:6px; font-weight:800;">急遽追加</span>' : ''}
-        </span>
-        <span class="user-picker-sub">
-          ${currentChoice ? `現在の選択: <strong>${currentChoice.icon} ${currentChoice.name}</strong>` : '<span style="color:#e64980; font-weight:700;">未選択</span>'}
-        </span>
-      </div>
-      <div>
-        <button class="btn btn-sm ${isChosenThis ? 'btn-secondary' : (isStaff ? 'btn-pop' : 'btn-primary')}" style="${isStaff && !isChosenThis ? 'background:linear-gradient(135deg, #1864ab, #228be6); border:none; font-weight:800;' : ''}" onclick="confirmAssignUserForBento('${u.id || u.name}')">
-          ${isChosenThis ? '選択済み' : (isSuddenAdd ? '急遽お弁当を追加 ➕' : (currentChoice ? '変更する' : 'この人に決定 🎯'))}
-        </button>
+    const cleanName = u.name.replace('👔', '').replace('スタッフ', '').trim();
+    const displayName = isStaff ? `👔 ${cleanName}` : `👤 ${cleanName} 様`;
+
+    const btn = document.createElement('button');
+    btn.className = `user-btn ${isChosenThis ? 'chosen' : ''}`;
+    btn.style.cssText = `
+      padding: 16px 20px;
+      border-radius: 20px;
+      font-size: 1.05rem;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+      ${isStaff 
+        ? (isChosenThis ? 'background:#e6fcf5; border:2px solid #63e6be; color:#0ca678;' : 'background:#eef7ff; border:2px solid #91c7ff; color:#1864ab;')
+        : (isChosenThis ? 'background:#d3f9d8; border:2px solid #63e6be; color:#2b8a3e;' : 'background:#fff0f6; border:2px solid #ffdeeb; color:#c2255c;')
+      }
+    `;
+    btn.innerHTML = `
+      <div style="text-align:left; width:100%; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:900; font-size:1.05rem;">${displayName}</span>
+        ${isChosenThis ? '<span style="font-size:0.85rem; font-weight:800; color:#2b8a3e; background:#ffffff; padding:3px 10px; border-radius:10px;">✅ 選択中</span>' : (currentChoice ? `<span style="font-size:0.8rem; opacity:0.8;">(変更: ${currentChoice.icon})</span>` : '')}
       </div>
     `;
-    listContainer.appendChild(div);
+    btn.onclick = () => confirmAssignUserForBento(u.id || u.name);
+    listContainer.appendChild(btn);
   });
 }
 
