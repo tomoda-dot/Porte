@@ -1734,7 +1734,12 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
 
     let loadedUsers = [];
     if (userRes.data && userRes.data.length > 0) {
-      loadedUsers = userRes.data.map((u, idx) => {
+      userRes.data.forEach((u, idx) => {
+        // 利用終了・退所済みの利用者は除外
+        if (u.userStatus === '利用終了' || u.userStatus === '退所' || u.status === '利用終了' || u.status === '退所') return;
+        if (u.enrollDate && u.enrollDate > todayStr) return;
+        if (u.endDate && u.endDate < todayStr) return;
+
         const uId = String(u.id || '').trim();
         const uName = String(u.name || u.氏名 || '').trim();
         const r = attMap[uId] || attMap[uName];
@@ -1769,7 +1774,7 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         const existingUser = porteUsers.find(item => String(item.id).trim() === uId || String(item.name).trim() === String(u.name || u.氏名).trim());
         const savedBentoId = existingUser ? (existingUser.selectedBentoId || '') : '';
 
-        return {
+        loadedUsers.push({
           id: u.id || `P${idx+1}`,
           name: u.name || u.氏名 || '利用者',
           kana: u.kana || u.フリガナ || '',
@@ -1778,13 +1783,22 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           status: r ? (r.status || '出席') : '出席',
           wantsBento: wantsBento,
           selectedBentoId: savedBentoId
-        };
+        });
       });
     }
 
-    // スタッフの統合（スタッフもお弁当注文可能に）
+    // スタッフの統合（退職済スタッフを除外し在職者のみ追加）
     if (staffRes && staffRes.data && staffRes.data.length > 0) {
       staffRes.data.forEach((s, idx) => {
+        // 退職・離職・非表示スタッフは除外
+        const isStaffResigned = (
+          s.userStatus === '退職' || s.userStatus === '退職済' || s.userStatus === '利用終了' || s.userStatus === '退所' ||
+          s.status === '退職' || s.status === '退職済' || s.status === '離職' || s.status === '無効' || s.status === '非表示' ||
+          (s.startDate && s.startDate > todayStr) ||
+          (s.endDate && s.endDate <= todayStr)
+        );
+        if (isStaffResigned) return;
+
         const sId = String(s.id || '').trim();
         const sName = String(s.name || s.氏名 || '').trim();
         const r = staffAttMap[sId] || staffAttMap[sName];
