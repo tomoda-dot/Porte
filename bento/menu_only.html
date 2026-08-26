@@ -459,9 +459,6 @@
     </div>
     <div class="header-controls">
       <div class="date-badge" id="dateBadge">2026年8月5日(水)</div>
-      <button class="btn-fullscreen" style="background:linear-gradient(135deg, #1864ab, #228be6); color:#fff; border:none;" onclick="openStaffAllMenuModal()">
-        👔 スタッフ特権（全30品から選ぶ）
-      </button>
       <button class="btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreen()">
         🖥️ 全画面表示
       </button>
@@ -477,20 +474,6 @@
       <!-- JSで本日の5品を表示 -->
     </div>
   </main>
-
-  <!-- スタッフ専用全30品メニュー選択モーダル -->
-  <div class="modal-overlay" id="staffMenuModal">
-    <div class="modal-box" style="max-width:960px;">
-      <div class="modal-title" style="color:#1864ab;">👔 スタッフ専用特権メニュー</div>
-      <div class="modal-sub">全30品目からお好きなお弁当をお選びいただけます</div>
-
-      <div id="staffMenuGrid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; max-height:55vh; overflow-y:auto; padding:10px; margin-bottom:20px; text-align:left;">
-        <!-- JSで全30品目を表示 -->
-      </div>
-
-      <button class="btn-modal-close" onclick="closeStaffAllMenuModal()">閉じる</button>
-    </div>
-  </div>
 
   <!-- お名前選択モーダル -->
   <div class="modal-overlay" id="userModal">
@@ -717,41 +700,7 @@
       }
     }
 
-    function openStaffAllMenuModal() {
-      const grid = document.getElementById('staffMenuGrid');
-      grid.innerHTML = '';
 
-      bentoMaster.forEach(item => {
-        const isSoldOut = item.stock <= 0;
-        const card = document.createElement('div');
-        card.style.cssText = `background:#f8f9fa; border:2px solid ${isSoldOut ? '#e9ecef' : '#bac8ff'}; border-radius:18px; padding:14px; display:flex; flex-direction:column; justify-content:space-between; opacity:${isSoldOut ? 0.6 : 1};`;
-        card.innerHTML = `
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <span style="font-size:0.75rem; background:#d0ebff; color:#1864ab; padding:2px 8px; border-radius:10px; font-weight:800;">${item.category}</span>
-              <span style="font-size:0.8rem; font-weight:700; color:#495057;">在庫: ${item.stock}</span>
-            </div>
-            <div style="font-weight:900; font-size:1.05rem; color:#212529; margin-bottom:6px;">${item.icon} ${item.name}</div>
-            <div style="font-size:0.8rem; color:#666; margin-bottom:10px; line-height:1.3;">${item.desc || ''}</div>
-          </div>
-          <button style="width:100%; padding:10px; background:${isSoldOut ? '#adb5bd' : 'linear-gradient(135deg, #1864ab, #228be6)'}; color:#fff; border:none; border-radius:14px; font-weight:800; font-size:0.95rem; cursor:${isSoldOut ? 'not-allowed' : 'pointer'};" ${isSoldOut ? 'disabled' : ''} onclick="onChooseStaffSpecialBento('${item.id}')">
-            ${isSoldOut ? '完売' : 'これにする！ 🎯'}
-          </button>
-        `;
-        grid.appendChild(card);
-      });
-
-      document.getElementById('staffMenuModal').classList.add('active');
-    }
-
-    function closeStaffAllMenuModal() {
-      document.getElementById('staffMenuModal').classList.remove('active');
-    }
-
-    function onChooseStaffSpecialBento(bentoId) {
-      closeStaffAllMenuModal();
-      onChooseBento(bentoId);
-    }
 
     function onChooseBento(bentoId) {
       const bento = bentoMaster.find(b => b.id === bentoId);
