@@ -67,14 +67,14 @@ canvas{border:2px solid #ddd;border-radius:10px;width:100%;height:200px;touch-ac
 </style>
 </head>
 <body>
-<div class="header">
+<div class="header" id="hd-container" ondblclick="toggleFullscreen()" title="クリックまたはダブルタップで全画面切り替え">
   <div class="header-left">
-    <button onclick="toggleFullscreen()" class="btn-fs" id="btn-fs" title="全画面表示の切り替え">🖥️ 全画面</button>
+    <button onclick="toggleFullscreen()" class="btn-fs" id="btn-fs" title="全画面表示の切替">🖥️ 全画面</button>
   </div>
-  <div class="header-center">
+  <div class="header-center" id="hd-title-box" onclick="toggleFullscreen()" style="cursor:pointer" title="タップで全画面切り替え">
     <h1>⏰ タイムカード</h1>
   </div>
-  <div class="header-right">
+  <div class="header-right" id="hd-right-box" onclick="toggleFullscreen()" style="cursor:pointer" title="タップで全画面切り替え">
     <div class="date" id="hd-date"></div>
     <div class="clock" id="hd-clock"></div>
   </div>
@@ -263,17 +263,33 @@ function updateFsButton(){
   if(isFs){
     document.body.classList.add('is-fullscreen');
     document.documentElement.classList.add('is-fullscreen');
-    if(btn)btn.innerHTML='✕ 全画面解除';
   }else{
     document.body.classList.remove('is-fullscreen');
     document.documentElement.classList.remove('is-fullscreen');
-    if(btn)btn.innerHTML='🖥️ 全画面';
   }
+  if(btn) btn.innerHTML='🖥️ 全画面';
 }
 document.addEventListener('fullscreenchange',updateFsButton);
 document.addEventListener('webkitfullscreenchange',updateFsButton);
 document.addEventListener('mozfullscreenchange',updateFsButton);
 document.addEventListener('MSFullscreenChange',updateFsButton);
+
+// タブレット用ダブルタップ動作
+(function(){
+  var lastTap=0;
+  document.addEventListener('DOMContentLoaded',function(){
+    var hd=document.getElementById('hd-container');
+    if(!hd)return;
+    hd.addEventListener('touchend',function(e){
+      var now=new Date().getTime();
+      if(now-lastTap<350&&now-lastTap>0){
+        e.preventDefault();
+        toggleFullscreen();
+      }
+      lastTap=now;
+    });
+  });
+})();
 
 // --- タブ切替 ---
 function switchMode(mode){
