@@ -8,11 +8,13 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Noto Sans JP',sans-serif;background:#f5f0ea;color:#333;min-height:100vh;overflow-x:hidden;user-select:none;-webkit-user-select:none}
 .header{background:linear-gradient(135deg,#5d4037,#8d6e63);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;transition:padding .2s}
+:root:fullscreen .header,
 :fullscreen .header,
 :-webkit-full-screen .header,
 :-moz-full-screen .header,
 :-ms-fullscreen .header,
-body.is-fullscreen .header{padding-top:44px!important;padding-bottom:20px!important}
+.is-fullscreen .header,
+body.is-fullscreen .header{padding-top:75px!important;padding-bottom:20px!important}
 .header h1{font-size:20px;letter-spacing:2px}
 .header .date{font-size:15px;opacity:0.9}
 .header .clock{font-size:28px;font-weight:900;letter-spacing:1px}
@@ -256,17 +258,21 @@ function toggleFullscreen(){
 }
 function updateFsButton(){
   var btn=document.getElementById('btn-fs');
-  var isFs=!!(document.fullscreenElement||document.webkitFullscreenElement);
+  var isFs=!!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement||document.msFullscreenElement);
   if(isFs){
     document.body.classList.add('is-fullscreen');
+    document.documentElement.classList.add('is-fullscreen');
     if(btn)btn.innerHTML='✕ 全画面解除';
   }else{
     document.body.classList.remove('is-fullscreen');
+    document.documentElement.classList.remove('is-fullscreen');
     if(btn)btn.innerHTML='🖥️ 全画面';
   }
 }
 document.addEventListener('fullscreenchange',updateFsButton);
 document.addEventListener('webkitfullscreenchange',updateFsButton);
+document.addEventListener('mozfullscreenchange',updateFsButton);
+document.addEventListener('MSFullscreenChange',updateFsButton);
 
 // --- タブ切替 ---
 function switchMode(mode){
