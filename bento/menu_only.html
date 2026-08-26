@@ -482,8 +482,8 @@
       <div class="modal-sub">どなたのご注文にしますか？お名前をタップしてください</div>
 
       <div style="display:flex; justify-content:center; gap:10px; margin-bottom:18px; flex-wrap:wrap;">
-        <button id="modalFilterBentoOnly" style="padding:8px 20px; border-radius:20px; border:2px solid #ff7e67; background:#fff5eb; color:#d9480f; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter(false)">🍱 お弁当対象者</button>
-        <button id="modalFilterShowAll" style="padding:8px 20px; border-radius:20px; border:2px solid #ced4da; background:#fff; color:#495057; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter(true)">👔 スタッフ・全員から選択</button>
+        <button id="modalFilterBentoOnly" style="padding:8px 20px; border-radius:20px; border:2px solid #ff7e67; background:#fff5eb; color:#d9480f; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter(false)">🍱 本日の利用対象者</button>
+        <button id="modalFilterShowAll" style="padding:8px 20px; border-radius:20px; border:2px solid #ced4da; background:#fff; color:#495057; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter(true)">👥 全ご利用者様から選択</button>
       </div>
 
       <div class="modal-user-grid" id="modalUserGrid">
@@ -656,7 +656,7 @@
 
       items.forEach((item, index) => {
         const isSoldOut = item.stock <= 0;
-        const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id);
+        const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id && u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
 
         let usersHtml = '';
         chosenUsers.forEach(u => {
@@ -683,24 +683,7 @@
         `;
         grid.appendChild(card);
       });
-
-      // 特権メニュー（5案以外のお弁当）を選んだスタッフの注文を表示
-      const otherChosenUsers = porteUsers.filter(u => u.selectedBentoId && !todaysMenuIds.includes(u.selectedBentoId));
-      if (otherChosenUsers.length > 0) {
-        const staffBanner = document.createElement('div');
-        staffBanner.style.cssText = 'grid-column:1/-1; background:#eef7ff; border:2px solid #91c7ff; border-radius:20px; padding:16px 24px; margin-top:10px; text-align:left;';
-        let bannerHtml = '<div style="font-weight:900; color:#1864ab; font-size:1.1rem; margin-bottom:8px;">👔 スタッフ特権（全30品から選択）のご注文</div><div style="display:flex; flex-wrap:wrap; gap:10px;">';
-        otherChosenUsers.forEach(u => {
-          const bento = bentoMaster.find(b => b.id === u.selectedBentoId);
-          bannerHtml += `<span style="background:#fff; border:1.5px solid #74c0fc; color:#1864ab; padding:6px 14px; border-radius:16px; font-weight:800; font-size:0.9rem;">${u.name}: ${bento ? (bento.icon + ' ' + bento.name) : '選択中'}</span>`;
-        });
-        bannerHtml += '</div>';
-        staffBanner.innerHTML = bannerHtml;
-        grid.appendChild(staffBanner);
-      }
     }
-
-
 
     function onChooseBento(bentoId) {
       const bento = bentoMaster.find(b => b.id === bentoId);
@@ -742,26 +725,24 @@
       const grid = document.getElementById('modalUserGrid');
       grid.innerHTML = '';
 
-      const users = porteUsers.filter(u => modalFilterShowAll || u.wantsBento !== false);
+      // ご利用者様のみ抽出（スタッフを除外）
+      const clientUsers = porteUsers.filter(u => u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
+      const users = clientUsers.filter(u => modalFilterShowAll || u.wantsBento !== false);
 
       if (users.length === 0) {
-        grid.innerHTML = `<p style="grid-column:1/-1; padding:20px; font-weight:700; color:#868e96;">対象の方が登録されていません。上部の「👔 スタッフ・全員から選択」ボタンをお試しください。</p>`;
+        grid.innerHTML = `<p style="grid-column:1/-1; padding:20px; font-weight:700; color:#868e96;">本日利用のご利用者様データが登録されていません。上部の「👥 全ご利用者様から選択」ボタンをお試しください。</p>`;
         return;
       }
 
       users.forEach(u => {
         const isChosenThis = u.selectedBentoId === currentBentoId;
         const currentChoice = u.selectedBentoId ? bentoMaster.find(b => b.id === u.selectedBentoId) : null;
-        const isStaff = u.type === '👔 スタッフ' || String(u.name).includes('👔');
 
         const btn = document.createElement('button');
         btn.className = `user-btn ${isChosenThis ? 'chosen' : ''}`;
-        if (isStaff) {
-          btn.style.cssText = isChosenThis ? 'background:#e6fcf5; border-color:#63e6be; color:#0ca678;' : 'background:#eef7ff; border-color:#91c7ff; color:#1864ab;';
-        }
         btn.innerHTML = `
           <div style="text-align:left;">
-            <span>${isStaff ? '' : '👤 '}${u.name}${isStaff ? '' : ' 様'}</span>
+            <span>👤 ${u.name} 様</span>
             ${u.wantsBento === false ? '<span style="font-size:0.75rem; background:#e9ecef; color:#495057; padding:2px 6px; border-radius:6px; margin-left:6px; font-weight:700;">追加可能</span>' : ''}
           </div>
           <span style="font-size:0.9rem; opacity:0.8; flex-shrink:0;">
