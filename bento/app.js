@@ -1697,9 +1697,11 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    const [userRes, attRes] = await Promise.all([
+    const [userRes, attRes, staffRes, staffAttRes] = await Promise.all([
       SB.from('利用者').select('*'),
-      SB.from('出欠').select('*').eq('date', todayStr)
+      SB.from('出欠').select('*').eq('date', todayStr),
+      SB.from('スタッフ').select('*'),
+      SB.from('スタッフ出欠').select('*').eq('date', todayStr)
     ]);
 
     if (userRes.error) {
@@ -1719,8 +1721,20 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
       });
     }
 
+    const staffAttMap = {};
+    if (staffAttRes && staffAttRes.data) {
+      staffAttRes.data.forEach(a => {
+        if (a) {
+          if (a.staffId) staffAttMap[String(a.staffId).trim()] = a;
+          if (a.staff_id) staffAttMap[String(a.staff_id).trim()] = a;
+          if (a.name) staffAttMap[String(a.name).trim()] = a;
+        }
+      });
+    }
+
+    let loadedUsers = [];
     if (userRes.data && userRes.data.length > 0) {
-      porteUsers = userRes.data.map((u, idx) => {
+      loadedUsers = userRes.data.map((u, idx) => {
         const uId = String(u.id || '').trim();
         const uName = String(u.name || u.氏名 || '').trim();
         const r = attMap[uId] || attMap[uName];
@@ -1766,26 +1780,42 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           selectedBentoId: savedBentoId
         };
       });
-    } else {
-      const staffRes = await SB.from('スタッフ').select('*');
-      if (staffRes.data && staffRes.data.length > 0) {
-        porteUsers = staffRes.data.map((s, idx) => {
-          const sId = String(s.id || '').trim();
-          const existingUser = porteUsers.find(item => String(item.id).trim() === sId);
-          return {
-            id: s.id || `P${idx+1}`,
-            name: s.name || s.username || '利用者',
-            kana: s.kana || '',
-            type: '通所',
-            note: s.note || '',
-            wantsBento: false,
-            selectedBentoId: existingUser ? (existingUser.selectedBentoId || '') : ''
-          };
+    }
+
+    // スタッフの統合（スタッフもお弁当注文可能に）
+    if (staffRes && staffRes.data && staffRes.data.length > 0) {
+      staffRes.data.forEach((s, idx) => {
+        const sId = String(s.id || '').trim();
+        const sName = String(s.name || s.氏名 || '').trim();
+        const r = staffAttMap[sId] || staffAttMap[sName];
+
+        const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? String(r.bento).trim() : (s.bento ? String(s.bento).trim() : '');
+        let wantsBento = false;
+        if (curB === 'あり' || curB === '必要' || curB === 'true' || curB === '1') {
+          wantsBento = true;
+        }
+
+        const existingUser = porteUsers.find(item => String(item.id).trim() === sId || String(item.name).trim() === (`👔 ${sName}`));
+        const savedBentoId = existingUser ? (existingUser.selectedBentoId || '') : '';
+
+        loadedUsers.push({
+          id: sId || `ST${idx+1}`,
+          name: `👔 ${sName}`,
+          kana: s.kana || s.furigana || '',
+          type: '👔 スタッフ',
+          note: wantsBento ? '【スタッフ用お弁当】' : '【お弁当不要】',
+          status: r ? '出勤' : '未出勤',
+          wantsBento: wantsBento,
+          selectedBentoId: savedBentoId
         });
-      } else {
-        showToast('⚠️ テーブル内にデータが見つかりませんでした。', 'warning');
-        return;
-      }
+      });
+    }
+
+    if (loadedUsers.length > 0) {
+      porteUsers = loadedUsers;
+    } else {
+      showToast('⚠️ テーブル内にデータが見つかりませんでした。', 'warning');
+      return;
     }
 
     savePorteUsers();
