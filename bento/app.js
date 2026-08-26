@@ -792,10 +792,15 @@ window.quickOrderBento = function(bentoId) {
 window.openStaffAllMenuModalAdmin = function() {
   const modal = document.getElementById('staffMenuModalAdmin');
   const grid = document.getElementById('staffMenuGridAdmin');
-  if (!modal || !grid) return;
+  if (!modal || !grid) {
+    console.error('staffMenuModalAdmin or grid missing');
+    return;
+  }
   grid.innerHTML = '';
 
-  bentoMaster.forEach(item => {
+  const masterList = (bentoMaster && bentoMaster.length > 0) ? bentoMaster : DEFAULT_30_BENTO;
+
+  masterList.forEach(item => {
     const isSoldOut = item.stock <= 0;
     const card = document.createElement('div');
     card.style.cssText = `background:#fff; border:1.5px solid ${isSoldOut ? '#e9ecef' : '#bac8ff'}; border-radius:14px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; opacity:${isSoldOut ? 0.6 : 1};`;
@@ -808,7 +813,7 @@ window.openStaffAllMenuModalAdmin = function() {
         <div style="font-weight:800; font-size:0.95rem; color:#212529; margin-bottom:4px;">${item.icon} ${item.name}</div>
         <div style="font-size:0.75rem; color:#666; margin-bottom:8px; line-height:1.3;">${item.desc || ''}</div>
       </div>
-      <button class="btn btn-sm ${isSoldOut ? 'btn-outline' : 'btn-pop'}" style="width:100%; padding:6px; font-weight:800; font-size:0.85rem;" ${isSoldOut ? 'disabled' : ''} onclick="onChooseStaffSpecialBentoAdmin('${item.id}')">
+      <button type="button" class="btn btn-sm ${isSoldOut ? 'btn-outline' : 'btn-pop'}" style="width:100%; padding:6px; font-weight:800; font-size:0.85rem;" ${isSoldOut ? 'disabled' : ''} onclick="onChooseStaffSpecialBentoAdmin('${item.id}')">
         ${isSoldOut ? '完売' : 'このお弁当を選ぶ 🍱'}
       </button>
     `;
@@ -816,16 +821,25 @@ window.openStaffAllMenuModalAdmin = function() {
   });
 
   modal.classList.add('active');
+  modal.style.display = 'flex';
+  modal.style.opacity = '1';
+  modal.style.pointerEvents = 'auto';
 };
 
 window.closeStaffAllMenuModalAdmin = function() {
   const modal = document.getElementById('staffMenuModalAdmin');
-  if (modal) modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+    modal.style.opacity = '0';
+    modal.style.pointerEvents = 'none';
+  }
 };
 
 window.onChooseStaffSpecialBentoAdmin = function(bentoId) {
   closeStaffAllMenuModalAdmin();
-  openUserSelectForBentoModal(bentoId);
+  const item = bentoMaster.find(b => b.id === bentoId);
+  openUserSelectForBentoModal(item || bentoId);
 };
 
 // 1. 本日の5品 メニュー表示（賞味期限の短い順で描画）
@@ -908,12 +922,25 @@ window.quickOrderBento = function(bentoId) {
   openUserSelectForBentoModal(item);
 };
 
-function openUserSelectForBentoModal(bentoItem) {
-  document.getElementById('selectUserModalBentoTitle').textContent = `🍱 『${bentoItem.name}』を誰の注文にしますか？`;
-  document.getElementById('userSelectModalSearch').value = '';
+function openUserSelectForBentoModal(bentoItemOrId) {
+  let bentoItem = typeof bentoItemOrId === 'string' ? bentoMaster.find(b => b.id === bentoItemOrId) : bentoItemOrId;
+  if (!bentoItem) bentoItem = { id: String(bentoItemOrId), name: 'お弁当' };
+  currentSelectedBentoId = bentoItem.id;
+
+  const titleEl = document.getElementById('selectUserModalBentoTitle');
+  if (titleEl) titleEl.textContent = `🍱 『${bentoItem.name}』を誰の注文にしますか？`;
+  
+  const searchEl = document.getElementById('userSelectModalSearch');
+  if (searchEl) searchEl.value = '';
   
   renderUserPickerList('');
-  document.getElementById('userSelectForBentoModal').classList.add('active');
+  const modal = document.getElementById('userSelectForBentoModal');
+  if (modal) {
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    modal.style.pointerEvents = 'auto';
+  }
 }
 
 function renderUserPickerList(searchQuery) {
