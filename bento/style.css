@@ -621,6 +621,23 @@ body {
   background: #fff9db;
 }
 
+/* 管理画面 メニュー作成テーブル用（絶対改行禁止） */
+.admin-menu-table {
+  width: 100% !important;
+  min-width: 780px !important;
+  border-collapse: collapse !important;
+  table-layout: auto !important;
+}
+
+.admin-menu-table th,
+.admin-menu-table td,
+.admin-menu-table span,
+.admin-menu-table button {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  line-break: strict !important;
+}
+
 .badge-status {
   padding: 4px 12px;
   border-radius: 12px;

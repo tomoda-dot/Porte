@@ -859,15 +859,15 @@ function renderTodaysMenu() {
 
   let tableHtml = `
     <div style="background:#fff; border-radius:18px; border:1.5px solid #e9ecef; overflow-x:auto; -webkit-overflow-scrolling:touch; box-shadow:0 4px 12px rgba(0,0,0,0.03); width:100%;">
-      <table class="data-table" style="width:100%; min-width:720px; border-collapse:collapse; font-size:0.95rem; table-layout:auto;">
+      <table class="data-table admin-menu-table" style="width:100%; min-width:780px; border-collapse:collapse; font-size:0.95rem; table-layout:auto;">
         <thead>
           <tr style="background:#fff4e6; color:#d9480f; border-bottom:2px solid #ffd8a8; font-weight:800;">
-            <th style="padding:12px 14px; width:80px; text-align:center; white-space:nowrap;">枠</th>
-            <th style="padding:12px 14px; width:120px; text-align:center; white-space:nowrap;">カテゴリ</th>
-            <th style="padding:12px 14px; min-width:200px; white-space:nowrap;">お弁当名</th>
-            <th style="padding:12px 14px; width:100px; text-align:center; white-space:nowrap;">残在庫</th>
-            <th style="padding:12px 14px; white-space:nowrap;">本日選択された方</th>
-            <th style="padding:12px 14px; width:140px; text-align:center; white-space:nowrap;">操作</th>
+            <th style="padding:12px 14px; width:90px; min-width:90px; text-align:center; white-space:nowrap !important; word-break:keep-all !important;">枠</th>
+            <th style="padding:12px 14px; width:130px; min-width:130px; text-align:center; white-space:nowrap !important; word-break:keep-all !important;">カテゴリ</th>
+            <th style="padding:12px 14px; min-width:220px; white-space:nowrap !important; word-break:keep-all !important;">お弁当名</th>
+            <th style="padding:12px 14px; width:100px; min-width:100px; text-align:center; white-space:nowrap !important; word-break:keep-all !important;">残在庫</th>
+            <th style="padding:12px 14px; min-width:180px;">本日選択された方</th>
+            <th style="padding:12px 14px; width:130px; min-width:130px; text-align:center; white-space:nowrap !important; word-break:keep-all !important;">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -876,20 +876,20 @@ function renderTodaysMenu() {
   items.forEach((item, index) => {
     const isSoldOut = item.stock <= 0;
     const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id);
-    let userNamesHtml = chosenUsers.map(u => `<span style="background:#fff0f6; border:1px solid #ffdeeb; color:#c2255c; padding:2px 8px; border-radius:12px; font-size:0.85rem; font-weight:700; display:inline-block; margin:2px; white-space:nowrap;">${u.name}</span>`).join(' ');
-    if (!userNamesHtml) userNamesHtml = '<span style="color:#adb5bd; font-size:0.85rem; white-space:nowrap;">(未選択)</span>';
+    let userNamesHtml = chosenUsers.map(u => `<span style="background:#fff0f6; border:1px solid #ffdeeb; color:#c2255c; padding:2px 8px; border-radius:12px; font-size:0.85rem; font-weight:700; display:inline-block; margin:2px; white-space:nowrap !important; word-break:keep-all !important;">${u.name}</span>`).join(' ');
+    if (!userNamesHtml) userNamesHtml = '<span style="color:#adb5bd; font-size:0.85rem; white-space:nowrap !important;">(未選択)</span>';
 
     tableHtml += `
       <tr style="border-bottom:1px solid #f1f3f5; background:${index % 2 === 0 ? '#fff' : '#fafafa'};">
-        <td style="padding:12px 14px; text-align:center; font-weight:800; color:#d9480f; white-space:nowrap;">第${index + 1}案</td>
-        <td style="padding:12px 14px; text-align:center; white-space:nowrap;"><span style="background:#e7f5ff; color:#1971c2; padding:4px 12px; border-radius:14px; font-size:0.8rem; font-weight:800; display:inline-block; white-space:nowrap;">${item.category}</span></td>
-        <td style="padding:12px 14px; font-weight:800; color:#212529; white-space:nowrap;">${item.icon} ${item.name}</td>
-        <td style="padding:12px 14px; text-align:center; white-space:nowrap;">
+        <td style="padding:12px 14px; text-align:center; font-weight:800; color:#d9480f; white-space:nowrap !important; word-break:keep-all !important;">第${index + 1}案</td>
+        <td style="padding:12px 14px; text-align:center; white-space:nowrap !important; word-break:keep-all !important;"><span style="background:#e7f5ff; color:#1971c2; padding:4px 12px; border-radius:14px; font-size:0.8rem; font-weight:800; display:inline-block; white-space:nowrap !important; word-break:keep-all !important;">${item.category}</span></td>
+        <td style="padding:12px 14px; font-weight:800; color:#212529; white-space:nowrap !important; word-break:keep-all !important;">${item.icon} ${item.name}</td>
+        <td style="padding:12px 14px; text-align:center; white-space:nowrap !important; word-break:keep-all !important;">
           ${isSoldOut ? '<span style="color:#ff4757; font-weight:900;">完売</span>' : `<span style="font-weight:900; color:#2b8a3e;">${item.stock} 食</span>`}
         </td>
         <td style="padding:12px 14px;">${userNamesHtml}</td>
-        <td style="padding:12px 14px; text-align:center; white-space:nowrap;">
-          <button class="btn btn-sm ${isSoldOut ? 'btn-outline' : 'btn-pop'}" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap;" ${isSoldOut ? 'disabled' : ''} onclick="quickOrderBento('${item.id}')">
+        <td style="padding:12px 14px; text-align:center; white-space:nowrap !important; word-break:keep-all !important;">
+          <button type="button" class="btn btn-sm ${isSoldOut ? 'btn-outline' : 'btn-pop'}" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap !important;" ${isSoldOut ? 'disabled' : ''} onclick="quickOrderBento('${item.id}')">
             ${isSoldOut ? '完売' : '注文登録 🍱'}
           </button>
         </td>
