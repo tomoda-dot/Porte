@@ -290,7 +290,7 @@
 
   <!-- お弁当選択用 利用者選びモーダル -->
   <div class="modal-overlay" id="userSelectForBentoModal">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width: 620px;">
       <div class="modal-header">
         <h3 id="selectUserModalBentoTitle">🍱 誰のお弁当にしますか？</h3>
         <button class="close-btn" id="closeUserSelectForBentoModal" onclick="closeUserSelectForBentoModal()">&times;</button>
@@ -298,12 +298,12 @@
       <div class="modal-body">
         <p class="modal-subtitle">お弁当を選ぶご利用者様のお名前をタップしてください。</p>
         
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-          <input type="text" id="userSelectModalSearch" placeholder="氏名またはフリガナで検索..." class="form-control" style="max-width:220px;">
-          <div class="pill-switch" style="display:flex; gap:4px; flex-wrap:wrap;">
-            <button class="pill-btn active" id="modalFilterBentoOnlyBtn" onclick="setAdminModalFilterMode('bentoOnly')">🍱 本日の利用対象者</button>
-            <button class="pill-btn" id="modalFilterShowAllBtn" onclick="setAdminModalFilterMode('showAll')">👥 全ご利用者様を表示</button>
-            <button class="pill-btn" id="modalFilterStaffBtn" onclick="setAdminModalFilterMode('staff')">👔 スタッフを表示</button>
+        <div style="margin-bottom:14px;">
+          <input type="text" id="userSelectModalSearch" placeholder="氏名またはフリガナで検索..." class="form-control" style="width:100%; margin-bottom:10px;">
+          <div style="display:flex; justify-content:center; align-items:center; gap:6px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px;">
+            <button class="pill-btn active" id="modalFilterBentoOnlyBtn" style="padding:6px 12px; font-size:0.85rem; white-space:nowrap; flex-shrink:0;" onclick="setAdminModalFilterMode('bentoOnly')">🍱 本日の利用対象者</button>
+            <button class="pill-btn" id="modalFilterShowAllBtn" style="padding:6px 12px; font-size:0.85rem; white-space:nowrap; flex-shrink:0;" onclick="setAdminModalFilterMode('showAll')">👥 全ご利用者様を表示</button>
+            <button class="pill-btn" id="modalFilterStaffBtn" style="padding:6px 12px; font-size:0.85rem; white-space:nowrap; flex-shrink:0;" onclick="setAdminModalFilterMode('staff')">👔 スタッフを表示</button>
           </div>
         </div>
 

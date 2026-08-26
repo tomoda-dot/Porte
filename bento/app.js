@@ -1136,8 +1136,7 @@ function renderUserPickerList(searchQuery) {
     } else {
       listContainer.innerHTML = `
         <div style="text-align:center; padding:24px; color:#747d8c;">
-          <p style="margin-bottom:8px;">該当するお弁当対象者様が見つかりません。</p>
-          <button class="btn btn-sm btn-outline" onclick="setAdminModalFilterMode('showAll')">👥 全ご利用者様を表示</button>
+          <p style="padding:10px; font-weight:700;">該当するお弁当対象者様が見つかりません。</p>
         </div>
       `;
     }
@@ -1163,7 +1162,6 @@ function renderUserPickerList(searchQuery) {
         </span>
         <span class="user-picker-sub">
           ${currentChoice ? `現在の選択: <strong>${currentChoice.icon} ${currentChoice.name}</strong>` : '<span style="color:#e64980; font-weight:700;">未選択</span>'}
-          ${u.note ? ` | 特記: ${u.note}` : ''}
         </span>
       </div>
       <div>
