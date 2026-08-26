@@ -1018,10 +1018,17 @@ window.confirmAssignUserForBento = function(userId) {
   showToast(`🎉 ${user.name} 様のお弁当を『${bentoItem.name}』に登録しました！`, 'success');
 };
 
-function closeUserSelectForBentoModal() {
-  document.getElementById('userSelectForBentoModal').classList.remove('active');
+window.closeUserSelectForBentoModal = function() {
+  const modal = document.getElementById('userSelectForBentoModal');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+    modal.style.opacity = '0';
+    modal.style.pointerEvents = 'none';
+  }
   currentSelectingBentoId = null;
-}
+  currentSelectedBentoId = null;
+};
 
 // 2. ポルテデータ＆注文受付レンダー
 function renderPorteSection() {
