@@ -743,9 +743,9 @@
 
       if (users.length === 0) {
         if (modalFilterMode === 'staff') {
-          grid.innerHTML = `<p style="grid-column:1/-1; padding:20px; font-weight:700; color:#1864ab;">登録されているスタッフデータが見つかりません。</p>`;
+          grid.innerHTML = `<div style="grid-column:1/-1; width:100%; text-align:center; padding:30px 10px; color:#1864ab;"><p style="font-weight:700; font-size:1.05rem;">登録されているスタッフデータが見つかりません。</p></div>`;
         } else {
-          grid.innerHTML = `<p style="grid-column:1/-1; padding:20px; font-weight:700; color:#868e96;">本日利用のご利用者様データが登録されていません。上部の「👥 全ご利用者様から選択」または「👔 スタッフから選択」ボタンをお試しください。</p>`;
+          grid.innerHTML = `<div style="grid-column:1/-1; width:100%; text-align:center; padding:30px 10px; color:#868e96;"><p style="font-weight:700; font-size:1rem; line-height:1.7; margin:0;">本日利用のご利用者様データが登録されていません。上部の「👥 全ご利用者様から選択」または「👔 スタッフから選択」ボタンをお試しください。</p></div>`;
         }
         return;
       }

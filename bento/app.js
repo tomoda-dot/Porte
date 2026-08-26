@@ -1134,15 +1134,15 @@ function renderUserPickerList(searchQuery) {
   if (filtered.length === 0) {
     if (adminModalFilterMode === 'staff') {
       listContainer.innerHTML = `
-        <div style="text-align:center; padding:24px; color:#747d8c;">
-          <p style="margin-bottom:12px; font-weight:700;">該当するスタッフが見つかりません。</p>
-          <button class="btn btn-sm btn-pop" style="background:linear-gradient(135deg, #1864ab, #228be6); border:none; font-weight:800;" onclick="addNewStaffUserQuick()">👔 スタッフ名を入力して注文登録</button>
+        <div style="grid-column:1/-1; width:100%; text-align:center; padding:30px 10px; color:#1864ab;">
+          <p style="margin-bottom:12px; font-weight:700; font-size:1.05rem;">登録されているスタッフデータが見つかりません。</p>
+          <button class="btn btn-sm btn-pop" style="background:linear-gradient(135deg, #1864ab, #228be6); border:none; font-weight:800; padding:8px 20px;" onclick="addNewStaffUserQuick()">👔 スタッフ名を入力して注文登録</button>
         </div>
       `;
     } else {
       listContainer.innerHTML = `
-        <div style="text-align:center; padding:24px; color:#747d8c;">
-          <p style="padding:10px; font-weight:700;">該当するお弁当対象者様が見つかりません。</p>
+        <div style="grid-column:1/-1; width:100%; text-align:center; padding:30px 10px; color:#868e96;">
+          <p style="font-weight:700; font-size:1rem; line-height:1.7; margin:0;">本日利用のご利用者様データが登録されていません。上部の「👥 全ご利用者様から選択」または「👔 スタッフから選択」ボタンをお試しください。</p>
         </div>
       `;
     }
