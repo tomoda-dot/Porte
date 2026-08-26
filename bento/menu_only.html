@@ -481,9 +481,10 @@
       <div id="modalBentoTitle" class="modal-title">🍱 『タラのトマトソース弁当』</div>
       <div class="modal-sub">どなたのご注文にしますか？お名前をタップしてください</div>
 
-      <div style="display:flex; justify-content:center; gap:10px; margin-bottom:18px; flex-wrap:wrap;">
-        <button id="modalFilterBentoOnly" style="padding:8px 20px; border-radius:20px; border:2px solid #ff7e67; background:#fff5eb; color:#d9480f; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter(false)">🍱 本日の利用対象者</button>
-        <button id="modalFilterShowAll" style="padding:8px 20px; border-radius:20px; border:2px solid #ced4da; background:#fff; color:#495057; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter(true)">👥 全ご利用者様から選択</button>
+      <div style="display:flex; justify-content:center; gap:8px; margin-bottom:18px; flex-wrap:wrap;">
+        <button id="modalFilterBentoOnly" style="padding:8px 16px; border-radius:20px; border:2px solid #ff7e67; background:#fff5eb; color:#d9480f; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter('bentoOnly')">🍱 本日の利用対象者</button>
+        <button id="modalFilterShowAll" style="padding:8px 16px; border-radius:20px; border:2px solid #ced4da; background:#fff; color:#495057; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter('showAll')">👥 全ご利用者様から選択</button>
+        <button id="modalFilterStaff" style="padding:8px 16px; border-radius:20px; border:2px solid #ced4da; background:#fff; color:#495057; font-weight:800; font-size:0.95rem; cursor:pointer;" onclick="setModalFilter('staff')">👔 スタッフから選択</button>
       </div>
 
       <div class="modal-user-grid" id="modalUserGrid">
@@ -695,68 +696,99 @@
       document.getElementById('userModal').classList.add('active');
     }
 
-    let modalFilterShowAll = false;
+    let modalFilterMode = 'bentoOnly';
 
-    function setModalFilter(showAll) {
-      modalFilterShowAll = showAll;
+    function setModalFilter(mode) {
+      modalFilterMode = mode;
       const bentoBtn = document.getElementById('modalFilterBentoOnly');
       const allBtn = document.getElementById('modalFilterShowAll');
-      if (bentoBtn && allBtn) {
-        if (showAll) {
-          allBtn.style.borderColor = '#ff7e67';
-          allBtn.style.background = '#fff5eb';
-          allBtn.style.color = '#d9480f';
-          bentoBtn.style.borderColor = '#ced4da';
-          bentoBtn.style.background = '#fff';
-          bentoBtn.style.color = '#495057';
-        } else {
-          bentoBtn.style.borderColor = '#ff7e67';
-          bentoBtn.style.background = '#fff5eb';
-          bentoBtn.style.color = '#d9480f';
-          allBtn.style.borderColor = '#ced4da';
-          allBtn.style.background = '#fff';
-          allBtn.style.color = '#495057';
-        }
-      }
+      const staffBtn = document.getElementById('modalFilterStaff');
+
+      const activeCss = 'border:2px solid #ff7e67; background:#fff5eb; color:#d9480f;';
+      const staffActiveCss = 'border:2px solid #91c7ff; background:#eef7ff; color:#1864ab;';
+      const inactiveCss = 'border:2px solid #ced4da; background:#fff; color:#495057;';
+
+      if (bentoBtn) bentoBtn.style.cssText = `padding:8px 16px; border-radius:20px; font-weight:800; font-size:0.95rem; cursor:pointer; ${mode === 'bentoOnly' ? activeCss : inactiveCss}`;
+      if (allBtn) allBtn.style.cssText = `padding:8px 16px; border-radius:20px; font-weight:800; font-size:0.95rem; cursor:pointer; ${mode === 'showAll' ? activeCss : inactiveCss}`;
+      if (staffBtn) staffBtn.style.cssText = `padding:8px 16px; border-radius:20px; font-weight:800; font-size:0.95rem; cursor:pointer; ${mode === 'staff' ? staffActiveCss : inactiveCss}`;
+
       renderModalUsers();
     }
 
     function renderModalUsers() {
       const grid = document.getElementById('modalUserGrid');
+      if (!grid) return;
       grid.innerHTML = '';
 
-      // ご利用者様のみ抽出（スタッフを除外）
-      const clientUsers = porteUsers.filter(u => u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
-      const users = clientUsers.filter(u => modalFilterShowAll || u.wantsBento !== false);
+      let users = [];
+
+      if (modalFilterMode === 'staff') {
+        users = porteUsers.filter(u => u.type === '👔 スタッフ' || u.isStaff || String(u.name).includes('👔'));
+        if (users.length === 0 && window.porteStaffList && window.porteStaffList.length > 0) {
+          users = window.porteStaffList.map(s => ({
+            id: s.id || ('staff_' + s.name),
+            name: s.name,
+            type: '👔 スタッフ',
+            isStaff: true,
+            wantsBento: true,
+            selectedBentoId: null
+          }));
+        }
+      } else if (modalFilterMode === 'showAll') {
+        users = porteUsers.filter(u => u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
+      } else {
+        // bentoOnly
+        users = porteUsers.filter(u => (u.type !== '👔 スタッフ' && !String(u.name).includes('👔')) && u.wantsBento !== false);
+      }
 
       if (users.length === 0) {
-        grid.innerHTML = `<p style="grid-column:1/-1; padding:20px; font-weight:700; color:#868e96;">本日利用のご利用者様データが登録されていません。上部の「👥 全ご利用者様から選択」ボタンをお試しください。</p>`;
+        if (modalFilterMode === 'staff') {
+          grid.innerHTML = `<p style="grid-column:1/-1; padding:20px; font-weight:700; color:#1864ab;">登録されているスタッフデータが見つかりません。</p>`;
+        } else {
+          grid.innerHTML = `<p style="grid-column:1/-1; padding:20px; font-weight:700; color:#868e96;">本日利用のご利用者様データが登録されていません。上部の「👥 全ご利用者様から選択」または「👔 スタッフから選択」ボタンをお試しください。</p>`;
+        }
         return;
       }
 
       users.forEach(u => {
         const isChosenThis = u.selectedBentoId === currentBentoId;
         const currentChoice = u.selectedBentoId ? bentoMaster.find(b => b.id === u.selectedBentoId) : null;
+        const isStaff = u.type === '👔 スタッフ' || u.isStaff || String(u.name).includes('👔');
 
         const btn = document.createElement('button');
         btn.className = `user-btn ${isChosenThis ? 'chosen' : ''}`;
+        if (isStaff) {
+          btn.style.cssText = isChosenThis ? 'background:#e6fcf5; border-color:#63e6be; color:#0ca678;' : 'background:#eef7ff; border-color:#91c7ff; color:#1864ab;';
+        }
         btn.innerHTML = `
           <div style="text-align:left;">
-            <span>👤 ${u.name} 様</span>
+            <span>${isStaff ? '👔 ' : '👤 '}${u.name.replace('👔', '').trim()}${isStaff ? ' スタッフ' : ' 様'}</span>
             ${u.wantsBento === false ? '<span style="font-size:0.75rem; background:#e9ecef; color:#495057; padding:2px 6px; border-radius:6px; margin-left:6px; font-weight:700;">追加可能</span>' : ''}
           </div>
           <span style="font-size:0.9rem; opacity:0.8; flex-shrink:0;">
             ${isChosenThis ? '✅ 選択中' : (currentChoice ? `(変更: ${currentChoice.icon})` : '選ぶ ➔')}
           </span>
         `;
-        btn.onclick = () => selectUserOrder(u.id);
+        btn.onclick = () => selectUserOrder(u.id || u.name);
         grid.appendChild(btn);
       });
     }
 
     function selectUserOrder(userId) {
-      const userIndex = porteUsers.findIndex(u => u.id === userId);
-      if (userIndex < 0 || !currentBentoId) return;
+      let userIndex = porteUsers.findIndex(u => u.id === userId || u.name === userId);
+      if (userIndex < 0) {
+        const userObj = {
+          id: 'staff_' + Date.now(),
+          name: String(userId).replace('👔', '').trim(),
+          type: '👔 スタッフ',
+          isStaff: true,
+          wantsBento: true,
+          selectedBentoId: null
+        };
+        porteUsers.push(userObj);
+        userIndex = porteUsers.length - 1;
+      }
+      if (!currentBentoId) return;
 
       const user = porteUsers[userIndex];
       const bento = bentoMaster.find(b => b.id === currentBentoId);
@@ -771,7 +803,7 @@
       }
 
       const toast = document.getElementById('successToast');
-      document.getElementById('successMsg').textContent = `${user.name} 様\n『${bento.name}』決定！`;
+      document.getElementById('successMsg').textContent = `${user.name} 様\n『${bento ? bento.name : ''}』決定！`;
       toast.classList.add('show');
 
       setTimeout(() => { toast.classList.remove('show'); }, 2400);
