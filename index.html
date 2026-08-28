@@ -1478,23 +1478,28 @@ function filterU(){
 }
 
 function hasUnsavedChanges(){
-  var saved=window._ueCurrentData;
-  if(!saved||!saved.id)return false;
+  if(!window._ueInitialSnapshot) return false;
   try{
-    var cur=collectCurrentUserData();
-    var keys=Object.keys(cur);
-    for(var i=0;i<keys.length;i++){
-      var k=keys[i];
-      if(k==='relatedOrgs')continue;
-      var a=String(cur[k]||'');var b=String(saved[k]||'');
-      if(a!==b)return true;
-    }
-  }catch(e){}
-  return false;
+    var cur = JSON.stringify(collectCurrentUserData());
+    return cur !== window._ueInitialSnapshot;
+  }catch(e){
+    return false;
+  }
 }
 function guardNav(fn){
-  if(!hasUnsavedChanges()){fn();return;}
-  cConfirm('変更が保存されていません。\n保存せずに移動しますか？').then(function(ok){if(ok)fn();});
+  if(!hasUnsavedChanges()){
+    window._ueInitialSnapshot = null;
+    window._ueCurrentData = null;
+    if(typeof fn === 'function') fn();
+    return;
+  }
+  cConfirm('変更が保存されていません。\n保存せずに移動しますか？').then(function(ok){
+    if(ok){
+      window._ueInitialSnapshot = null;
+      window._ueCurrentData = null;
+      if(typeof fn === 'function') fn();
+    }
+  });
 }
 
 function _fixPhone(v){
@@ -1714,7 +1719,7 @@ function collectUserContacts(){
   return list;
 }
 
-function openUserModal(u){
+function openUserModal(u, isTabSwitch){
   var d=u||{name:'',furigana:'',birthdate:'',gender:'男性',disability:'',serviceType:'就労B型',staffId:'',
     prefecture:'大阪府',city:'',address:'',contact:'',contact2:'',contact3:'',emergencyContact:'',emergencyPhone:'',
     recipientNumber:'',supportStartDate:'',supportEndDate:'',supportDays:'',
@@ -1973,6 +1978,9 @@ function openUserModal(u){
 
   document.getElementById('content').innerHTML=html;
   window._ueCurrentData=d;
+  if(!isTabSwitch){
+    window._ueInitialSnapshot=JSON.stringify(collectCurrentUserData());
+  }
   window.scrollTo(0,0);
   // フィルタ状態を再適用
   filterUserList();
@@ -3408,7 +3416,7 @@ function switchUserTab(tab){
   // 現在のフォーム値を収集
   var cur=collectCurrentUserData();
   window._ueTab=tab;
-  openUserModal(cur);
+  openUserModal(cur, true);
 }
 
 function collectCurrentUserData(){
@@ -3580,7 +3588,7 @@ async function saveUser(id){
     workHistory:gv('uf-workhist',existing.workHistory||''),otherHistory:gv('uf-otherhist',existing.otherHistory||'')
   };
   if(!data.name){unlockUI();await cAlert('氏名を入力してください');return;}
-  try{if(id){data.id=id;await gas('updateUser',data);}else{var res=await gas('addUser',data);if(res&&res.id)id=res.id;}S.users=await gas('getUsers');var updated=S.users.find(function(x){return x.id===id;});if(updated){window._ueCurrentData=updated;openUserModal(updated);}else{renderUsers(document.getElementById('content'));}toast('保存しました');}
+  try{if(id){data.id=id;await gas('updateUser',data);}else{var res=await gas('addUser',data);if(res&&res.id)id=res.id;}S.users=await gas('getUsers');var updated=S.users.find(function(x){return x.id===id;});if(updated){window._ueCurrentData=updated;openUserModal(updated, false);}else{window._ueInitialSnapshot=null;renderUsers(document.getElementById('content'));}toast('保存しました');}
   catch(e){await cAlert('保存に失敗: '+e);}finally{unlockUI();}
 }
 async function delUser(id){
