@@ -1505,6 +1505,149 @@ function _fixPhone(v){
   return s;
 }
 
+// 住所複数登録＆送迎ルート指定ヘルパー
+function renderUserAddressRow(idx, addr){
+  var a = addr || {label:'自宅', prefecture:'大阪府', city:'', address:'', isPickup:true, isDropoff:true};
+  var labelOptions = ['自宅','グループホーム','実家','親族宅','ショートステイ','作業場','その他'];
+  var isCustomLabel = labelOptions.indexOf(a.label||'') < 0 && a.label;
+
+  var h = '<div class="uf-addr-row" style="background:#fdfbf7; border:1px solid #ebdcd0; border-radius:10px; padding:12px; margin-bottom:10px; position:relative;">';
+  h += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">';
+  h += '<div style="font-weight:700; font-size:13px; color:var(--pri); display:flex; align-items:center; gap:8px;">';
+  h += '<span>📍 住所 ' + (idx + 1) + '</span>';
+  h += '<select class="uf-addr-label" style="font-size:12px; padding:3px 8px; border-radius:6px; border:1px solid #ccc; font-weight:700; background:#fff;">';
+  labelOptions.forEach(function(opt){
+    h += '<option value="' + opt + '"' + (a.label === opt ? ' selected' : '') + '>' + opt + '</option>';
+  });
+  if (isCustomLabel) {
+    h += '<option value="' + esc(a.label) + '" selected>' + esc(a.label) + '</option>';
+  }
+  h += '</select>';
+  h += '</div>';
+  if (idx > 0) {
+    h += '<button type="button" onclick="this.closest(\'.uf-addr-row\').remove(); reindexAddressRows();" style="background:none; border:none; color:#e64980; font-size:12px; cursor:pointer; font-weight:700;">🗑️ 削除</button>';
+  }
+  h += '</div>';
+
+  h += '<div class="grid3">';
+  h += '<div class="field"><label>都道府県</label><select class="uf-addr-pref" style="width:100%"><option value="">選択</option>' + PREFS.map(function(p){ return '<option' + ((a.prefecture || '大阪府') === p ? ' selected' : '') + '>' + p + '</option>'; }).join('') + '</select></div>';
+  h += '<div class="field"><label>市区町村</label><input class="uf-addr-city" value="' + esc(a.city || '') + '" placeholder="例：箕面市桜井" style="width:100%"></div>';
+  h += '<div class="field"><label>番地・建物名など</label><input class="uf-addr-street" value="' + esc(a.address || '') + '" placeholder="例：3-1-25-7" style="width:100%"></div>';
+  h += '</div>';
+
+  h += '<div style="display:flex; gap:16px; margin-top:8px; padding-top:6px; border-top:1px dashed #ebdcd0; font-size:12px; color:#495057;">';
+  h += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; color:#2b8a3e;">';
+  h += '<input type="checkbox" class="uf-addr-is-pickup" ' + (a.isPickup ? 'checked' : '') + ' onchange="updatePickupRadio(this, \'pickup\')"> 🚘 迎え（往路）送迎場所に指定';
+  h += '</label>';
+  h += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:700; color:#1864ab;">';
+  h += '<input type="checkbox" class="uf-addr-is-dropoff" ' + (a.isDropoff ? 'checked' : '') + ' onchange="updatePickupRadio(this, \'dropoff\')"> 🚘 送り（復路）送迎場所に指定';
+  h += '</label>';
+  h += '</div>';
+
+  h += '</div>';
+  return h;
+}
+
+function addUserAddressRow(){
+  var container = document.getElementById('uf-addr-list');
+  if(!container) return;
+  var count = container.querySelectorAll('.uf-addr-row').length;
+  var div = document.createElement('div');
+  div.innerHTML = renderUserAddressRow(count, {
+    label: count === 1 ? 'グループホーム' : 'その他',
+    prefecture: '大阪府',
+    city: '',
+    address: '',
+    isPickup: false,
+    isDropoff: false
+  });
+  container.appendChild(div.firstElementChild);
+}
+
+function reindexAddressRows(){
+  var container = document.getElementById('uf-addr-list');
+  if(!container) return;
+  container.querySelectorAll('.uf-addr-row').forEach(function(row, idx){
+    var titleEl = row.querySelector('span');
+    if(titleEl) titleEl.textContent = '📍 住所 ' + (idx + 1);
+  });
+}
+
+function updatePickupRadio(el, type){
+  if(el.checked){
+    var cls = type === 'pickup' ? '.uf-addr-is-pickup' : '.uf-addr-is-dropoff';
+    document.querySelectorAll(cls).forEach(function(cb){
+      if(cb !== el) cb.checked = false;
+    });
+  }
+}
+
+function collectUserAddresses(){
+  var rows = document.querySelectorAll('.uf-addr-row');
+  var list = [];
+  rows.forEach(function(row){
+    var label = row.querySelector('.uf-addr-label') ? row.querySelector('.uf-addr-label').value : '';
+    var pref = row.querySelector('.uf-addr-pref') ? row.querySelector('.uf-addr-pref').value : '';
+    var city = row.querySelector('.uf-addr-city') ? row.querySelector('.uf-addr-city').value : '';
+    var street = row.querySelector('.uf-addr-street') ? row.querySelector('.uf-addr-street').value : '';
+    var isPickup = row.querySelector('.uf-addr-is-pickup') ? row.querySelector('.uf-addr-is-pickup').checked : false;
+    var isDropoff = row.querySelector('.uf-addr-is-dropoff') ? row.querySelector('.uf-addr-is-dropoff').checked : false;
+    if(pref || city || street || label){
+      list.push({
+        label: label,
+        prefecture: pref,
+        city: city,
+        address: street,
+        isPickup: isPickup,
+        isDropoff: isDropoff
+      });
+    }
+  });
+  return list;
+}
+
+function getUserAddressForRoute(u, pattern){
+  if(!u) return '';
+  var addrs = [];
+  if(u.addresses){
+    try { addrs = typeof u.addresses === 'string' ? JSON.parse(u.addresses) : u.addresses; } catch(e){}
+  }
+  if(Array.isArray(addrs) && addrs.length > 0){
+    var pat = pattern || 'morning';
+    var isM = (pat === 'morning' || pat === '往路' || pat === '行き' || pat === 'pickup');
+    var found = addrs.find(function(a){ return isM ? a.isPickup : a.isDropoff; });
+    if(found){
+      var full = (found.prefecture || '') + (found.city || '') + (found.address || '');
+      return full.trim() ? ((found.label ? '[' + found.label + '] ' : '') + full.trim()) : (found.label || '');
+    }
+    var first = addrs[0];
+    var firstFull = (first.prefecture || '') + (first.city || '') + (first.address || '');
+    return firstFull.trim() ? ((first.label ? '[' + first.label + '] ' : '') + firstFull.trim()) : (first.label || '');
+  }
+  return ((u.prefecture || '') + (u.city || '') + (u.address || '')).trim();
+}
+
+function getUserRawAddressForRoute(u, pattern){
+  if(!u) return '';
+  var addrs = [];
+  if(u.addresses){
+    try { addrs = typeof u.addresses === 'string' ? JSON.parse(u.addresses) : u.addresses; } catch(e){}
+  }
+  if(Array.isArray(addrs) && addrs.length > 0){
+    var pat = pattern || 'morning';
+    var isM = (pat === 'morning' || pat === '往路' || pat === '行き' || pat === 'pickup');
+    var found = addrs.find(function(a){ return isM ? a.isPickup : a.isDropoff; });
+    if(found){
+      var full = (found.prefecture || '') + (found.city || '') + (found.address || '');
+      if(full.trim()) return full.trim();
+    }
+    var first = addrs[0];
+    var firstFull = (first.prefecture || '') + (first.city || '') + (first.address || '');
+    if(firstFull.trim()) return firstFull.trim();
+  }
+  return ((u.prefecture || '') + (u.city || '') + (u.address || '')).trim();
+}
+
 function openUserModal(u){
   var d=u||{name:'',furigana:'',birthdate:'',gender:'男性',disability:'',serviceType:'就労B型',staffId:'',
     prefecture:'大阪府',city:'',address:'',contact:'',contact2:'',contact3:'',emergencyContact:'',emergencyPhone:'',
@@ -1581,11 +1724,33 @@ function openUserModal(u){
     '<div class="field"><label>担当スタッフ</label><select id="uf-staff" style="width:100%"><option value="">未設定</option>'+S.staff.filter(function(s){return _isStaffActive(s)||(d.staffId&&d.staffId===s.id);}).map(function(s){return'<option value="'+s.id+'"'+(d.staffId===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
     '<div></div><div></div></div></div>';
   
-  // 住所
-  html+='<div class="card" style="margin-bottom:12px"><div class="section-title" style="margin-top:0">住所</div><div class="grid3">'+
-    '<div class="field"><label>都道府県</label><select id="uf-pref" style="width:100%"><option value="">選択</option>'+PREFS.map(function(p){return'<option'+((d.prefecture||'大阪府')===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select></div>'+
-    '<div class="field"><label>市区町村</label><input id="uf-city" value="'+esc(d.city||'')+'" style="width:100%"></div>'+
-    '<div class="field"><label>番地・建物名など</label><input id="uf-addr" value="'+esc(d.address||'')+'" style="width:100%"></div></div></div>';
+  // 住所 (複数登録・送迎場所指定対応)
+  var addrList = [];
+  if(d.addresses){
+    try{ addrList = typeof d.addresses==='string'?JSON.parse(d.addresses):d.addresses; }catch(e){}
+  }
+  if(!Array.isArray(addrList)||addrList.length===0){
+    addrList = [{
+      label: '自宅',
+      prefecture: d.prefecture || '大阪府',
+      city: d.city || '',
+      address: d.address || '',
+      isPickup: true,
+      isDropoff: true
+    }];
+  }
+
+  html += '<div class="card" style="margin-bottom:12px">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1.5px solid var(--bdr);padding-bottom:6px">';
+  html += '<div class="section-title" style="margin:0">住所</div>';
+  html += '<button type="button" onclick="addUserAddressRow()" style="font-size:12px;padding:4px 12px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;font-weight:700;color:var(--pri)">＋ 住所を追加</button>';
+  html += '</div>';
+  html += '<div id="uf-addr-list">';
+  addrList.forEach(function(a, idx){
+    html += renderUserAddressRow(idx, a);
+  });
+  html += '</div>';
+  html += '</div>';
   
   // 連絡先
   html+='<div class="card" style="margin-bottom:12px"><div class="section-title" style="margin-top:0">連絡先</div><p style="font-size:11px;color:var(--sub);margin-bottom:8px">※「連絡先」は利用者ご本人、「緊急連絡先」はご家族・保護者等を入力してください。</p>'+
@@ -3194,6 +3359,17 @@ function collectCurrentUserData(){
   if(hasDays) d.scheduleDays=days.join(',');
   // 関係先事業所
   if(document.getElementById('rel-org-body')){d.relatedOrgs=JSON.stringify(collectRelOrgs());}
+  // 住所複数登録
+  if(document.getElementById('uf-addr-list')){
+    var addrs = collectUserAddresses();
+    d.addresses = JSON.stringify(addrs);
+    if(addrs.length > 0){
+      var mainAddr = addrs.find(function(a){ return a.isPickup; }) || addrs[0];
+      d.prefecture = mainAddr.prefecture || '';
+      d.city = mainAddr.city || '';
+      d.address = mainAddr.address || '';
+    }
+  }
   return d;
 }
 
@@ -3248,13 +3424,20 @@ async function saveUser(id){
   var days=[];document.querySelectorAll('.uf-day').forEach(function(cb){if(cb.checked)days.push(cb.value);});
   var hasDays=document.querySelectorAll('.uf-day').length>0;
 
+  var addrs = document.getElementById('uf-addr-list') ? collectUserAddresses() : null;
+  var addressesJson = addrs ? JSON.stringify(addrs) : (existing.addresses || '');
+  var mainAddr = (addrs && addrs.length > 0) ? (addrs.find(function(a){ return a.isPickup; }) || addrs[0]) : null;
+
   var data={
     name:gv('uf-name',existing.name||''),furigana:gv('uf-furi',existing.furigana||''),
     serviceType:gv('uf-stype',existing.serviceType||'就労B型'),birthdate:gv('uf-birth',existing.birthdate||''),
     gender:gv('uf-gender',existing.gender||'男性'),
     disability:gv('uf-dis',gv('uf-dis2',existing.disability||'')),
     staffId:gv('uf-staff',existing.staffId||''),userStatus:gv('uf-ustatus',existing.userStatus||'利用中'),
-    prefecture:gv('uf-pref',existing.prefecture||''),city:gv('uf-city',existing.city||''),address:gv('uf-addr',existing.address||''),
+    prefecture:mainAddr ? (mainAddr.prefecture||'') : gv('uf-pref',existing.prefecture||''),
+    city:mainAddr ? (mainAddr.city||'') : gv('uf-city',existing.city||''),
+    address:mainAddr ? (mainAddr.address||'') : gv('uf-addr',existing.address||''),
+    addresses:addressesJson,
     contact:_fixPhone(gv('uf-contact',existing.contact||'')),contact2:_fixPhone(gv('uf-contact2',existing.contact2||'')),contact3:_fixPhone(gv('uf-contact3',existing.contact3||'')),
     emergencyContact:gv('uf-ec',existing.emergencyContact||''),emergencyPhone:_fixPhone(gv('uf-ep',existing.emergencyPhone||'')),
     recipientNumber:gv('uf-rcpt',existing.recipientNumber||''),supportDays:gv('uf-sdays',existing.supportDays||''),
@@ -5208,7 +5391,7 @@ function buildMapsUrl(r){
     users = ids.map(function(id){ return S.users.find(function(u){ return u.id===id; }) || {}; });
   }
   users.forEach(function(u){
-    var a = u.address || ((u.prefecture||'')+(u.city||'')+(u.address||''));
+    var a = getUserRawAddressForRoute(u, r ? r.pattern : 'morning');
     if(a && String(a).trim()!=='undefined') parts.push(encodeURIComponent(a));
   });
   parts.push(encodeURIComponent(fac));
@@ -5447,7 +5630,7 @@ function printSingleRoute(idx){
   h+='<table><thead><tr><th style="width:40px">順</th><th>氏名</th><th>住所</th><th>連絡先</th><th class="check-col">乗車✓</th><th class="check-col">降車✓</th><th style="width:80px">備考</th></tr></thead><tbody>';
   names.forEach(function(name,i){
     var u=S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
-    var addr=u?((u.prefecture||'')+(u.city||'')+(u.address||'')):'';
+    var addr=u?getUserAddressForRoute(u, r.pattern):'';
     var phone=u?(u.contact||''):'';
     var timeStr = calcUserStopSubtext(r, i, names.length, u);
     h+='<tr><td style="text-align:center;font-weight:700;font-size:16px">'+(i+1)+'</td><td style="font-weight:700;font-size:16px">'+esc(name)+(timeStr?'<div style="font-size:11px;color:#555;font-weight:normal;margin-top:2px">'+esc(timeStr)+'</div>':'')+'</td><td style="font-size:13px">'+esc(addr)+'</td><td style="font-size:14px;letter-spacing:1px;white-space:nowrap">'+esc(phone)+'</td><td class="check-col">☐</td><td class="check-col">☐</td><td></td></tr>';
@@ -5470,7 +5653,7 @@ function buildStaticMapUrl(r){
   var routeNames=(r.routeOrder||r.userNames||'').split(',').filter(function(x){return x;});
   uIds.forEach(function(uid){
     var u=S.users.find(function(x){return x.id===uid;});
-    if(u){var a=(u.prefecture||'')+(u.city||'')+(u.address||'');if(a.length>=3)waypoints.push(a);}
+    if(u){var a=getUserRawAddressForRoute(u, r?r.pattern:'morning');if(a.length>=3)waypoints.push(a);}
   });
   if(waypoints.length===0)return'';
   // Google Maps Directions URLをembedで表示（Static APIキー不要の方式）
@@ -5554,7 +5737,7 @@ async function printRoutesByPattern(pattern){
     printHtml+='<table><thead><tr><th style="width:36px">順</th><th>氏名</th><th>住所</th><th>連絡先</th><th class="check-col">乗車✓</th><th class="check-col">降車✓</th><th style="width:60px">備考</th></tr></thead><tbody>';
     names.forEach(function(name,i){
       var u=S.users.find(function(x){return x.id===uIds[i];}) || S.users.find(function(x){return x.name===name;});
-      var addr=u?((u.prefecture||'')+(u.city||'')+(u.address||'')):'';
+      var addr=u?getUserAddressForRoute(u, r.pattern):'';
       var phone=u?(u.contact||''):'';
       var timeStr = calcUserStopSubtext(r, i, names.length, u);
       printHtml+='<tr><td style="text-align:center;font-weight:700">'+(i+1)+'</td><td style="font-weight:700">'+esc(name)+(timeStr?'<div style="font-size:10px;color:#666;font-weight:normal;margin-top:1px">'+esc(timeStr)+'</div>':'')+'</td><td style="font-size:11px">'+esc(addr)+'</td><td style="font-size:11px;white-space:nowrap">'+esc(phone)+'</td><td class="check-col">☐</td><td class="check-col">☐</td><td></td></tr>';

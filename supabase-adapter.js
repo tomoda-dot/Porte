@@ -425,12 +425,33 @@ async function gas(fn){
 console.log('✅ Supabaseアダプター読み込み完了');
 
 // ═══ ルート計算ヘルパー（Maps API不要版）═══
+function _getUserRawAddressForRoute(u, pattern){
+  if(!u) return '';
+  var addrs = [];
+  if(u.addresses){
+    try { addrs = typeof u.addresses === 'string' ? JSON.parse(u.addresses) : u.addresses; } catch(e){}
+  }
+  if(Array.isArray(addrs) && addrs.length > 0){
+    var pat = pattern || 'morning';
+    var isM = (pat === 'morning' || pat === '往路' || pat === '行き' || pat === 'pickup');
+    var found = addrs.find(function(a){ return isM ? a.isPickup : a.isDropoff; });
+    if(found){
+      var full = (found.prefecture || '') + (found.city || '') + (found.address || '');
+      if(full.trim()) return full.trim();
+    }
+    var first = addrs[0];
+    var firstFull = (first.prefecture || '') + (first.city || '') + (first.address || '');
+    if(firstFull.trim()) return firstFull.trim();
+  }
+  return ((u.prefecture || '') + (u.city || '') + (u.address || '')).trim();
+}
+
 function _buildMapsUrl(facilityAddr,users,pattern){
   var base='https://www.google.com/maps/dir/';
   var fac = (facilityAddr && String(facilityAddr).trim()!=='undefined') ? facilityAddr : '大阪府豊中市小曽根1丁目10-23';
   var parts=[encodeURIComponent(fac)];
   for(var i=0;i<users.length;i++){
-    var a = users[i].address || ((users[i].prefecture||'')+(users[i].city||'')+(users[i].address||''));
+    var a = _getUserRawAddressForRoute(users[i], pattern);
     if(a && String(a).trim()!=='undefined') parts.push(encodeURIComponent(a));
   }
   parts.push(encodeURIComponent(fac));
@@ -465,7 +486,7 @@ async function _calcOptimalRoute(userIds,pattern,targetTime){
   for(var i=0;i<userIds.length;i++){
     for(var j=0;j<allUsers.length;j++){
       if(String(allUsers[j].id)===String(userIds[i])){
-        var u=allUsers[j];var addr=(u.prefecture||'')+(u.city||'')+(u.address||'');
+        var u=allUsers[j];var addr=_getUserRawAddressForRoute(u, pattern);
         ordered.push({id:u.id,name:u.name,address:addr,scheduleStart:u.scheduleStart,scheduleEnd:u.scheduleEnd});break;
       }
     }
@@ -510,7 +531,7 @@ async function _calcSmartRoutes(userIds,pattern,date){
   for(var i=0;i<userIds.length;i++){
     var u=null;for(var j=0;j<allUsers.length;j++){if(String(allUsers[j].id)===String(userIds[i])){u=allUsers[j];break;}}
     if(!u)continue;
-    var addr=(u.prefecture||'')+(u.city||'')+(u.address||'');if(!addr||addr.length<3)continue;
+    var addr=_getUserRawAddressForRoute(u, pattern);if(!addr||addr.length<3)continue;
     var sTime=u.scheduleStart||'09:10';
     var eTime=u.scheduleEnd||'16:30';
     var timeKey=pattern==='morning'?sTime:eTime;
