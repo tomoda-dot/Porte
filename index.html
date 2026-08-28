@@ -1718,7 +1718,7 @@ function openUserModal(u){
   var d=u||{name:'',furigana:'',birthdate:'',gender:'男性',disability:'',serviceType:'就労B型',staffId:'',
     prefecture:'大阪府',city:'',address:'',contact:'',contact2:'',contact3:'',emergencyContact:'',emergencyPhone:'',
     recipientNumber:'',supportStartDate:'',supportEndDate:'',supportDays:'',
-    scheduleDays:'',scheduleStart:'10:00',scheduleEnd:'16:00',bento:'なし',bentoPaymentMethod:'工賃払い',pickup:'なし',
+    scheduleDays:'',scheduleStart:'10:00',scheduleEnd:'16:00',contractStart:'09:10',contractEnd:'16:30',bento:'なし',bentoPaymentMethod:'工賃払い',pickup:'なし',
     enrollDate:today(),endDate:'',endReason:'',userStatus:'利用中',notes:'',
     disabilityName:'',handicapBook:'',handicapGrade:'',jiritsuMedical:'',severeDisMedical:'',
     income:'',incomeNote:'',disPension:'',disPensionNote:'',welfare:'',welfareNote:'',otherIncome:'',otherIncomeNote:'',
@@ -1882,8 +1882,10 @@ function openUserModal(u){
   // スケジュール
   html+='<div class="card" style="margin-bottom:12px"><div class="section-title" style="margin-top:0">利用スケジュール</div>'+
     '<div class="field"><label>利用日（曜日）</label><div style="display:flex;flex-wrap:wrap;gap:2px">'+DAYS_JP.map(function(day){return'<label class="day-check"><input type="checkbox" class="uf-day" value="'+day+'"'+(schDays.indexOf(day)>=0?' checked':'')+'>'+day+'</label>';}).join('')+'</div></div>'+
-    '<div class="grid2"><div class="field"><label>利用時間（開始）</label><input type="time" id="uf-tstart" value="'+(d.scheduleStart||'10:00')+'" style="width:100%"></div>'+
-    '<div class="field"><label>利用時間（終了）</label><input type="time" id="uf-tend" value="'+(d.scheduleEnd||'16:00')+'" style="width:100%"></div></div>'+
+    '<div class="grid2" style="margin-bottom:8px"><div class="field"><label>利用時間（開始） <span style="font-size:10px;color:var(--sub);font-weight:400">※工賃計算で使用</span></label><input type="time" id="uf-tstart" value="'+(d.scheduleStart||'10:00')+'" style="width:100%"></div>'+
+    '<div class="field"><label>利用時間（終了） <span style="font-size:10px;color:var(--sub);font-weight:400">※工賃計算で使用</span></label><input type="time" id="uf-tend" value="'+(d.scheduleEnd||'16:00')+'" style="width:100%"></div></div>'+
+    '<div class="grid2"><div class="field"><label>契約時間（開始） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cstart" value="'+(d.contractStart||'09:10')+'" style="width:100%"></div>'+
+    '<div class="field"><label>契約時間（終了） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cend" value="'+(d.contractEnd||'16:30')+'" style="width:100%"></div></div>'+
     '<div class="grid3"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%"><option'+(d.bento==='あり'?' selected':'')+'>あり</option><option'+(d.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
     '<div class="field"><label>お弁当支払方法</label><select id="uf-bento-pay" style="width:100%"><option value="工賃払い"'+(d.bentoPaymentMethod==='工賃払い'||!d.bentoPaymentMethod?' selected':'')+'>工賃払い</option><option value="当日"'+(d.bentoPaymentMethod==='当日'?' selected':'')+'>当日払い</option><option value="月末締め翌月払い"'+(d.bentoPaymentMethod==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option></select></div>'+
     '<div class="field"><label>送迎</label><select id="uf-pickup" style="width:100%">'+
@@ -3428,6 +3430,7 @@ function collectCurrentUserData(){
     supportStartDate:'uf-sstart',supportEndDate:'uf-send',
     enrollDate:'uf-enroll',endDate:'uf-edate',endReason:'uf-endreason',
     scheduleStart:'uf-tstart',scheduleEnd:'uf-tend',
+    contractStart:'uf-cstart',contractEnd:'uf-cend',
     bento:'uf-bento',bentoPaymentMethod:'uf-bento-pay',pickup:'uf-pickup',notes:'uf-notes',
     afterCarePlan:'uf-aftercare',afterCareOrg:'uf-afterorg',
     disabilityName:'uf-disname',handicapBook:'uf-hbook',handicapGrade:'uf-hgrade',
@@ -3558,6 +3561,7 @@ async function saveUser(id){
     endReason:gv('uf-endreason',existing.endReason||''),
     scheduleDays:hasDays?days.join(','):(existing.scheduleDays||''),
     scheduleStart:gv('uf-tstart',existing.scheduleStart||'10:00'),scheduleEnd:gv('uf-tend',existing.scheduleEnd||'16:00'),
+    contractStart:gv('uf-cstart',existing.contractStart||'09:10'),contractEnd:gv('uf-cend',existing.contractEnd||'16:30'),
     bento:gv('uf-bento',existing.bento||'なし'),bentoPaymentMethod:gv('uf-bento-pay',existing.bentoPaymentMethod||'工賃払い'),pickup:gv('uf-pickup',existing.pickup||'なし'),
     notes:gv('uf-notes',existing.notes||''),
     afterCarePlan:gv('uf-aftercare',existing.afterCarePlan||''),afterCareOrg:gv('uf-afterorg',existing.afterCareOrg||''),
@@ -4926,9 +4930,9 @@ async function bulkPresent(){
 }
 
 function calcUserStopSubtext(r, index, totalStops, u) {
-  var sStart = u ? (u.scheduleStart || '09:10') : '09:10';
-  var sEnd = u ? (u.scheduleEnd || '16:30') : '16:30';
-  return 'サービス提供時間 ' + sStart + '〜' + sEnd;
+  var sStart = u ? (u.contractStart || u.scheduleStart || '09:10') : '09:10';
+  var sEnd = u ? (u.contractEnd || u.scheduleEnd || '16:30') : '16:30';
+  return '契約時間 ' + sStart + '〜' + sEnd;
 }
 
 // ═══ BMI測定管理 ═══

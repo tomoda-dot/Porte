@@ -63,7 +63,7 @@ async function _getGte(table,col,val){var r=await supabase.from(table).select('*
 
 // 時刻フィールドをHH:mm形式にパディング
 function _padTimes(row){
-  var timeFields=['startTime','endTime','scheduleStart','scheduleEnd','departTime','arriveTime'];
+  var timeFields=['startTime','endTime','scheduleStart','scheduleEnd','contractStart','contractEnd','departTime','arriveTime'];
   for(var i=0;i<timeFields.length;i++){
     var k=timeFields[i];
     if(row[k]&&typeof row[k]==='string'&&row[k].match(/^\d{1,2}:\d{2}$/)){
@@ -487,7 +487,9 @@ async function _calcOptimalRoute(userIds,pattern,targetTime){
     for(var j=0;j<allUsers.length;j++){
       if(String(allUsers[j].id)===String(userIds[i])){
         var u=allUsers[j];var addr=_getUserRawAddressForRoute(u, pattern);
-        ordered.push({id:u.id,name:u.name,address:addr,scheduleStart:u.scheduleStart,scheduleEnd:u.scheduleEnd});break;
+        var cStart = u.contractStart || u.scheduleStart || '09:10';
+        var cEnd = u.contractEnd || u.scheduleEnd || '16:30';
+        ordered.push({id:u.id,name:u.name,address:addr,scheduleStart:cStart,scheduleEnd:cEnd,contractStart:cStart,contractEnd:cEnd});break;
       }
     }
   }
@@ -496,10 +498,8 @@ async function _calcOptimalRoute(userIds,pattern,targetTime){
   var departTime='', arriveTime='';
 
   if(pattern==='morning'){
-    // 朝：ご自宅お迎え時刻（u.scheduleStart 例: 09:10）を基準に、
-    // 事業所発 ＝ 09:10 - 片道時間(30分) ＝ 08:40
-    // 事業所着 ＝ 08:40 + 合計所要時間(60分) ＝ 09:40
-    var pickupTime = targetArriveTime || (ordered[0]?(ordered[0].scheduleStart||'09:10'):'09:10');
+    // 朝：お迎え時刻（contractStart 例: 09:10）を基準に計算
+    var pickupTime = targetTime || (ordered[0]?(ordered[0].contractStart||'09:10'):'09:10');
     var pp = pickupTime.split(':');
     var pickupMin = Number(pp[0])*60 + Number(pp[1]||0);
     var depMin = Math.max(0, pickupMin - oneWay);
@@ -508,8 +508,8 @@ async function _calcOptimalRoute(userIds,pattern,targetTime){
     departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
     arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
   }else{
-    // 夕：サービス終了（scheduleEnd 例: 16:30）に事業所発
-    departTime=targetArriveTime || (ordered[0]?(ordered[0].scheduleEnd||'16:30'):'16:30');
+    // 夕：契約時間終了（contractEnd 例: 16:30）に事業所発
+    departTime=targetTime || (ordered[0]?(ordered[0].contractEnd||'16:30'):'16:30');
     var dp=departTime.split(':');
     var depMin=Number(dp[0])*60+Number(dp[1]||0);
     var arrMin=depMin + totalMin;
@@ -532,8 +532,8 @@ async function _calcSmartRoutes(userIds,pattern,date){
     var u=null;for(var j=0;j<allUsers.length;j++){if(String(allUsers[j].id)===String(userIds[i])){u=allUsers[j];break;}}
     if(!u)continue;
     var addr=_getUserRawAddressForRoute(u, pattern);if(!addr||addr.length<3)continue;
-    var sTime=u.scheduleStart||'09:10';
-    var eTime=u.scheduleEnd||'16:30';
+    var sTime=u.contractStart||u.scheduleStart||'09:10';
+    var eTime=u.contractEnd||u.scheduleEnd||'16:30';
     var timeKey=pattern==='morning'?sTime:eTime;
     var tp=timeKey.split(':');var timeMin=Number(tp[0])*60+Number(tp[1]||0);
     candidates.push({id:u.id,name:u.name,address:addr,startTime:sTime,endTime:eTime,timeKey:timeKey,timeMin:timeMin});
