@@ -2031,21 +2031,36 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         if (u.enrollDate && u.enrollDate > todayStr) return;
         if (u.endDate && u.endDate < todayStr) return;
 
+        const daysJp = ['日', '月', '火', '水', '木', '金', '土'];
+        const todayDayJp = daysJp[now.getDay()];
+
         const uId = String(u.id || '').trim();
         const uName = String(u.name || u.氏名 || '').trim();
         const r = attMap[uId] || attMap[uName];
         
+        // 利用曜日のチェック
+        const scheduleDays = (u.scheduleDays || '').split(',').map(s => s.trim()).filter(Boolean);
+        const isScheduledToday = scheduleDays.length === 0 || scheduleDays.includes(todayDayJp);
+
         // 欠席・お休み判定
-        const isAbsent = r ? (
-          r.status === '欠席' || 
-          r.status === '公休' || 
-          r.status === '調整休' || 
-          r.status === '欠勤' || 
-          r.status === 'お休み' || 
-          r.status === 'キャンセル' ||
-          String(r.status || '').includes('欠') ||
-          String(r.status || '').includes('休')
-        ) : false;
+        let isAbsent = false;
+        if (r) {
+          isAbsent = (
+            r.status === '欠席' || 
+            r.status === '公休' || 
+            r.status === '調整休' || 
+            r.status === '欠勤' || 
+            r.status === 'お休み' || 
+            r.status === 'キャンセル' ||
+            String(r.status || '').includes('欠') ||
+            String(r.status || '').includes('休')
+          );
+        } else {
+          // 出欠レコードがない場合、登録利用曜日に入っていなければ「お休み（利用曜日外）」判定
+          if (scheduleDays.length > 0 && !isScheduledToday) {
+            isAbsent = true;
+          }
+        }
 
         const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? String(r.bento).trim() : (u.bento ? String(u.bento).trim() : '');
         const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
@@ -2059,7 +2074,16 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         }
 
         const noteText = (r && r.notes) ? r.notes : (u.note || u.特記事項 || '');
-        const fullNote = isAbsent ? (noteText ? `【本日お休み】${noteText}` : '【本日お休み】') : (wantsBento ? noteText : (noteText ? `【お弁当不要】${noteText}` : '【お弁当不要】'));
+        let fullNote = '';
+        if (isAbsent) {
+          if (!r && scheduleDays.length > 0 && !isScheduledToday) {
+            fullNote = noteText ? `【利用曜日外】${noteText}` : '【利用曜日外(本日お休み)】';
+          } else {
+            fullNote = noteText ? `【本日お休み】${noteText}` : '【本日お休み】';
+          }
+        } else {
+          fullNote = wantsBento ? noteText : (noteText ? `【お弁当不要】${noteText}` : '【お弁当不要】');
+        }
 
         // 既存の選択中のお弁当IDを保護・マージ
         const existingUser = porteUsers.find(item => String(item.id).trim() === uId || String(item.name).trim() === String(u.name || u.氏名).trim());
@@ -2071,7 +2095,7 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           kana: u.kana || u.フリガナ || '',
           type: u.type || u.区分 || '通所',
           note: fullNote,
-          status: r ? (r.status || '出席') : '出席',
+          status: r ? (r.status || '出席') : (isAbsent ? '利用曜日外' : '出席'),
           wantsBento: wantsBento,
           selectedBentoId: savedBentoId
         });
