@@ -4930,8 +4930,8 @@ async function bulkPresent(){
 }
 
 function calcUserStopSubtext(r, index, totalStops, u) {
-  var sStart = u ? (u.contractStart || u.scheduleStart || '09:10') : '09:10';
-  var sEnd = u ? (u.contractEnd || u.scheduleEnd || '16:30') : '16:30';
+  var sStart = (u && u.contractStart) ? u.contractStart : '09:10';
+  var sEnd = (u && u.contractEnd) ? u.contractEnd : '16:30';
   return '契約時間 ' + sStart + '〜' + sEnd;
 }
 

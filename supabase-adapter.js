@@ -487,8 +487,8 @@ async function _calcOptimalRoute(userIds,pattern,targetTime){
     for(var j=0;j<allUsers.length;j++){
       if(String(allUsers[j].id)===String(userIds[i])){
         var u=allUsers[j];var addr=_getUserRawAddressForRoute(u, pattern);
-        var cStart = u.contractStart || u.scheduleStart || '09:10';
-        var cEnd = u.contractEnd || u.scheduleEnd || '16:30';
+        var cStart = u.contractStart ? u.contractStart : '09:10';
+        var cEnd = u.contractEnd ? u.contractEnd : '16:30';
         ordered.push({id:u.id,name:u.name,address:addr,scheduleStart:cStart,scheduleEnd:cEnd,contractStart:cStart,contractEnd:cEnd});break;
       }
     }
@@ -532,8 +532,8 @@ async function _calcSmartRoutes(userIds,pattern,date){
     var u=null;for(var j=0;j<allUsers.length;j++){if(String(allUsers[j].id)===String(userIds[i])){u=allUsers[j];break;}}
     if(!u)continue;
     var addr=_getUserRawAddressForRoute(u, pattern);if(!addr||addr.length<3)continue;
-    var sTime=u.contractStart||u.scheduleStart||'09:10';
-    var eTime=u.contractEnd||u.scheduleEnd||'16:30';
+    var sTime=u.contractStart?u.contractStart:'09:10';
+    var eTime=u.contractEnd?u.contractEnd:'16:30';
     var timeKey=pattern==='morning'?sTime:eTime;
     var tp=timeKey.split(':');var timeMin=Number(tp[0])*60+Number(tp[1]||0);
     candidates.push({id:u.id,name:u.name,address:addr,startTime:sTime,endTime:eTime,timeKey:timeKey,timeMin:timeMin});
