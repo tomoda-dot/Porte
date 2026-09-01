@@ -7012,19 +7012,25 @@ function renderEnvelopePrint(wd, fn){
     var honorific = esc(window._envHonorific);
     var showWage = window._envShowWage;
 
+    var parts = eM.split('-');
+    var yearStr = parts[0] || '';
+    var monthStr = parts[1] || '';
+    // 年月日：数字のみ＋間に0.3cm(3mm)空白
+    var ymOverlayStr = yearStr + '<span style="display:inline-block;width:3mm"></span>' + monthStr;
+
     if (window._envMode === 'overlay') {
       // 既成給料袋（角形8号 119mm x 197mm）直接印字モード
       var h = '<div class="env-page env-overlay" style="width:119mm;height:197mm;box-sizing:border-box;margin:0 auto;padding:0;position:relative;background:#fff;font-family:\'MS 明朝\',\'Hiragino Mincho ProN\',serif;color:#000;">';
-      // 年月分（上部 37mmの位置）
-      h += '<div style="position:absolute;top:37mm;left:0;width:100%;text-align:center;font-size:14px;font-weight:700;letter-spacing:2px;">' + ymLabel + '</div>';
-      // 工賃金額（給料タイトルの下 59mmの位置）
+      // 年月日（32mmの位置：0.5cm上へ引き上げ、数字のみ＋3mm空白）
+      h += '<div style="position:absolute;top:32mm;left:0;width:100%;text-align:center;font-size:15px;font-weight:700;letter-spacing:1px;">' + ymOverlayStr + '</div>';
+      // 工賃金額（給料タイトルの下 54mmの位置）
       if (showWage && userWage) {
-        h += '<div style="position:absolute;top:59mm;left:0;width:100%;text-align:center;font-size:18px;font-weight:800;">' + userWage + '</div>';
+        h += '<div style="position:absolute;top:54mm;left:0;width:100%;text-align:center;font-size:18px;font-weight:800;">' + userWage + '</div>';
       }
-      // 所属（82mmの位置）
-      h += '<div style="position:absolute;top:82mm;left:34mm;width:68mm;font-size:11.5px;font-weight:600;white-space:nowrap;">' + deptText + '</div>';
-      // 氏名 ＋ 敬称（103mmの位置）
-      h += '<div style="position:absolute;top:103mm;left:24mm;width:68mm;font-size:17px;font-weight:800;letter-spacing:1px;">' + nameText + '<span style="margin-left:10px;font-size:14px;font-weight:600;">' + honorific + '</span></div>';
+      // 所属（77mmの位置：0.5cm上へ引き上げ）
+      h += '<div style="position:absolute;top:77mm;left:34mm;width:68mm;font-size:11.5px;font-weight:600;white-space:nowrap;">' + deptText + '</div>';
+      // 氏名 ＋ 敬称（93mmの位置：1cm上へ引き上げ）
+      h += '<div style="position:absolute;top:93mm;left:24mm;width:68mm;font-size:17px;font-weight:800;letter-spacing:1px;">' + nameText + '<span style="margin-left:10px;font-size:14px;font-weight:600;">' + honorific + '</span></div>';
       h += '</div>';
       return h;
     } else {
