@@ -3465,6 +3465,7 @@ function collectCurrentUserData(){
     supportStartDate:'uf-sstart',supportEndDate:'uf-send',
     enrollDate:'uf-enroll',endDate:'uf-edate',endReason:'uf-endreason',
     scheduleStart:'uf-tstart',scheduleEnd:'uf-tend',
+    breakMin:'uf-brk',
     contractStart:'uf-cstart',contractEnd:'uf-cend',
     bento:'uf-bento',bentoPaymentMethod:'uf-bento-pay',pickup:'uf-pickup',notes:'uf-notes',
     afterCarePlan:'uf-aftercare',afterCareOrg:'uf-afterorg',
@@ -3559,7 +3560,8 @@ function ueKana(k){
 async function saveUser(id){
   if(!lockUI())return;
   // 現在のユーザーデータを取得（タブ切替時に他タブのデータを失わないよう）
-  var existing=id?S.users.find(function(x){return x.id===id;})||{}:{};
+  var dbUser = id ? S.users.find(function(x){return x.id===id;})||{} : {};
+  var existing = Object.assign({}, dbUser, window._ueCurrentData || {});
   function gv(elId,fallback){var el=document.getElementById(elId);return el?el.value:(fallback!==undefined?fallback:'');}
   function gtv(elId,fallback){var el=document.getElementById(elId);return el?el.value:(fallback!==undefined?fallback:'');}
   var days=[];document.querySelectorAll('.uf-day').forEach(function(cb){if(cb.checked)days.push(cb.value);});

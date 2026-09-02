@@ -167,14 +167,23 @@ async function gas(fn){
       var _uSet=await _getSettings();
       return _uList.map(function(u){
         u.bentoPaymentMethod=u.bentoPaymentMethod||_uSet['bentoPay_'+u.id]||'工賃払い';
+        if(u.contractStart===undefined||u.contractStart===null||u.contractStart==='') u.contractStart=_uSet['contractStart_'+u.id]||'09:10';
+        if(u.contractEnd===undefined||u.contractEnd===null||u.contractEnd==='') u.contractEnd=_uSet['contractEnd_'+u.id]||'16:30';
+        if(u.breakMin===undefined||u.breakMin===null||u.breakMin==='') u.breakMin=_uSet['breakMin_'+u.id]||'60';
         return u;
       });
     case 'addUser':
       a1.id=_genId('u');
       if(a1.bentoPaymentMethod)await _updateSetting('bentoPay_'+a1.id,a1.bentoPaymentMethod);
+      if(a1.contractStart)await _updateSetting('contractStart_'+a1.id,a1.contractStart);
+      if(a1.contractEnd)await _updateSetting('contractEnd_'+a1.id,a1.contractEnd);
+      if(a1.breakMin!==undefined)await _updateSetting('breakMin_'+a1.id,String(a1.breakMin));
       return _add('利用者',a1);
     case 'updateUser':
       if(a1.bentoPaymentMethod)await _updateSetting('bentoPay_'+a1.id,a1.bentoPaymentMethod);
+      if(a1.contractStart)await _updateSetting('contractStart_'+a1.id,a1.contractStart);
+      if(a1.contractEnd)await _updateSetting('contractEnd_'+a1.id,a1.contractEnd);
+      if(a1.breakMin!==undefined)await _updateSetting('breakMin_'+a1.id,String(a1.breakMin));
       return _update('利用者',a1);
     case 'deleteUser': return _del('利用者',a1);
 
