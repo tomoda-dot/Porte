@@ -1184,10 +1184,30 @@ async function openAttDailyM(uid, ds){
     allDayUsers.forEach(function(x){
       var isCur=String(x.id)===String(uid);
       var xAtt=atts.find(function(a){return String(a.userId)===String(x.id);});
-      var stLabel=xAtt?xAtt.status:'';
+      var xRep=dailies.find(function(d){return String(d.userId)===String(x.id);});
+      var stLabel=xAtt?xAtt.status:'予定';
       var isTemp=isTempUser(x.id);
+      var isAbs=['欠席','体調不良','通院','調整休'].indexOf(stLabel)>=0;
+
+      // 入力済み判定：作業内容（出席時）または欠席理由（欠席時）のどちらかが入力されているか
+      var isEntered=false;
+      if(isAbs){
+        var notesStr=(xAtt&&xAtt.notes?String(xAtt.notes).trim():'')||(xRep&&xRep.notes?String(xRep.notes).trim():'')||(xRep&&xRep.content?String(xRep.content).trim():'');
+        isEntered=notesStr.length>0;
+      }else{
+        var hasWtAm=xRep&&xRep.workTypeId&&xRep.workTypeId!=='none'&&xRep.workTypeId!=='なし';
+        var hasWtPm=xRep&&xRep.workTypeIdPm&&xRep.workTypeIdPm!=='none'&&xRep.workTypeIdPm!=='なし';
+        var hasAttWtAm=xAtt&&xAtt.workTypeId&&xAtt.workTypeId!=='none'&&xAtt.workTypeId!=='なし';
+        var hasContent=xRep&&xRep.content&&String(xRep.content).trim().length>0;
+        isEntered=!!(hasWtAm||hasWtPm||hasAttWtAm||hasContent);
+      }
+
+      var entryTag=isEntered?
+        '<span style="font-size:10px;font-weight:700;color:'+(isCur?'#a5d6a7':'#2e7d32')+';margin-left:3px">✅入力済</span>':
+        '<span style="font-size:10px;color:'+(isCur?'rgba(255,255,255,.6)':'#e65100')+';margin-left:3px">未入力</span>';
+
       var stColor=stLabel==='出席'?'#2e7d32':stLabel==='欠席'||stLabel==='体調不良'?'#c62828':stLabel==='予定'?'var(--acc)':'#888';
-      side+='<div onclick="openAttDailyM(\''+x.id+'\',\''+ds+'\')" style="padding:6px 8px;cursor:pointer;font-size:12px;border-bottom:1px solid #f5f0ea;'+(isCur?'background:var(--pri);color:#fff':'')+'"><div style="font-weight:600">'+esc(x.name)+(isTemp?'<span style="font-size:9px;color:'+(isCur?'rgba(255,255,255,.7)':'var(--acc)')+';margin-left:4px">★臨時</span>':'')+'</div>'+(stLabel?'<div style="font-size:10px;color:'+(isCur?'rgba(255,255,255,.7)':stColor)+'">'+stLabel+'</div>':'')+'</div>';
+      side+='<div onclick="openAttDailyM(\''+x.id+'\',\''+ds+'\')" style="padding:6px 8px;cursor:pointer;font-size:12px;border-bottom:1px solid #f5f0ea;'+(isCur?'background:var(--pri);color:#fff':'')+'"><div style="font-weight:600">'+esc(x.name)+(isTemp?'<span style="font-size:9px;color:'+(isCur?'rgba(255,255,255,.7)':'var(--acc)')+';margin-left:4px">★臨時</span>':'')+'</div><div style="font-size:10px;color:'+(isCur?'rgba(255,255,255,.85)':stColor)+'">'+stLabel+' '+entryTag+'</div></div>';
     });
     side+='</div>';
 
