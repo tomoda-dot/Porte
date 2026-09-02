@@ -3559,7 +3559,10 @@ function ueKana(k){
 
 async function saveUser(id){
   if(!lockUI())return;
-  // 現在のユーザーデータを取得（タブ切替時に他タブのデータを失わないよう）
+  // 現在の入力内容を収集して保持
+  var currentData = collectCurrentUserData();
+  window._ueCurrentData = currentData;
+
   var dbUser = id ? S.users.find(function(x){return x.id===id;})||{} : {};
   var existing = Object.assign({}, dbUser, window._ueCurrentData || {});
   function gv(elId,fallback){var el=document.getElementById(elId);return el?el.value:(fallback!==undefined?fallback:'');}
