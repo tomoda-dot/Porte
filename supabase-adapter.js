@@ -363,15 +363,9 @@ async function gas(fn){
     case 'deleteRouteRecord': return _del('送迎ルート',a1);
 
     // ── BMI測定管理 ──
-    case 'getBmiRecords': return a1?_getLike('BMI測定','date',a1):_getAll('BMI測定');
-    case 'saveBmiRecord':
-      if(a1.id){ a1.updatedAt=new Date().toISOString(); return _update('BMI測定',a1); }
-      var ym = (a1.date||'').slice(0,7);
-      var allBmi = await _getAll('BMI測定');
-      var existing = allBmi.find(function(b){ return String(b.userId)===String(a1.userId) && String(b.date||'').startsWith(ym); });
-      if(existing){ a1.id = existing.id; a1.updatedAt=new Date().toISOString(); return _update('BMI測定',a1); }
-      a1.id = _genId('bmi'); a1.createdAt = new Date().toISOString(); return _add('BMI測定',a1);
-    case 'deleteBmiRecord': return _del('BMI測定',a1);
+    case 'getBmiRecords': return _getBmiRecordsHelper(a1);
+    case 'saveBmiRecord': return _saveBmiRecordHelper(a1);
+    case 'deleteBmiRecord': return _deleteBmiRecordHelper(a1);
 
     // ── サイン保存 ──
     case 'saveSignatureForDate':
@@ -884,4 +878,110 @@ async function _calcAnnualWageDetail(fiscalYear){
     monthTotals.push({ym:months[mi2],bizDays:Object.keys(uniqueDates).length,totalDays:td,totalHours:Math.round(th*100)/100,totalWage:Math.round(tw)});
   }
   return{fiscalYear:fy,users:result,monthTotals:monthTotals};
+}
+
+// ═══ BMI測定ヘバー（テーブル未作成時の安全な自動フォールバック対応）═══
+async function _getBmiRecordsHelper(ymPrefix) {
+  try {
+    var r = await supabase.from('BMI測定').select('*').order('date', { ascending: false });
+    if (!r.error && r.data) {
+      var data = r.data.map(_padTimes);
+      if (ymPrefix) {
+        return data.filter(function(b) { return String(b.date || '').startsWith(ymPrefix); });
+      }
+      return data;
+    }
+  } catch(e) {}
+
+  var list = [];
+  try {
+    var settings = await _getSettings();
+    if (settings['bmi_records']) {
+      list = JSON.parse(settings['bmi_records']);
+    }
+  } catch(e) {}
+
+  if (!Array.isArray(list) || list.length === 0) {
+    try {
+      var local = localStorage.getItem('porte_bmi_records');
+      if (local) list = JSON.parse(local);
+    } catch(e) {}
+  }
+
+  if (!Array.isArray(list)) list = [];
+
+  if (ymPrefix) {
+    return list.filter(function(b) { return String(b.date || '').startsWith(ymPrefix); });
+  }
+  return list;
+}
+
+async function _saveBmiRecordHelper(obj) {
+  try {
+    if (obj.id) {
+      obj.updatedAt = new Date().toISOString();
+      var r = await supabase.from('BMI測定').update(obj).eq('id', obj.id).select();
+      if (!r.error && r.data && r.data.length > 0) return r.data[0];
+    } else {
+      var ym = (obj.date || '').slice(0, 7);
+      var allBmi = await _getBmiRecordsHelper('');
+      var existing = allBmi.find(function(b) { return String(b.userId) === String(obj.userId) && String(b.date || '').startsWith(ym); });
+      if (existing) {
+        obj.id = existing.id;
+        obj.updatedAt = new Date().toISOString();
+        var r2 = await supabase.from('BMI測定').update(obj).eq('id', obj.id).select();
+        if (!r2.error && r2.data && r2.data.length > 0) return r2.data[0];
+      } else {
+        obj.id = _genId('bmi');
+        obj.createdAt = new Date().toISOString();
+        var r3 = await supabase.from('BMI測定').insert([obj]).select();
+        if (!r3.error && r3.data && r3.data.length > 0) return r3.data[0];
+      }
+    }
+  } catch(e) {}
+
+  var list = await _getBmiRecordsHelper('');
+  var targetYm = (obj.date || '').slice(0, 7);
+  var idx = list.findIndex(function(b) {
+    return (obj.id && String(b.id) === String(obj.id)) || (String(b.userId) === String(obj.userId) && String(b.date || '').startsWith(targetYm));
+  });
+
+  if (idx >= 0) {
+    obj.id = list[idx].id;
+    obj.updatedAt = new Date().toISOString();
+    list[idx] = Object.assign({}, list[idx], obj);
+  } else {
+    if (!obj.id) obj.id = _genId('bmi');
+    obj.createdAt = new Date().toISOString();
+    list.unshift(obj);
+  }
+
+  try {
+    await _updateSetting('bmi_records', JSON.stringify(list));
+  } catch(e) {}
+  try {
+    localStorage.setItem('porte_bmi_records', JSON.stringify(list));
+  } catch(e) {}
+
+  return obj;
+}
+
+async function _deleteBmiRecordHelper(id) {
+  try {
+    var r = await supabase.from('BMI測定').delete().eq('id', id);
+    if (!r.error) {
+      // 成功
+    }
+  } catch(e) {}
+
+  var list = await _getBmiRecordsHelper('');
+  list = list.filter(function(b) { return String(b.id) !== String(id); });
+  try {
+    await _updateSetting('bmi_records', JSON.stringify(list));
+  } catch(e) {}
+  try {
+    localStorage.setItem('porte_bmi_records', JSON.stringify(list));
+  } catch(e) {}
+
+  return true;
 }
