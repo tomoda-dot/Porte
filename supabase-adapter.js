@@ -511,11 +511,14 @@ async function _calcOptimalRoute(userIds,pattern,targetTime){
     departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
     arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
   }else{
-    // 夕：契約時間終了（contractEnd 例: 16:30）に事業所発
-    departTime=targetTime || (ordered[0]?(ordered[0].contractEnd||'16:30'):'16:30');
-    var dp=departTime.split(':');
-    var depMin=Number(dp[0])*60+Number(dp[1]||0);
-    var arrMin=depMin + totalMin;
+    // 夕：契約時間終了（contractEnd 例: 16:30）をご自宅着時刻として事業所発を逆算
+    var dropTime = targetTime || (ordered[0]?(ordered[0].contractEnd||'16:30'):'16:30');
+    var dp = dropTime.split(':');
+    var dropMin = Number(dp[0])*60 + Number(dp[1]||0);
+    var depMin = Math.max(0, dropMin - oneWay);
+    var arrMin = depMin + totalMin;
+
+    departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
     arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
   }
 
@@ -569,10 +572,12 @@ async function _calcSmartRoutes(userIds,pattern,date){
       departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
       arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
     }else{
-      // 夕：事業所発
-      departTime=trip[0].timeKey||'16:30';
-      var depMin=Number(departTime.split(':')[0])*60+Number(departTime.split(':')[1]||0);
+      // 夕：ご自宅送りの着時刻（例: 16:30）を基準に事業所発を逆算
+      var dropTime=trip[0].timeKey||'16:30';
+      var dMin=Number(dropTime.split(':')[0])*60+Number(dropTime.split(':')[1]||0);
+      var depMin=Math.max(0, dMin - oneWay);
       var arrMin=depMin + routeMin;
+      departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
       arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
     }
 
