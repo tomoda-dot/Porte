@@ -761,7 +761,7 @@ async function _calcWageDetailPerUser(ym){
       }
     }
 
-    result.push({id:user.id,name:user.name,days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,bentoPrice:bentoPrice,total:wSub+bonus-bcDeduct*bentoPrice});
+    result.push({id:user.id,name:user.name,bentoPaymentMethod:user.bentoPaymentMethod||'工賃払い',days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,bentoPrice:bentoPrice,total:wSub+bonus-bcDeduct*bentoPrice});
   });
   return{ym:ym,companyName:companyName,payDate:payDateStr,users:result,bentoPrice:bentoPrice};
 }

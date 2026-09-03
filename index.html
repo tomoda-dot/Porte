@@ -6936,7 +6936,10 @@ function renderWageDetail(wd,fn){
     });
     if(u.bentoCount>0){
       adjRows++;
-      h+='<tr><td style="'+B+'padding:2px 5px">弁当代</td><td style="'+B+'padding:2px 5px;text-align:right">'+u.bentoCount+'</td><td style="'+B+'padding:2px 5px;text-align:right">¥'+u.bentoPrice.toLocaleString()+'</td><td style="'+B+'padding:2px 5px;text-align:right;color:#c00">-¥'+u.bentoDed.toLocaleString()+'</td></tr>';
+      var pmRaw = u.bentoPaymentMethod || (u.u ? u.u.bentoPaymentMethod : '') || '工賃払い';
+      var pmLabel = pmRaw;
+      if(pmRaw === '当日') pmLabel = '当日払い';
+      h+='<tr><td style="'+B+'padding:2px 5px">弁当代（'+esc(pmLabel)+'）</td><td style="'+B+'padding:2px 5px;text-align:right">'+u.bentoCount+'</td><td style="'+B+'padding:2px 5px;text-align:right">¥'+u.bentoPrice.toLocaleString()+'</td><td style="'+B+'padding:2px 5px;text-align:right;color:#c00">-¥'+u.bentoDed.toLocaleString()+'</td></tr>';
     }
     // 空行で2行に揃える
     var emptyAdj=Math.max(0,2-adjRows);
