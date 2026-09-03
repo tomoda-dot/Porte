@@ -1702,9 +1702,8 @@ function matchCategoryItem(itemCategory, filterCategory) {
 
           lotBadgesHtml += `
             <div class="lot-badge ${statusClass}">
-              <span style="font-size:0.75rem; font-weight:900; background:${typeBg}; color:${typeColor}; padding:2px 6px; border-radius:6px; margin-right:4px;">${typeLabel}</span>
               <span>📅 ${lot.expDate}</span>
-              <strong style="margin-left:6px; font-size:0.88rem; color:#212529;">${lot.qty}食</strong>
+              <strong style="margin-left:6px; font-size:0.88rem; color:#d9480f;">${lot.qty}食</strong>
               <button class="btn-del-lot" onclick="deleteBentoLot('${item.id}', ${lIdx})" title="このロットを削除">&times;</button>
             </div>
           `;
@@ -1834,10 +1833,7 @@ function renderModalLotRows() {
     const row = document.createElement('div');
     row.className = 'modal-lot-row';
     row.innerHTML = `
-      <select onchange="updateModalLotField(${idx}, 'type', this.value)">
-        <option value="STOCK" ${lot.type === 'STOCK' ? 'selected' : ''}>📦 既存在庫分</option>
-        <option value="ARRIVED" ${lot.type === 'ARRIVED' ? 'selected' : ''}>🚚 新規入荷分</option>
-      </select>
+      <span style="font-weight:800; color:#d9480f; font-size:0.9rem; min-width:90px;">📦 在庫ロット${idx + 1}</span>
       
       <div style="display:flex; align-items:center; gap:4px;">
         <span style="font-size:0.85rem; font-weight:700; color:#495057;">数量:</span>

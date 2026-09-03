@@ -316,21 +316,21 @@
             </div>
           </div>
 
-          <!-- 在庫分 ＆ 入荷分のリスト明細個数管理パネル -->
+          <!-- 在庫 ＆ 賞味期限のリスト明細個数管理パネル -->
           <div style="background:#fff8f0; border:2px solid #ffd8a8; border-radius:18px; padding:18px; margin:16px 0;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-              <h4 style="font-size:1.05rem; color:#d9480f; font-weight:900;">📦 在庫分 ＆ 🚚 入荷分のリスト管理</h4>
+              <h4 style="font-size:1.05rem; color:#d9480f; font-weight:900;">📦 在庫・賞味期限リスト管理</h4>
               <div style="font-size:1rem; font-weight:900; color:#212529;">
                 合計在庫数: <strong id="modalTotalStockText" style="color:#d9480f; font-size:1.35rem;">0</strong> 食
               </div>
             </div>
 
             <div id="modalLotRowsContainer" style="display:flex; flex-direction:column; gap:10px; max-height:220px; overflow-y:auto; padding-right:4px;">
-              <!-- 在庫・入荷ロット行が動的に追加・編集されます -->
+              <!-- 在庫・賞味期限ロット行が動的に追加・編集されます -->
             </div>
 
             <div style="display:flex; gap:10px; margin-top:14px; padding-top:10px; border-top:1px dashed #ffd8a8;">
-              <button type="button" class="btn btn-sm btn-outline" onclick="addModalLotRow('STOCK')">📦 在庫分を追加</button>
+              <button type="button" class="btn btn-sm btn-outline" onclick="addModalLotRow('STOCK')">📦 在庫ロットを追加</button>
             </div>
           </div>
 
