@@ -529,8 +529,29 @@ function confirmDailyOrder() {
     orders: snapshot
   };
   saveDailyOrders();
+
+  // 確定タイミングで本日分の注文・受付履歴ログを作成・保存
+  const now = new Date();
+  const mStr = (now.getMonth() + 1) + '/' + now.getDate() + ' ' + now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  
+  orderHistory = orderHistory.filter(ord => ord.dateKey !== todayKey);
+
+  snapshot.forEach(s => {
+    orderHistory.unshift({
+      id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      date: mStr,
+      dateKey: todayKey,
+      userId: s.userId,
+      userName: s.userName,
+      bentoId: s.bentoId,
+      bentoName: s.bentoName,
+      category: s.category
+    });
+  });
+  saveOrderHistory();
+
   renderAll();
-  showToast(`🔒 本日(${todayKey})の注文【${snapshot.length}食】を確定・実績保存しました！`, 'success');
+  showToast(`🔒 本日(${todayKey})の注文【${snapshot.length}食】を確定し、履歴・マトリクスに反映しました！`, 'success');
 }
 
 function unlockDailyOrder() {
@@ -540,8 +561,13 @@ function unlockDailyOrder() {
       dailyOrders[todayKey].status = 'DRAFT';
       saveDailyOrders();
     }
+
+    // 未確定にした場合、本日分の注文履歴ログおよびマトリクス表示をクリア
+    orderHistory = orderHistory.filter(ord => ord.dateKey !== todayKey);
+    saveOrderHistory();
+
     renderAll();
-    showToast('🔓 本日注文の確定を解除しました（編集可能状態）', 'info');
+    showToast('🔓 本日注文の確定を解除し、履歴・マトリクスをクリアしました（編集可能状態）', 'info');
   }
 }
 
@@ -674,7 +700,7 @@ function renderMonthlyMatrix() {
       
       let cellContent = `<span class="matrix-cell-empty">-</span>`;
 
-      if (dayRecord && dayRecord.orders) {
+      if (dayRecord && dayRecord.status === 'CONFIRMED' && dayRecord.orders) {
         const userOrder = dayRecord.orders.find(o => o.userId === u.id);
         if (userOrder) {
           monthTotalCount++;
@@ -682,39 +708,6 @@ function renderMonthlyMatrix() {
           const icon = bento ? bento.icon : (userOrder.bentoIcon || '🍱');
           const shortName = (userOrder.bentoName || '').slice(0, 5);
           cellContent = `<span class="matrix-cell-chip" title="${userOrder.bentoName}">${icon} ${shortName}</span>`;
-        }
-      }
-      
-      // 未確定日のバックアップ復元表示 (注文履歴ログから検索)
-      if (cellContent.indexOf('matrix-cell-chip') < 0) {
-        const histMatch = orderHistory.find(ord => {
-          if (ord.userName !== u.name && ord.userId !== u.id) return false;
-          let ordDateStr = '';
-          if (ord.id) {
-            const ts = parseInt(String(ord.id).replace('ord_', ''), 10);
-            if (!isNaN(ts) && ts > 1000000000000) {
-              const d = new Date(ts);
-              ordDateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-            }
-          }
-          return ordDateStr === dayKey;
-        });
-        if (histMatch) {
-          monthTotalCount++;
-          const bento = bentoMaster.find(b => b.id === histMatch.bentoId);
-          const icon = bento ? bento.icon : '🍱';
-          const shortName = (histMatch.bentoName || '').slice(0, 5);
-          cellContent = `<span class="matrix-cell-chip" style="background:#f3f0ff; border-color:#d0bfff; color:#6741d9;" title="履歴より復元: ${histMatch.bentoName}">${icon} ${shortName}</span>`;
-        }
-      }
-
-      if (cellContent.indexOf('matrix-cell-chip') < 0 && isToday) {
-        const currentUser = porteUsers.find(item => item.id === u.id);
-        if (currentUser && currentUser.selectedBentoId) {
-          const bento = bentoMaster.find(b => b.id === currentUser.selectedBentoId);
-          if (bento) {
-            cellContent = `<span class="matrix-cell-chip" style="background:#e7f5ff; border-color:#a5d8ff; color:#1971c2;" title="本日選択中(未確定)">${bento.icon} ${bento.name.slice(0,4)}</span>`;
-          }
         }
       }
 
@@ -1382,17 +1375,6 @@ window.assignUserBento = function(userIndex, newBentoId) {
         }
         saveTodaysMenu();
       }
-
-      const now = new Date();
-      const mStr = (now.getMonth() + 1) + '/' + now.getDate() + ' ' + new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-      orderHistory.unshift({
-        id: 'ord_' + Date.now(),
-        date: mStr,
-        userName: user.name,
-        bentoId: newBento.id,
-        bentoName: newBento.name,
-        category: newBento.category
-      });
     }
   }
 
