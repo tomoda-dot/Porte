@@ -6144,6 +6144,7 @@ async function renderExport(c){
     ['wageDetail','💰','工賃明細書（個人別）'],
     ['annualDetail','📑','年度工賃支払明細書'],
     ['envelopePrint','✉️','給料袋印刷（角8）'],
+    ['bentoSummary','🍱','昼食利用集計表'],
     ['invoice','🧾','請求書'],
     ['receipt','🧾','工賃領収書'],
     ['bentoReceipt','🍱','昼食代領収書'],
@@ -6154,8 +6155,8 @@ async function renderExport(c){
     var groups=[
       {label:'📦 国保連請求・伝送',items:tabs.slice(0,1)},
       {label:'📋 記録・集計',items:tabs.slice(1,5)},
-      {label:'💰 工賃',items:tabs.slice(5,9)},
-      {label:'🧾 請求・受領',items:tabs.slice(9)}
+      {label:'💰 工賃',items:tabs.slice(5,10)},
+      {label:'🧾 請求・受領',items:tabs.slice(10)}
     ];
     var menuH='<div class="hd-row"><h2>📄 帳票出力</h2></div>';
     groups.forEach(function(g){
@@ -6529,6 +6530,101 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     showLoading('e-c','稼働率を集計中（15ヶ月分）...');
     var ud=await gas('getUtilizationData',eM);
     renderUtilization(ud);
+  } else if(eT==='bentoSummary'){
+    showLoading('e-c','昼食利用データを集計中...');
+    var att=await cachedGas('getAttendance',eM);
+    var bentoPrice=Number(S.settings.bentoPrice)||100;
+    var ym=eM.split('-');var yStr=ym[0];var mStr=parseInt(ym[1]);
+    var fn=S.settings.facilityName||'事業所';
+    var compName=S.settings.companyName||'';
+    var users=S.users.filter(function(u){return u.userStatus!=='利用終了';});
+
+    var summaryList=[];
+    var grandCount=0, grandAmount=0;
+    var grandDeductCount=0, grandDeductAmt=0;
+    var grandNextCount=0, grandNextAmt=0;
+    var grandDailyCount=0, grandDailyAmt=0;
+
+    users.forEach(function(u){
+      var recs=att.filter(function(a){return String(a.userId)===u.id&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
+      var bc=0, bcDeduct=0, bcDaily=0, bcNext=0;
+      recs.forEach(function(r){
+        if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
+          bc++;
+          var pm=(u&&u.bentoPaymentMethod)?u.bentoPaymentMethod:(r.bentoPaymentMethod||'工賃払い');
+          if(pm==='当日')bcDaily++;
+          else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
+          else bcDeduct++;
+        }
+      });
+      if(bc>0){
+        var totalAmt = bc * bentoPrice;
+        var pmRaw = u.bentoPaymentMethod || '工賃払い';
+        var pmLabel = pmRaw;
+        if(pmRaw === '当日') pmLabel = '当日払い';
+
+        summaryList.push({
+          id: u.id,
+          name: u.name,
+          serviceType: u.serviceType || '就労B型',
+          pmLabel: pmLabel,
+          count: bc,
+          bentoPrice: bentoPrice,
+          amount: totalAmt,
+          bcDeduct: bcDeduct,
+          bcNext: bcNext,
+          bcDaily: bcDaily
+        });
+        grandCount += bc;
+        grandAmount += totalAmt;
+        grandDeductCount += bcDeduct;
+        grandDeductAmt += bcDeduct * bentoPrice;
+        grandNextCount += bcNext;
+        grandNextAmt += bcNext * bentoPrice;
+        grandDailyCount += bcDaily;
+        grandDailyAmt += bcDaily * bentoPrice;
+      }
+    });
+
+    var h = '<div class="card" style="max-width:900px;margin:0 auto;padding:24px">';
+    h += '<div class="no-print" style="margin-bottom:20px">';
+    h += '<div style="font-size:14px;font-weight:700;color:var(--pri);margin-bottom:10px">📊 売上計上サマリー（'+yStr+'年'+mStr+'月分）</div>';
+    h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">';
+    h += '<div style="background:#f5f0ea;padding:12px;border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--sub)">昼食売上総額</div><div style="font-size:20px;font-weight:800;color:var(--pri)">¥'+grandAmount.toLocaleString()+'</div><div style="font-size:10px;color:#888">（全'+grandCount+'食）</div></div>';
+    h += '<div style="background:#e8f5e9;padding:12px;border-radius:8px;text-align:center"><div style="font-size:11px;color:#2e7d32">工賃控除分</div><div style="font-size:18px;font-weight:700;color:#2e7d32">¥'+grandDeductAmt.toLocaleString()+'</div><div style="font-size:10px;color:#666">（'+grandDeductCount+'食）</div></div>';
+    h += '<div style="background:#e3f2fd;padding:12px;border-radius:8px;text-align:center"><div style="font-size:11px;color:#1565c0">翌月請求分</div><div style="font-size:18px;font-weight:700;color:#1565c0">¥'+grandNextAmt.toLocaleString()+'</div><div style="font-size:10px;color:#666">（'+grandNextCount+'食）</div></div>';
+    h += '<div style="background:#fff3e0;padding:12px;border-radius:8px;text-align:center"><div style="font-size:11px;color:#e65100">当日精算分</div><div style="font-size:18px;font-weight:700;color:#e65100">¥'+grandDailyAmt.toLocaleString()+'</div><div style="font-size:10px;color:#666">（'+grandDailyCount+'食）</div></div>';
+    h += '</div></div>';
+
+    h += '<div style="text-align:center;margin-bottom:16px"><h2 style="font-size:20px;letter-spacing:4px;margin-bottom:6px">昼食利用集計報告書（昼食売上集計表）</h2>';
+    h += '<div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-top:10px"><div>対象月：'+yStr+'年'+mStr+'月分</div><div>作成日：'+today().replace(/-/g,'/')+'</div><div>'+esc(compName||fn)+'</div></div></div>';
+
+    h += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;border:1px solid #ccc">';
+    h += '<thead><tr style="background:#f5f0ea"><th style="padding:8px;border:1px solid #ccc;text-align:center;width:40px">No.</th><th style="padding:8px;border:1px solid #ccc;text-align:left;width:100px">種別</th><th style="padding:8px;border:1px solid #ccc;text-align:left">氏名</th><th style="padding:8px;border:1px solid #ccc;text-align:left;width:120px">支払方法</th><th style="padding:8px;border:1px solid #ccc;text-align:right;width:80px">利用食数</th><th style="padding:8px;border:1px solid #ccc;text-align:right;width:80px">単価</th><th style="padding:8px;border:1px solid #ccc;text-align:right;width:100px">売上金額</th></tr></thead><tbody>';
+
+    if(summaryList.length===0){
+      h += '<tr><td colspan="7" style="padding:20px;text-align:center;color:#888;border:1px solid #ccc">対象月のお弁当ご利用データがありません</td></tr>';
+    } else {
+      summaryList.forEach(function(item, idx){
+        h += '<tr><td style="padding:6px;border:1px solid #ccc;text-align:center">'+(idx+1)+'</td>';
+        h += '<td style="padding:6px;border:1px solid #ccc">'+esc(item.serviceType)+'</td>';
+        h += '<td style="padding:6px;border:1px solid #ccc;font-weight:600">'+esc(item.name)+'</td>';
+        h += '<td style="padding:6px;border:1px solid #ccc">'+esc(item.pmLabel)+'</td>';
+        h += '<td style="padding:6px;border:1px solid #ccc;text-align:right;font-weight:700">'+item.count+' 食</td>';
+        h += '<td style="padding:6px;border:1px solid #ccc;text-align:right">¥'+item.bentoPrice.toLocaleString()+'</td>';
+        h += '<td style="padding:6px;border:1px solid #ccc;text-align:right;font-weight:700">¥'+item.amount.toLocaleString()+'</td></tr>';
+      });
+    }
+
+    h += '</tbody><tfoot><tr style="background:#e8e0d8;font-weight:700">';
+    h += '<td colspan="4" style="padding:8px;border:1px solid #ccc;text-align:right">合計（利用人数: '+summaryList.length+'名）</td>';
+    h += '<td style="padding:8px;border:1px solid #ccc;text-align:right;font-size:13px">'+grandCount+' 食</td>';
+    h += '<td style="padding:8px;border:1px solid #ccc"></td>';
+    h += '<td style="padding:8px;border:1px solid #ccc;text-align:right;font-size:14px;color:var(--pri)">¥'+grandAmount.toLocaleString()+'</td>';
+    h += '</tr></tfoot></table></div>';
+    h += '</div>';
+
+    document.getElementById('e-c').innerHTML=h;
   } else if(eT==='invoice'||eT==='receipt'||eT==='bentoReceipt'||eT==='proxyReceipt'){
     var activeUsers=S.users.slice().sort(function(a,b){var ae=a.userStatus==='利用終了'?1:0;var be=b.userStatus==='利用終了'?1:0;return ae-be;});
     var userSelHtml='<div class="no-print" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">';
@@ -7521,6 +7617,36 @@ async function dlCSV(){try{
       });
     });
     var b6=new Blob(['\uFEFF'+csv6],{type:'text/csv'});var ur6=URL.createObjectURL(b6);var a6=document.createElement('a');a6.href=ur6;a6.download='提供実績記録_'+eM+'.csv';a6.click();
+  } else if(eT==='bentoSummary'){
+    var attB=await cachedGas('getAttendance',eM);
+    var bentoPriceB=Number(S.settings.bentoPrice)||100;
+    var usersB=S.users.filter(function(u){return u.userStatus!=='利用終了';});
+    var csvB='対象月,サービス種別,氏名,支払方法,食数,単価,売上金額,工賃控除食数,翌月請求食数,当日精算食数\n';
+    var totalCB=0, totalAB=0;
+    usersB.forEach(function(u){
+      var recs=attB.filter(function(a){return String(a.userId)===u.id&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
+      var bc=0, bcDeduct=0, bcDaily=0, bcNext=0;
+      recs.forEach(function(r){
+        if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
+          bc++;
+          var pm=(u&&u.bentoPaymentMethod)?u.bentoPaymentMethod:(r.bentoPaymentMethod||'工賃払い');
+          if(pm==='当日')bcDaily++;
+          else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
+          else bcDeduct++;
+        }
+      });
+      if(bc>0){
+        var amt = bc * bentoPriceB;
+        var pmRaw = u.bentoPaymentMethod || '工賃払い';
+        var pmLabel = pmRaw;
+        if(pmRaw === '当日') pmLabel = '当日払い';
+        csvB += eM+','+(u.serviceType||'就労B型')+','+u.name+','+pmLabel+','+bc+','+bentoPriceB+','+amt+','+bcDeduct+','+bcNext+','+bcDaily+'\n';
+        totalCB += bc;
+        totalAB += amt;
+      }
+    });
+    csvB += '合計,-,-,-,'+totalCB+','+bentoPriceB+','+totalAB+',-,-,-\n';
+    var bB=new Blob(['\uFEFF'+csvB],{type:'text/csv'});var urB=URL.createObjectURL(bB);var aB=document.createElement('a');aB.href=urB;aB.download='昼食利用集計表_'+eM+'.csv';aB.click();
   } else {
     var csv2=await gas('getWageCSV',eM);var b2=new Blob(['\uFEFF'+csv2],{type:'text/csv'});var u2=URL.createObjectURL(b2);var a2=document.createElement('a');a2.href=u2;a2.download='工賃_'+eM+'.csv';a2.click();
   }
