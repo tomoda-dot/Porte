@@ -1405,6 +1405,7 @@ window.assignUserBento = function(userIndex, newBentoId) {
 
 function renderCateringOrderTally() {
   const container = document.getElementById('cateringOrderTally');
+  if (!container) return;
   container.innerHTML = '';
 
   const tally = {};
@@ -1886,13 +1887,17 @@ window.openAddLotModal = function(bentoId) {
 
   ensureBentoLots(item);
 
-  document.getElementById('addLotBentoId').value = item.id;
-  document.getElementById('addLotBentoName').textContent = item.name;
-  document.getElementById('lotQtyInput').value = 5;
-  document.getElementById('lotExpDateInput').value = getOffsetDateStr(7);
+  const idEl = document.getElementById('addLotBentoId');
+  if (idEl) idEl.value = item.id;
+  const nameEl = document.getElementById('addLotBentoName');
+  if (nameEl) nameEl.textContent = item.name;
+  const qtyEl = document.getElementById('lotQtyInput');
+  if (qtyEl) qtyEl.value = 5;
+  const expEl = document.getElementById('lotExpDateInput');
+  if (expEl) expEl.value = getOffsetDateStr(7);
 
   const listEl = document.getElementById('existingLotsList');
-  listEl.innerHTML = '';
+  if (listEl) listEl.innerHTML = '';
   if (item.lots && item.lots.length > 0) {
     item.lots.forEach((l, idx) => {
       const isArrived = l.type === 'ARRIVED';
