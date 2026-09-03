@@ -1745,8 +1745,8 @@ function matchCategoryItem(itemCategory, filterCategory) {
         <td style="width: 100px; text-align:center;">
           ${isToday ? '<span class="badge-status done">本日5品</span>' : '<span style="color:#adb5bd; font-size:0.85rem;">-</span>'}
         </td>
-        <td style="width: 110px; text-align:center;">
-          <button class="btn btn-sm btn-outline" style="font-weight:700;" onclick="openEditBentoModal('${item.id}')">✏️ 編集・明細</button>
+        <td style="width: 100px; text-align:center; white-space:nowrap;">
+          <button class="btn btn-sm btn-outline" style="font-weight:700; white-space:nowrap; padding:4px 10px;" onclick="openEditBentoModal('${item.id}')">✏️ 編集</button>
         </td>
       </tr>
     `;
