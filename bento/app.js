@@ -1735,9 +1735,6 @@ function matchCategoryItem(itemCategory, filterCategory) {
             <div class="lot-badge-container">
               ${lotBadgesHtml}
             </div>
-            <button class="btn btn-sm btn-outline" style="font-size:0.8rem; padding:4px 10px; font-weight:700; border-color:#ffa8a8; color:#e03131;" onclick="openAddLotModal('${item.id}')">
-              🚚 入荷分を追加
-            </button>
           </div>
         </td>
         <td style="width: 100px; text-align:center;">
