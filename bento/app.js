@@ -1284,7 +1284,7 @@ function renderPorteSection() {
         const isSoldOut = b.stock <= 0 && u.selectedBentoId !== b.id;
         const isSelected = u.selectedBentoId === b.id;
         optionsHtml += `<option value="${b.id}" ${isSelected ? 'selected' : ''} ${isSoldOut ? 'disabled' : ''}>
-          ${b.icon} ${b.name} (残${b.stock}) ${isSelected ? '✓ 選択中' : ''}
+          ${b.icon} ${b.name}
         </option>`;
       });
 
