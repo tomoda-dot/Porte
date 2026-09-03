@@ -1249,11 +1249,15 @@ function renderPorteSection() {
   const ordered = bentoUsers.filter(u => u.selectedBentoId).length;
   const pending = totalTarget - ordered;
 
-  document.getElementById('summaryTotalUsers').textContent = `${totalTarget} (全員:${porteUsers.length})`;
-  document.getElementById('summaryOrderedUsers').textContent = ordered;
-  document.getElementById('summaryPendingUsers').textContent = pending;
+  const elTotal = document.getElementById('summaryTotalUsers');
+  if (elTotal) elTotal.textContent = `${totalTarget} (全員:${porteUsers.length})`;
+  const elOrdered = document.getElementById('summaryOrderedUsers');
+  if (elOrdered) elOrdered.textContent = ordered;
+  const elPending = document.getElementById('summaryPendingUsers');
+  if (elPending) elPending.textContent = pending;
 
-  document.getElementById('porteTabBadge').textContent = `未受付 ${pending}`;
+  const elTabBadge = document.getElementById('porteTabBadge');
+  if (elTabBadge) elTabBadge.textContent = `未受付 ${pending}`;
 
   const tbody = document.getElementById('porteUserTableBody');
   tbody.innerHTML = '';
@@ -1933,8 +1937,10 @@ function updateHeaderStats() {
   const totalUsers = bentoUsers.length;
   const orderedUsers = bentoUsers.filter(u => u.selectedBentoId).length;
 
-  document.getElementById('headerUserCount').textContent = `${totalUsers}名 (全${porteUsers.length}名)`;
-  document.getElementById('headerOrderedCount').textContent = `${orderedUsers}食`;
+  const userCountEl = document.getElementById('headerUserCount');
+  if (userCountEl) userCountEl.textContent = `${totalUsers}名 (全${porteUsers.length}名)`;
+  const orderedCountEl = document.getElementById('headerOrderedCount');
+  if (orderedCountEl) orderedCountEl.textContent = `${orderedUsers}食`;
 
   const totalStock = bentoMaster.reduce((sum, item) => sum + (parseInt(item.stock, 10) || 0), 0);
   const stockEl = document.getElementById('headerTotalStockCount');
