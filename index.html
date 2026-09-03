@@ -6145,7 +6145,8 @@ async function renderExport(c){
     ['annualDetail','📑','年度工賃支払明細書'],
     ['envelopePrint','✉️','給料袋印刷（角8）'],
     ['invoice','🧾','請求書'],
-    ['receipt','🧾','領収書'],
+    ['receipt','🧾','工賃領収書'],
+    ['bentoReceipt','🍱','昼食代領収書'],
     ['proxyReceipt','📄','代理受領書']
   ];
   if(!eT||eT==='menu'){
@@ -6528,7 +6529,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     showLoading('e-c','稼働率を集計中（15ヶ月分）...');
     var ud=await gas('getUtilizationData',eM);
     renderUtilization(ud);
-  } else if(eT==='invoice'||eT==='receipt'||eT==='proxyReceipt'){
+  } else if(eT==='invoice'||eT==='receipt'||eT==='bentoReceipt'||eT==='proxyReceipt'){
     var activeUsers=S.users.slice().sort(function(a,b){var ae=a.userStatus==='利用終了'?1:0;var be=b.userStatus==='利用終了'?1:0;return ae-be;});
     var userSelHtml='<div class="no-print" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">';
     userSelHtml+='<select id="eU-sel" onchange="window._eUid=this.value;loadE()" style="padding:5px 10px;font-size:13px;border:1px solid #ccc;border-radius:6px">';
@@ -6577,6 +6578,14 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
 
     }else if(eT==='receipt'){
       document.getElementById('e-c').innerHTML=userSelHtml+renderOneReceipt(u,recs,tW,tH,bcDeduct,bd,bonus,total,alResult,yStr,mStr,compName,fName,fNum,fType);
+
+    }else if(eT==='bentoReceipt'){
+      var totalBento = bc * bentoPrice;
+      if(bc===0){
+        document.getElementById('e-c').innerHTML=userSelHtml+'<div style="text-align:center;padding:40px;color:var(--sub)">対象月のお弁当（昼食）のご利用・お支払いデータがありません。</div>';
+      }else{
+        document.getElementById('e-c').innerHTML=userSelHtml+renderOneBentoReceipt(u,recs,bc,totalBento,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
+      }
 
     }else if(eT==='proxyReceipt'){
       // 代理受領通知書（編集・保存対応）
@@ -6689,6 +6698,22 @@ function renderOneReceipt(u,recs,tW,tH,bc,bd,bonus,total,alResult,yStr,mStr,comp
   h+='<div style="margin-top:30px;display:flex;justify-content:space-between;align-items:flex-end"><div style="text-align:right;font-size:12px;line-height:1.8"><div style="font-weight:700">'+esc(compName||fName)+'</div><div>'+esc(fType)+' '+esc(fName)+'</div>'+(fNum?'<div>事業所番号: '+esc(fNum)+'</div>':'')+'</div><div style="text-align:center;font-size:11px;color:#999;border:1px dashed #ccc;padding:20px 30px;border-radius:8px">印</div></div></div>';
   return h;
 }
+function renderOneBentoReceipt(u,recs,bc,totalBentoAmt,bentoPrice,yStr,mStr,compName,fName,fNum,fType){
+  var h='<div class="irp-page" style="page-break-after:always;max-width:700px;margin:0 auto 24px;font-size:13px">';
+  h+='<h2 style="text-align:center;font-size:22px;letter-spacing:8px;margin-bottom:24px;border-bottom:3px double #333;padding-bottom:12px">領　収　書</h2>';
+  h+='<div style="display:flex;justify-content:space-between;margin-bottom:20px"><div><span style="font-size:18px;font-weight:700;border-bottom:1px solid #333;padding-bottom:2px">'+esc(u.name)+'</span> 様</div>';
+  h+='<div style="text-align:right;font-size:12px">'+yStr+'年'+mStr+'月分<br>発行日: '+today().replace(/-/g,'/')+'</div></div>';
+  h+='<div style="text-align:center;margin-bottom:20px;padding:16px;border:2px solid #333;border-radius:8px"><span style="font-size:12px">領収金額</span><br><span style="font-size:28px;font-weight:700">¥'+Math.abs(totalBentoAmt).toLocaleString()+'</span></div>';
+  h+='<p style="margin-bottom:12px">上記の金額を'+yStr+'年'+mStr+'月分の昼食代（お弁当代）として正に領収いたしました。</p>';
+  h+='<table style="width:100%;border-collapse:collapse;margin-bottom:20px"><thead><tr style="background:#f5f5f5"><th style="border:1px solid #999;padding:8px;text-align:left">項目</th><th style="border:1px solid #999;padding:8px;text-align:center;width:60px">数量</th><th style="border:1px solid #999;padding:8px;text-align:right;width:80px">単価</th><th style="border:1px solid #999;padding:8px;text-align:right;width:100px">金額</th></tr></thead><tbody>';
+  var pmRaw = u.bentoPaymentMethod || '工賃払い';
+  var pmLabel = pmRaw;
+  if(pmRaw === '当日') pmLabel = '当日払い';
+  h+='<tr><td style="border:1px solid #999;padding:8px">昼食代（お弁当代） <span style="font-size:11px;color:#666">（支払方法: '+esc(pmLabel)+'）</span></td><td style="border:1px solid #999;padding:8px;text-align:center">'+bc+'食</td><td style="border:1px solid #999;padding:8px;text-align:right">¥'+bentoPrice.toLocaleString()+'</td><td style="border:1px solid #999;padding:8px;text-align:right">¥'+totalBentoAmt.toLocaleString()+'</td></tr>';
+  h+='</tbody><tfoot><tr style="font-weight:700;background:#f9f9f9"><td colspan="3" style="border:1px solid #999;padding:8px;text-align:right">領収合計</td><td style="border:1px solid #999;padding:8px;text-align:right;font-size:16px">¥'+Math.abs(totalBentoAmt).toLocaleString()+'</td></tr></tfoot></table>';
+  h+='<div style="margin-top:30px;display:flex;justify-content:space-between;align-items:flex-end"><div style="text-align:right;font-size:12px;line-height:1.8"><div style="font-weight:700">'+esc(compName||fName)+'</div><div>'+esc(fType)+' '+esc(fName)+'</div>'+(fNum?'<div>事業所番号: '+esc(fNum)+'</div>':'')+'</div><div style="text-align:center;font-size:11px;color:#999;border:1px dashed #ccc;padding:20px 30px;border-radius:8px">印</div></div></div>';
+  return h;
+}
 async function printAllIRP(){
   if(eT==='proxyReceipt'){await cAlert('代理受領書は利用者ごとに印刷してください');return;}
   showLoading('e-c','全員分を作成中...');
@@ -6721,6 +6746,9 @@ async function printAllIRP(){
       if(bcNext>0)allH+=renderOneInvoice(u,recs,bcNext,bdNext,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
     }
     else if(eT==='receipt')allH+=renderOneReceipt(u,recs,tW,tH,bcDeduct,bd,bonus,total,alResult,yStr,mStr,compName,fName,fNum,fType);
+    else if(eT==='bentoReceipt'){
+      if(bc>0)allH+=renderOneBentoReceipt(u,recs,bc,bc*bentoPrice,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
+    }
   });
   if(!allH){await cAlert('出勤データのある利用者がいません');return;}
   document.getElementById('e-c').innerHTML=allH;
