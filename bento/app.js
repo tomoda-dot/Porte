@@ -1290,19 +1290,19 @@ function renderPorteSection() {
 
       const kanaHtml = u.kana ? `<span style="font-size:0.75rem; color:#868e96; margin-left:4px;">(${u.kana})</span>` : '';
       tr.innerHTML = `
-        <td><strong>${u.name}</strong> ${kanaHtml}</td>
-        <td>
+        <td style="width: 160px;"><strong>${u.name}</strong> ${kanaHtml}</td>
+        <td style="width: 130px; text-align: center;">
           <button class="btn btn-sm ${wantsBento ? 'btn-outline' : 'btn-sample'}" style="padding:2px 8px; font-size:0.75rem; ${isConfirmedToday ? 'opacity:0.6; cursor:not-allowed;' : ''}" ${isConfirmedToday ? 'disabled title="本日の注文は確定済みです"' : ''} onclick="toggleUserBentoWant(${realIndex})">
             ${wantsBento ? '🍱 注文あり' : '⚪ 注文なし'}
           </button>
         </td>
-        <td><span style="color:#e64980; font-size:0.85rem; font-weight:700;">${u.note || '-'}</span></td>
-        <td>
+        <td style="min-width: 180px;"><span style="color:#e64980; font-size:0.85rem; font-weight:700;">${u.note || '-'}</span></td>
+        <td style="width: 260px;">
           <select class="bento-select-dropdown" ${isConfirmedToday ? 'disabled style="background:#e9ecef; cursor:not-allowed; opacity:0.85; border-color:#ced4da;" title="本日の注文は確定済みです（クリックで確定解除すると変更可能）"' : ''} onchange="assignUserBento(${realIndex}, this.value)">
             ${optionsHtml}
           </select>
         </td>
-        <td>
+        <td style="width: 100px; text-align: center;">
           <span class="badge-status ${isDone ? 'done' : 'pending'}">
             ${isDone ? '決定' : '未選択'}
           </span>
