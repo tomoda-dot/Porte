@@ -2619,18 +2619,22 @@ function parsePorteCsvFile(file) {
     });
   }
 
-  document.getElementById('addNewBentoBtn').addEventListener('click', () => openEditBentoModal(null));
-  document.getElementById('resetMasterBtn').addEventListener('click', () => {
-    if (confirm('商品マスターを初期30品目にリセットしますか？')) {
-      bentoMaster = JSON.parse(JSON.stringify(DEFAULT_30_BENTO));
-      bentoMaster.forEach(b => ensureBentoLots(b));
-      todaysMenuIds = bentoMaster.slice(0, 5).map(b => b.id);
-      saveMaster();
-      saveTodaysMenu();
-      renderAll();
-      showToast('30品目のデフォルトデータにリセットしました', 'success');
-    }
-  });
+  const addBentoBtn = document.getElementById('addNewBentoBtn');
+  if (addBentoBtn) addBentoBtn.addEventListener('click', () => openEditBentoModal(null));
+  const resetBtn = document.getElementById('resetMasterBtn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (confirm('商品マスターを初期30品目にリセットしますか？')) {
+        bentoMaster = JSON.parse(JSON.stringify(DEFAULT_30_BENTO));
+        bentoMaster.forEach(b => ensureBentoLots(b));
+        todaysMenuIds = bentoMaster.slice(0, 5).map(b => b.id);
+        saveMaster();
+        saveTodaysMenu();
+        renderAll();
+        showToast('30品目のデフォルトデータにリセットしました', 'success');
+      }
+    });
+  }
 
   document.getElementById('closeBentoEditModal').addEventListener('click', closeEditBentoModal);
   document.getElementById('cancelBentoEditBtn').addEventListener('click', closeEditBentoModal);
