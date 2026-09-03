@@ -662,6 +662,7 @@ async function _calcAttendanceList(ym){
         bc++;
         var pm=rec.bentoPaymentMethod||user.bentoPaymentMethod||'工賃払い';
         if(pm==='当日')bcDaily++;
+        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
         else bcDeduct++;
       }
     });
@@ -727,6 +728,7 @@ async function _calcWageDetailPerUser(ym){
         bc++;
         var pm=rec.bentoPaymentMethod||user.bentoPaymentMethod||'工賃払い';
         if(pm==='当日')bcDaily++;
+        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
         else bcDeduct++;
       }
     });

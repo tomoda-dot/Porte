@@ -6009,6 +6009,7 @@ async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var attR
       bc++;
       var pm=r.bentoPaymentMethod||u.bentoPaymentMethod||'工賃払い';
       if(pm==='当日')bcDaily++;
+      else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
       else bcDeduct++;
     }
   });
@@ -6554,6 +6555,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
         bc++;
         var pm=r.bentoPaymentMethod||u.bentoPaymentMethod||'工賃払い';
         if(pm==='当日')bcDaily++;
+        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
         else bcDeduct++;
       }
     });
@@ -6707,6 +6709,7 @@ async function printAllIRP(){
         bc++;
         var pm=r.bentoPaymentMethod||u.bentoPaymentMethod||'工賃払い';
         if(pm==='当日')bcDaily++;
+        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
         else bcDeduct++;
       }
     });
