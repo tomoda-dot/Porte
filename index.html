@@ -6995,10 +6995,10 @@ function renderWageDetail(wd,fn){
     document.getElementById('e-c').innerHTML=selHtml+'<div style="text-align:center;padding:40px;color:var(--sub)">利用者を選択してください</div>';
     return;
   }
-  var screenContent=renderOneWD(wd.users[selIdx]);
+  var cutLineHtml = '<div class="wd-cut-line" style="border-top:1px dashed #ccc;margin:12px 0 12px;position:relative;text-align:right;height:0"><span style="position:relative;top:-8px;right:15px;background:#fff;padding:0 6px;font-size:8.5px;color:#bbb;-webkit-print-color-adjust:exact;print-color-adjust:exact">✂ 切り取り線</span></div>';
+  var screenContent=renderOneWD(wd.users[selIdx]) + cutLineHtml;
   var printContent='';
   if(window._wdPrintTarget==='all'){
-    var cutLineHtml = '<div class="wd-cut-line" style="border-top:1px dashed #ccc;margin:4px 0 6px;position:relative;text-align:right;height:0"><span style="position:relative;top:-8px;right:15px;background:#fff;padding:0 6px;font-size:8.5px;color:#bbb;-webkit-print-color-adjust:exact;print-color-adjust:exact">✂ 切り取り線</span></div>';
     for(var pi=0;pi<wd.users.length;pi++){
       printContent += renderOneWD(wd.users[pi]);
       var isLast = (pi === wd.users.length - 1);
@@ -7009,7 +7009,7 @@ function renderWageDetail(wd,fn){
       }
     }
   } else {
-    printContent=renderOneWD(wd.users[selIdx]);
+    printContent=renderOneWD(wd.users[selIdx]) + cutLineHtml;
   }
   document.getElementById('e-c').innerHTML=selHtml+
     '<div class="wd-screen">'+screenContent+'</div>'+
