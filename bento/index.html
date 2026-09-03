@@ -127,42 +127,7 @@
           </div>
         </div>
 
-        <div class="grid-2col" style="margin-bottom: 24px;">
-          <!-- 発注まとめ集計（配食業者用） -->
-          <div class="card summary-card">
-            <div class="card-header" style="flex-wrap:wrap; gap:8px;">
-              <h3>🍱 本日の発注集計（配食業者用）</h3>
-              <div style="display:flex; gap:6px;">
-                <button class="btn btn-sm btn-outline" id="copyOrderSummaryBtn">📋 発注リストをコピー</button>
-                <button class="btn btn-sm btn-pop" id="confirmDailyOrderCardBtn" style="background: linear-gradient(135deg, #10b981, #059669); font-size:0.8rem; padding:4px 10px;">🔒 注文を確定</button>
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="summary-stats-row">
-                <div class="mini-stat">
-                  <span class="stat-label">お弁当対象者</span>
-                  <strong class="stat-num" id="summaryTotalUsers">0</strong>
-                </div>
-                <div class="mini-stat text-success">
-                  <span class="stat-label">注文決定済み</span>
-                  <strong class="stat-num" id="summaryOrderedUsers">0</strong>
-                </div>
-                <div class="mini-stat text-danger">
-                  <span class="stat-label">未受付</span>
-                  <strong class="stat-num" id="summaryPendingUsers">0</strong>
-                </div>
-                <div class="mini-stat" id="confirmStatusCard" style="background:#f8f9fa;">
-                  <span class="stat-label">本日注文状態</span>
-                  <strong class="stat-num" id="summaryConfirmStatus" style="font-size:1.1rem; color:#6c757d;">未確定 🔓</strong>
-                </div>
-              </div>
-              
-              <div class="catering-tally-list" id="cateringOrderTally">
-                <!-- 発注内訳のリアルタイム集計表示 -->
-              </div>
-            </div>
-          </div>
-
+        <div style="margin-bottom: 24px;">
           <!-- 利用者別 注文選択テーブル -->
           <div class="card users-table-card">
             <div class="card-header">
