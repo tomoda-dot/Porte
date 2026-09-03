@@ -2276,7 +2276,20 @@ function pickBalancedTodaysMenu(preferStockOnly = true) {
 let tempPickFiveIds = [];
 
 window.openPickFiveModal = function() {
-  tempPickFiveIds = [...todaysMenuIds];
+  // 在庫がある商品のみを優先取得して初期選択セット
+  const inStockIds = todaysMenuIds.filter(id => {
+    const b = bentoMaster.find(item => item.id === id);
+    return b && b.stock > 0;
+  });
+
+  const availableInStock = bentoMaster.filter(b => b.stock > 0);
+  availableInStock.forEach(b => {
+    if (inStockIds.length < 5 && !inStockIds.includes(b.id)) {
+      inStockIds.push(b.id);
+    }
+  });
+
+  tempPickFiveIds = [...inStockIds];
   renderPickFiveGrid();
   const modal = document.getElementById('pickFiveModal');
   if (modal) modal.classList.add('active');
@@ -2295,43 +2308,56 @@ window.renderPickFiveGrid = function() {
   if (!container) return;
   container.innerHTML = '';
 
-  bentoMaster.forEach(item => {
+  // 在庫がある商品を最優先して上にソート表示
+  const sortedMaster = [...bentoMaster].sort((a, b) => {
+    if (a.stock > 0 && b.stock <= 0) return -1;
+    if (a.stock <= 0 && b.stock > 0) return 1;
+    return 0;
+  });
+
+  sortedMaster.forEach(item => {
     ensureBentoLots(item);
     const isSelected = tempPickFiveIds.includes(item.id);
+    const isSoldOut = item.stock <= 0;
     const earliestExp = getBentoEarliestExpDate(item);
     const expText = earliestExp !== '9999-12-31' ? earliestExp : '未設定';
 
     const card = document.createElement('div');
-    card.className = `pick-five-item-card ${isSelected ? 'selected' : ''}`;
+    card.className = `pick-five-item-card ${isSelected ? 'selected' : ''} ${isSoldOut ? 'disabled-card' : ''}`;
     card.style.cssText = `
-      border: 2px solid ${isSelected ? '#ff7e67' : '#e9ecef'};
-      background: ${isSelected ? '#fff5eb' : '#ffffff'};
+      border: 2px solid ${isSoldOut ? '#e9ecef' : (isSelected ? '#ff7e67' : '#e9ecef')};
+      background: ${isSoldOut ? '#f8f9fa' : (isSelected ? '#fff5eb' : '#ffffff')};
       border-radius: 14px;
       padding: 12px 14px;
-      cursor: pointer;
+      cursor: ${isSoldOut ? 'not-allowed' : 'pointer'};
+      opacity: ${isSoldOut ? 0.45 : 1};
       display: flex;
       align-items: center;
       justify-content: space-between;
       transition: all 0.2s ease;
-      box-shadow: ${isSelected ? '0 4px 12px rgba(255, 126, 103, 0.18)' : 'none'};
+      box-shadow: ${isSelected && !isSoldOut ? '0 4px 12px rgba(255, 126, 103, 0.18)' : 'none'};
     `;
 
-    card.onclick = () => togglePickFiveItem(item.id);
+    if (isSoldOut) {
+      card.onclick = () => showToast(`⚠️ 『${item.name}』は在庫切れ（0食）のため選択できません。`, 'warning');
+    } else {
+      card.onclick = () => togglePickFiveItem(item.id);
+    }
 
     card.innerHTML = `
       <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-size:1.6rem;">${item.icon || '🍱'}</span>
+        <span style="font-size:1.6rem; opacity:${isSoldOut ? 0.5 : 1};">${item.icon || '🍱'}</span>
         <div>
-          <div style="font-weight:800; font-size:0.95rem; color:#212529;">${item.name}</div>
+          <div style="font-weight:800; font-size:0.95rem; color:${isSoldOut ? '#868e96' : '#212529'};">${item.name}</div>
           <div style="font-size:0.78rem; color:#747d8c; margin-top:2px;">
             <span class="cat-pill" style="font-size:0.7rem; padding:1px 6px;">${item.category}</span>
-            <span style="margin-left:6px;">在庫: <strong style="color:#d9480f;">${item.stock}食</strong></span>
-            <span style="margin-left:6px;">賞味期限: 📅 ${expText}</span>
+            <span style="margin-left:6px;">在庫: <strong style="color:${isSoldOut ? '#e03131' : '#d9480f'};">${item.stock}食</strong></span>
+            ${isSoldOut ? '<span style="color:#e03131; font-weight:800; font-size:0.75rem; background:#ffe3e3; padding:2px 6px; border-radius:6px; margin-left:6px;">在庫切れ(選択不可)</span>' : `<span style="margin-left:6px;">賞味期限: 📅 ${expText}</span>`}
           </div>
         </div>
       </div>
       <div>
-        <input type="checkbox" ${isSelected ? 'checked' : ''} style="width:20px; height:20px; accent-color:#ff7e67; pointer-events:none;">
+        <input type="checkbox" ${isSelected ? 'checked' : ''} ${isSoldOut ? 'disabled' : ''} style="width:20px; height:20px; accent-color:#ff7e67; pointer-events:none;">
       </div>
     `;
 
@@ -2340,6 +2366,12 @@ window.renderPickFiveGrid = function() {
 };
 
 window.togglePickFiveItem = function(bentoId) {
+  const item = bentoMaster.find(b => b.id === bentoId);
+  if (item && item.stock <= 0) {
+    showToast(`⚠️ 『${item.name}』は在庫切れ（0食）のため選択できません。在庫があるお弁当をお選びください。`, 'warning');
+    return;
+  }
+
   const index = tempPickFiveIds.indexOf(bentoId);
   if (index >= 0) {
     tempPickFiveIds.splice(index, 1);
@@ -2354,6 +2386,12 @@ window.togglePickFiveItem = function(bentoId) {
 };
 
 window.savePickFiveSelection = function() {
+  const soldOutSelected = tempPickFiveIds.map(id => bentoMaster.find(b => b.id === id)).filter(b => !b || b.stock <= 0);
+  if (soldOutSelected.length > 0) {
+    showToast(`⚠️ 在庫切れのお弁当（『${soldOutSelected[0].name}』等）が含まれています。在庫があるお弁当（1食以上）のみ選択してください。`, 'warning');
+    return;
+  }
+
   if (tempPickFiveIds.length !== 5) {
     showToast(`⚠️ 本日のメニューはちょうど5品選んでください（現在: ${tempPickFiveIds.length}品選択中）`, 'warning');
     return;
@@ -2363,7 +2401,7 @@ window.savePickFiveSelection = function() {
   saveTodaysMenu();
   closePickFiveModal();
   renderAll();
-  showToast('✨ 本日のメニュー5品をカスタム更新しました！', 'success');
+  showToast('✨ 在庫があるお弁当5品を本日のメニューに設定しました！', 'success');
 };
 
   const randomBtn = document.getElementById('randomSelectBtn');
