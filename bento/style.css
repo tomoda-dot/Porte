@@ -665,6 +665,7 @@ body {
   color: var(--text-dark);
   outline: none;
   cursor: pointer;
+  max-width: 230px;
   width: 100%;
 }
 
