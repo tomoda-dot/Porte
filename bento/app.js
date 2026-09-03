@@ -774,9 +774,12 @@ function renderProgressBar() {
   const pending = total - ordered;
   const percent = total > 0 ? Math.round((ordered / total) * 100) : 0;
 
-  document.getElementById('progressText').textContent = `${ordered} / ${total} 名完了 (${percent}%)`;
-  document.getElementById('progressSubText').textContent = `未選択: ${pending}名`;
-  document.getElementById('progressFill').style.width = `${percent}%`;
+  const elText = document.getElementById('progressText');
+  if (elText) elText.textContent = `${ordered} / ${total} 名完了 (${percent}%)`;
+  const elSubText = document.getElementById('progressSubText');
+  if (elSubText) elSubText.textContent = `未選択: ${pending}名`;
+  const elFill = document.getElementById('progressFill');
+  if (elFill) elFill.style.width = `${percent}%`;
 }
 
 window.quickOrderBento = function(bentoId) {
