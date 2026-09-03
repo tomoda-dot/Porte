@@ -545,9 +545,14 @@ function unlockDailyOrder() {
   }
 }
 
+function isTodayOrderConfirmed() {
+  const todayKey = getTodayKey();
+  return !!(dailyOrders[todayKey] && dailyOrders[todayKey].status === 'CONFIRMED');
+}
+
 function updateConfirmStatusUI() {
   const todayKey = getTodayKey();
-  const isConfirmed = dailyOrders[todayKey] && dailyOrders[todayKey].status === 'CONFIRMED';
+  const isConfirmed = isTodayOrderConfirmed();
   
   const statusEl = document.getElementById('summaryConfirmStatus');
   if (statusEl) {
@@ -1000,11 +1005,19 @@ function renderTodaysMenu() {
         <tbody>
   `;
 
+  const isConfirmedToday = isTodayOrderConfirmed();
+
   items.forEach((item, index) => {
     const isSoldOut = item.stock <= 0;
     const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id);
     let userNamesHtml = chosenUsers.map(u => `<span style="background:#fff0f6; border:1px solid #ffdeeb; color:#c2255c; padding:2px 8px; border-radius:12px; font-size:0.85rem; font-weight:700; display:inline-block; margin:2px; white-space:nowrap !important; word-break:keep-all !important;">${u.name}</span>`).join(' ');
     if (!userNamesHtml) userNamesHtml = '<span style="color:#adb5bd; font-size:0.85rem; white-space:nowrap !important;">(未選択)</span>';
+
+    const orderBtnHtml = isConfirmedToday
+      ? `<button type="button" class="btn btn-sm btn-outline" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap !important; opacity:0.6; cursor:not-allowed;" disabled title="本日の注文は確定済みです">🔒 確定済み</button>`
+      : (isSoldOut 
+          ? `<button type="button" class="btn btn-sm btn-outline" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap !important;" disabled>完売</button>`
+          : `<button type="button" class="btn btn-sm btn-pop" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap !important;" onclick="quickOrderBento('${item.id}')">注文登録 🍱</button>`);
 
     tableHtml += `
       <tr style="border-bottom:1px solid #f1f3f5; background:${index % 2 === 0 ? '#fff' : '#fafafa'};">
@@ -1016,9 +1029,7 @@ function renderTodaysMenu() {
         </td>
         <td style="padding:12px 14px;">${userNamesHtml}</td>
         <td style="padding:12px 14px; text-align:center; white-space:nowrap !important; word-break:keep-all !important;">
-          <button type="button" class="btn btn-sm ${isSoldOut ? 'btn-outline' : 'btn-pop'}" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap !important;" ${isSoldOut ? 'disabled' : ''} onclick="quickOrderBento('${item.id}')">
-            ${isSoldOut ? '完売' : '注文登録 🍱'}
-          </button>
+          ${orderBtnHtml}
         </td>
       </tr>
     `;
@@ -1034,6 +1045,10 @@ function renderTodaysMenu() {
 }
 
 window.quickOrderBento = function(bentoId) {
+  if (isTodayOrderConfirmed()) {
+    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「本日注文確定済み (クリックで解除)」を押して確定を解除してください。', 'warning');
+    return;
+  }
   const item = bentoMaster.find(b => b.id === bentoId);
   if (!item || item.stock <= 0) {
     showToast('在庫がありません', 'info');
@@ -1248,6 +1263,7 @@ function renderPorteSection() {
   } else {
     const todaysBentoList = todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean);
     const displayList = porteUsers.filter(u => tableShowAll || u.wantsBento !== false || u.selectedBentoId);
+    const isConfirmedToday = isTodayOrderConfirmed();
 
     displayList.forEach((u) => {
       const realIndex = porteUsers.findIndex(item => item.id === u.id);
@@ -1276,13 +1292,13 @@ function renderPorteSection() {
         <td><strong>${u.id}</strong></td>
         <td><strong>${u.name}</strong> <span style="font-size:0.75rem; color:#868e96;">(${u.kana || ''})</span></td>
         <td>
-          <button class="btn btn-sm ${wantsBento ? 'btn-outline' : 'btn-sample'}" style="padding:2px 8px; font-size:0.75rem;" onclick="toggleUserBentoWant(${realIndex})">
+          <button class="btn btn-sm ${wantsBento ? 'btn-outline' : 'btn-sample'}" style="padding:2px 8px; font-size:0.75rem; ${isConfirmedToday ? 'opacity:0.6; cursor:not-allowed;' : ''}" ${isConfirmedToday ? 'disabled title="本日の注文は確定済みです"' : ''} onclick="toggleUserBentoWant(${realIndex})">
             ${wantsBento ? '🍱 注文あり' : '⚪ 注文なし'}
           </button>
         </td>
         <td><span style="color:#e64980; font-size:0.85rem; font-weight:700;">${u.note || '-'}</span></td>
         <td>
-          <select class="bento-select-dropdown" onchange="assignUserBento(${realIndex}, this.value)">
+          <select class="bento-select-dropdown" ${isConfirmedToday ? 'disabled style="background:#e9ecef; cursor:not-allowed; opacity:0.85; border-color:#ced4da;" title="本日の注文は確定済みです（クリックで確定解除すると変更可能）"' : ''} onchange="assignUserBento(${realIndex}, this.value)">
             ${optionsHtml}
           </select>
         </td>
@@ -1300,6 +1316,10 @@ function renderPorteSection() {
 }
 
 window.toggleUserBentoWant = function(userIndex) {
+  if (isTodayOrderConfirmed()) {
+    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「本日注文確定済み (クリックで解除)」を押して確定を解除してください。', 'warning');
+    return;
+  }
   const user = porteUsers[userIndex];
   if (!user) return;
 
@@ -1312,9 +1332,12 @@ window.toggleUserBentoWant = function(userIndex) {
   showToast(`${user.name} 様のお弁当注文希望を切り替えました`, 'info');
 };
 
-
-
 window.assignUserBento = function(userIndex, newBentoId) {
+  if (isTodayOrderConfirmed()) {
+    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「本日注文確定済み (クリックで解除)」を押して確定を解除してください。', 'warning');
+    renderAll();
+    return;
+  }
   const user = porteUsers[userIndex];
   if (!user) return;
   const oldBentoId = user.selectedBentoId;
