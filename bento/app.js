@@ -1288,9 +1288,9 @@ function renderPorteSection() {
         </option>`;
       });
 
+      const kanaHtml = u.kana ? `<span style="font-size:0.75rem; color:#868e96; margin-left:4px;">(${u.kana})</span>` : '';
       tr.innerHTML = `
-        <td><strong>${u.id}</strong></td>
-        <td><strong>${u.name}</strong> <span style="font-size:0.75rem; color:#868e96;">(${u.kana || ''})</span></td>
+        <td><strong>${u.name}</strong> ${kanaHtml}</td>
         <td>
           <button class="btn btn-sm ${wantsBento ? 'btn-outline' : 'btn-sample'}" style="padding:2px 8px; font-size:0.75rem; ${isConfirmedToday ? 'opacity:0.6; cursor:not-allowed;' : ''}" ${isConfirmedToday ? 'disabled title="本日の注文は確定済みです"' : ''} onclick="toggleUserBentoWant(${realIndex})">
             ${wantsBento ? '🍱 注文あり' : '⚪ 注文なし'}
