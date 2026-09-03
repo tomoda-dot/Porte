@@ -1724,12 +1724,10 @@ function matchCategoryItem(itemCategory, filterCategory) {
         <td style="width: 240px;">
           <strong style="font-size:1.05rem; color:#212529;">${item.name}</strong>
         </td>
-        <td style="width: 140px; text-align:center;">
-          <div class="stock-control" style="justify-content: center;">
-            <button class="btn-qty" onclick="adjustMasterStock('${item.id}', -1)">-</button>
-            <strong style="font-size:1.2rem; color:#d9480f; min-width:34px; text-align:center;">${item.stock}</strong>
-            <button class="btn-qty" onclick="adjustMasterStock('${item.id}', 1)">+</button>
-            <span style="font-size:0.85rem; font-weight:800; color:#495057; margin-left:4px;">食</span>
+        <td style="width: 120px; text-align:center;">
+          <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
+            <strong style="font-size:1.2rem; color:#d9480f;">${item.stock}</strong>
+            <span style="font-size:0.85rem; font-weight:800; color:#495057; margin-left:2px;">食</span>
           </div>
         </td>
         <td>
