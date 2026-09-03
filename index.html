@@ -6007,7 +6007,7 @@ async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var attR
     });
     if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
       bc++;
-      var pm=r.bentoPaymentMethod||u.bentoPaymentMethod||'工賃払い';
+      var pm=(u&&u.bentoPaymentMethod)?u.bentoPaymentMethod:(r.bentoPaymentMethod||'工賃払い');
       if(pm==='当日')bcDaily++;
       else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
       else bcDeduct++;
@@ -6553,7 +6553,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
       var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
       if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
         bc++;
-        var pm=r.bentoPaymentMethod||u.bentoPaymentMethod||'工賃払い';
+        var pm=(u&&u.bentoPaymentMethod)?u.bentoPaymentMethod:(r.bentoPaymentMethod||'工賃払い');
         if(pm==='当日')bcDaily++;
         else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
         else bcDeduct++;
@@ -6707,7 +6707,7 @@ async function printAllIRP(){
       var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
       if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
         bc++;
-        var pm=r.bentoPaymentMethod||u.bentoPaymentMethod||'工賃払い';
+        var pm=(u&&u.bentoPaymentMethod)?u.bentoPaymentMethod:(r.bentoPaymentMethod||'工賃払い');
         if(pm==='当日')bcDaily++;
         else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
         else bcDeduct++;
