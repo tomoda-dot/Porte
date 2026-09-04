@@ -3121,7 +3121,7 @@ function updateTrashBadgeUI() {
   }
 }
 
-window.deleteBento = function(id) {
+window.deleteBento = async function(id) {
   const item = bentoMaster.find(b => b.id === id);
   if (!item) return;
 
@@ -3138,13 +3138,22 @@ window.deleteBento = function(id) {
       if (unused) todaysMenuIds.push(unused.id);
     }
     
+    // Supabase DBのテーブルからも削除
+    const { url, key } = getSupabaseCredentials();
+    if (url && key && typeof supabase !== 'undefined') {
+      try {
+        const SB = supabase.createClient(url, key);
+        await SB.from('bento_master').delete().eq('id', id);
+      } catch(e) {}
+    }
+
     saveMaster();
     saveTrash();
     saveTodaysMenu();
     closeEditBentoModal();
     renderAll();
     
-    showToast(`🗑️ 『${item.name}』をごみ箱に移動しました。「ごみ箱」からいつでも復元できます。`, 'warning');
+    showToast(`🗑️ 『${item.name}』をごみ箱に移動しました。「ごみ箱」から復元可能です。`, 'warning');
   }
 };
 
@@ -3188,11 +3197,11 @@ function renderTrashItemsList() {
           <span style="font-size:0.75rem; background:#e7f5ff; color:#1971c2; padding:2px 8px; border-radius:10px; font-weight:800; margin-left:6px;">${item.category || ''}</span>
         </div>
         <div style="font-size:0.8rem; color:#868e96; margin-top:2px;">
-          削除日時: ${item.deletedAt || '不明'} / 元の在庫: ${item.stock || 0}食
+          削除日時: ${item.deletedAt || '不明'} / 保存されている在庫: <strong style="color:#d9480f;">${item.stock || 0}食</strong>
         </div>
       </div>
       <button type="button" class="btn btn-sm btn-pop" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; font-weight:800; padding:6px 14px; cursor:pointer;" onclick="restoreBentoFromTrash('${item.id}')">
-        ↩️ 復元する
+        ↩️ 在庫含めて復元
       </button>
     `;
     container.appendChild(div);
@@ -3215,7 +3224,7 @@ window.restoreBentoFromTrash = function(id) {
   renderAll();
 
   renderTrashItemsList();
-  showToast(`✨ 『${item.name}』をごみ箱から復元しました！`, 'success');
+  showToast(`✨ 『${item.name}』をごみ箱から復元しました！（在庫数・賞味期限データ ${item.stock}食 復元完了）`, 'success');
 };
 
 window.restoreMissingBentos = function() {
