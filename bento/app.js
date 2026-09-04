@@ -2172,7 +2172,6 @@ function renderModalLotRows() {
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed #ffd8a8;">
         <div style="display:flex; align-items:center; gap:8px;">
           <span style="font-weight:900; color:#d9480f; font-size:1.05rem;">📦 ロット${idx + 1}</span>
-          <span style="font-size:0.8rem; background:#fff5eb; color:#d9480f; font-weight:800; padding:2px 8px; border-radius:10px; border:1px solid #ffd8a8;">冷凍賞味期限</span>
         </div>
         
         <div style="display:flex; align-items:center; gap:6px;">
