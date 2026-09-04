@@ -1218,18 +1218,10 @@ async function openAttDailyM(uid, ds){
       var isTemp=isTempUser(x.id);
       var isAbs=['欠席','体調不良','通院','調整休'].indexOf(stLabel)>=0;
 
-      // 入力済み判定：作業内容（出席時）または欠席理由（欠席時）のどちらかが入力されているか
-      var isEntered=false;
-      if(isAbs){
-        var notesStr=(xAtt&&xAtt.notes?String(xAtt.notes).trim():'')||(xRep&&xRep.notes?String(xRep.notes).trim():'')||(xRep&&xRep.content?String(xRep.content).trim():'');
-        isEntered=notesStr.length>0;
-      }else{
-        var hasWtAm=xRep&&xRep.workTypeId&&xRep.workTypeId!=='none'&&xRep.workTypeId!=='なし';
-        var hasWtPm=xRep&&xRep.workTypeIdPm&&xRep.workTypeIdPm!=='none'&&xRep.workTypeIdPm!=='なし';
-        var hasAttWtAm=xAtt&&xAtt.workTypeId&&xAtt.workTypeId!=='none'&&xAtt.workTypeId!=='なし';
-        var hasContent=xRep&&xRep.content&&String(xRep.content).trim().length>0;
-        isEntered=!!(hasWtAm||hasWtPm||hasAttWtAm||hasContent);
-      }
+      // 入力済み判定：作業内容または出欠備考のどちらかにテキストが入力されているか
+      var notesStr=(xAtt&&xAtt.notes?String(xAtt.notes).trim():'')||(xRep&&xRep.notes?String(xRep.notes).trim():'');
+      var contentStr=xRep&&xRep.content?String(xRep.content).trim():'';
+      var isEntered=(notesStr.length>0 || contentStr.length>0);
 
       var entryTag=isEntered?
         '<span style="font-size:10px;font-weight:700;color:'+(isCur?'#a5d6a7':'#2e7d32')+';margin-left:3px">✅入力済</span>':
