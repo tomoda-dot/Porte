@@ -425,6 +425,9 @@ async function gas(fn){
     case 'sendPlanEmail':
       return { success: true, method: 'client' };
 
+    // ── 国保連レセプトCSV生成 ──
+    case 'generateKokuhoReceiptCSV': return _generateKokuhoReceiptCSV(a1,a2,a3);
+
     // ── アプリURL ──
     case 'getAppUrl': return window.location.origin+window.location.pathname;
 
@@ -1012,4 +1015,120 @@ async function _deleteBmiRecordHelper(id) {
   } catch(e) {}
 
   return true;
+}
+
+// ═══ 国保連レセプトCSV生成 ═══
+async function _generateKokuhoReceiptCSV(ym, dataType, kokuhoOpts) {
+  var settings = await _getSettings();
+  var facilityNumber = (kokuhoOpts && kokuhoOpts.facilityNumber) || settings.facilityNumber || '2714005457';
+  var cityNumber = (kokuhoOpts && kokuhoOpts.cityNumber) || settings.cityNumber || '000000';
+  var prefectureNumber = (kokuhoOpts && kokuhoOpts.prefectureNumber) || settings.prefectureNumber || '27';
+  var targetYm = String(ym || '').replace(/[^0-9]/g, '').substring(0, 6);
+
+  var us = await _getAll('利用者');
+  var att = await _getLike('出欠', 'date', ym);
+
+  var generator = window.KokuhoReceiptGenerator;
+  if (!generator) {
+    throw new Error('KokuhoReceiptGenerator モジュールが読み込まれていません');
+  }
+
+  var dataRows = [];
+  var dt = dataType || 'J11_J21';
+
+  var validAtt = att.filter(function(a) { return _isAttend(a); });
+
+  if (dt === 'J61') {
+    validAtt.sort(function(a, b) {
+      if (String(a.date) !== String(b.date)) {
+        return String(a.date).localeCompare(String(b.date));
+      }
+      return String(a.userId).localeCompare(String(b.userId));
+    });
+    validAtt.forEach(function(rec) {
+      var user = us.find(function(u) { return String(u.id) === String(rec.userId); }) || {};
+      var netH = rec.actualHours != null ? Number(rec.actualHours) : _calcNetH(rec, user);
+      var rowObj = {
+        recipientNumber: user.recipientNumber || user.recipientNo || user.id || '',
+        userName: user.name || '',
+        serviceType: '46',
+        date: String(rec.date).replace(/[^0-9]/g, ''),
+        startTime: String(rec.startTime || '10:00').replace(/[^0-9]/g, ''),
+        endTime: String(rec.endTime || '16:00').replace(/[^0-9]/g, ''),
+        actualHours: netH,
+        pickupFlag: (rec.pickup && rec.pickup !== 'なし' && rec.pickup !== 'false') || (user.pickup && user.pickup !== 'なし' && rec.pickup !== 'なし'),
+        mealFlag: _getBentoCount(rec) > 0,
+        remarks: rec.notes || ''
+      };
+      dataRows.push(generator.formatShuukouBServiceRecordRow(rowObj));
+    });
+  } else {
+    var userStats = [];
+    var totalUsersCount = 0;
+    var totalDaysCount = 0;
+    var totalUnits = 0;
+    var totalClaimAmount = 0;
+    var totalCopayAmount = 0;
+
+    var baseUnitPerDay = 604;
+    var unitPrice = 10.54;
+
+    us.forEach(function(user) {
+      var userRecs = validAtt.filter(function(a) { return String(a.userId) === String(user.id); });
+      if (userRecs.length === 0) return;
+
+      var days = userRecs.length;
+      var units = days * baseUnitPerDay;
+      var copay = 0;
+      var claim = Math.floor(units * unitPrice) - copay;
+
+      totalUsersCount++;
+      totalDaysCount += days;
+      totalUnits += units;
+      totalClaimAmount += claim;
+      totalCopayAmount += copay;
+
+      userStats.push({
+        recipientNumber: user.recipientNumber || user.recipientNo || user.id || '',
+        userName: user.name || '',
+        serviceType: '46',
+        targetYm: targetYm,
+        serviceDays: days,
+        totalUnits: units,
+        copayAmount: copay,
+        claimAmount: claim
+      });
+    });
+
+    if (dt === 'J11' || dt === 'J11_J21') {
+      var invObj = {
+        facilityNumber: facilityNumber,
+        targetYm: targetYm,
+        serviceType: '46',
+        totalUsersCount: totalUsersCount,
+        totalDaysCount: totalDaysCount,
+        totalUnits: totalUnits,
+        totalClaimAmount: totalClaimAmount,
+        totalCopayAmount: totalCopayAmount
+      };
+      dataRows.push(generator.formatShuukouBClaimInvoiceRow(invObj));
+    }
+
+    if (dt === 'J21' || dt === 'J11_J21') {
+      userStats.forEach(function(stat) {
+        dataRows.push(generator.formatShuukouBClaimDetailRow(stat));
+      });
+    }
+  }
+
+  var csvText = generator.buildReceiptCsvText({
+    dataType: (dt === 'J11_J21' ? 'J11' : dt),
+    facilityNumber: facilityNumber,
+    targetYm: targetYm,
+    dataRows: dataRows,
+    cityNumber: cityNumber,
+    prefectureNumber: prefectureNumber
+  });
+
+  return csvText;
 }
