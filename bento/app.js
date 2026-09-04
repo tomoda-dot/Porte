@@ -2098,6 +2098,23 @@ window.setModalLotMonth = function(idx, newMonthVal) {
   renderModalLotRows();
 };
 
+window.setModalLotYearMonth = function(idx, ymVal) {
+  if (!tempModalLots[idx] || !ymVal) return;
+  const cur = tempModalLots[idx].expDate || getOffsetDateStr(7);
+  const parts = cur.split('-');
+  const dd = parts[2] || '01';
+
+  const ymParts = ymVal.split('-');
+  const yyyy = ymParts[0];
+  const mm = ymParts[1];
+
+  const daysInMonth = new Date(parseInt(yyyy, 10), parseInt(mm, 10), 0).getDate();
+  const validDd = String(Math.min(parseInt(dd, 10), daysInMonth)).padStart(2, '0');
+
+  tempModalLots[idx].expDate = `${yyyy}-${mm}-${validDd}`;
+  renderModalLotRows();
+};
+
 window.updateModalLotField = function(index, field, val) {
   if (!tempModalLots[index]) return;
   if (field === 'qty') {
@@ -2141,7 +2158,19 @@ function renderModalLotRows() {
       formattedDateJp = `${dateParts[0]}年${curM}月${parseInt(dateParts[2], 10)}日`;
     }
 
-    const currentYearNow = new Date().getFullYear();
+    const now = new Date();
+    const currentYearNow = now.getFullYear();
+    const curYM = `${curY}-${String(curM).padStart(2, '0')}`;
+
+    let yearMonthOptionsHtml = '';
+    for (let y = currentYearNow - 1; y <= currentYearNow + 5; y++) {
+      for (let m = 1; m <= 12; m++) {
+        const ymVal = `${y}-${String(m).padStart(2, '0')}`;
+        const isSelected = ymVal === curYM;
+        yearMonthOptionsHtml += `<option value="${ymVal}" ${isSelected ? 'selected' : ''}>${y}年${m}月</option>`;
+      }
+    }
+
     let yearOptionsHtml = '';
     for (let y = currentYearNow - 1; y <= currentYearNow + 5; y++) {
       yearOptionsHtml += `<option value="${y}" ${y === curY ? 'selected' : ''}>${y}年</option>`;
@@ -2180,34 +2209,43 @@ function renderModalLotRows() {
         </div>
       </div>
 
-      <!-- 【C案】 年月直接選択ドロップダウン ＋ クイックジャンプボタン ＋ カレンダー -->
-      <div style="background:#fff4e6; border:2px solid #ff922b; border-radius:14px; padding:12px 14px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+      <!-- 【C案】「年月（2027年3月）」ダイレクト指定 ＋ カレンダー方式 -->
+      <div style="background:#fff4e6; border:2px solid #ff922b; border-radius:14px; padding:14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:10px;">
           <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:0.9rem; font-weight:900; color:#d9480f;">📅 賞味期限:</span>
-            <strong style="font-size:1.15rem; font-weight:900; color:#d9480f; background:#ffffff; border:1.5px solid #ff7e67; padding:4px 12px; border-radius:10px; min-width:140px; text-align:center; display:inline-block;">
+            <span style="font-size:0.95rem; font-weight:900; color:#d9480f;">📅 設定中の賞味期限:</span>
+            <strong style="font-size:1.2rem; font-weight:900; color:#d9480f; background:#ffffff; border:2px solid #ff7e67; padding:4px 14px; border-radius:12px; min-width:150px; text-align:center; display:inline-block; box-shadow:0 2px 6px rgba(255,126,103,0.15);">
               ${formattedDateJp}
             </strong>
           </div>
 
-          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-            <span style="font-size:0.82rem; font-weight:800; color:#495057;">年月指定:</span>
-            <select style="font-weight:800; font-size:0.88rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="setModalLotYear(${idx}, this.value)">
-              ${yearOptionsHtml}
-            </select>
-            <select style="font-weight:800; font-size:0.88rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="setModalLotMonth(${idx}, this.value)">
-              ${monthOptionsHtml}
-            </select>
-            <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:0.85rem; padding:4px 6px; border-radius:8px; border:1.5px solid #ffd8a8; background:#ffffff; color:#495057; cursor:pointer;" onchange="updateModalLotField(${idx}, 'expDate', this.value)" title="日付をカレンダーから指定">
-          </div>
+          <button type="button" class="btn btn-sm btn-secondary" style="font-weight:800; font-size:0.8rem; padding:6px 12px; border-radius:10px; cursor:pointer;" onclick="resetModalLotToToday(${idx})">今日に戻す</button>
         </div>
 
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding-top:8px; border-top:1px dashed #ffd8a8;">
-          <span style="font-size:0.85rem; font-weight:900; color:#d9480f;">⚡ クイックジャンプ:</span>
-          <button type="button" class="btn btn-sm" style="font-weight:900; font-size:0.88rem; padding:6px 14px; background:linear-gradient(135deg, #ff7e67, #ff5252); color:#ffffff; border:none; border-radius:10px; box-shadow:0 2px 6px rgba(255,82,82,0.3); cursor:pointer;" onclick="addMonthsToModalLot(${idx}, 3)">＋3ヶ月後</button>
-          <button type="button" class="btn btn-sm" style="font-weight:900; font-size:0.88rem; padding:6px 14px; background:linear-gradient(135deg, #e64980, #be4bdb); color:#ffffff; border:none; border-radius:10px; box-shadow:0 2px 6px rgba(230,73,128,0.3); cursor:pointer;" onclick="addMonthsToModalLot(${idx}, 6)">＋6ヶ月後</button>
-          <button type="button" class="btn btn-sm" style="font-weight:900; font-size:0.88rem; padding:6px 14px; background:linear-gradient(135deg, #15aabf, #22b8cf); color:#ffffff; border:none; border-radius:10px; box-shadow:0 2px 6px rgba(21,170,191,0.3); cursor:pointer;" onclick="addMonthsToModalLot(${idx}, 12)">＋1年後</button>
-          <button type="button" class="btn btn-sm btn-secondary" style="font-weight:800; font-size:0.8rem; padding:5px 10px; border-radius:10px; margin-left:auto; cursor:pointer;" onclick="resetModalLotToToday(${idx})">今日に戻す</button>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding-top:10px; border-top:1px dashed #ffd8a8;">
+          <!-- 1. 年月（2027年3月）ダイレクト指定 -->
+          <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:220px;">
+            <span style="font-size:0.88rem; font-weight:900; color:#d9480f; white-space:nowrap;">🗓️ 年月一括選択:</span>
+            <select style="font-weight:900; font-size:0.95rem; padding:6px 12px; border-radius:10px; border:2px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer; flex:1; box-shadow:0 2px 4px rgba(0,0,0,0.04);" onchange="setModalLotYearMonth(${idx}, this.value)">
+              ${yearMonthOptionsHtml}
+            </select>
+          </div>
+
+          <!-- 2. 年・月 個別選択 -->
+          <div style="display:flex; align-items:center; gap:4px;">
+            <select style="font-weight:800; font-size:0.88rem; padding:5px 8px; border-radius:8px; border:1.5px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="setModalLotYear(${idx}, this.value)">
+              ${yearOptionsHtml}
+            </select>
+            <select style="font-weight:800; font-size:0.88rem; padding:5px 8px; border-radius:8px; border:1.5px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="setModalLotMonth(${idx}, this.value)">
+              ${monthOptionsHtml}
+            </select>
+          </div>
+
+          <!-- 3. カレンダー日付指定 -->
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:0.88rem; font-weight:900; color:#d9480f; white-space:nowrap;">📅 カレンダー指定:</span>
+            <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:0.9rem; padding:5px 10px; border-radius:10px; border:1.5px solid #ffd8a8; background:#ffffff; color:#495057; cursor:pointer;" onchange="updateModalLotField(${idx}, 'expDate', this.value)" title="カレンダーから日付を指定">
+          </div>
         </div>
       </div>
     `;
