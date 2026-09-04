@@ -2175,8 +2175,6 @@ function renderModalLotRows() {
     `;
     container.appendChild(row);
   });
-    container.appendChild(row);
-  });
 
   updateModalTotalStockText();
 }
