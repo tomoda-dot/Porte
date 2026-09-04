@@ -290,12 +290,12 @@
 
   <!-- お弁当追加・編集 ＆ 在庫・入荷ロット管理モーダル -->
   <div class="modal-overlay" id="bentoEditModal">
-    <div class="modal-card modal-lg" style="max-width: 680px;">
+    <div class="modal-card modal-lg" style="max-width: 680px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;">
       <div class="modal-header">
         <h3 id="bentoModalTitle">お弁当・在庫・入荷管理</h3>
         <button class="close-btn" id="closeBentoEditModal" onclick="closeEditBentoModal()">&times;</button>
       </div>
-      <form id="bentoForm">
+      <form id="bentoForm" style="display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; margin: 0;">
         <div class="modal-body">
           <input type="hidden" id="editBentoId">
           

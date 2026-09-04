@@ -1999,16 +1999,14 @@ window.addModalLotRow = function(type = 'STOCK', defaultQty = 5) {
     expDate: getOffsetDateStr(7)
   });
   renderModalLotRows();
+  setTimeout(() => {
+    const container = document.getElementById('modalLotRowsContainer');
+    if (container) container.scrollTop = container.scrollHeight;
+  }, 50);
 };
 
 window.quickAddModalStock = function(amount) {
-  if (tempModalLots.length === 0) {
-    addModalLotRow('STOCK', amount);
-  } else {
-    const lastLot = tempModalLots[tempModalLots.length - 1];
-    lastLot.qty = (parseInt(lastLot.qty, 10) || 0) + amount;
-    renderModalLotRows();
-  }
+  addModalLotRow('STOCK', amount);
 };
 
 window.adjustModalLotQty = function(index, delta) {
@@ -2072,23 +2070,22 @@ function renderModalLotRows() {
     `;
     row.innerHTML = `
       <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-weight:900; color:#d9480f; font-size:0.9rem; min-width:85px;">📦 ロット${idx + 1}</span>
+        <span style="font-weight:900; color:#d9480f; font-size:0.95rem;">📦 ロット${idx + 1}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 8px; font-size:0.8rem; font-weight:800;" onclick="removeModalLotRow(${idx})" title="このロットを削除">🗑️ 削除</button>
       </div>
       
       <div style="display:flex; align-items:center; gap:4px;">
         <span style="font-size:0.85rem; font-weight:800; color:#495057;">数量:</span>
         <button type="button" class="btn-qty" style="width:34px; height:34px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff5eb; color:#d9480f; font-weight:900; font-size:1.1rem; cursor:pointer;" onclick="adjustModalLotQty(${idx}, -1)">-</button>
-        <input type="number" value="${lot.qty}" min="0" style="width:60px; text-align:center; font-weight:900; font-size:1rem; padding:4px 2px; border-radius:8px; border:1.5px solid #ffd8a8;" onchange="updateModalLotField(${idx}, 'qty', this.value)">
+        <input type="number" value="${lot.qty}" min="0" style="width:58px; text-align:center; font-weight:900; font-size:1rem; padding:4px 2px; border-radius:8px; border:1.5px solid #ffd8a8;" onchange="updateModalLotField(${idx}, 'qty', this.value)">
         <button type="button" class="btn-qty" style="width:34px; height:34px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff5eb; color:#d9480f; font-weight:900; font-size:1.1rem; cursor:pointer;" onclick="adjustModalLotQty(${idx}, 1)">+</button>
         <span style="font-size:0.85rem; font-weight:800; color:#495057; margin-left:2px;">食</span>
       </div>
 
       <div style="display:flex; align-items:center; gap:4px;">
-        <span style="font-size:0.85rem; font-weight:800; color:#495057;">賞味期限:</span>
-        <input type="date" value="${lot.expDate}" style="font-weight:700; font-size:0.9rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ffd8a8;" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
+        <span style="font-size:0.85rem; font-weight:800; color:#d9480f;">📅 賞味期限:</span>
+        <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:0.95rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff4e6; color:#d9480f; cursor:pointer;" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
       </div>
-
-      <button type="button" class="btn btn-sm btn-outline-danger" style="padding:4px 10px; font-size:0.85rem; font-weight:800;" onclick="removeModalLotRow(${idx})" title="この明細行を削除">🗑️ 削除</button>
     `;
     container.appendChild(row);
   });
