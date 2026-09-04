@@ -1880,8 +1880,8 @@ function openUserModal(u, isTabSwitch){
   }
   if(!Array.isArray(contactList) || contactList.length === 0){
     if(d.contact || d.emergencyPhone || d.contact2 || d.contact3 || d.emergencyContact){
-      if(d.contact) contactList.push({ label: '本人', phone: d.contact, note: '' });
-      if(d.emergencyPhone || d.emergencyContact) contactList.push({ label: '家族', phone: d.emergencyPhone || '', note: d.emergencyContact || '' });
+      if(d.contact || (d.emergencyContact && !d.emergencyPhone)) contactList.push({ label: '本人', phone: d.contact || '', note: (d.emergencyContact && !d.emergencyPhone ? d.emergencyContact : '') });
+      if(d.emergencyPhone) contactList.push({ label: '家族', phone: d.emergencyPhone, note: d.emergencyContact || '' });
       if(d.contact2 && !d.emergencyPhone) contactList.push({ label: '家族', phone: d.contact2, note: '' });
       if(d.contact3) contactList.push({ label: '世話人', phone: d.contact3, note: '' });
     }
@@ -3534,10 +3534,11 @@ function collectCurrentUserData(){
     if(contacts.length > 0){
       var honnin = contacts.find(function(c){ return c.label === '本人'; }) || contacts[0];
       var kazoku = contacts.find(function(c){ return c.label === '家族' || c.label === '緊急連絡先'; }) || contacts[1];
+      var firstNote = contacts.find(function(c){ return c.note && String(c.note).trim() !== ''; });
       d.contact = honnin ? honnin.phone : '';
       d.contact2 = contacts[1] ? contacts[1].phone : '';
       d.contact3 = contacts[2] ? contacts[2].phone : '';
-      d.emergencyContact = kazoku ? (kazoku.note || kazoku.label) : '';
+      d.emergencyContact = kazoku ? (kazoku.note || kazoku.label) : (firstNote ? firstNote.note : '');
       d.emergencyPhone = kazoku ? kazoku.phone : '';
     }
   }
@@ -3607,6 +3608,7 @@ async function saveUser(id){
   var contactsJson = contacts ? JSON.stringify(contacts) : (existing.contacts || '');
   var honnin = contacts ? (contacts.find(function(c){ return c.label === '本人'; }) || contacts[0]) : null;
   var kazoku = contacts ? (contacts.find(function(c){ return c.label === '家族' || c.label === '緊急連絡先'; }) || contacts[1]) : null;
+  var firstNote = contacts ? (contacts.find(function(c){ return c.note && String(c.note).trim() !== ''; })) : null;
 
   var data={
     name:gv('uf-name',existing.name||''),furigana:gv('uf-furi',existing.furigana||''),
@@ -3621,7 +3623,7 @@ async function saveUser(id){
     contact:contacts ? (honnin ? honnin.phone : '') : _fixPhone(gv('uf-contact',existing.contact||'')),
     contact2:contacts ? (contacts[1] ? contacts[1].phone : '') : _fixPhone(gv('uf-contact2',existing.contact2||'')),
     contact3:contacts ? (contacts[2] ? contacts[2].phone : '') : _fixPhone(gv('uf-contact3',existing.contact3||'')),
-    emergencyContact:contacts ? (kazoku ? (kazoku.note || kazoku.label) : '') : gv('uf-ec',existing.emergencyContact||''),
+    emergencyContact:contacts ? (kazoku ? (kazoku.note || kazoku.label) : (firstNote ? firstNote.note : '')) : gv('uf-ec',existing.emergencyContact||''),
     emergencyPhone:contacts ? (kazoku ? kazoku.phone : '') : _fixPhone(gv('uf-ep',existing.emergencyPhone||'')),
     contacts:contactsJson,
     recipientNumber:gv('uf-rcpt',existing.recipientNumber||''),supportDays:gv('uf-sdays',existing.supportDays||''),
