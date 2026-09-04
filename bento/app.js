@@ -2149,46 +2149,32 @@ function renderModalLotRows() {
 
   tempModalLots.forEach((lot, idx) => {
     const curExp = lot.expDate || getOffsetDateStr(7);
-    const dateParts = curExp.split('-');
-    let formattedDateJp = curExp;
-    const curY = parseInt(dateParts[0], 10) || new Date().getFullYear();
-    const curM = parseInt(dateParts[1], 10) || 1;
-
-    if (dateParts.length === 3) {
-      formattedDateJp = `${dateParts[0]}年${curM}月${parseInt(dateParts[2], 10)}日`;
-    }
 
     const row = document.createElement('div');
     row.className = 'modal-lot-row';
-    row.style.cssText = `
-      background: #ffffff;
-      border: 2px solid #ffd8a8;
-      border-radius: 16px;
-      padding: 14px;
-      margin-bottom: 10px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.03);
-    `;
     row.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed #ffd8a8;">
-        <span style="font-weight:900; color:#d9480f; font-size:1.05rem;">📦 ロット${idx + 1}</span>
-        <button type="button" class="btn btn-sm btn-outline-danger" style="padding:4px 12px; font-size:0.85rem; font-weight:800; border-radius:8px;" onclick="removeModalLotRow(${idx})" title="このロットを削除">🗑️ 削除</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed #ffd8a8;">
+        <span style="font-weight:900; color:#d9480f; font-size:1.05rem; white-space:nowrap;">📦 ロット${idx + 1}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger" style="padding:4px 12px; font-size:0.85rem; font-weight:800; border-radius:8px; white-space:nowrap;" onclick="removeModalLotRow(${idx})" title="このロットを削除">🗑️ 削除</button>
       </div>
 
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-sizing:border-box;">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; width:100%; box-sizing:border-box;">
         <div style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
-          <span style="font-size:0.9rem; font-weight:900; color:#495057; white-space:nowrap; display:inline-block; min-width:38px;">数量:</span>
+          <span style="font-size:0.9rem; font-weight:900; color:#495057; white-space:nowrap;">数量:</span>
           <button type="button" class="btn-qty" style="width:32px; height:32px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff5eb; color:#d9480f; font-weight:900; font-size:1.1rem; cursor:pointer;" onclick="adjustModalLotQty(${idx}, -1)">-</button>
           <input type="number" value="${lot.qty}" min="0" style="width:52px; text-align:center; font-weight:900; font-size:1.05rem; padding:4px; border-radius:8px; border:1.5px solid #ffd8a8;" onchange="updateModalLotField(${idx}, 'qty', this.value)">
           <button type="button" class="btn-qty" style="width:32px; height:32px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff5eb; color:#d9480f; font-weight:900; font-size:1.1rem; cursor:pointer;" onclick="adjustModalLotQty(${idx}, 1)">+</button>
           <span style="font-size:0.9rem; font-weight:800; color:#495057;">食</span>
         </div>
 
-        <div style="background:#fff4e6; border:1.5px solid #ff922b; border-radius:12px; padding:6px 12px; display:flex; align-items:center; gap:8px; white-space:nowrap; max-width:100%; box-sizing:border-box;">
-          <span style="font-size:0.9rem; font-weight:900; color:#d9480f; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;">📅 賞味期限:</span>
-          <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:0.9rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer; max-width:150px;" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
+        <div style="background:#fff4e6; border:1.5px solid #ff922b; border-radius:12px; padding:6px 12px; display:flex; align-items:center; gap:6px; white-space:nowrap;">
+          <span style="font-size:0.9rem; font-weight:900; color:#d9480f; white-space:nowrap;">📅 賞味期限:</span>
+          <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:0.9rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer; width:145px;" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
         </div>
       </div>
     `;
+    container.appendChild(row);
+  });
     container.appendChild(row);
   });
 

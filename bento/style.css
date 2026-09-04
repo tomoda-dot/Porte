@@ -1110,13 +1110,14 @@ body {
 /* モーダル内 在庫・入荷ロット行 */
 .modal-lot-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
   background: #ffffff;
-  border: 1.5px solid #ffe8cc;
-  padding: 8px 12px;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  border: 2px solid #ffd8a8;
+  padding: 14px 16px;
+  border-radius: 16px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.03);
+  margin-bottom: 12px;
+  width: 100%;
 }
 
 .modal-lot-row select {
