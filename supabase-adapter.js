@@ -619,7 +619,15 @@ function _calcRecWage(rec,wts,user){
   if(!wt.am||String(wt.am.id)===String(wt.pm.id)){return{netH:netH,wage:netH*(wt.am?Number(wt.am.rate):0)};}
   var half=netH/2;return{netH:netH,wage:half*(Number(wt.am.rate)||0)+half*(Number(wt.pm.rate)||0)};
 }
-function _isBento(rec){return rec.bento&&String(rec.bento)!=='0'&&String(rec.bento)!=='false'&&String(rec.bento)!==''&&String(rec.bento)!=='なし';}
+function _getBentoCount(rec){
+  if(!rec || !rec.bento) return 0;
+  var s = String(rec.bento).trim();
+  if(s==='3食' || s==='3' || s==='3個') return 3;
+  if(s==='2食' || s==='2' || s==='2個') return 2;
+  if(s==='1食' || s==='1' || s==='1個' || s==='あり' || s==='true' || s==='要') return 1;
+  return 0;
+}
+function _isBento(rec){return _getBentoCount(rec) > 0;}
 function _isAttend(rec){return['出席','遅刻','早退'].indexOf(rec.status)>=0;}
 function _checkKaikin(user,allAtt,ym){
   var recs=allAtt.filter(function(a){return String(a.userId)===String(user.id);});
@@ -657,12 +665,13 @@ async function _calcAttendanceList(ym){
       var sp=String(rec.startTime||'10:00').split(':'),ep=String(rec.endTime||'16:00').split(':');
       var wm=Number(ep[0])*60+Number(ep[1])-Number(sp[0])*60-Number(sp[1]);var brk=Number(rec.breakMin)||0;
       tServiceMin+=sMin;tWM+=wm;tBM+=brk;tW+=_calcRecWage(rec,wts,user).wage;
-      if(_isBento(rec)){
-        bc++;
+      var bCount = _getBentoCount(rec);
+      if(bCount > 0){
+        bc += bCount;
         var pm=(user&&user.bentoPaymentMethod)?user.bentoPaymentMethod:(rec.bentoPaymentMethod||'工賃払い');
-        if(pm==='当日')bcDaily++;
-        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
-        else bcDeduct++;
+        if(pm==='当日')bcDaily += bCount;
+        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext += bCount;
+        else bcDeduct += bCount;
       }
     });
     var net=Math.max(0,tWM-tBM);var kk=_checkKaikin(user,att,ym);
@@ -723,12 +732,13 @@ async function _calcWageDetailPerUser(ym){
         if(!byWt[wt.am.name])byWt[wt.am.name]={hours:0,rate:Number(wt.am.rate)||0,wage:0};byWt[wt.am.name].hours+=hh;byWt[wt.am.name].wage+=hh*(Number(wt.am.rate)||0);
         if(!byWt[wt.pm.name])byWt[wt.pm.name]={hours:0,rate:Number(wt.pm.rate)||0,wage:0};byWt[wt.pm.name].hours+=hh;byWt[wt.pm.name].wage+=hh*(Number(wt.pm.rate)||0);
       }
-      if(_isBento(rec)){
-        bc++;
+      var bCount = _getBentoCount(rec);
+      if(bCount > 0){
+        bc += bCount;
         var pm=(user&&user.bentoPaymentMethod)?user.bentoPaymentMethod:(rec.bentoPaymentMethod||'工賃払い');
-        if(pm==='当日')bcDaily++;
-        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
-        else bcDeduct++;
+        if(pm==='当日')bcDaily += bCount;
+        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext += bCount;
+        else bcDeduct += bCount;
       }
     });
     var items=[],wSub=0;Object.keys(byWt).forEach(function(k){var w=byWt[k];var rw=Math.round(w.wage);items.push({name:k,hours:Math.round(w.hours*100)/100,rate:w.rate,wage:rw});wSub+=rw;});

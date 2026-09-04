@@ -440,8 +440,11 @@ async function selectUser(userId){
 
     // お弁当
     var bentoVal = 'なし';
-    if(att){
-      if(att.bento === 'あり' || att.bento === '1' || att.meal === true || att.meal === 'true') bentoVal = 'あり';
+    if(att && att.bento){
+      var bs = String(att.bento).trim();
+      if(bs==='3食'||bs==='3'||bs==='3個') bentoVal = '3食';
+      else if(bs==='2食'||bs==='2'||bs==='2個') bentoVal = '2食';
+      else if(bs==='1食'||bs==='1'||bs==='1個'||bs==='あり'||bs==='true') bentoVal = '1食';
     }
     if(el('f-bento')) el('f-bento').value = bentoVal;
 
@@ -493,7 +496,7 @@ function buildFormHTML(){
   +'<div class="field"><label>退勤時間</label><input type="time" id="f-end"></div></div>'
   +'<div class="grid3">'
   +'<div class="field"><label>休憩時間</label><select id="f-break"><option value="0">なし</option><option value="30">30分</option><option value="60" selected>60分（標準）</option><option value="90">90分</option></select></div>'
-  +'<div class="field"><label>お弁当</label><select id="f-bento"><option value="なし">なし</option><option value="あり">あり</option></select></div>'
+  +'<div class="field"><label>お弁当</label><select id="f-bento"><option value="なし">なし</option><option value="1食">1食</option><option value="2食">2食</option><option value="3食">3食</option></select></div>'
   +'<div class="field"><label>送迎</label><select id="f-transport"><option value="なし">なし</option><option value="往復">往復</option><option value="往路">往路のみ</option><option value="復路">復路のみ</option></select></div>'
   +'</div>'
   +'<div class="field"><label>出欠備考</label><textarea id="f-att-notes" placeholder="欠席理由や連絡事項..."></textarea></div>'
@@ -593,7 +596,7 @@ async function saveForm(){
       breakMin: (el('f-break')&&el('f-break').value!=='')?parseInt(el('f-break').value):60,
       workTypeId: amTypeId,
       workTypeIdPm: pmTypeId,
-      bento: el('f-bento').value==='あり'?'あり':'なし',
+      bento: el('f-bento').value,
       bentoPaymentMethod: userObj ? (userObj.bentoPaymentMethod || '工賃払い') : '工賃払い',
       pickup: transport,
       notes: el('f-att-notes').value || null

@@ -102,6 +102,55 @@ function ensureBentoLots(bento) {
   recalculateBentoTotalStock(bento);
 }
 
+// ユーザーデータの正規化 (複数食スロット: 1食, 2食, 3食... 対応)
+function normalizeUserData(u) {
+  if (!u) return;
+  if (u.wantsBento === false) {
+    u.bentoCount = 0;
+  } else {
+    if (!u.bentoCount || u.bentoCount < 1) {
+      const bs = String(u.bentoVal || u.bento || '').trim();
+      if (bs === '3食' || bs === '3' || bs === '3個') u.bentoCount = 3;
+      else if (bs === '2食' || bs === '2' || bs === '2個') u.bentoCount = 2;
+      else u.bentoCount = 1;
+    }
+  }
+
+  if (!Array.isArray(u.selectedBentoIds)) {
+    u.selectedBentoIds = [];
+    if (u.selectedBentoId) {
+      u.selectedBentoIds[0] = u.selectedBentoId;
+    }
+  }
+
+  while (u.selectedBentoIds.length < u.bentoCount) {
+    u.selectedBentoIds.push('');
+  }
+  if (u.selectedBentoIds.length > u.bentoCount) {
+    u.selectedBentoIds = u.selectedBentoIds.slice(0, u.bentoCount);
+  }
+
+  u.selectedBentoId = u.selectedBentoIds[0] || '';
+}
+
+function getUserOrderedCount(u) {
+  normalizeUserData(u);
+  if (u.wantsBento === false || u.bentoCount <= 0) return 0;
+  return (u.selectedBentoIds || []).filter(Boolean).length;
+}
+
+function getUserTargetCount(u) {
+  normalizeUserData(u);
+  if (u.wantsBento === false) return 0;
+  return u.bentoCount || 1;
+}
+
+function isUserFullyOrdered(u) {
+  normalizeUserData(u);
+  if (u.wantsBento === false || u.bentoCount <= 0) return true;
+  return (u.selectedBentoIds || []).filter(Boolean).length === u.bentoCount;
+}
+
 function recalculateBentoTotalStock(bento) {
   if (!bento.lots) bento.lots = [];
   bento.stock = bento.lots.reduce((sum, l) => sum + (parseInt(l.qty, 10) || 0), 0);
@@ -208,6 +257,7 @@ function loadData() {
       porteUsers = [];
     }
   }
+  porteUsers.forEach(u => normalizeUserData(u));
 
   const savedOrders = localStorage.getItem('bento_order_history');
   if (savedOrders) {
@@ -503,25 +553,35 @@ function renderAll() {
 
 function confirmDailyOrder() {
   const todayKey = getTodayKey();
-  const orderedUsers = porteUsers.filter(u => u.selectedBentoId);
-  if (orderedUsers.length === 0) {
+  const snapshot = [];
+
+  porteUsers.forEach(u => {
+    normalizeUserData(u);
+    if (u.wantsBento !== false && u.bentoCount > 0) {
+      (u.selectedBentoIds || []).forEach((bId, slotIdx) => {
+        if (bId) {
+          const bento = bentoMaster.find(b => b.id === bId);
+          snapshot.push({
+            userId: u.id,
+            userName: u.name,
+            userKana: u.kana || '',
+            slotIndex: slotIdx,
+            slotName: (slotIdx + 1) + '食目',
+            bentoId: bId,
+            bentoName: bento ? bento.name : '不明なお弁当',
+            bentoIcon: bento ? bento.icon : '🍱',
+            category: bento ? bento.category : '',
+            price: 500
+          });
+        }
+      });
+    }
+  });
+
+  if (snapshot.length === 0) {
     showToast('確定する注文選択がありません。利用者のお弁当を選択してください。', 'info');
     return;
   }
-
-  const snapshot = orderedUsers.map(u => {
-    const bento = bentoMaster.find(b => b.id === u.selectedBentoId);
-    return {
-      userId: u.id,
-      userName: u.name,
-      userKana: u.kana || '',
-      bentoId: u.selectedBentoId,
-      bentoName: bento ? bento.name : '不明なお弁当',
-      bentoIcon: bento ? bento.icon : '🍱',
-      category: bento ? bento.category : '',
-      price: 500
-    };
-  });
 
   dailyOrders[todayKey] = {
     status: 'CONFIRMED',
@@ -543,6 +603,8 @@ function confirmDailyOrder() {
       dateKey: todayKey,
       userId: s.userId,
       userName: s.userName,
+      slotIndex: s.slotIndex,
+      slotName: s.slotName,
       bentoId: s.bentoId,
       bentoName: s.bentoName,
       category: s.category
@@ -551,7 +613,7 @@ function confirmDailyOrder() {
   saveOrderHistory();
 
   renderAll();
-  showToast(`🔒 本日(${todayKey})の注文【${snapshot.length}食】を確定し、履歴・マトリクスに反映しました！`, 'success');
+  showToast(`🔒 本日(${todayKey})の注文【計${snapshot.length}食】を確定し、履歴・マトリクスに反映しました！`, 'success');
 }
 
 function unlockDailyOrder() {
@@ -701,13 +763,21 @@ function renderMonthlyMatrix() {
       let cellContent = `<span class="matrix-cell-empty">-</span>`;
 
       if (dayRecord && dayRecord.status === 'CONFIRMED' && dayRecord.orders) {
-        const userOrder = dayRecord.orders.find(o => o.userId === u.id);
-        if (userOrder) {
-          monthTotalCount++;
-          const bento = bentoMaster.find(b => b.id === userOrder.bentoId);
-          const icon = bento ? bento.icon : (userOrder.bentoIcon || '🍱');
-          const shortName = (userOrder.bentoName || '').slice(0, 5);
-          cellContent = `<span class="matrix-cell-chip" title="${userOrder.bentoName}">${icon} ${shortName}</span>`;
+        const userOrders = dayRecord.orders.filter(o => o.userId === u.id);
+        if (userOrders.length > 0) {
+          monthTotalCount += userOrders.length;
+          const namesJoin = userOrders.map(o => `${o.slotName || ''}: ${o.bentoName}`).join(', ');
+          if (userOrders.length === 1) {
+            const o0 = userOrders[0];
+            const bento = bentoMaster.find(b => b.id === o0.bentoId);
+            const icon = bento ? bento.icon : (o0.bentoIcon || '🍱');
+            const shortName = (o0.bentoName || '').slice(0, 5);
+            cellContent = `<span class="matrix-cell-chip" title="${namesJoin}">${icon} ${shortName}</span>`;
+          } else {
+            const firstBento = bentoMaster.find(b => b.id === userOrders[0].bentoId);
+            const icon = firstBento ? firstBento.icon : '🍱';
+            cellContent = `<span class="matrix-cell-chip" style="background:#fff3bf; color:#f59f00; border:1px solid #ffe066;" title="${namesJoin}">${icon} ×${userOrders.length}</span>`;
+          }
         }
       }
 
@@ -733,7 +803,7 @@ function exportMonthlyMatrixCsv() {
   const month = parseInt(monthStr, 10);
   const daysInMonth = new Date(year, month, 0).getDate();
 
-  let csv = `\uFEFF日付,利用者ID,利用者名,注文お弁当名,カテゴリー,単価\n`;
+  let csv = `\uFEFF日付,利用者ID,利用者名,食数スロット,注文お弁当名,カテゴリー,単価\n`;
   let totalCount = 0;
 
   for (let day = 1; day <= daysInMonth; day++) {
@@ -742,7 +812,7 @@ function exportMonthlyMatrixCsv() {
     if (record && record.orders && record.orders.length > 0) {
       record.orders.forEach(o => {
         totalCount++;
-        csv += `"${dayKey}","${o.userId}","${o.userName}","${o.bentoName}","${o.category || ''}",${o.price || 500}\n`;
+        csv += `"${dayKey}","${o.userId}","${o.userName}","${o.slotName || '1食目'}","${o.bentoName}","${o.category || ''}",${o.price || 500}\n`;
       });
     }
   }
@@ -761,16 +831,24 @@ function exportMonthlyMatrixCsv() {
 }
 
 function renderProgressBar() {
-  const bentoTargetUsers = porteUsers.filter(u => u.wantsBento !== false);
-  const total = bentoTargetUsers.length;
-  const ordered = bentoTargetUsers.filter(u => u.selectedBentoId).length;
-  const pending = total - ordered;
-  const percent = total > 0 ? Math.round((ordered / total) * 100) : 0;
+  let totalMeals = 0;
+  let orderedMeals = 0;
+
+  porteUsers.forEach(u => {
+    normalizeUserData(u);
+    if (u.wantsBento !== false && u.bentoCount > 0) {
+      totalMeals += u.bentoCount;
+      orderedMeals += (u.selectedBentoIds || []).filter(Boolean).length;
+    }
+  });
+
+  const pending = totalMeals - orderedMeals;
+  const percent = totalMeals > 0 ? Math.round((orderedMeals / totalMeals) * 100) : 0;
 
   const elText = document.getElementById('progressText');
-  if (elText) elText.textContent = `${ordered} / ${total} 名完了 (${percent}%)`;
+  if (elText) elText.textContent = `${orderedMeals} / ${totalMeals} 食完了 (${percent}%)`;
   const elSubText = document.getElementById('progressSubText');
-  if (elSubText) elSubText.textContent = `未選択: ${pending}名`;
+  if (elSubText) elSubText.textContent = `未選択: ${pending}食`;
   const elFill = document.getElementById('progressFill');
   if (elFill) elFill.style.width = `${percent}%`;
 }
@@ -1161,15 +1239,22 @@ function renderUserPickerList(searchQuery) {
   }
 
   filtered.forEach(u => {
-    const isChosenThis = u.selectedBentoId === currentSelectingBentoId;
-    const currentChoice = u.selectedBentoId ? bentoMaster.find(b => b.id === u.selectedBentoId) : null;
+    normalizeUserData(u);
+    const hasChosenThis = (u.selectedBentoIds || []).includes(currentSelectingBentoId);
+    const orderedCount = getUserOrderedCount(u);
+    const targetCount = u.bentoCount || 1;
     const isStaff = u.type === '👔 スタッフ' || u.isStaff || String(u.name).includes('👔');
 
     const cleanName = u.name.replace('👔', '').replace('スタッフ', '').trim();
     const displayName = isStaff ? `👔 ${cleanName}` : `👤 ${cleanName} 様`;
 
+    let subText = '';
+    if (targetCount > 1) {
+      subText = `<span style="font-size:0.8rem; font-weight:800; margin-left:6px; color:#d9480f;">(${orderedCount}/${targetCount}食決定)</span>`;
+    }
+
     const btn = document.createElement('button');
-    btn.className = `user-btn ${isChosenThis ? 'chosen' : ''}`;
+    btn.className = `user-btn ${hasChosenThis ? 'chosen' : ''}`;
     btn.style.cssText = `
       padding: 16px 20px;
       border-radius: 20px;
@@ -1181,14 +1266,14 @@ function renderUserPickerList(searchQuery) {
       align-items: center;
       transition: all 0.2s ease;
       ${isStaff 
-        ? (isChosenThis ? 'background:#e6fcf5; border:2px solid #63e6be; color:#0ca678;' : 'background:#eef7ff; border:2px solid #91c7ff; color:#1864ab;')
-        : (isChosenThis ? 'background:#d3f9d8; border:2px solid #63e6be; color:#2b8a3e;' : 'background:#fff0f6; border:2px solid #ffdeeb; color:#c2255c;')
+        ? (hasChosenThis ? 'background:#e6fcf5; border:2px solid #63e6be; color:#0ca678;' : 'background:#eef7ff; border:2px solid #91c7ff; color:#1864ab;')
+        : (hasChosenThis ? 'background:#d3f9d8; border:2px solid #63e6be; color:#2b8a3e;' : 'background:#fff0f6; border:2px solid #ffdeeb; color:#c2255c;')
       }
     `;
     btn.innerHTML = `
       <div style="text-align:left; width:100%; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-weight:900; font-size:1.05rem;">${displayName}</span>
-        ${isChosenThis ? '<span style="font-size:0.85rem; font-weight:800; color:#2b8a3e; background:#ffffff; padding:3px 10px; border-radius:10px;">✅ 選択中</span>' : (currentChoice ? `<span style="font-size:0.8rem; opacity:0.8;">(変更: ${currentChoice.icon})</span>` : '')}
+        <span style="font-weight:900; font-size:1.05rem;">${displayName} ${subText}</span>
+        ${hasChosenThis ? '<span style="font-size:0.85rem; font-weight:800; color:#2b8a3e; background:#ffffff; padding:3px 10px; border-radius:10px;">✅ 選択中</span>' : (orderedCount > 0 ? `<span style="font-size:0.8rem; opacity:0.8;">(${orderedCount}/${targetCount}食済)</span>` : '')}
       </div>
     `;
     btn.onclick = () => confirmAssignUserForBento(u.id || u.name);
@@ -1205,6 +1290,8 @@ window.confirmAssignUserForBento = function(userId) {
       type: '👔 スタッフ',
       isStaff: true,
       wantsBento: true,
+      bentoCount: 1,
+      selectedBentoIds: [],
       selectedBentoId: null
     };
     porteUsers.push(userObj);
@@ -1213,17 +1300,25 @@ window.confirmAssignUserForBento = function(userId) {
   if (!currentSelectingBentoId) return;
 
   const user = porteUsers[userIndex];
-  
-  if (user.wantsBento === false) {
+  normalizeUserData(user);
+
+  if (user.wantsBento === false || user.bentoCount < 1) {
     user.wantsBento = true;
+    user.bentoCount = 1;
+    normalizeUserData(user);
     showToast(`⚡ ${user.name} 様のお弁当希望を追加しました！`, 'info');
   }
 
-  assignUserBento(userIndex, currentSelectingBentoId);
+  let targetSlot = user.selectedBentoIds.findIndex(id => !id);
+  if (targetSlot < 0) targetSlot = 0;
+
+  assignUserBentoSlot(userIndex, targetSlot, currentSelectingBentoId);
   const bentoItem = bentoMaster.find(b => b.id === currentSelectingBentoId);
 
   closeUserSelectForBentoModal();
-  showToast(`🎉 ${user.name} 様のお弁当を『${bentoItem ? bentoItem.name : ''}』に登録しました！`, 'success');
+
+  const slotLabel = user.bentoCount > 1 ? ` (${targetSlot + 1}食目)` : '';
+  showToast(`🎉 ${user.name} 様のお弁当${slotLabel}を『${bentoItem ? bentoItem.name : ''}』に登録しました！`, 'success');
 };
 
 window.closeUserSelectForBentoModal = function() {
@@ -1240,72 +1335,121 @@ window.closeUserSelectForBentoModal = function() {
 
 // 2. ポルテデータ＆注文受付レンダー
 function renderPorteSection() {
-  const bentoUsers = porteUsers.filter(u => u.wantsBento !== false);
-  const totalTarget = bentoUsers.length;
-  const ordered = bentoUsers.filter(u => u.selectedBentoId).length;
-  const pending = totalTarget - ordered;
+  let totalTargetMeals = 0;
+  let orderedMeals = 0;
+
+  porteUsers.forEach(u => {
+    normalizeUserData(u);
+    if (u.wantsBento !== false && u.bentoCount > 0) {
+      totalTargetMeals += u.bentoCount;
+      orderedMeals += (u.selectedBentoIds || []).filter(Boolean).length;
+    }
+  });
+
+  const bentoTargetUsers = porteUsers.filter(u => u.wantsBento !== false && u.bentoCount > 0);
+  const pendingMeals = totalTargetMeals - orderedMeals;
 
   const elTotal = document.getElementById('summaryTotalUsers');
-  if (elTotal) elTotal.textContent = `${totalTarget} (全員:${porteUsers.length})`;
+  if (elTotal) elTotal.textContent = `${totalTargetMeals}食 (${bentoTargetUsers.length}名/全員:${porteUsers.length})`;
   const elOrdered = document.getElementById('summaryOrderedUsers');
-  if (elOrdered) elOrdered.textContent = ordered;
+  if (elOrdered) elOrdered.textContent = `${orderedMeals}食`;
   const elPending = document.getElementById('summaryPendingUsers');
-  if (elPending) elPending.textContent = pending;
+  if (elPending) elPending.textContent = `${pendingMeals}食`;
 
   const elTabBadge = document.getElementById('porteTabBadge');
-  if (elTabBadge) elTabBadge.textContent = `未受付 ${pending}`;
+  if (elTabBadge) elTabBadge.textContent = `未受付 ${pendingMeals}食`;
 
   const tbody = document.getElementById('porteUserTableBody');
   tbody.innerHTML = '';
 
   if (porteUsers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#747d8c;">ポルテのDBから自動読込するか、CSVファイルを読み込んでください。</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:#747d8c;">ポルテのDBから自動読込するか、CSVファイルを読み込んでください。</td></tr>`;
   } else {
     const todaysBentoList = todaysMenuIds.map(id => bentoMaster.find(b => b.id === id)).filter(Boolean);
-    const displayList = porteUsers.filter(u => tableShowAll || u.wantsBento !== false || u.selectedBentoId);
+    const displayList = porteUsers.filter(u => {
+      normalizeUserData(u);
+      return tableShowAll || u.wantsBento !== false || (u.selectedBentoIds || []).some(Boolean);
+    });
     const isConfirmedToday = isTodayOrderConfirmed();
 
     displayList.forEach((u) => {
+      normalizeUserData(u);
       const realIndex = porteUsers.findIndex(item => item.id === u.id);
-      const isDone = !!u.selectedBentoId;
-      const wantsBento = u.wantsBento !== false;
+      const orderedCount = getUserOrderedCount(u);
+      const targetCount = u.bentoCount;
+      const isFullyDone = isUserFullyOrdered(u);
       const tr = document.createElement('tr');
 
-      let userBentoOptions = [...todaysBentoList];
-      if (u.selectedBentoId && !userBentoOptions.some(b => b.id === u.selectedBentoId)) {
-        const chosenItem = bentoMaster.find(b => b.id === u.selectedBentoId);
-        if (chosenItem) {
-          userBentoOptions.push(chosenItem);
+      // 食数変更ドロップダウン
+      const countSelectHtml = `
+        <select style="padding:4px 8px; border-radius:10px; border:1.5px solid #ffc078; font-weight:800; font-size:0.85rem; background:#fff5eb; color:#d9480f; cursor:pointer; ${isConfirmedToday ? 'opacity:0.6; cursor:not-allowed;' : ''}" ${isConfirmedToday ? 'disabled title="本日の注文は確定済みです"' : ''} onchange="changeUserBentoCount(${realIndex}, this.value)">
+          <option value="0" ${u.wantsBento === false || targetCount === 0 ? 'selected' : ''}>⚪ 注文なし</option>
+          <option value="1" ${u.wantsBento !== false && targetCount === 1 ? 'selected' : ''}>🍱 1食分</option>
+          <option value="2" ${u.wantsBento !== false && targetCount === 2 ? 'selected' : ''}>🍱 2食分</option>
+          <option value="3" ${u.wantsBento !== false && targetCount === 3 ? 'selected' : ''}>🍱 3食分</option>
+        </select>
+      `;
+
+      let slotsHtml = '';
+      if (u.wantsBento === false || targetCount === 0) {
+        slotsHtml = `<span style="color:#adb5bd; font-size:0.85rem;">(注文なし)</span>`;
+      } else {
+        slotsHtml = `<div style="display:flex; flex-direction:column; gap:6px;">`;
+        for (let slotIdx = 0; slotIdx < targetCount; slotIdx++) {
+          const currentBentoId = u.selectedBentoIds[slotIdx] || '';
+          
+          let userBentoOptions = [...todaysBentoList];
+          if (currentBentoId && !userBentoOptions.some(b => b.id === currentBentoId)) {
+            const chosenItem = bentoMaster.find(b => b.id === currentBentoId);
+            if (chosenItem) userBentoOptions.push(chosenItem);
+          }
+
+          let optionsHtml = `<option value="">-- ${targetCount > 1 ? (slotIdx + 1) + '食目' : 'お弁当'}を選択 --</option>`;
+          userBentoOptions.forEach(b => {
+            const isSoldOut = b.stock <= 0 && currentBentoId !== b.id;
+            const isSelected = currentBentoId === b.id;
+            optionsHtml += `<option value="${b.id}" ${isSelected ? 'selected' : ''} ${isSoldOut ? 'disabled' : ''}>
+              ${b.icon} ${b.name}
+            </option>`;
+          });
+
+          const labelPrefix = targetCount > 1 ? `<span style="font-size:0.75rem; font-weight:800; color:#d9480f; min-width:40px;">${slotIdx + 1}食目:</span>` : '';
+
+          slotsHtml += `
+            <div style="display:flex; align-items:center; gap:6px;">
+              ${labelPrefix}
+              <select class="bento-select-dropdown" style="flex:1;" ${isConfirmedToday ? 'disabled style="background:#e9ecef; cursor:not-allowed; opacity:0.85; border-color:#ced4da;" title="本日の注文は確定済みです"' : ''} onchange="assignUserBentoSlot(${realIndex}, ${slotIdx}, this.value)">
+                ${optionsHtml}
+              </select>
+            </div>
+          `;
         }
+        slotsHtml += `</div>`;
       }
 
-      let optionsHtml = `<option value="">-- お弁当を選択してください --</option>`;
-      userBentoOptions.forEach(b => {
-        const isSoldOut = b.stock <= 0 && u.selectedBentoId !== b.id;
-        const isSelected = u.selectedBentoId === b.id;
-        optionsHtml += `<option value="${b.id}" ${isSelected ? 'selected' : ''} ${isSoldOut ? 'disabled' : ''}>
-          ${b.icon} ${b.name}
-        </option>`;
-      });
+      let statusBadgeHtml = '';
+      if (u.wantsBento === false || targetCount === 0) {
+        statusBadgeHtml = `<span class="badge-status pending" style="background:#f1f3f5; color:#868e96; border-color:#ced4da;">なし</span>`;
+      } else if (isFullyDone) {
+        statusBadgeHtml = `<span class="badge-status done">決定 (${orderedCount}/${targetCount}食)</span>`;
+      } else if (orderedCount > 0) {
+        statusBadgeHtml = `<span class="badge-status pending" style="background:#fff3bf; color:#f59f00; border-color:#ffe066;">一部 (${orderedCount}/${targetCount}食)</span>`;
+      } else {
+        statusBadgeHtml = `<span class="badge-status pending">未選択 (0/${targetCount}食)</span>`;
+      }
 
       const kanaHtml = u.kana ? `<span style="font-size:0.75rem; color:#868e96; margin-left:4px;">(${u.kana})</span>` : '';
       tr.innerHTML = `
         <td style="width: 160px;"><strong>${u.name}</strong> ${kanaHtml}</td>
-        <td style="width: 130px; text-align: center;">
-          <button class="btn btn-sm ${wantsBento ? 'btn-outline' : 'btn-sample'}" style="padding:2px 8px; font-size:0.75rem; ${isConfirmedToday ? 'opacity:0.6; cursor:not-allowed;' : ''}" ${isConfirmedToday ? 'disabled title="本日の注文は確定済みです"' : ''} onclick="toggleUserBentoWant(${realIndex})">
-            ${wantsBento ? '🍱 注文あり' : '⚪ 注文なし'}
-          </button>
+        <td style="width: 140px; text-align: center;">
+          ${countSelectHtml}
         </td>
-        <td style="min-width: 180px;"><span style="color:#e64980; font-size:0.85rem; font-weight:700;">${u.note || '-'}</span></td>
-        <td style="width: 260px;">
-          <select class="bento-select-dropdown" ${isConfirmedToday ? 'disabled style="background:#e9ecef; cursor:not-allowed; opacity:0.85; border-color:#ced4da;" title="本日の注文は確定済みです（クリックで確定解除すると変更可能）"' : ''} onchange="assignUserBento(${realIndex}, this.value)">
-            ${optionsHtml}
-          </select>
+        <td style="min-width: 160px;"><span style="color:#e64980; font-size:0.85rem; font-weight:700;">${u.note || '-'}</span></td>
+        <td style="width: 280px; padding:8px;">
+          ${slotsHtml}
         </td>
-        <td style="width: 100px; text-align: center;">
-          <span class="badge-status ${isDone ? 'done' : 'pending'}">
-            ${isDone ? '決定' : '未選択'}
-          </span>
+        <td style="width: 120px; text-align: center;">
+          ${statusBadgeHtml}
         </td>
       `;
       tbody.appendChild(tr);
@@ -1317,31 +1461,84 @@ function renderPorteSection() {
 
 window.toggleUserBentoWant = function(userIndex) {
   if (isTodayOrderConfirmed()) {
-    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「本日注文確定済み (クリックで解除)」を押して確定を解除してください。', 'warning');
+    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「確定を解除」してください。', 'warning');
     return;
   }
   const user = porteUsers[userIndex];
   if (!user) return;
+  normalizeUserData(user);
 
-  user.wantsBento = !(user.wantsBento !== false);
-  if (!user.wantsBento && user.selectedBentoId) {
-    assignUserBento(userIndex, '');
+  if (user.wantsBento !== false && user.bentoCount > 0) {
+    changeUserBentoCount(userIndex, 0);
+  } else {
+    changeUserBentoCount(userIndex, 1);
   }
-  savePorteUsers();
-  renderAll();
-  showToast(`${user.name} 様のお弁当注文希望を切り替えました`, 'info');
 };
 
-window.assignUserBento = function(userIndex, newBentoId) {
+window.changeUserBentoCount = function(userIndex, countVal) {
   if (isTodayOrderConfirmed()) {
-    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「本日注文確定済み (クリックで解除)」を押して確定を解除してください。', 'warning');
+    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「確定を解除」してください。', 'warning');
     renderAll();
     return;
   }
   const user = porteUsers[userIndex];
   if (!user) return;
-  const oldBentoId = user.selectedBentoId;
+  normalizeUserData(user);
 
+  const newCount = Math.max(0, parseInt(countVal, 10) || 0);
+
+  if (newCount <= 0) {
+    // 注文なしに設定：既存スロットの在庫をFIFO戻し
+    (user.selectedBentoIds || []).forEach(bId => {
+      if (bId) {
+        const b = bentoMaster.find(item => item.id === bId);
+        if (b) addBentoStockLot(b, 1, getOffsetDateStr(7), 'STOCK');
+      }
+    });
+    user.wantsBento = false;
+    user.bentoCount = 0;
+    user.selectedBentoIds = [];
+    user.selectedBentoId = '';
+  } else {
+    user.wantsBento = true;
+    if (newCount < user.bentoCount) {
+      // 減食：削減されるスロットの在庫を戻す
+      for (let i = newCount; i < user.selectedBentoIds.length; i++) {
+        const bId = user.selectedBentoIds[i];
+        if (bId) {
+          const b = bentoMaster.find(item => item.id === bId);
+          if (b) addBentoStockLot(b, 1, getOffsetDateStr(7), 'STOCK');
+        }
+      }
+      user.selectedBentoIds = user.selectedBentoIds.slice(0, newCount);
+    } else {
+      while (user.selectedBentoIds.length < newCount) {
+        user.selectedBentoIds.push('');
+      }
+    }
+    user.bentoCount = newCount;
+    user.selectedBentoId = user.selectedBentoIds[0] || '';
+  }
+
+  saveMaster();
+  savePorteUsers();
+  renderAll();
+  showToast(`${user.name} 様の希望食数を「${newCount > 0 ? newCount + '食' : '注文なし'}」に変更しました`, 'info');
+};
+
+window.assignUserBentoSlot = function(userIndex, slotIndex, newBentoId) {
+  if (isTodayOrderConfirmed()) {
+    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「確定を解除」してください。', 'warning');
+    renderAll();
+    return;
+  }
+  const user = porteUsers[userIndex];
+  if (!user) return;
+  normalizeUserData(user);
+
+  if (slotIndex < 0 || slotIndex >= user.bentoCount) return;
+
+  const oldBentoId = user.selectedBentoIds[slotIndex];
   if (oldBentoId === newBentoId) return;
 
   if (oldBentoId) {
@@ -1356,7 +1553,8 @@ window.assignUserBento = function(userIndex, newBentoId) {
     if (newBento) {
       if (newBento.stock <= 0) {
         showToast('売り切れのため選択できません', 'info');
-        user.selectedBentoId = '';
+        user.selectedBentoIds[slotIndex] = '';
+        user.selectedBentoId = user.selectedBentoIds[0] || '';
         renderAll();
         return;
       }
@@ -1366,7 +1564,7 @@ window.assignUserBento = function(userIndex, newBentoId) {
 
       if (!todaysMenuIds.includes(newBento.id)) {
         const replaceableIndex = todaysMenuIds.findIndex(id => {
-          return !porteUsers.some(u => u.selectedBentoId === id);
+          return !porteUsers.some(u => (u.selectedBentoIds || []).includes(id));
         });
         if (replaceableIndex >= 0) {
           todaysMenuIds[replaceableIndex] = newBento.id;
@@ -1378,11 +1576,17 @@ window.assignUserBento = function(userIndex, newBentoId) {
     }
   }
 
-  user.selectedBentoId = newBentoId;
+  user.selectedBentoIds[slotIndex] = newBentoId;
+  user.selectedBentoId = user.selectedBentoIds[0] || '';
+
   saveMaster();
   savePorteUsers();
   saveOrderHistory();
   renderAll();
+};
+
+window.assignUserBento = function(userIndex, newBentoId) {
+  assignUserBentoSlot(userIndex, 0, newBentoId);
 };
 
 function renderCateringOrderTally() {
@@ -1392,10 +1596,15 @@ function renderCateringOrderTally() {
 
   const tally = {};
   porteUsers.forEach(u => {
-    if (u.selectedBentoId) {
-      const b = bentoMaster.find(item => item.id === u.selectedBentoId);
-      const name = b ? b.name : '不明なお弁当';
-      tally[name] = (tally[name] || 0) + 1;
+    normalizeUserData(u);
+    if (u.wantsBento !== false) {
+      (u.selectedBentoIds || []).forEach(bId => {
+        if (bId) {
+          const b = bentoMaster.find(item => item.id === bId);
+          const name = b ? b.name : '不明なお弁当';
+          tally[name] = (tally[name] || 0) + 1;
+        }
+      });
     }
   });
 

@@ -207,6 +207,36 @@ var fmtPickupIcon=function(pStr){
   if(s==='往復') return '<span title="送迎: 往復" style="color:#2e7d32;font-weight:700;display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;font-size:11px;vertical-align:middle"><span>🚐</span><span>往復</span></span>';
   return '🚐';
 };
+var renderBentoOptions=function(val){
+  var s=String(val||'').trim();
+  var is3=s==='3食'||s==='3'||s==='3個';
+  var is2=s==='2食'||s==='2'||s==='2個';
+  var is1=s==='1食'||s==='1'||s==='1個'||s==='あり'||s==='true'||s==='要';
+  return '<option value="なし"'+(!is1&&!is2&&!is3?' selected':'')+'>なし</option>'+
+         '<option value="1食"'+(is1?' selected':'')+'>1食</option>'+
+         '<option value="2食"'+(is2?' selected':'')+'>2食</option>'+
+         '<option value="3食"'+(is3?' selected':'')+'>3食</option>';
+};
+var fmtBentoBadge=function(curB, isAb, masterBento){
+  if(isAb){
+    var hasB = curB && curB !== 'なし' && curB !== '0' && curB !== 'false';
+    return hasB ? '<span style="color:var(--red)">❌</span>' : '−';
+  }
+  var s = String(curB||'').trim();
+  if(s==='3食'||s==='3'||s==='3個') return '<span class="badge" style="background:#e65100;color:#fff;font-weight:700">🍱×3</span>';
+  if(s==='2食'||s==='2'||s==='2個') return '<span class="badge" style="background:#e65100;color:#fff;font-weight:700">🍱×2</span>';
+  if(s==='1食'||s==='1'||s==='1個'||s==='あり'||s==='true'||s==='要') return '🍱';
+  var mHas = masterBento && masterBento !== 'なし' && masterBento !== '0' && masterBento !== 'false';
+  if(mHas && (s==='なし'||s==='0'||s==='false')) return '<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
+  return '−';
+};
+var getBentoCountValue=function(val){
+  var s = String(val||'').trim();
+  if(s==='3食'||s==='3'||s==='3個') return 3;
+  if(s==='2食'||s==='2'||s==='2個') return 2;
+  if(s==='1食'||s==='1'||s==='1個'||s==='あり'||s==='true'||s==='要') return 1;
+  return 0;
+};
 var userName=function(id){return(S.users.find(function(u){return String(u.id)===String(id);})||{}).name||'?';};
 var wtName=function(id){return(S.workTypes.find(function(w){return String(w.id)===String(id);})||{}).name||'-';};
 var wtRate=function(id){return Number((S.workTypes.find(function(w){return String(w.id)===String(id);})||{}).rate)||0;};
@@ -709,12 +739,12 @@ async function renderDashboard(c){
       var pStr=String(p||'').trim();
       var hasP = pStr && pStr !== 'なし' && pStr !== '0' && pStr !== 'false';
       if(isAb){
-        bIcon=b==='あり'?'<span style="color:var(--red)">❌</span>':'−';
+        bIcon=fmtBentoBadge(b, true, null);
         pIcon=hasP?'<span style="color:var(--red)">❌</span>':'−';
       }
       else if(isAdj){bIcon='−';pIcon='−';}
       else{
-        bIcon=b==='あり'?'🍱':'−';
+        bIcon=fmtBentoBadge(b, false, null);
         if(!hasP) pIcon='−';
         else pIcon=fmtPickupIcon(pStr);
       }
@@ -975,9 +1005,7 @@ function renderDD(ds){
     var timeDiff=sDiff||eDiff;
     var timeDisp='<span style="'+(timeDiff?'color:var(--red);font-weight:700':'')+'">'+sTime+'～'+eTime+'</span>';
     var curB=(r&&r.bento)?r.bento:u.bento,curP=(r&&r.pickup)?r.pickup:u.pickup;
-    var bIcon='−',pIcon='−';
-    if(curB==='あり')bIcon=isAb?'<span style="color:var(--red)">❌</span>':'🍱';
-    else if(u.bento==='あり'&&curB==='なし')bIcon='<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
+    var bIcon=fmtBentoBadge(curB, isAb, u.bento),pIcon='−';
     var pStr=String(curP||'').trim();
     var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
     var uHasP=u.pickup&&u.pickup!=='なし'&&u.pickup!=='0'&&u.pickup!=='false';
@@ -1027,7 +1055,7 @@ async function openCalAttM(uid, ds){
       '</select></div>'+
       '<div class="grid2"><div class="field"><label>出勤時間</label><input type="time" id="adm-s" value="'+att.startTime+'" style="width:100%" onchange="updateAdmAH()"></div>'+
       '<div class="field"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><label style="margin-bottom:0">退勤時間</label><button type="button" class="bg" id="adm-e-clear" onclick="document.getElementById(\'adm-e\').value=\'\';updateAdmAH();" style="font-size:10px;padding:1px 6px;line-height:1.2;cursor:pointer" title="退勤時間を未確定(利用中)の状態に戻します">未確定にする</button></div><input type="time" id="adm-e" value="'+att.endTime+'" style="width:100%" onchange="updateAdmAH()"></div></div>'+
-      '<div class="grid3"><div class="field"><label>お弁当</label><select id="adm-b" style="width:100%"><option'+(att.bento==='あり'?' selected':'')+'>あり</option><option'+(att.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
+      '<div class="grid3"><div class="field"><label>お弁当</label><select id="adm-b" style="width:100%">'+renderBentoOptions(att.bento)+'</select></div>' +
       '<div class="field"><label>支払方法</label><select id="adm-bp" style="width:100%"><option value="工賃払い"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod)||'工賃払い')==='工賃払い'?' selected':'')+'>工賃払い</option><option value="当日"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod))==='当日'?' selected':'')+'>当日</option><option value="月末締め翌月払い"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod))==='月末締め翌月払い'?' selected':'')+'>翌月払い</option></select></div>'+
       '<div class="field"><label>送迎</label><select id="adm-p" style="width:100%">'+
         '<option value="なし"'+(att.pickup==='なし'||!att.pickup?' selected':'')+'>なし</option>'+
@@ -1919,7 +1947,7 @@ function openUserModal(u, isTabSwitch){
     '</select></div></div>'+
     '<div class="grid2"><div class="field"><label>契約時間（開始） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cstart" value="'+(d.contractStart||'09:10')+'" style="width:100%"></div>'+
     '<div class="field"><label>契約時間（終了） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cend" value="'+(d.contractEnd||'16:30')+'" style="width:100%"></div></div>'+
-    '<div class="grid3"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%"><option'+(d.bento==='あり'?' selected':'')+'>あり</option><option'+(d.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
+    '<div class="grid3"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%">'+renderBentoOptions(d.bento)+'</select></div>'+
     '<div class="field"><label>お弁当支払方法</label><select id="uf-bento-pay" style="width:100%"><option value="工賃払い"'+(d.bentoPaymentMethod==='工賃払い'||!d.bentoPaymentMethod?' selected':'')+'>工賃払い</option><option value="当日"'+(d.bentoPaymentMethod==='当日'?' selected':'')+'>当日払い</option><option value="月末締め翌月払い"'+(d.bentoPaymentMethod==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option></select></div>'+
     '<div class="field"><label>送迎</label><select id="uf-pickup" style="width:100%">'+
       '<option value="なし"'+(d.pickup==='なし'||!d.pickup?' selected':'')+'>なし</option>'+
@@ -4075,7 +4103,7 @@ function openTrialModal(t){
         '<div class="field"><label>記録作成者（担当）</label><input id="tr-creator" value="'+esc(rep.creator)+'" style="width:100%" placeholder="担当：友田"></div>'+
       '</div>'+
       '<div class="grid3">'+
-        '<div class="field"><label>お弁当</label><select id="tr-bento" style="width:100%"><option'+(d.bento==='あり'?' selected':'')+'>あり</option><option'+(d.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
+        '<div class="field"><label>お弁当</label><select id="tr-bento" style="width:100%">'+renderBentoOptions(d.bento)+'</select></div>'+
         '<div class="field"><label>送迎</label><select id="tr-pickup" style="width:100%">'+
           '<option value="なし"'+(d.pickup==='なし'||!d.pickup?' selected':'')+'>なし</option>'+
           '<option value="往復"'+(d.pickup==='往復'||d.pickup==='あり'||d.pickup==='必要'?' selected':'')+'>往復</option>'+
@@ -4717,8 +4745,7 @@ async function renderAttTbl(){
         bIcon='−';
         pIcon='−';
       }else{
-        if(curB==='あり'){bIcon=isAb?'<span style="color:var(--red)">❌</span>':'🍱';}
-        else if(r&&r.bento==='なし'&&u.bento==='あり'){bIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
+        bIcon=fmtBentoBadge(curB, isAb, u.bento);
         var pStr=String(curP||'').trim();
         var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
         var uHasP=u.pickup&&u.pickup!=='なし'&&u.pickup!=='0'&&u.pickup!=='false';
@@ -4827,12 +4854,9 @@ function renderAttMonthlyTbl(){
       var isAb=['欠席','体調不良','通院','調整休'].indexOf(status)>=0;
       var curB=r.bento||user.bento;
       var curP=r.pickup||user.pickup;
-      if(curB==='あり'){
-        bIcon=isAb?'<span style="color:var(--red)">❌</span>':'🍱';
-        if(!isAb)bentoCount++;
-      }else if(user.bento==='あり'&&curB==='なし'){
-        bIcon='<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
-      }
+      var bCount=getBentoCountValue(curB);
+      bIcon=fmtBentoBadge(curB, isAb, user.bento);
+      if(bCount>0 && !isAb) bentoCount+=bCount;
       var pStr=String(curP||'').trim();
       var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
       var uHasP=user.pickup&&user.pickup!=='なし'&&user.pickup!=='0'&&user.pickup!=='false';
@@ -4849,7 +4873,8 @@ function renderAttMonthlyTbl(){
       if(isActive&&isScheduled){
         status='予定';
         timeDisp=(user.scheduleStart||'10:00')+'〜'+(user.scheduleEnd||'16:00');
-        if(user.bento==='あり'){bIcon='🍱';bentoCount++;}
+        var uBCount=getBentoCountValue(user.bento);
+        if(uBCount>0){bIcon=fmtBentoBadge(user.bento, false, user.bento);bentoCount+=uBCount;}
         var uPStr=String(user.pickup||'').trim();
         var uHasP=uPStr&&uPStr!=='なし'&&uPStr!=='0'&&uPStr!=='false';
         if(uHasP){

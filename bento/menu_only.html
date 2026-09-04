@@ -643,6 +643,42 @@
       });
     }
 
+    function normalizeUserData(u) {
+      if (!u) return;
+      if (u.wantsBento === false) {
+        u.bentoCount = 0;
+      } else {
+        if (!u.bentoCount || u.bentoCount < 1) {
+          const bs = String(u.bentoVal || u.bento || '').trim();
+          if (bs === '3食' || bs === '3' || bs === '3個') u.bentoCount = 3;
+          else if (bs === '2食' || bs === '2' || bs === '2個') u.bentoCount = 2;
+          else u.bentoCount = 1;
+        }
+      }
+
+      if (!Array.isArray(u.selectedBentoIds)) {
+        u.selectedBentoIds = [];
+        if (u.selectedBentoId) {
+          u.selectedBentoIds[0] = u.selectedBentoId;
+        }
+      }
+
+      while (u.selectedBentoIds.length < u.bentoCount) {
+        u.selectedBentoIds.push('');
+      }
+      if (u.selectedBentoIds.length > u.bentoCount) {
+        u.selectedBentoIds = u.selectedBentoIds.slice(0, u.bentoCount);
+      }
+
+      u.selectedBentoId = u.selectedBentoIds[0] || '';
+    }
+
+    function getUserOrderedCount(u) {
+      normalizeUserData(u);
+      if (u.wantsBento === false || u.bentoCount <= 0) return 0;
+      return (u.selectedBentoIds || []).filter(Boolean).length;
+    }
+
     function renderClientView() {
       const grid = document.getElementById('clientCardsGrid');
       grid.innerHTML = '';
@@ -657,11 +693,34 @@
 
       items.forEach((item, index) => {
         const isSoldOut = item.stock <= 0;
-        const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id && u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
+        
+        const userPillsMap = {};
+        porteUsers.forEach(u => {
+          if (u.type !== '👔 スタッフ' && !String(u.name).includes('👔')) {
+            normalizeUserData(u);
+            (u.selectedBentoIds || []).forEach((bId, slotIdx) => {
+              if (bId === item.id) {
+                if (!userPillsMap[u.id]) {
+                  userPillsMap[u.id] = { user: u, count: 0, slots: [] };
+                }
+                userPillsMap[u.id].count++;
+                userPillsMap[u.id].slots.push(slotIdx);
+              }
+            });
+          }
+        });
 
         let usersHtml = '';
-        chosenUsers.forEach(u => {
-          usersHtml += `<span class="user-pill">👤 ${u.name} 様</span>`;
+        Object.values(userPillsMap).forEach(entry => {
+          const u = entry.user;
+          if (entry.count > 1) {
+            usersHtml += `<span class="user-pill">👤 ${u.name} 様 ×${entry.count}</span>`;
+          } else if (u.bentoCount > 1) {
+            const slotName = (entry.slots[0] + 1) + '食目';
+            usersHtml += `<span class="user-pill">👤 ${u.name} 様 (${slotName})</span>`;
+          } else {
+            usersHtml += `<span class="user-pill">👤 ${u.name} 様</span>`;
+          }
         });
 
         const card = document.createElement('div');
@@ -745,28 +804,38 @@
         if (modalFilterMode === 'staff') {
           grid.innerHTML = `<div style="grid-column:1/-1; width:100%; text-align:center; padding:30px 10px; color:#1864ab;"><p style="font-weight:700; font-size:1.05rem;">登録されているスタッフデータが見つかりません。</p></div>`;
         } else {
-          grid.innerHTML = `<div style="grid-column:1/-1; width:100%; text-align:center; padding:30px 10px; color:#868e96;"><p style="font-weight:700; font-size:1rem; line-height:1.7; margin:0;">本日利用のご利用者様データが登録されていません。上部の「👥 全ご利用者様から選択」または「👔 スタッフから選択」ボタンをお試しください。</p></div>`;
+          grid.innerHTML = `<div style="grid-column:1/-1; width:100%; text-align:center; padding:30px 10px; color:#868e96;"><p style="font-weight:700; font-size:1rem; line-height:1.7; margin:0;">本日利用のごご利用者様データが登録されていません。上部の「👥 全ご利用者様から選択」または「👔 スタッフから選択」ボタンをお試しください。</p></div>`;
         }
         return;
       }
 
       users.forEach(u => {
-        const isChosenThis = u.selectedBentoId === currentBentoId;
-        const currentChoice = u.selectedBentoId ? bentoMaster.find(b => b.id === u.selectedBentoId) : null;
+        normalizeUserData(u);
+        const hasChosenThis = (u.selectedBentoIds || []).includes(currentBentoId);
+        const orderedCount = getUserOrderedCount(u);
+        const targetCount = u.bentoCount || 1;
         const isStaff = u.type === '👔 スタッフ' || u.isStaff || String(u.name).includes('👔');
 
         const cleanName = u.name.replace('👔', '').replace('スタッフ', '').trim();
         const displayName = isStaff ? `👔 ${cleanName}` : `👤 ${cleanName} 様`;
 
-        const btn = document.createElement('button');
-        btn.className = `user-btn ${isChosenThis ? 'chosen' : ''}`;
-        if (isStaff) {
-          btn.style.cssText = isChosenThis ? 'background:#e6fcf5; border-color:#63e6be; color:#0ca678;' : 'background:#eef7ff; border-color:#91c7ff; color:#1864ab;';
+        let subText = '';
+        if (targetCount > 1) {
+          subText = `<span style="font-size:0.9rem; font-weight:800; color:#d9480f; margin-left:6px;">(${orderedCount}/${targetCount}食決定)</span>`;
         }
+
+        const btn = document.createElement('button');
+        btn.className = `user-btn ${hasChosenThis ? 'chosen' : ''}`;
+        if (isStaff) {
+          btn.style.cssText = hasChosenThis ? 'background:#e6fcf5; border-color:#63e6be; color:#0ca678;' : 'background:#eef7ff; border-color:#91c7ff; color:#1864ab;';
+        } else if (hasChosenThis) {
+          btn.style.cssText = 'background:#d3f9d8; border-color:#63e6be; color:#2b8a3e;';
+        }
+
         btn.innerHTML = `
           <div style="text-align:left; width:100%; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-weight:800; font-size:1.05rem;">${displayName}</span>
-            ${isChosenThis ? '<span style="font-size:0.85rem; font-weight:800; color:#2b8a3e; background:#d3f9d8; padding:3px 10px; border-radius:10px;">✅ 選択中</span>' : (currentChoice ? `<span style="font-size:0.8rem; opacity:0.8;">(変更: ${currentChoice.icon})</span>` : '')}
+            <span style="font-weight:800; font-size:1.1rem;">${displayName} ${subText}</span>
+            ${hasChosenThis ? '<span style="font-size:0.85rem; font-weight:800; color:#2b8a3e; background:#d3f9d8; padding:3px 10px; border-radius:10px;">✅ 選択中</span>' : (orderedCount > 0 ? `<span style="font-size:0.85rem; opacity:0.8;">(${orderedCount}/${targetCount}食済)</span>` : '')}
           </div>
         `;
         btn.onclick = () => selectUserOrder(u.id || u.name);
@@ -783,6 +852,8 @@
           type: '👔 スタッフ',
           isStaff: true,
           wantsBento: true,
+          bentoCount: 1,
+          selectedBentoIds: [],
           selectedBentoId: null
         };
         porteUsers.push(userObj);
@@ -791,9 +862,20 @@
       if (!currentBentoId) return;
 
       const user = porteUsers[userIndex];
+      normalizeUserData(user);
+
+      if (user.wantsBento === false || user.bentoCount < 1) {
+        user.wantsBento = true;
+        user.bentoCount = 1;
+        normalizeUserData(user);
+      }
+
       const bento = bentoMaster.find(b => b.id === currentBentoId);
 
-      assignUserBento(userIndex, currentBentoId);
+      let targetSlot = user.selectedBentoIds.findIndex(id => !id);
+      if (targetSlot < 0) targetSlot = 0;
+
+      assignUserBentoSlot(userIndex, targetSlot, currentBentoId);
 
       closeUserModal();
       renderClientView();
@@ -803,17 +885,24 @@
       }
 
       const toast = document.getElementById('successToast');
-      document.getElementById('successMsg').textContent = `${user.name} 様\n『${bento ? bento.name : ''}』決定！`;
+      const slotText = user.bentoCount > 1 ? ` (${targetSlot + 1}食目)` : '';
+      const remaining = user.bentoCount - getUserOrderedCount(user);
+      const remText = remaining > 0 ? `\n(残り${remaining}食)` : `\n(全${user.bentoCount}食決定完了！)`;
+
+      document.getElementById('successMsg').textContent = `${user.name} 様\n『${bento ? bento.name : ''}』${slotText}決定！${remText}`;
       toast.classList.add('show');
 
-      setTimeout(() => { toast.classList.remove('show'); }, 2400);
+      setTimeout(() => { toast.classList.remove('show'); }, 2500);
     }
 
-    function assignUserBento(userIndex, newBentoId) {
+    function assignUserBentoSlot(userIndex, slotIndex, newBentoId) {
       const user = porteUsers[userIndex];
       if (!user) return;
-      const oldBentoId = user.selectedBentoId;
+      normalizeUserData(user);
 
+      if (slotIndex < 0 || slotIndex >= user.bentoCount) return;
+
+      const oldBentoId = user.selectedBentoIds[slotIndex];
       if (oldBentoId === newBentoId) return;
 
       if (oldBentoId) {
@@ -830,9 +919,15 @@
         }
       }
 
-      user.selectedBentoId = newBentoId;
+      user.selectedBentoIds[slotIndex] = newBentoId;
+      user.selectedBentoId = user.selectedBentoIds[0] || '';
+
       localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
       localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+    }
+
+    function assignUserBento(userIndex, newBentoId) {
+      assignUserBentoSlot(userIndex, 0, newBentoId);
     }
 
     function closeUserModal() {
