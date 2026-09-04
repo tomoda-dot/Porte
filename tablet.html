@@ -345,11 +345,25 @@ function buildUserSelect(){
 async function fetchAttendanceForDate(date){
   if(!date)return;
   try{
-    var attList=await gas('getAttendanceByDate', date);
+    var results=await Promise.all([
+      gas('getAttendanceByDate', date),
+      gas('getDailyByDate', date)
+    ]);
+    var attList=results[0]||[];
+    var repList=results[1]||[];
     var map={};
     if(attList && Array.isArray(attList)){
       attList.forEach(function(a){
-        if(a && a.userId) map[String(a.userId).trim()]=a;
+        if(a && a.userId) map[String(a.userId).trim()]=Object.assign({}, a);
+      });
+    }
+    if(repList && Array.isArray(repList)){
+      repList.forEach(function(r){
+        if(r && r.userId){
+          var uKey=String(r.userId).trim();
+          if(!map[uKey]) map[uKey]={ userId: r.userId, date: date, status: '出席' };
+          map[uKey].content=r.content||r.notes||'';
+        }
       });
     }
     ATTENDANCE_CACHE[date]=map;
@@ -398,11 +412,14 @@ async function renderUserList(){
     var isSaved=SAVED_DATES[u.id+'_'+date];
     var att=attMap[String(u.id||'').trim()];
     var badge='';
+
+    var hasNotes=att && att.notes && String(att.notes).trim()!=='';
+    var hasContent=att && att.content && String(att.content).trim()!=='';
+    var isInputFilled=isSaved || hasNotes || hasContent;
+
     if(att && ['欠席','体調不良','通院'].indexOf(att.status)>=0){
       badge='<span class="u-badge" style="color:#c62828;font-weight:700">❌ '+esc(att.status)+'</span>';
-    }else if(att && ['出席','遅刻','早退'].indexOf(att.status)>=0){
-      badge='<span class="u-badge saved">✅ 入力済</span>';
-    }else if(isSaved){
+    }else if(isInputFilled){
       badge='<span class="u-badge saved">✅ 入力済</span>';
     }
     return '<div class="user-item'+(isActive?' active':'')+
@@ -484,7 +501,8 @@ async function selectUser(userId){
     });
     if(startInput) startInput.value = att ? att.startTime||'' : '';
     if(endInput) endInput.value = att ? att.endTime||'' : '';
-    if(breakInput) breakInput.value = (att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='') ? String(att.breakMin) : '60';
+    var defaultBreak = (user && user.breakMin !== undefined && user.breakMin !== null && user.breakMin !== '') ? String(user.breakMin) : '60';
+    if(breakInput) breakInput.value = (att && att.breakMin !== undefined && att.breakMin !== null && att.breakMin !== '') ? String(att.breakMin) : defaultBreak;
 
     // お弁当
     var bentoVal = 'なし';
