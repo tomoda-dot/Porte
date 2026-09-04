@@ -617,15 +617,19 @@ function _calcNetH(rec,user){
 function _findWt(wts,amId,pmId){
   var wtAm=null,wtPm=null;
   for(var w=0;w<wts.length;w++){if(String(wts[w].id)===String(amId))wtAm=wts[w];if(String(wts[w].id)===String(pmId))wtPm=wts[w];}
-  if(!wtAm&&!wtPm&&wts.length>0){wtAm=wts[0];wtPm=wts[0];}
+  if(!wtAm&&!wtPm&&wts.length>0&&pmId!=='none'&&pmId!=='なし'){wtAm=wts[0];wtPm=wts[0];}
   else if(!wtAm&&wtPm)wtAm=wtPm;
-  else if(wtAm&&!wtPm)wtPm=wtAm;
+  else if(wtAm&&!wtPm&&pmId!=='none'&&pmId!=='なし')wtPm=wtAm;
   return{am:wtAm,pm:wtPm};
 }
 function _calcRecWage(rec,wts,user){
   var netH=_calcNetH(rec,user);if(netH<=0)return{netH:0,wage:0};
-  var wt=_findWt(wts,rec.workTypeId||'',(rec.workTypeIdPm&&String(rec.workTypeIdPm)!=='')?rec.workTypeIdPm:rec.workTypeId||'');
-  if(!wt.am||String(wt.am.id)===String(wt.pm.id)){return{netH:netH,wage:netH*(wt.am?Number(wt.am.rate):0)};}
+  var pmVal = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && rec.workTypeIdPm!=='') ? rec.workTypeIdPm : rec.workTypeId||'';
+  var wt=_findWt(wts,rec.workTypeId||'',pmVal);
+  if(!wt.am||!wt.pm||String(wt.am.id)===String(wt.pm.id)){
+    var targetWt=wt.am||wt.pm;
+    return{netH:netH,wage:netH*(targetWt?Number(targetWt.rate):0)};
+  }
   var half=netH/2;return{netH:netH,wage:half*(Number(wt.am.rate)||0)+half*(Number(wt.pm.rate)||0)};
 }
 function _getBentoCount(rec){

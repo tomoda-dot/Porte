@@ -238,7 +238,16 @@ var getBentoCountValue=function(val){
   return 0;
 };
 var userName=function(id){return(S.users.find(function(u){return String(u.id)===String(id);})||{}).name||'?';};
-var wtName=function(id){return(S.workTypes.find(function(w){return String(w.id)===String(id);})||{}).name||'-';};
+var wtName=function(id){if(!id)return'-';if(id==='none'||id==='なし')return'なし';return(S.workTypes.find(function(w){return String(w.id)===String(id);})||{}).name||String(id);};
+var getPmId=function(rep,att){
+  var val=(rep&&rep.workTypeIdPm!==undefined&&rep.workTypeIdPm!==null)?rep.workTypeIdPm:(att&&att.workTypeIdPm!==undefined&&att.workTypeIdPm!==null?att.workTypeIdPm:undefined);
+  if(val===undefined||val===null||val===''){
+    var amVal=(rep&&rep.workTypeId)?rep.workTypeId:(att?att.workTypeId:'');
+    return(amVal&&amVal!=='none'&&amVal!=='なし')?amVal:'none';
+  }
+  if(val==='none'||val==='なし')return'none';
+  return val;
+};
 var wtRate=function(id){return Number((S.workTypes.find(function(w){return String(w.id)===String(id);})||{}).rate)||0;};
 var staffName=function(id){return(S.staff.find(function(s){return String(s.id)===String(id);})||{}).name||'';};
 var isUserActive=function(u,d){if(!u)return false;if(u.userStatus==='利用終了')return false;if(u.enrollDate&&u.enrollDate>d)return false;if(u.endDate&&u.endDate<d)return false;return true;};
@@ -1065,7 +1074,7 @@ async function openCalAttM(uid, ds){
       '</select></div></div>'+
       '<div class="field"><label>工賃算定時間（調整） <span style="font-weight:normal;font-size:11px;color:var(--sub)">※早帰り・延長時に指定</span></label><input type="number" step="0.1" min="0" max="24" id="adm-ah" value="'+(att.actualHours!=null?att.actualHours:'')+'" placeholder="自動算定 (サービス提供時間)" style="width:100%" onchange="updateAdmAH()" oninput="updateAdmAH()"></div>'+
       '<div class="field"><label>備考（変更理由）</label><textarea id="adm-an" rows="2" style="width:100%" placeholder="変更理由や連絡事項を記入...">'+esc(att.notes||'')+'</textarea></div>'+
-      '<div style="display:none"><select id="adm-brk"><option value="'+((att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?att.breakMin:60)+'"></option></select><select id="adm-wt"><option value="'+(dWt?dWt.id:'')+'"></option></select><select id="adm-wtp"><option value="'+(dWt?dWt.id:'')+'"></option></select><textarea id="adm-content">'+esc(rep.content||'')+'</textarea><select id="adm-m"><option>'+esc(rep.mood||'普通')+'</option></select><textarea id="adm-dn">'+esc(rep.notes||'')+'</textarea></div>'+
+      '<div style="display:none"><select id="adm-brk"><option value="'+((att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?att.breakMin:60)+'"></option></select><select id="adm-wt"><option value="'+(rep&&rep.workTypeId?rep.workTypeId:(att&&att.workTypeId?att.workTypeId:(dWt?dWt.id:'')))+'"></option></select><select id="adm-wtp"><option value="'+getPmId(rep,att)+'"></option></select><textarea id="adm-content">'+esc(rep.content||'')+'</textarea><select id="adm-m"><option>'+esc(rep.mood||'普通')+'</option></select><textarea id="adm-dn">'+esc(rep.notes||'')+'</textarea></div>'+
       '<div style="font-size:11px;color:var(--sub);text-align:right;margin-top:4px" id="adm-h-calc"></div>'+
       '<div class="btns" style="margin-top:14px;border-top:1px solid var(--bdr);padding-top:14px;display:flex;justify-content:space-between;align-items:center">'+
       '  <button style="background:#c62828;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer" onclick="deleteCalAtt(\''+uid+'\',\''+ds+'\')">🗑️ 削除</button>'+
@@ -1279,20 +1288,26 @@ async function openAttDailyM(uid, ds){
       '      <div class="field">'+
       '        <label>作業(AM)</label>'+
       '        <select id="adm-wt" style="width:100%">'+
-                 '<option value="none" '+(rep.workTypeId==='none'||rep.workTypeId==='なし'||!rep.workTypeId?'selected':'')+'>なし（作業なし・午前帰宅等）</option>'+
-                 S.workTypes.map(function(w){
-                   return'<option value="'+w.id+'"'+(rep.workTypeId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';
-                 }).join('')+
+                 (function(){
+                   var amId = (rep&&rep.workTypeId)?rep.workTypeId:(att?att.workTypeId:'');
+                   if(!amId) amId = 'none';
+                   return '<option value="none" '+(amId==='none'||amId==='なし'?'selected':'')+'>なし（作業なし・午前帰宅等）</option>'+
+                   S.workTypes.map(function(w){
+                     return'<option value="'+w.id+'"'+(amId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';
+                   }).join('');
+                 })()+
       '        </select>'+
       '      </div>'+
       '      <div class="field">'+
       '        <label>作業(PM)</label>'+
       '        <select id="adm-wtp" style="width:100%">'+
-                 '<option value="none" '+(rep.workTypeIdPm==='none'||rep.workTypeIdPm==='なし'||rep.workTypeIdPm===''||(rep.workTypeIdPm===undefined&&(rep.workTypeId==='none'||!rep.workTypeId))?'selected':'')+'>なし（作業なし・午前帰宅等）</option>'+
-                 S.workTypes.map(function(w){
-                   var pmId = (rep.workTypeIdPm!==undefined && rep.workTypeIdPm!==null && rep.workTypeIdPm!=='')?rep.workTypeIdPm:(att && att.workTypeIdPm!==undefined && att.workTypeIdPm!==null && att.workTypeIdPm!=='' ? att.workTypeIdPm : rep.workTypeId);
-                   return'<option value="'+w.id+'"'+(pmId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';
-                 }).join('')+
+                 (function(){
+                   var pmId = getPmId(rep, att);
+                   return '<option value="none" '+(pmId==='none'||pmId==='なし'?'selected':'')+'>なし（作業なし・午前帰宅等）</option>'+
+                   S.workTypes.map(function(w){
+                     return'<option value="'+w.id+'"'+(pmId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';
+                   }).join('');
+                 })()+
       '        </select>'+
       '      </div>'+
       '    </div>'+
@@ -4726,9 +4741,10 @@ async function renderAttTbl(){
       var isTemp=tempUids.indexOf(u.id)>=0&&!(u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0);
       var stLabel=(r && r.status !== '調整休')?'<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>':'<span style="color:var(--sub);font-size:11px">-</span>';
       var nameLabel=esc(u.name)+(isTemp?' <span style="font-size:9px;color:var(--acc)">★臨時</span>':'');
-      var wtDispAm=r?esc(wtName(r.workTypeId)):'-';
-      var pmId=r?((r.workTypeIdPm&&r.workTypeIdPm!=='')?r.workTypeIdPm:r.workTypeId):'';
-      var wtDispPm=r?esc(wtName(pmId)):'-';
+      var amId=(rep&&rep.workTypeId)?rep.workTypeId:(r?r.workTypeId:'');
+      var pmId=getPmId(rep,r);
+      var wtDispAm=(r||rep)?esc(wtName(amId)):'-';
+      var wtDispPm=(r||rep)?esc(wtName(pmId)):'-';
       var bIcon='-',pIcon='-';
       var curB=r?(r.bento||u.bento):u.bento;
       var curP=r?(r.pickup||u.pickup):u.pickup;
@@ -4884,12 +4900,13 @@ function renderAttMonthlyTbl(){
     var repContent='-';
     var moodDisp='-';
     var isAbLine=['欠席','体調不良','通院'].indexOf(status)>=0;
-    if(rep && status!=='調整休'){
-      wtDispAm=wtName(rep.workTypeId);
-      var pmId=(rep.workTypeIdPm&&rep.workTypeIdPm!=='')?rep.workTypeIdPm:rep.workTypeId;
+    if((rep || r) && status!=='調整休'){
+      var amId=(rep&&rep.workTypeId)?rep.workTypeId:(r?r.workTypeId:'');
+      var pmId=getPmId(rep,r);
+      wtDispAm=wtName(amId);
       wtDispPm=wtName(pmId);
-      repContent=rep.content||'';
-      moodDisp=rep.mood||'';
+      repContent=rep?rep.content||'':'-';
+      moodDisp=rep?rep.mood||'':'-';
     }else{
       if(status!=='-'){
         if(isAbLine)repContent='<span style="color:var(--sub);font-style:italic">お休み ('+esc(notes)+')</span>';
@@ -5986,13 +6003,13 @@ function calcWage(r,user){
     totalH=rawMin/60;
   }
   var amId=r.workTypeId||'';
-  var pmId=(r.workTypeIdPm&&r.workTypeIdPm!=='')?r.workTypeIdPm:amId;
+  var pmId=getPmId(null,r);
   var wtAm=amId?S.workTypes.find(function(w){return w.id===amId;}):null;
-  var wtPm=pmId?S.workTypes.find(function(w){return w.id===pmId;}):null;
-  if(!wtAm&&!wtPm&&S.workTypes.length>0){wtAm=S.workTypes[0];wtPm=S.workTypes[0];}
+  var wtPm=(pmId&&pmId!=='none'&&pmId!=='なし')?S.workTypes.find(function(w){return w.id===pmId;}):null;
+  if(!wtAm&&!wtPm&&S.workTypes.length>0&&pmId!=='none'&&pmId!=='なし'){wtAm=S.workTypes[0];wtPm=S.workTypes[0];}
   else if(!wtAm&&wtPm){wtAm=wtPm;}
-  else if(wtAm&&!wtPm){wtPm=wtAm;}
-  if(!wtAm||wtAm.id===wtPm.id){
+  else if(wtAm&&!wtPm&&pmId!=='none'&&pmId!=='なし'){wtPm=wtAm;}
+  if(!wtAm||(wtPm&&wtAm.id===wtPm.id)||(!wtPm&&(pmId==='none'||pmId==='なし'))){
     var wt=wtAm||wtPm;
     var rt=wt?Number(wt.rate):0;
     var nm=wt?wt.name:'未設定';
