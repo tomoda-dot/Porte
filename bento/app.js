@@ -3117,6 +3117,31 @@ window.deleteBento = function(id) {
   }
 };
 
+window.restoreMissingBentos = function() {
+  let restoredCount = 0;
+  const restoredNames = [];
+
+  DEFAULT_30_BENTO.forEach(defItem => {
+    const exists = bentoMaster.some(b => b.id === defItem.id || b.name === defItem.name);
+    if (!exists) {
+      const restoredItem = JSON.parse(JSON.stringify(defItem));
+      ensureBentoLots(restoredItem);
+      bentoMaster.push(restoredItem);
+      restoredNames.push(defItem.name);
+      restoredCount++;
+    }
+  });
+
+  if (restoredCount > 0) {
+    bentoMaster.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+    saveMaster();
+    renderAll();
+    showToast(`✨ 消えていた『${restoredNames.join('』『')}』を復元しました！`, 'success');
+  } else {
+    showToast('すべてのデフォルトお弁当（30品）が登録されています。', 'info');
+  }
+};
+
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
