@@ -2021,6 +2021,46 @@ window.removeModalLotRow = function(index) {
   renderModalLotRows();
 };
 
+window.setModalLotYear = function(idx, newYear) {
+  if (!tempModalLots[idx]) return;
+  const cur = tempModalLots[idx].expDate || getOffsetDateStr(7);
+  const parts = cur.split('-');
+  const m = parts[1] || '01';
+  const d = parts[2] || '01';
+  tempModalLots[idx].expDate = `${newYear}-${m}-${d}`;
+  renderModalLotRows();
+};
+
+window.setModalLotMonth = function(idx, newMonth) {
+  if (!tempModalLots[idx]) return;
+  const cur = tempModalLots[idx].expDate || getOffsetDateStr(7);
+  const parts = cur.split('-');
+  const y = parts[0] || new Date().getFullYear();
+  const m = String(newMonth).padStart(2, '0');
+  const d = parts[2] || '01';
+  tempModalLots[idx].expDate = `${y}-${m}-${d}`;
+  renderModalLotRows();
+};
+
+window.addMonthsToModalLot = function(idx, monthsToAdd) {
+  if (!tempModalLots[idx]) return;
+  const cur = tempModalLots[idx].expDate || getOffsetDateStr(7);
+  const parts = cur.split('-');
+  const curY = parseInt(parts[0], 10) || new Date().getFullYear();
+  const curM = (parseInt(parts[1], 10) || 1) - 1;
+  const curD = parseInt(parts[2], 10) || 1;
+
+  const dateObj = new Date(curY, curM, curD);
+  dateObj.setMonth(dateObj.getMonth() + parseInt(monthsToAdd, 10));
+
+  const yyyy = dateObj.getFullYear();
+  const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const dd = String(dateObj.getDate()).padStart(2, '0');
+
+  tempModalLots[idx].expDate = `${yyyy}-${mm}-${dd}`;
+  renderModalLotRows();
+};
+
 window.updateModalLotField = function(index, field, val) {
   if (!tempModalLots[index]) return;
   if (field === 'qty') {
@@ -2054,37 +2094,73 @@ function renderModalLotRows() {
   }
 
   tempModalLots.forEach((lot, idx) => {
+    const curExp = lot.expDate || getOffsetDateStr(7);
+    const dateParts = curExp.split('-');
+    const curYear = parseInt(dateParts[0], 10) || new Date().getFullYear();
+    const curMonth = parseInt(dateParts[1], 10) || 1;
+
+    const nowY = new Date().getFullYear();
+    let yearOptionsHtml = '';
+    for (let y = nowY - 1; y <= nowY + 5; y++) {
+      yearOptionsHtml += `<option value="${y}" ${y === curYear ? 'selected' : ''}>${y}年</option>`;
+    }
+
+    let monthOptionsHtml = '';
+    for (let m = 1; m <= 12; m++) {
+      monthOptionsHtml += `<option value="${m}" ${m === curMonth ? 'selected' : ''}>${m}月</option>`;
+    }
+
     const row = document.createElement('div');
     row.className = 'modal-lot-row';
     row.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
       background: #ffffff;
-      border: 1.5px solid #ffe8cc;
-      padding: 10px 14px;
-      border-radius: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-      flex-wrap: wrap;
+      border: 2px solid #ffd8a8;
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.03);
     `;
     row.innerHTML = `
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-weight:900; color:#d9480f; font-size:0.95rem;">📦 ロット${idx + 1}</span>
-        <button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 8px; font-size:0.8rem; font-weight:800;" onclick="removeModalLotRow(${idx})" title="このロットを削除">🗑️ 削除</button>
-      </div>
-      
-      <div style="display:flex; align-items:center; gap:4px;">
-        <span style="font-size:0.85rem; font-weight:800; color:#495057;">数量:</span>
-        <button type="button" class="btn-qty" style="width:34px; height:34px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff5eb; color:#d9480f; font-weight:900; font-size:1.1rem; cursor:pointer;" onclick="adjustModalLotQty(${idx}, -1)">-</button>
-        <input type="number" value="${lot.qty}" min="0" style="width:58px; text-align:center; font-weight:900; font-size:1rem; padding:4px 2px; border-radius:8px; border:1.5px solid #ffd8a8;" onchange="updateModalLotField(${idx}, 'qty', this.value)">
-        <button type="button" class="btn-qty" style="width:34px; height:34px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff5eb; color:#d9480f; font-weight:900; font-size:1.1rem; cursor:pointer;" onclick="adjustModalLotQty(${idx}, 1)">+</button>
-        <span style="font-size:0.85rem; font-weight:800; color:#495057; margin-left:2px;">食</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px dashed #ffd8a8;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-weight:900; color:#d9480f; font-size:1.05rem;">📦 ロット${idx + 1}</span>
+          <span style="font-size:0.8rem; background:#fff5eb; color:#d9480f; font-weight:800; padding:2px 8px; border-radius:10px; border:1px solid #ffd8a8;">冷凍品</span>
+        </div>
+        
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:0.88rem; font-weight:800; color:#495057;">数量:</span>
+          <button type="button" class="btn-qty" style="width:34px; height:34px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff5eb; color:#d9480f; font-weight:900; font-size:1.1rem; cursor:pointer;" onclick="adjustModalLotQty(${idx}, -1)">-</button>
+          <input type="number" value="${lot.qty}" min="0" style="width:58px; text-align:center; font-weight:900; font-size:1.05rem; padding:4px; border-radius:8px; border:1.5px solid #ffd8a8;" onchange="updateModalLotField(${idx}, 'qty', this.value)">
+          <button type="button" class="btn-qty" style="width:34px; height:34px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff5eb; color:#d9480f; font-weight:900; font-size:1.1rem; cursor:pointer;" onclick="adjustModalLotQty(${idx}, 1)">+</button>
+          <span style="font-size:0.88rem; font-weight:800; color:#495057; margin-right:8px;">食</span>
+
+          <button type="button" class="btn btn-sm btn-outline-danger" style="padding:4px 10px; font-size:0.85rem; font-weight:800;" onclick="removeModalLotRow(${idx})" title="このロットを削除">🗑️ 削除</button>
+        </div>
       </div>
 
-      <div style="display:flex; align-items:center; gap:4px;">
-        <span style="font-size:0.85rem; font-weight:800; color:#d9480f;">📅 賞味期限:</span>
-        <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:0.95rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff4e6; color:#d9480f; cursor:pointer;" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
+      <div style="background:#fff4e6; border:1.5px solid #ffc078; border-radius:12px; padding:10px 12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+          <span style="font-size:0.9rem; font-weight:900; color:#d9480f; display:flex; align-items:center; gap:4px;">
+            📅 賞味期限:
+          </span>
+          
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <select style="padding:5px 8px; border-radius:8px; border:1.5px solid #ff7e67; font-weight:900; font-size:0.9rem; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="setModalLotYear(${idx}, this.value)">
+              ${yearOptionsHtml}
+            </select>
+            <select style="padding:5px 8px; border-radius:8px; border:1.5px solid #ff7e67; font-weight:900; font-size:0.9rem; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="setModalLotMonth(${idx}, this.value)">
+              ${monthOptionsHtml}
+            </select>
+            <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:0.9rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ff7e67; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding-top:6px; border-top:1px dashed #ffd8a8;">
+          <span style="font-size:0.78rem; font-weight:800; color:#862e9c;">⚡ 年月ワンタップ:</span>
+          <button type="button" class="btn btn-sm btn-outline" style="font-size:0.78rem; font-weight:800; padding:3px 10px; background:#ffffff; border-color:#d9480f; color:#d9480f; border-radius:10px;" onclick="addMonthsToModalLot(${idx}, 3)">＋3ヶ月後</button>
+          <button type="button" class="btn btn-sm btn-outline" style="font-weight:800; font-size:0.78rem; padding:3px 10px; background:#ffffff; border-color:#d9480f; color:#d9480f; border-radius:10px;" onclick="addMonthsToModalLot(${idx}, 6)">＋6ヶ月後</button>
+          <button type="button" class="btn btn-sm btn-outline" style="font-weight:800; font-size:0.78rem; padding:3px 10px; background:#ffffff; border-color:#d9480f; color:#d9480f; border-radius:10px;" onclick="addMonthsToModalLot(${idx}, 12)">＋1年後</button>
+        </div>
       </div>
     `;
     container.appendChild(row);
