@@ -409,13 +409,12 @@ async function renderUserList(){
 
   function makeItem(u){
     var isActive=String(u.id)===String(curId);
-    var isSaved=SAVED_DATES[u.id+'_'+date];
     var att=attMap[String(u.id||'').trim()];
     var badge='';
 
     var hasNotes=att && att.notes && String(att.notes).trim()!=='';
     var hasContent=att && att.content && String(att.content).trim()!=='';
-    var isInputFilled=isSaved || hasNotes || hasContent;
+    var isInputFilled=hasNotes || hasContent;
 
     if(att && ['欠席','体調不良','通院'].indexOf(att.status)>=0){
       badge='<span class="u-badge" style="color:#c62828;font-weight:700">❌ '+esc(att.status)+'</span>';
@@ -686,7 +685,7 @@ async function saveForm(){
     // 完了表示
     SAVED_DATES[userId+'_'+date]=true;
     if(!ATTENDANCE_CACHE[date]) ATTENDANCE_CACHE[date]={};
-    ATTENDANCE_CACHE[date][String(userId)]=attData;
+    ATTENDANCE_CACHE[date][String(userId)]=Object.assign({}, attData, { content: repData.content });
     await renderUserList();
     var user=USERS.find(function(u){return String(u.id)===String(userId);});
     el('done-msg').textContent=(user?user.name:'')+' の日報を保存しました';
