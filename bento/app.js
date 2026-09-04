@@ -1991,13 +1991,30 @@ function matchCategoryItem(itemCategory, filterCategory) {
   container.appendChild(table);
 }
 
-window.addModalLotRow = function(type = 'STOCK') {
+window.addModalLotRow = function(type = 'STOCK', defaultQty = 5) {
   tempModalLots.push({
     id: 'lot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
     type: type,
-    qty: type === 'ARRIVED' ? 5 : 2,
+    qty: defaultQty,
     expDate: getOffsetDateStr(7)
   });
+  renderModalLotRows();
+};
+
+window.quickAddModalStock = function(amount) {
+  if (tempModalLots.length === 0) {
+    addModalLotRow('STOCK', amount);
+  } else {
+    const lastLot = tempModalLots[tempModalLots.length - 1];
+    lastLot.qty = (parseInt(lastLot.qty, 10) || 0) + amount;
+    renderModalLotRows();
+  }
+};
+
+window.adjustModalLotQty = function(index, delta) {
+  if (!tempModalLots[index]) return;
+  const current = parseInt(tempModalLots[index].qty, 10) || 0;
+  tempModalLots[index].qty = Math.max(0, current + delta);
   renderModalLotRows();
 };
 
@@ -2033,7 +2050,7 @@ function renderModalLotRows() {
   container.innerHTML = '';
 
   if (tempModalLots.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:16px; color:#868e96; font-size:0.9rem;">登録されている既存在庫・入荷ロットはありません。下のボタンから追加してください。</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:16px; color:#868e96; font-size:0.9rem;">登録されている既存在庫・入荷ロットはありません。「ワンタップ在庫追加」または「在庫ロットを追加」から登録してください。</div>`;
     updateModalTotalStockText();
     return;
   }
@@ -2041,21 +2058,37 @@ function renderModalLotRows() {
   tempModalLots.forEach((lot, idx) => {
     const row = document.createElement('div');
     row.className = 'modal-lot-row';
+    row.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #ffffff;
+      border: 1.5px solid #ffe8cc;
+      padding: 10px 14px;
+      border-radius: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+      flex-wrap: wrap;
+    `;
     row.innerHTML = `
-      <span style="font-weight:800; color:#d9480f; font-size:0.9rem; min-width:90px;">📦 在庫ロット${idx + 1}</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-weight:900; color:#d9480f; font-size:0.9rem; min-width:85px;">📦 ロット${idx + 1}</span>
+      </div>
       
       <div style="display:flex; align-items:center; gap:4px;">
-        <span style="font-size:0.85rem; font-weight:700; color:#495057;">数量:</span>
-        <input type="number" value="${lot.qty}" min="0" onchange="updateModalLotField(${idx}, 'qty', this.value)">
-        <span style="font-size:0.85rem; font-weight:800; color:#495057;">食</span>
+        <span style="font-size:0.85rem; font-weight:800; color:#495057;">数量:</span>
+        <button type="button" class="btn-qty" style="width:34px; height:34px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff5eb; color:#d9480f; font-weight:900; font-size:1.1rem; cursor:pointer;" onclick="adjustModalLotQty(${idx}, -1)">-</button>
+        <input type="number" value="${lot.qty}" min="0" style="width:60px; text-align:center; font-weight:900; font-size:1rem; padding:4px 2px; border-radius:8px; border:1.5px solid #ffd8a8;" onchange="updateModalLotField(${idx}, 'qty', this.value)">
+        <button type="button" class="btn-qty" style="width:34px; height:34px; border-radius:8px; border:1.5px solid #ffd8a8; background:#fff5eb; color:#d9480f; font-weight:900; font-size:1.1rem; cursor:pointer;" onclick="adjustModalLotQty(${idx}, 1)">+</button>
+        <span style="font-size:0.85rem; font-weight:800; color:#495057; margin-left:2px;">食</span>
       </div>
 
-      <div style="display:flex; align-items:center; gap:4px; margin-left:auto;">
-        <span style="font-size:0.85rem; font-weight:700; color:#495057;">賞味期限:</span>
-        <input type="date" value="${lot.expDate}" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
+      <div style="display:flex; align-items:center; gap:4px;">
+        <span style="font-size:0.85rem; font-weight:800; color:#495057;">賞味期限:</span>
+        <input type="date" value="${lot.expDate}" style="font-weight:700; font-size:0.9rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ffd8a8;" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
       </div>
 
-      <button type="button" class="btn btn-sm btn-outline-danger" style="padding:2px 8px; font-size:0.8rem;" onclick="removeModalLotRow(${idx})" title="この明細行を削除">&times;</button>
+      <button type="button" class="btn btn-sm btn-outline-danger" style="padding:4px 10px; font-size:0.85rem; font-weight:800;" onclick="removeModalLotRow(${idx})" title="この明細行を削除">🗑️ 削除</button>
     `;
     container.appendChild(row);
   });

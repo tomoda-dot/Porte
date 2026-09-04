@@ -318,10 +318,20 @@
 
           <!-- 在庫 ＆ 賞味期限のリスト明細個数管理パネル -->
           <div style="background:#fff8f0; border:2px solid #ffd8a8; border-radius:18px; padding:18px; margin:16px 0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
               <h4 style="font-size:1.05rem; color:#d9480f; font-weight:900;">📦 在庫・賞味期限リスト管理</h4>
               <div style="font-size:1rem; font-weight:900; color:#212529;">
                 合計在庫数: <strong id="modalTotalStockText" style="color:#d9480f; font-size:1.35rem;">0</strong> 食
+              </div>
+            </div>
+
+            <!-- ワンタップ在庫追加プリセット -->
+            <div style="background:#ffffff; border:1.5px solid #ffd8a8; border-radius:14px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+              <span style="font-size:0.88rem; font-weight:800; color:#d9480f;">⚡ ワンタップ在庫追加:</span>
+              <div style="display:flex; gap:8px;">
+                <button type="button" class="btn btn-sm btn-outline" style="font-weight:900; padding:6px 14px; border-color:#ff7e67; color:#d9480f; background:#fff5eb; border-radius:12px;" onclick="quickAddModalStock(1)">＋1食</button>
+                <button type="button" class="btn btn-sm btn-outline" style="font-weight:900; padding:6px 14px; border-color:#ff7e67; color:#d9480f; background:#fff5eb; border-radius:12px;" onclick="quickAddModalStock(5)">＋5食</button>
+                <button type="button" class="btn btn-sm btn-outline" style="font-weight:900; padding:6px 14px; border-color:#ff7e67; color:#d9480f; background:#fff5eb; border-radius:12px;" onclick="quickAddModalStock(10)">＋10食</button>
               </div>
             </div>
 
@@ -330,7 +340,7 @@
             </div>
 
             <div style="display:flex; gap:10px; margin-top:14px; padding-top:10px; border-top:1px dashed #ffd8a8;">
-              <button type="button" class="btn btn-sm btn-outline" onclick="addModalLotRow('STOCK')">📦 在庫ロットを追加</button>
+              <button type="button" class="btn btn-sm btn-outline" onclick="addModalLotRow('STOCK', 5)">➕ 在庫ロットを追加</button>
             </div>
           </div>
 
