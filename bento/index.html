@@ -220,9 +220,9 @@
             <p>全商品の在庫数および入荷ロット別の賞味期限を一括管理できます。</p>
           </div>
           <div class="action-buttons">
-            <button class="btn btn-outline" onclick="openBentoTrashModal()" style="font-weight:800; border-color:#e03131; color:#e03131; background:#fff5f5;" id="openBentoTrashBtn">🗑️ ごみ箱 (0)</button>
-            <button class="btn btn-outline" onclick="restoreMissingBentos()" style="font-weight:800; border-color:#ff7e67; color:#d9480f; background:#fff5eb;">🔄 消えたお弁当を自動復元</button>
-            <button class="btn btn-outline-danger" onclick="resetMasterToDefault30()" style="font-weight:800;">⚡ 30品目初期状態にリセット</button>
+            <button class="btn btn-outline" id="toggleShowHiddenBtn" onclick="toggleShowHiddenItems()" style="font-weight:800; border-color:#ced4da; color:#495057; background:#ffffff;">
+              👁️ 非表示商品を含める: OFF
+            </button>
             <button class="btn btn-primary" id="addNewBentoBtn">➕ 新しいお弁当を追加</button>
           </div>
         </div>
@@ -356,7 +356,7 @@
 
         <div class="modal-footer" style="justify-content: space-between;">
           <button type="button" class="btn btn-outline-danger" id="deleteCurrentBentoBtn" style="display:none;">
-            🗑️ このお弁当を削除
+            🙈 このお弁当を非表示にする
           </button>
           <div style="display:flex; gap:12px; margin-left:auto;">
             <button type="button" class="btn btn-secondary" id="cancelBentoEditBtn" onclick="closeEditBentoModal()">キャンセル</button>
@@ -479,23 +479,7 @@
         </div>
       </div>
       <div class="modal-footer" style="background:#f8f9fa;">
-  <!-- ごみ箱モーダル -->
-  <div class="modal-overlay" id="bentoTrashModal">
-    <div class="modal-card" style="max-width: 620px; max-height: 85vh; display: flex; flex-direction: column;">
-      <div class="modal-header" style="background:#fff5f5; border-bottom:2px solid #ffc9c9;">
-        <h3 style="color:#e03131; display:flex; align-items:center; gap:6px;">🗑️ 削除済みお弁当のごみ箱</h3>
-        <button class="close-btn" onclick="closeBentoTrashModal()">&times;</button>
-      </div>
-      <div class="modal-body" style="flex:1; overflow-y:auto; padding:20px;">
-        <p style="font-size:0.9rem; color:#495057; margin-bottom:14px; font-weight:700;">
-          過去に削除されたお弁当（新規追加したオリジナル商品も含む）の一覧です。「↩️ 復元する」ボタンを押すと、マスターに復元できます。
-        </p>
-        <div id="trashItemsList" style="display:flex; flex-direction:column; gap:10px; max-height:380px; overflow-y:auto;">
-          <!-- JSで動的生成 -->
-        </div>
-      </div>
-      <div class="modal-footer" style="background:#f8f9fa;">
-        <button class="btn btn-secondary" onclick="closeBentoTrashModal()">閉じる</button>
+        <button class="btn btn-secondary" onclick="closeStaffSelectForBentoModal()">キャンセル</button>
       </div>
     </div>
   </div>

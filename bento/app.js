@@ -42,7 +42,7 @@ let todaysMenuIds = [];
 let porteUsers = [];
 let orderHistory = [];
 let dailyOrders = {}; // 日別注文確定スナップショット { "2026-08-07": { status: 'CONFIRMED'|'DRAFT', confirmedAt: '...', orders: [...] } }
-let bentoTrash = [];
+let showHiddenItems = false;
 let currentSelectedMonth = '';
 let currentCategoryFilter = 'ALL';
 let currentSelectingBentoId = null;
@@ -278,14 +278,7 @@ function loadData() {
     }
   }
 
-  const savedTrash = localStorage.getItem('bento_trash');
-  if (savedTrash) {
-    try {
-      bentoTrash = JSON.parse(savedTrash);
-    } catch(e) {
-      bentoTrash = [];
-    }
-  }
+
 
   // 日付チェック：日が変わっていた場合、前日の選択(selectedBentoId)が当日に上書きされないよう自動切り替え
   const todayKey = getTodayKey();
@@ -559,7 +552,6 @@ function renderAll() {
   renderProgressBar();
   updateConfirmStatusUI();
   renderMonthlyMatrix();
-  updateTrashBadgeUI();
 }
 
 function confirmDailyOrder() {
@@ -1839,7 +1831,10 @@ function matchCategoryItem(itemCategory, filterCategory) {
   let filtered = bentoMaster.filter(item => {
     ensureBentoLots(item);
     
-    // 検索窓に文字がある場合（1文字以上入力時）：全30品目から部分一致リアルタイム検索
+    if (!showHiddenItems && item.isHidden) {
+      return false;
+    }
+
     if (rawSearch.length > 0) {
       const nameLower = (item.name || '').toLowerCase();
       const nameKana = toKatakana(nameLower);
@@ -1858,11 +1853,9 @@ function matchCategoryItem(itemCategory, filterCategory) {
              catLower.includes(rawSearch);
     }
 
-    // 文字が空（削除時）：カテゴリー選択に応じた全件を即座に復元・全件表示
     return matchCategoryItem(item.category, currentCategoryFilter);
   });
 
-  // テーブルソート実行
   if (currentMasterSortKey !== 'default') {
     filtered.sort((a, b) => {
       let valA, valB;
@@ -1889,9 +1882,10 @@ function matchCategoryItem(itemCategory, filterCategory) {
     });
   }
 
-  document.getElementById('masterTotalCount').textContent = bentoMaster.length;
+  const activeMaster = bentoMaster.filter(b => !b.isHidden);
+  document.getElementById('masterTotalCount').textContent = activeMaster.length;
   const countBadge = document.getElementById('masterCountBadge');
-  if (countBadge) countBadge.textContent = `${bentoMaster.length}品目`;
+  if (countBadge) countBadge.textContent = `${activeMaster.length}品目`;
 
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:40px; color:#747d8c; font-weight:700;">該当する商品が見つかりません。</div>`;
@@ -1904,27 +1898,22 @@ function matchCategoryItem(itemCategory, filterCategory) {
   let rowsHtml = '';
   filtered.forEach(item => {
     const isToday = todaysMenuIds.includes(item.id);
+    const isHidden = !!item.isHidden;
 
     let lotBadgesHtml = '';
     if (item.lots && item.lots.length > 0) {
-      item.lots.forEach((lot, lIdx) => {
+      item.lots.forEach((lot) => {
         if (lot.qty > 0) {
-          const isArrived = lot.type === 'ARRIVED';
           const daysLeft = Math.ceil((new Date(lot.expDate) - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
           
           let statusClass = 'exp-normal';
           if (daysLeft <= 0) statusClass = 'exp-expired';
           else if (daysLeft <= 3) statusClass = 'exp-warning';
 
-          const typeLabel = isArrived ? '🚚 入荷分' : '📦 既存在庫';
-          const typeBg = isArrived ? '#e7f5ff' : '#fff4e6';
-          const typeColor = isArrived ? '#1971c2' : '#d9480f';
-
           lotBadgesHtml += `
             <div class="lot-badge ${statusClass}">
               <span>📅 ${lot.expDate}</span>
               <strong style="margin-left:6px; font-size:0.88rem; color:#d9480f;">${lot.qty}食</strong>
-              <button class="btn-del-lot" onclick="deleteBentoLot('${item.id}', ${lIdx})" title="このロットを削除">&times;</button>
             </div>
           `;
         }
@@ -1935,13 +1924,17 @@ function matchCategoryItem(itemCategory, filterCategory) {
       lotBadgesHtml = `<span style="color:#adb5bd; font-size:0.85rem;">(在庫・入荷ロットなし)</span>`;
     }
 
+    const nameHtml = isHidden 
+      ? `<strong style="font-size:1.05rem; color:#868e96; text-decoration:line-through;">${item.name}</strong> <span class="badge-status pending" style="background:#fff0f6; color:#e64980; border-color:#ffdeeb; font-size:0.75rem; padding:2px 6px; margin-left:4px;">🙈 非表示中</span>`
+      : `<strong style="font-size:1.05rem; color:#212529;">${item.name}</strong>`;
+
     rowsHtml += `
-      <tr>
+      <tr style="${isHidden ? 'background:#f8f9fa; opacity:0.75;' : ''}">
         <td style="width: 120px;">
           <span class="cat-pill">${item.category}</span>
         </td>
         <td style="width: 240px;">
-          <strong style="font-size:1.05rem; color:#212529;">${item.name}</strong>
+          ${nameHtml}
         </td>
         <td style="width: 120px; text-align:center;">
           <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
@@ -2080,6 +2073,31 @@ window.addMonthsToModalLot = function(idx, monthsToAdd) {
   renderModalLotRows();
 };
 
+window.setModalLotYear = function(idx, newYearVal) {
+  if (!tempModalLots[idx]) return;
+  const cur = tempModalLots[idx].expDate || getOffsetDateStr(7);
+  const parts = cur.split('-');
+  const mm = parts[1] || '01';
+  const dd = parts[2] || '01';
+  tempModalLots[idx].expDate = `${newYearVal}-${mm}-${dd}`;
+  renderModalLotRows();
+};
+
+window.setModalLotMonth = function(idx, newMonthVal) {
+  if (!tempModalLots[idx]) return;
+  const cur = tempModalLots[idx].expDate || getOffsetDateStr(7);
+  const parts = cur.split('-');
+  const yyyy = parts[0] || new Date().getFullYear();
+  const mm = String(newMonthVal).padStart(2, '0');
+  const dd = parts[2] || '01';
+
+  const daysInMonth = new Date(parseInt(yyyy, 10), parseInt(newMonthVal, 10), 0).getDate();
+  const validDd = String(Math.min(parseInt(dd, 10), daysInMonth)).padStart(2, '0');
+
+  tempModalLots[idx].expDate = `${yyyy}-${mm}-${validDd}`;
+  renderModalLotRows();
+};
+
 window.updateModalLotField = function(index, field, val) {
   if (!tempModalLots[index]) return;
   if (field === 'qty') {
@@ -2116,8 +2134,22 @@ function renderModalLotRows() {
     const curExp = lot.expDate || getOffsetDateStr(7);
     const dateParts = curExp.split('-');
     let formattedDateJp = curExp;
+    const curY = parseInt(dateParts[0], 10) || new Date().getFullYear();
+    const curM = parseInt(dateParts[1], 10) || 1;
+
     if (dateParts.length === 3) {
-      formattedDateJp = `${dateParts[0]}年${parseInt(dateParts[1], 10)}月${parseInt(dateParts[2], 10)}日`;
+      formattedDateJp = `${dateParts[0]}年${curM}月${parseInt(dateParts[2], 10)}日`;
+    }
+
+    const currentYearNow = new Date().getFullYear();
+    let yearOptionsHtml = '';
+    for (let y = currentYearNow - 1; y <= currentYearNow + 5; y++) {
+      yearOptionsHtml += `<option value="${y}" ${y === curY ? 'selected' : ''}>${y}年</option>`;
+    }
+
+    let monthOptionsHtml = '';
+    for (let m = 1; m <= 12; m++) {
+      monthOptionsHtml += `<option value="${m}" ${m === curM ? 'selected' : ''}>${m}月</option>`;
     }
 
     const row = document.createElement('div');
@@ -2148,7 +2180,7 @@ function renderModalLotRows() {
         </div>
       </div>
 
-      <!-- 【Option A】 ワンタップ月数・年数自動算出 ＋ 日付微調整パネル -->
+      <!-- 【C案】 年月直接選択ドロップダウン ＋ クイックジャンプボタン ＋ カレンダー -->
       <div style="background:#fff4e6; border:2px solid #ff922b; border-radius:14px; padding:12px 14px;">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
           <div style="display:flex; align-items:center; gap:6px;">
@@ -2158,20 +2190,23 @@ function renderModalLotRows() {
             </strong>
           </div>
 
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:0.82rem; font-weight:800; color:#495057;">微調整:</span>
-            <button type="button" class="btn btn-sm btn-outline" style="font-weight:900; padding:4px 10px; background:#ffffff; border-color:#ff922b; color:#d9480f; border-radius:8px; cursor:pointer;" onclick="addDaysToModalLot(${idx}, -1)">-1日</button>
-            <button type="button" class="btn btn-sm btn-outline" style="font-weight:900; padding:4px 10px; background:#ffffff; border-color:#ff922b; color:#d9480f; border-radius:8px; cursor:pointer;" onclick="addDaysToModalLot(${idx}, 1)">+1日</button>
-            <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:0.85rem; padding:4px 6px; border-radius:8px; border:1.5px solid #ffd8a8; background:#ffffff; color:#495057; cursor:pointer;" onchange="updateModalLotField(${idx}, 'expDate', this.value)" title="カレンダーから指定">
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span style="font-size:0.82rem; font-weight:800; color:#495057;">年月指定:</span>
+            <select style="font-weight:800; font-size:0.88rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="setModalLotYear(${idx}, this.value)">
+              ${yearOptionsHtml}
+            </select>
+            <select style="font-weight:800; font-size:0.88rem; padding:4px 8px; border-radius:8px; border:1.5px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="setModalLotMonth(${idx}, this.value)">
+              ${monthOptionsHtml}
+            </select>
+            <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:0.85rem; padding:4px 6px; border-radius:8px; border:1.5px solid #ffd8a8; background:#ffffff; color:#495057; cursor:pointer;" onchange="updateModalLotField(${idx}, 'expDate', this.value)" title="日付をカレンダーから指定">
           </div>
         </div>
 
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding-top:8px; border-top:1px dashed #ffd8a8;">
-          <span style="font-size:0.85rem; font-weight:900; color:#d9480f;">⚡ ワンタップ算出:</span>
-          <button type="button" class="btn btn-sm" style="font-weight:900; font-size:0.88rem; padding:6px 14px; background:linear-gradient(135deg, #ff922b, #fcc419); color:#ffffff; border:none; border-radius:10px; box-shadow:0 2px 6px rgba(255,146,43,0.3); cursor:pointer;" onclick="addMonthsToModalLot(${idx}, 1)">＋1ヶ月</button>
-          <button type="button" class="btn btn-sm" style="font-weight:900; font-size:0.88rem; padding:6px 14px; background:linear-gradient(135deg, #ff7e67, #ff5252); color:#ffffff; border:none; border-radius:10px; box-shadow:0 2px 6px rgba(255,82,82,0.3); cursor:pointer;" onclick="addMonthsToModalLot(${idx}, 3)">＋3ヶ月</button>
-          <button type="button" class="btn btn-sm" style="font-weight:900; font-size:0.88rem; padding:6px 14px; background:linear-gradient(135deg, #e64980, #be4bdb); color:#ffffff; border:none; border-radius:10px; box-shadow:0 2px 6px rgba(230,73,128,0.3); cursor:pointer;" onclick="addMonthsToModalLot(${idx}, 6)">＋6ヶ月</button>
-          <button type="button" class="btn btn-sm" style="font-weight:900; font-size:0.88rem; padding:6px 14px; background:linear-gradient(135deg, #15aabf, #22b8cf); color:#ffffff; border:none; border-radius:10px; box-shadow:0 2px 6px rgba(21,170,191,0.3); cursor:pointer;" onclick="addMonthsToModalLot(${idx}, 12)">＋1年</button>
+          <span style="font-size:0.85rem; font-weight:900; color:#d9480f;">⚡ クイックジャンプ:</span>
+          <button type="button" class="btn btn-sm" style="font-weight:900; font-size:0.88rem; padding:6px 14px; background:linear-gradient(135deg, #ff7e67, #ff5252); color:#ffffff; border:none; border-radius:10px; box-shadow:0 2px 6px rgba(255,82,82,0.3); cursor:pointer;" onclick="addMonthsToModalLot(${idx}, 3)">＋3ヶ月後</button>
+          <button type="button" class="btn btn-sm" style="font-weight:900; font-size:0.88rem; padding:6px 14px; background:linear-gradient(135deg, #e64980, #be4bdb); color:#ffffff; border:none; border-radius:10px; box-shadow:0 2px 6px rgba(230,73,128,0.3); cursor:pointer;" onclick="addMonthsToModalLot(${idx}, 6)">＋6ヶ月後</button>
+          <button type="button" class="btn btn-sm" style="font-weight:900; font-size:0.88rem; padding:6px 14px; background:linear-gradient(135deg, #15aabf, #22b8cf); color:#ffffff; border:none; border-radius:10px; box-shadow:0 2px 6px rgba(21,170,191,0.3); cursor:pointer;" onclick="addMonthsToModalLot(${idx}, 12)">＋1年後</button>
           <button type="button" class="btn btn-sm btn-secondary" style="font-weight:800; font-size:0.8rem; padding:5px 10px; border-radius:10px; margin-left:auto; cursor:pointer;" onclick="resetModalLotToToday(${idx})">今日に戻す</button>
         </div>
       </div>
@@ -3040,7 +3075,18 @@ function openEditBentoModal(id) {
       tempModalLots = JSON.parse(JSON.stringify(item.lots || []));
 
       deleteBtn.style.display = 'inline-flex';
-      deleteBtn.onclick = () => deleteBento(item.id);
+      if (item.isHidden) {
+        deleteBtn.textContent = '👁️ 非表示を解除して再表示';
+        deleteBtn.className = 'btn btn-outline';
+        deleteBtn.style.borderColor = '#10b981';
+        deleteBtn.style.color = '#059669';
+      } else {
+        deleteBtn.textContent = '🙈 このお弁当を非表示にする';
+        deleteBtn.className = 'btn btn-outline-danger';
+        deleteBtn.style.borderColor = '#ffc9c9';
+        deleteBtn.style.color = '#e03131';
+      }
+      deleteBtn.onclick = () => toggleBentoHidden(item.id);
     }
   } else {
     title.textContent = '新しいお弁当の追加';
@@ -3109,173 +3155,46 @@ function handleSaveBentoForm(e) {
   showToast('お弁当・在庫明細を保存しました！', 'success');
 }
 
-function saveTrash() {
-  localStorage.setItem('bento_trash', JSON.stringify(bentoTrash));
-  updateTrashBadgeUI();
-}
-
-function updateTrashBadgeUI() {
-  const btn = document.getElementById('openBentoTrashBtn');
+window.toggleShowHiddenItems = function() {
+  showHiddenItems = !showHiddenItems;
+  const btn = document.getElementById('toggleShowHiddenBtn');
   if (btn) {
-    btn.textContent = `🗑️ ごみ箱 (${bentoTrash.length})`;
+    if (showHiddenItems) {
+      btn.textContent = '👁️ 非表示商品を含める: ON';
+      btn.style.background = '#e6fcf5';
+      btn.style.borderColor = '#20c997';
+      btn.style.color = '#0ca678';
+    } else {
+      btn.textContent = '👁️ 非表示商品を含める: OFF';
+      btn.style.background = '#ffffff';
+      btn.style.borderColor = '#ced4da';
+      btn.style.color = '#495057';
+    }
   }
-}
+  renderMasterSection();
+  showToast(showHiddenItems ? '👁️ 非表示商品を含めて全件表示します' : '🙈 非表示商品をリストから隠します', 'info');
+};
 
-window.deleteBento = async function(id) {
+window.toggleBentoHidden = function(id) {
   const item = bentoMaster.find(b => b.id === id);
   if (!item) return;
 
-  if (confirm(`『${item.name}』をごみ箱に移動してもよろしいですか？\n（ごみ箱からいつでも復元できます）`)) {
-    const deletedCopy = JSON.parse(JSON.stringify(item));
-    deletedCopy.deletedAt = new Date().toLocaleString('ja-JP');
-    
-    bentoTrash.unshift(deletedCopy);
-    bentoMaster = bentoMaster.filter(b => b.id !== id);
+  item.isHidden = !item.isHidden;
+
+  if (item.isHidden) {
     todaysMenuIds = todaysMenuIds.filter(tId => tId !== id);
-    
-    if (todaysMenuIds.length < 5 && bentoMaster.length >= 5) {
-      const unused = bentoMaster.find(b => !todaysMenuIds.includes(b.id));
-      if (unused) todaysMenuIds.push(unused.id);
-    }
-    
-    // Supabase DBのテーブルからも削除
-    const { url, key } = getSupabaseCredentials();
-    if (url && key && typeof supabase !== 'undefined') {
-      try {
-        const SB = supabase.createClient(url, key);
-        await SB.from('bento_master').delete().eq('id', id);
-      } catch(e) {}
-    }
-
-    saveMaster();
-    saveTrash();
-    saveTodaysMenu();
-    closeEditBentoModal();
-    renderAll();
-    
-    showToast(`🗑️ 『${item.name}』をごみ箱に移動しました。「ごみ箱」から復元可能です。`, 'warning');
-  }
-};
-
-window.openBentoTrashModal = function() {
-  renderTrashItemsList();
-  const modal = document.getElementById('bentoTrashModal');
-  if (modal) modal.classList.add('active');
-};
-
-window.closeBentoTrashModal = function() {
-  const modal = document.getElementById('bentoTrashModal');
-  if (modal) modal.classList.remove('active');
-};
-
-function renderTrashItemsList() {
-  const container = document.getElementById('trashItemsList');
-  if (!container) return;
-  container.innerHTML = '';
-
-  if (bentoTrash.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:30px; color:#868e96; font-weight:700;">ごみ箱は空です。削除されたお弁当はありません。</div>`;
-    return;
-  }
-
-  bentoTrash.forEach((item) => {
-    const div = document.createElement('div');
-    div.style.cssText = `
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      background: #ffffff;
-      border: 1.5px solid #ffc9c9;
-      border-radius: 14px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    `;
-    div.innerHTML = `
-      <div>
-        <div style="font-weight:900; font-size:1.05rem; color:#212529;">
-          ${item.icon || '🍱'} ${item.name}
-          <span style="font-size:0.75rem; background:#e7f5ff; color:#1971c2; padding:2px 8px; border-radius:10px; font-weight:800; margin-left:6px;">${item.category || ''}</span>
-        </div>
-        <div style="font-size:0.8rem; color:#868e96; margin-top:2px;">
-          削除日時: ${item.deletedAt || '不明'} / 保存されている在庫: <strong style="color:#d9480f;">${item.stock || 0}食</strong>
-        </div>
-      </div>
-      <button type="button" class="btn btn-sm btn-pop" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; font-weight:800; padding:6px 14px; cursor:pointer;" onclick="restoreBentoFromTrash('${item.id}')">
-        ↩️ 在庫含めて復元
-      </button>
-    `;
-    container.appendChild(div);
-  });
-}
-
-window.restoreBentoFromTrash = function(id) {
-  const idx = bentoTrash.findIndex(b => b.id === id);
-  if (idx < 0) return;
-
-  const item = bentoTrash.splice(idx, 1)[0];
-  delete item.deletedAt;
-
-  ensureBentoLots(item);
-  bentoMaster.push(item);
-  bentoMaster.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
-
-  saveMaster();
-  saveTrash();
-  renderAll();
-
-  renderTrashItemsList();
-  showToast(`✨ 『${item.name}』をごみ箱から復元しました！（在庫数・賞味期限データ ${item.stock}食 復元完了）`, 'success');
-};
-
-window.restoreMissingBentos = function() {
-  currentCategoryFilter = 'ALL';
-  const searchInput = document.getElementById('masterSearchInput');
-  if (searchInput) searchInput.value = '';
-
-  let restoredCount = 0;
-  const restoredNames = [];
-
-  DEFAULT_30_BENTO.forEach(defItem => {
-    const exists = bentoMaster.some(b => b.id === defItem.id || b.name === defItem.name);
-    if (!exists) {
-      const restoredItem = JSON.parse(JSON.stringify(defItem));
-      ensureBentoLots(restoredItem);
-      bentoMaster.push(restoredItem);
-      restoredNames.push(defItem.name);
-      restoredCount++;
-    }
-  });
-
-  if (todaysMenuIds.length < 5 && bentoMaster.length >= 5) {
-    todaysMenuIds = bentoMaster.slice(0, 5).map(b => b.id);
+    autoReplaceSoldOutMenu();
     saveTodaysMenu();
   }
 
-  bentoMaster.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
   saveMaster();
+  closeEditBentoModal();
   renderAll();
 
-  if (restoredCount > 0) {
-    showToast(`✨ 不足していた『${restoredNames.join('』『')}』を復元し、一覧を表示しました！`, 'success');
+  if (item.isHidden) {
+    showToast(`🙈 『${item.name}』を非表示に設定しました`, 'info');
   } else {
-    showToast(`✅ 商品マスターは全30品目揃っています。カテゴリー検索を「すべて」にリセットして全件表示しました！`, 'info');
-  }
-};
-
-window.resetMasterToDefault30 = function() {
-  if (confirm('商品マスターおよび「本日の5品」を、初期30品目の標準状態にリセット・完全復元しますか？')) {
-    currentCategoryFilter = 'ALL';
-    const searchInput = document.getElementById('masterSearchInput');
-    if (searchInput) searchInput.value = '';
-
-    bentoMaster = JSON.parse(JSON.stringify(DEFAULT_30_BENTO));
-    bentoMaster.forEach(b => ensureBentoLots(b));
-    todaysMenuIds = bentoMaster.slice(0, 5).map(b => b.id);
-
-    saveMaster();
-    saveTodaysMenu();
-    renderAll();
-    showToast('✨ 全30品目の初期マスターデータに完全リセット・復元しました！', 'success');
+    showToast(`👁️ 『${item.name}』の非表示を解除し、通常表示に戻しました`, 'success');
   }
 };
 
