@@ -3219,6 +3219,10 @@ window.restoreBentoFromTrash = function(id) {
 };
 
 window.restoreMissingBentos = function() {
+  currentCategoryFilter = 'ALL';
+  const searchInput = document.getElementById('masterSearchInput');
+  if (searchInput) searchInput.value = '';
+
   let restoredCount = 0;
   const restoredNames = [];
 
@@ -3233,13 +3237,36 @@ window.restoreMissingBentos = function() {
     }
   });
 
+  if (todaysMenuIds.length < 5 && bentoMaster.length >= 5) {
+    todaysMenuIds = bentoMaster.slice(0, 5).map(b => b.id);
+    saveTodaysMenu();
+  }
+
+  bentoMaster.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+  saveMaster();
+  renderAll();
+
   if (restoredCount > 0) {
-    bentoMaster.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
-    saveMaster();
-    renderAll();
-    showToast(`✨ 消えていた『${restoredNames.join('』『')}』を復元しました！`, 'success');
+    showToast(`✨ 不足していた『${restoredNames.join('』『')}』を復元し、一覧を表示しました！`, 'success');
   } else {
-    showToast('すべてのデフォルトお弁当（30品）が登録されています。', 'info');
+    showToast(`✅ 商品マスターは全30品目揃っています。カテゴリー検索を「すべて」にリセットして全件表示しました！`, 'info');
+  }
+};
+
+window.resetMasterToDefault30 = function() {
+  if (confirm('商品マスターおよび「本日の5品」を、初期30品目の標準状態にリセット・完全復元しますか？')) {
+    currentCategoryFilter = 'ALL';
+    const searchInput = document.getElementById('masterSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    bentoMaster = JSON.parse(JSON.stringify(DEFAULT_30_BENTO));
+    bentoMaster.forEach(b => ensureBentoLots(b));
+    todaysMenuIds = bentoMaster.slice(0, 5).map(b => b.id);
+
+    saveMaster();
+    saveTodaysMenu();
+    renderAll();
+    showToast('✨ 全30品目の初期マスターデータに完全リセット・復元しました！', 'success');
   }
 };
 
