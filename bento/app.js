@@ -42,6 +42,7 @@ let todaysMenuIds = [];
 let porteUsers = [];
 let orderHistory = [];
 let dailyOrders = {}; // 日別注文確定スナップショット { "2026-08-07": { status: 'CONFIRMED'|'DRAFT', confirmedAt: '...', orders: [...] } }
+let bentoTrash = [];
 let currentSelectedMonth = '';
 let currentCategoryFilter = 'ALL';
 let currentSelectingBentoId = null;
@@ -274,6 +275,15 @@ function loadData() {
       dailyOrders = JSON.parse(savedDailyOrders);
     } catch(e) {
       dailyOrders = {};
+    }
+  }
+
+  const savedTrash = localStorage.getItem('bento_trash');
+  if (savedTrash) {
+    try {
+      bentoTrash = JSON.parse(savedTrash);
+    } catch(e) {
+      bentoTrash = [];
     }
   }
 
@@ -549,6 +559,7 @@ function renderAll() {
   renderProgressBar();
   updateConfirmStatusUI();
   renderMonthlyMatrix();
+  updateTrashBadgeUI();
 }
 
 function confirmDailyOrder() {
@@ -3098,23 +3109,113 @@ function handleSaveBentoForm(e) {
   showToast('お弁当・在庫明細を保存しました！', 'success');
 }
 
+function saveTrash() {
+  localStorage.setItem('bento_trash', JSON.stringify(bentoTrash));
+  updateTrashBadgeUI();
+}
+
+function updateTrashBadgeUI() {
+  const btn = document.getElementById('openBentoTrashBtn');
+  if (btn) {
+    btn.textContent = `🗑️ ごみ箱 (${bentoTrash.length})`;
+  }
+}
+
 window.deleteBento = function(id) {
   const item = bentoMaster.find(b => b.id === id);
   if (!item) return;
 
-  if (confirm(`『${item.name}』をマスターから削除してもよろしいですか？`)) {
+  if (confirm(`『${item.name}』をごみ箱に移動してもよろしいですか？\n（ごみ箱からいつでも復元できます）`)) {
+    const deletedCopy = JSON.parse(JSON.stringify(item));
+    deletedCopy.deletedAt = new Date().toLocaleString('ja-JP');
+    
+    bentoTrash.unshift(deletedCopy);
     bentoMaster = bentoMaster.filter(b => b.id !== id);
     todaysMenuIds = todaysMenuIds.filter(tId => tId !== id);
+    
     if (todaysMenuIds.length < 5 && bentoMaster.length >= 5) {
       const unused = bentoMaster.find(b => !todaysMenuIds.includes(b.id));
       if (unused) todaysMenuIds.push(unused.id);
     }
+    
     saveMaster();
+    saveTrash();
     saveTodaysMenu();
     closeEditBentoModal();
     renderAll();
-    showToast('お弁当を削除しました', 'info');
+    
+    showToast(`🗑️ 『${item.name}』をごみ箱に移動しました。「ごみ箱」からいつでも復元できます。`, 'warning');
   }
+};
+
+window.openBentoTrashModal = function() {
+  renderTrashItemsList();
+  const modal = document.getElementById('bentoTrashModal');
+  if (modal) modal.classList.add('active');
+};
+
+window.closeBentoTrashModal = function() {
+  const modal = document.getElementById('bentoTrashModal');
+  if (modal) modal.classList.remove('active');
+};
+
+function renderTrashItemsList() {
+  const container = document.getElementById('trashItemsList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (bentoTrash.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:30px; color:#868e96; font-weight:700;">ごみ箱は空です。削除されたお弁当はありません。</div>`;
+    return;
+  }
+
+  bentoTrash.forEach((item) => {
+    const div = document.createElement('div');
+    div.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #ffffff;
+      border: 1.5px solid #ffc9c9;
+      border-radius: 14px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    `;
+    div.innerHTML = `
+      <div>
+        <div style="font-weight:900; font-size:1.05rem; color:#212529;">
+          ${item.icon || '🍱'} ${item.name}
+          <span style="font-size:0.75rem; background:#e7f5ff; color:#1971c2; padding:2px 8px; border-radius:10px; font-weight:800; margin-left:6px;">${item.category || ''}</span>
+        </div>
+        <div style="font-size:0.8rem; color:#868e96; margin-top:2px;">
+          削除日時: ${item.deletedAt || '不明'} / 元の在庫: ${item.stock || 0}食
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm btn-pop" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; font-weight:800; padding:6px 14px; cursor:pointer;" onclick="restoreBentoFromTrash('${item.id}')">
+        ↩️ 復元する
+      </button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+window.restoreBentoFromTrash = function(id) {
+  const idx = bentoTrash.findIndex(b => b.id === id);
+  if (idx < 0) return;
+
+  const item = bentoTrash.splice(idx, 1)[0];
+  delete item.deletedAt;
+
+  ensureBentoLots(item);
+  bentoMaster.push(item);
+  bentoMaster.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+
+  saveMaster();
+  saveTrash();
+  renderAll();
+
+  renderTrashItemsList();
+  showToast(`✨ 『${item.name}』をごみ箱から復元しました！`, 'success');
 };
 
 window.restoreMissingBentos = function() {
