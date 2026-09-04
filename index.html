@@ -200,6 +200,13 @@ var calcH=function(s,e,b){if(!s||!e)return 0;var sm=Number(s.split(':')[0])*60+N
 var esc=function(s){if(s===null||s===undefined)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;};
 var statusColor={'出席':'#2e7d32','欠席':'#c62828','遅刻':'#e65100','早退':'#f9a825','体調不良':'#6a1b9a','通院':'#1565c0','予定':'#c07830','調整休':'#757575'};
 var hasTimeDiff15=function(t1,t2){if(!t1||!t2)return false;var p1=t1.split(':'),p2=t2.split(':');if(p1.length<2||p2.length<2)return false;var m1=parseInt(p1[0])*60+parseInt(p1[1]),m2=parseInt(p2[0])*60+parseInt(p2[1]);return Math.abs(m1-m2)>=15;};
+var fmtPickupIcon=function(pStr){
+  var s=String(pStr||'').trim();
+  if(s==='往路'||s==='行き'||s==='行きだけ') return '<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700;display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;font-size:11px;vertical-align:middle"><span>🚐</span><span>往</span></span>';
+  if(s==='復路'||s==='帰り'||s==='帰りだけ') return '<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700;display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;font-size:11px;vertical-align:middle"><span>🚐</span><span>復</span></span>';
+  if(s==='往復') return '<span title="送迎: 往復" style="color:#2e7d32;font-weight:700;display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;font-size:11px;vertical-align:middle"><span>🚐</span><span>往復</span></span>';
+  return '🚐';
+};
 var userName=function(id){return(S.users.find(function(u){return String(u.id)===String(id);})||{}).name||'?';};
 var wtName=function(id){return(S.workTypes.find(function(w){return String(w.id)===String(id);})||{}).name||'-';};
 var wtRate=function(id){return Number((S.workTypes.find(function(w){return String(w.id)===String(id);})||{}).rate)||0;};
@@ -709,10 +716,7 @@ async function renderDashboard(c){
       else{
         bIcon=b==='あり'?'🍱':'−';
         if(!hasP) pIcon='−';
-        else if(pStr==='往路'||pStr==='行き'||pStr==='行きだけ') pIcon='<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700">🚐往</span>';
-        else if(pStr==='復路'||pStr==='帰り'||pStr==='帰りだけ') pIcon='<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700">🚐復</span>';
-        else if(pStr==='往復') pIcon='<span title="送迎: 往復" style="color:#2e7d32;font-weight:700">🚐往復</span>';
-        else pIcon='🚐';
+        else pIcon=fmtPickupIcon(pStr);
       }
       var stLabel = (r && r.status !== '調整休') ? '<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>' : (isTmp?'<span style="color:var(--acc);font-weight:700;font-size:11px">★臨時</span>':'<span style="color:var(--sub)">-</span>');
       var actual = (r && r.startTime) ? r.startTime+'〜'+(r.endTime||'--:--') : '-';
@@ -979,10 +983,7 @@ function renderDD(ds){
     var uHasP=u.pickup&&u.pickup!=='なし'&&u.pickup!=='0'&&u.pickup!=='false';
     if(hasP){
       if(isAb) pIcon='<span style="color:var(--red)">❌</span>';
-      else if(pStr==='往路'||pStr==='行き'||pStr==='行きだけ') pIcon='<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700">🚐往</span>';
-      else if(pStr==='復路'||pStr==='帰り'||pStr==='帰りだけ') pIcon='<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700">🚐復</span>';
-      else if(pStr==='往復') pIcon='<span title="送迎: 往復" style="color:#2e7d32;font-weight:700">🚐往復</span>';
-      else pIcon='🚐';
+      else pIcon=fmtPickupIcon(pStr);
     }
     else if(uHasP&&curP==='なし')pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
     return'<tr style="cursor:pointer;'+(isTmp?'background:#fffbf0':'')+'" onclick="openCalAttM(\''+u.id+'\',\''+ds+'\')" onmouseover="this.style.background=\'#f5f0ea\'" onmouseout="this.style.background=\''+(isTmp?'#fffbf0':'')+'\'">'+ 
@@ -4723,10 +4724,7 @@ async function renderAttTbl(){
         var uHasP=u.pickup&&u.pickup!=='なし'&&u.pickup!=='0'&&u.pickup!=='false';
         if(hasP){
           if(isAb) pIcon='<span style="color:var(--red)">❌</span>';
-          else if(pStr==='往路'||pStr==='行き') pIcon='<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700">🚐往</span>';
-          else if(pStr==='復路'||pStr==='帰り') pIcon='<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700">🚐復</span>';
-          else if(pStr==='往復') pIcon='<span title="送迎: 往復" style="color:#2e7d32;font-weight:700">🚐往復</span>';
-          else pIcon='🚐';
+          else pIcon=fmtPickupIcon(pStr);
         }
         else if(r&&r.pickup==='なし'&&uHasP){pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">✕取消</span>';}
       }
@@ -4840,10 +4838,7 @@ function renderAttMonthlyTbl(){
       var uHasP=user.pickup&&user.pickup!=='なし'&&user.pickup!=='0'&&user.pickup!=='false';
       if(hasP){
         if(isAb) pIcon='<span style="color:var(--red)">❌</span>';
-        else if(pStr==='往路'||pStr==='行き') pIcon='<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700">🚐往</span>';
-        else if(pStr==='復路'||pStr==='帰り') pIcon='<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700">🚐復</span>';
-        else if(pStr==='往復') pIcon='<span title="送迎: 往復" style="color:#2e7d32;font-weight:700">🚐往復</span>';
-        else pIcon='🚐';
+        else pIcon=fmtPickupIcon(pStr);
         if(!isAb)pickupCount++;
       }else if(uHasP&&curP==='なし'){
         pIcon='<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
@@ -4858,10 +4853,7 @@ function renderAttMonthlyTbl(){
         var uPStr=String(user.pickup||'').trim();
         var uHasP=uPStr&&uPStr!=='なし'&&uPStr!=='0'&&uPStr!=='false';
         if(uHasP){
-          if(uPStr==='往路'||uPStr==='行き') pIcon='<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700">🚐往</span>';
-          else if(uPStr==='復路'||uPStr==='帰り') pIcon='<span title="送迎: 帰りのみ" style="color:#0288d1;font-weight:700">🚐復</span>';
-          else if(uPStr==='往復') pIcon='<span title="送迎: 往復" style="color:#2e7d32;font-weight:700">🚐往復</span>';
-          else pIcon='🚐';
+          pIcon=fmtPickupIcon(uPStr);
           pickupCount++;
         }
         statCounts['予定']++;
