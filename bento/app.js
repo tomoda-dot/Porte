@@ -2186,11 +2186,9 @@ function renderModalLotRows() {
       </div>
 
       <!-- 📅 賞味期限 カレンダー入力 -->
-      <div style="background:#fff4e6; border:2px solid #ff922b; border-radius:14px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:0.95rem; font-weight:900; color:#d9480f;">📅 賞味期限:</span>
-          <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:1rem; padding:6px 12px; border-radius:10px; border:2px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
-        </div>
+      <div style="background:#fff4e6; border:2px solid #ff922b; border-radius:14px; padding:12px 16px; display:flex; align-items:center; gap:12px; flex-wrap:nowrap;">
+        <span style="font-size:0.95rem; font-weight:900; color:#d9480f; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;">📅 賞味期限:</span>
+        <input type="date" value="${lot.expDate}" style="font-weight:800; font-size:1rem; padding:6px 12px; border-radius:10px; border:2px solid #ff922b; background:#ffffff; color:#d9480f; cursor:pointer;" onchange="updateModalLotField(${idx}, 'expDate', this.value)">
       </div>
     `;
     container.appendChild(row);
