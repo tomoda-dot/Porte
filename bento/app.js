@@ -286,38 +286,68 @@ function loadData() {
   if (lastActiveDate && lastActiveDate !== todayKey) {
     // 押し忘れ防止オートセーブ：前日の確定データが存在せず、選択中のお弁当がある場合は前日日付で自動確定保存
     if (!dailyOrders[lastActiveDate] || dailyOrders[lastActiveDate].status !== 'CONFIRMED') {
-      const prevOrdered = porteUsers.filter(u => u.selectedBentoId);
-      if (prevOrdered.length > 0) {
-        const snapshot = prevOrdered.map(u => {
-          const bento = bentoMaster.find(b => b.id === u.selectedBentoId);
-          return {
-            userId: u.id,
-            userName: u.name,
-            userKana: u.kana || '',
-            bentoId: u.selectedBentoId,
-            bentoName: bento ? bento.name : '不明なお弁当',
-            bentoIcon: bento ? bento.icon : '🍱',
-            category: bento ? bento.category : '',
-            price: 500
-          };
-        });
+      const snapshot = [];
+      porteUsers.forEach(u => {
+        normalizeUserData(u);
+        if (u.wantsBento !== false && u.bentoCount > 0) {
+          (u.selectedBentoIds || [u.selectedBentoId]).filter(Boolean).forEach((bId, slotIdx) => {
+            const bento = bentoMaster.find(b => b.id === bId);
+            snapshot.push({
+              userId: u.id,
+              userName: u.name,
+              userKana: u.kana || '',
+              slotIndex: slotIdx,
+              slotName: (slotIdx + 1) + '食目',
+              bentoId: bId,
+              bentoName: bento ? bento.name : '不明なお弁当',
+              bentoIcon: bento ? bento.icon : '🍱',
+              category: bento ? bento.category : '',
+              price: 500
+            });
+          });
+        }
+      });
+
+      if (snapshot.length > 0) {
         dailyOrders[lastActiveDate] = {
           status: 'CONFIRMED',
           confirmedAt: `${lastActiveDate} 23:59:59 (日付跨ぎ自動保存)`,
           orders: snapshot
         };
         saveDailyOrders();
+
+        // 注文・受付履歴ログ (orderHistory) にも前日分を追加・保存
+        const parts = lastActiveDate.split('-');
+        const mStr = (parts.length === 3) ? `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)} 23:59` : lastActiveDate;
+        orderHistory = orderHistory.filter(ord => ord.dateKey !== lastActiveDate);
+        snapshot.forEach(s => {
+          orderHistory.unshift({
+            id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            date: mStr,
+            dateKey: lastActiveDate,
+            userId: s.userId,
+            userName: s.userName,
+            slotIndex: s.slotIndex,
+            slotName: s.slotName,
+            bentoId: s.bentoId,
+            bentoName: s.bentoName,
+            category: s.category
+          });
+        });
+        saveOrderHistory();
       }
     }
 
     // 本日の未確定選択状態をクリア
     porteUsers.forEach(u => {
       u.selectedBentoId = '';
+      u.selectedBentoIds = [];
     });
     savePorteUsers();
   }
   localStorage.setItem('bento_last_active_date', todayKey);
 
+  syncOrderHistoryWithDailyOrders();
   autoReplaceSoldOutMenu();
 }
 
@@ -419,9 +449,54 @@ async function syncFromSupabase() {
       }
     }
 
+    syncOrderHistoryWithDailyOrders();
     renderAll();
   } catch (err) {
     // 静かに無視
+  }
+}
+
+function syncOrderHistoryWithDailyOrders() {
+  if (!dailyOrders || typeof dailyOrders !== 'object') return;
+  let changed = false;
+
+  Object.keys(dailyOrders).forEach(dateKey => {
+    const dayRecord = dailyOrders[dateKey];
+    if (dayRecord && dayRecord.status === 'CONFIRMED' && Array.isArray(dayRecord.orders) && dayRecord.orders.length > 0) {
+      const existing = orderHistory.filter(ord => ord.dateKey === dateKey);
+      if (existing.length === 0) {
+        const parts = dateKey.split('-');
+        let mStr = dateKey;
+        if (parts.length === 3) {
+          let timeStr = '23:59';
+          if (dayRecord.confirmedAt) {
+            const matchTime = dayRecord.confirmedAt.match(/\d{1,2}:\d{2}/);
+            if (matchTime) timeStr = matchTime[0];
+          }
+          mStr = `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)} ${timeStr}`;
+        }
+
+        dayRecord.orders.forEach(s => {
+          orderHistory.unshift({
+            id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            date: mStr,
+            dateKey: dateKey,
+            userId: s.userId,
+            userName: s.userName,
+            slotIndex: s.slotIndex,
+            slotName: s.slotName || '1食目',
+            bentoId: s.bentoId,
+            bentoName: s.bentoName,
+            category: s.category || ''
+          });
+        });
+        changed = true;
+      }
+    }
+  });
+
+  if (changed) {
+    saveOrderHistory();
   }
 }
 
