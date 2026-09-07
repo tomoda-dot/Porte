@@ -435,7 +435,7 @@ async function renderDashboard(c){
     var r=att.find(function(a){return a.userId===uid;});
     var curB=(r&&r.bento)?r.bento:u.bento;
     var curP=(r&&r.pickup)?r.pickup:u.pickup;
-    if(curB==='あり')bc++;
+    var bCnt=getBentoCountValue(curB); if(bCnt>0) bc+=bCnt;
     if(curP && curP !== 'なし' && curP !== '0' && curP !== 'false') pc++;
   });
 
@@ -802,7 +802,7 @@ async function renderCalendar(c){
       var r=da.find(function(a){return a.userId===uid;});
       var curB=(r&&r.bento)?r.bento:u.bento;
       var curP=(r&&r.pickup)?r.pickup:u.pickup;
-      if(curB==='あり')bc++;
+      var bCnt=getBentoCountValue(curB); if(bCnt>0) bc+=bCnt;
       if(isPickupUser(curP))pc++;
     });
     var ab=abIds.length;
@@ -840,7 +840,7 @@ async function renderCalendar(c){
       var r=da2.find(function(a){return a.userId===uid;});
       var curB2=(r&&r.bento)?r.bento:u.bento;
       var curP2=(r&&r.pickup)?r.pickup:u.pickup;
-      if(curB2==='あり') tB++;
+      var bCnt2=getBentoCountValue(curB2); if(bCnt2>0) tB+=bCnt2;
       if(isPickupUser(curP2)) tP++;
     });
   }
@@ -988,7 +988,7 @@ function renderDD(ds){
     var r=da.find(function(a){return a.userId===uid;});
     var curB=(r&&r.bento)?r.bento:u.bento;
     var curP=(r&&r.pickup)?r.pickup:u.pickup;
-    if(curB==='あり')bc++;
+    var bCnt=getBentoCountValue(curB); if(bCnt>0) bc+=bCnt;
     if(isPickupUser(curP))pc++;
   });
   var plannedCount=allIds.filter(function(uid){return abIds.indexOf(uid)<0;}).length;
