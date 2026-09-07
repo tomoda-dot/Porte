@@ -2400,10 +2400,20 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? String(r.bento).trim() : (u.bento ? String(u.bento).trim() : '');
         const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
 
+        const isBentoPositive = (val, mealVal) => {
+          if (mealVal === true || mealVal === 'あり' || mealVal === '必要' || mealVal === '1食' || mealVal === '2食' || mealVal === '3食') return true;
+          const s = String(val || '').trim();
+          return (
+            s === 'あり' || s === '必要' || s === 'true' || s === '1' ||
+            s === '1食' || s === '2食' || s === '3食' ||
+            s === '2' || s === '3' || s === '1個' || s === '2個' || s === '3個'
+          );
+        };
+
         // お弁当が必要（wantsBento = true）かの判定：
         let wantsBento = false;
         if (!isAbsent) {
-          if (curB === 'あり' || curB === '必要' || curB === 'true' || curB === '1' || curMeal === true || curMeal === 'あり' || curMeal === '必要') {
+          if (isBentoPositive(curB, curMeal)) {
             wantsBento = true;
           }
         }
@@ -2432,6 +2442,7 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           note: fullNote,
           status: r ? (r.status || '出席') : (isAbsent ? '利用曜日外' : '出席'),
           wantsBento: wantsBento,
+          bentoVal: curB,
           selectedBentoId: savedBentoId
         });
       });
@@ -2455,7 +2466,7 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
 
         const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? String(r.bento).trim() : (s.bento ? String(s.bento).trim() : '');
         let wantsBento = false;
-        if (curB === 'あり' || curB === '必要' || curB === 'true' || curB === '1') {
+        if (isBentoPositive(curB, null)) {
           wantsBento = true;
         }
 

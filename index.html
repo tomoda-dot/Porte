@@ -1274,7 +1274,7 @@ async function openAttDailyM(uid, ds){
       '      <input type="number" step="0.1" min="0" max="24" id="adm-ah" value="'+(att.actualHours!=null?att.actualHours:'')+'" placeholder="自動算定 (サービス提供時間)" style="width:100%" onchange="updateAdmAH()" oninput="updateAdmAH()">'+
       '    </div>'+
       '    <div class="grid2">'+
-      '      <div class="field"><label>お弁当</label><select id="adm-b" style="width:100%"><option'+(att.bento==='あり'?' selected':'')+'>あり</option><option'+(att.bento!=='あり'?' selected':'')+'>なし</option></select></div>'+
+      '      <div class="field"><label>お弁当</label><select id="adm-b" style="width:100%">'+renderBentoOptions(att.bento)+'</select></div>'+
       '      <div class="field"><label>送迎</label><select id="adm-p" style="width:100%"><option value="なし"'+(att.pickup==='なし'||!att.pickup?' selected':'')+'>なし</option><option value="往復"'+(att.pickup==='往復'||att.pickup==='あり'||att.pickup==='必要'?' selected':'')+'>往復</option><option value="往路"'+(att.pickup==='往路'||att.pickup==='行き'?' selected':'')+'>往路（行きのみ）</option><option value="復路"'+(att.pickup==='復路'||att.pickup==='帰り'?' selected':'')+'>復路（帰りのみ）</option></select></div>'+
       '    </div>'+
       '    <div class="field" style="margin-top:14px">'+
