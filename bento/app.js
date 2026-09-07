@@ -581,7 +581,7 @@ function autoReplaceSoldOutMenu() {
   inStockMaster.sort((a, b) => new Date(getBentoEarliestExpDate(a)) - new Date(getBentoEarliestExpDate(b)));
 
   let changed = false;
-  const currentlyOrderedIds = porteUsers.map(u => u.selectedBentoId).filter(Boolean);
+  const currentlyOrderedIds = porteUsers.flatMap(u => (u.selectedBentoIds || [u.selectedBentoId])).filter(Boolean);
 
   for (let i = 0; i < todaysMenuIds.length; i++) {
     const currentId = todaysMenuIds[i];
@@ -1161,8 +1161,18 @@ function renderTodaysMenu() {
 
   items.forEach((item, index) => {
     const isSoldOut = item.stock <= 0;
-    const chosenUsers = porteUsers.filter(u => u.selectedBentoId === item.id);
-    let userNamesHtml = chosenUsers.map(u => `<span style="background:#fff0f6; border:1px solid #ffdeeb; color:#c2255c; padding:2px 8px; border-radius:12px; font-size:0.85rem; font-weight:700; display:inline-block; margin:2px; white-space:nowrap !important; word-break:keep-all !important;">${u.name}</span>`).join(' ');
+    const chosenUsers = porteUsers.filter(u => {
+      normalizeUserData(u);
+      const ids = (u.selectedBentoIds && u.selectedBentoIds.length > 0) ? u.selectedBentoIds : (u.selectedBentoId ? [u.selectedBentoId] : []);
+      return ids.includes(item.id);
+    });
+    let userNamesHtml = chosenUsers.map(u => {
+      normalizeUserData(u);
+      const ids = (u.selectedBentoIds && u.selectedBentoIds.length > 0) ? u.selectedBentoIds : (u.selectedBentoId ? [u.selectedBentoId] : []);
+      const count = ids.filter(id => id === item.id).length;
+      const countBadge = count > 1 ? ` ×${count}` : '';
+      return `<span style="background:#fff0f6; border:1px solid #ffdeeb; color:#c2255c; padding:2px 8px; border-radius:12px; font-size:0.85rem; font-weight:700; display:inline-block; margin:2px; white-space:nowrap !important; word-break:keep-all !important;">${u.name}${countBadge}</span>`;
+    }).join(' ');
     if (!userNamesHtml) userNamesHtml = '<span style="color:#adb5bd; font-size:0.85rem; white-space:nowrap !important;">(未選択)</span>';
 
     const orderBtnHtml = isConfirmedToday
