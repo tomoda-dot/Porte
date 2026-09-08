@@ -97,8 +97,11 @@ function initDate() {
 
 function getOffsetDateStr(days) {
   const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  if (days) d.setDate(d.getDate() + days);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const date = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${date}`;
 }
 
 // ロットデータの整合性保証 ＆ 合計在庫数の自動同期
