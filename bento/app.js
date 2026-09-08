@@ -46,6 +46,12 @@ let showHiddenItems = false;
 let currentSelectedMonth = '';
 let currentCategoryFilter = 'ALL';
 let currentSelectingBentoId = null;
+let isOrderHistoryExpanded = false;
+
+window.toggleOrderHistoryExpand = function() {
+  isOrderHistoryExpanded = !isOrderHistoryExpanded;
+  renderStockSection();
+};
 
 let modalShowAll = false;
 let tableShowAll = false;
@@ -1744,30 +1750,66 @@ function renderStockSection() {
   }
 
   const tbody = document.getElementById('orderHistoryTableBody');
-  tbody.innerHTML = '';
+  if (tbody) {
+    tbody.innerHTML = '';
 
-  if (orderHistory.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#747d8c;">注文履歴はありません。</td></tr>`;
-  } else {
-    orderHistory.slice(0, 30).forEach((ord, index) => {
-      let dateDisp = ord.date || '';
-      if (dateDisp && dateDisp.indexOf('/') < 0 && dateDisp.indexOf('-') < 0 && ord.id) {
-        const ts = parseInt(String(ord.id).replace('ord_', ''), 10);
-        if (!isNaN(ts) && ts > 1000000000000) {
-          const d = new Date(ts);
-          dateDisp = `${d.getMonth() + 1}/${d.getDate()} ${ord.date}`;
+    if (orderHistory.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:#747d8c;">注文履歴はありません。</td></tr>`;
+      const expandContainer = document.getElementById('orderHistoryExpandContainer');
+      if (expandContainer) expandContainer.style.display = 'none';
+    } else {
+      // 日付順（新しい順）に厳密ソート
+      orderHistory.sort((a, b) => {
+        const keyA = a.dateKey || '';
+        const keyB = b.dateKey || '';
+        if (keyA && keyB && keyA !== keyB) {
+          return keyB.localeCompare(keyA);
+        }
+        const tsA = a.id ? parseInt(String(a.id).replace('ord_', ''), 10) || 0 : 0;
+        const tsB = b.id ? parseInt(String(b.id).replace('ord_', ''), 10) || 0 : 0;
+        return tsB - tsA;
+      });
+
+      // 最新日付のデータのみ表示、折りたたみ・展開表示コントロール
+      const latestDateKey = (orderHistory.find(ord => ord.dateKey) || {}).dateKey || '';
+      const displayItems = isOrderHistoryExpanded
+        ? orderHistory.slice(0, 200)
+        : (latestDateKey ? orderHistory.filter(ord => ord.dateKey === latestDateKey) : orderHistory.slice(0, 10));
+
+      displayItems.forEach((ord) => {
+        let dateDisp = ord.date || '';
+        if (dateDisp && dateDisp.indexOf('/') < 0 && dateDisp.indexOf('-') < 0 && ord.id) {
+          const ts = parseInt(String(ord.id).replace('ord_', ''), 10);
+          if (!isNaN(ts) && ts > 1000000000000) {
+            const d = new Date(ts);
+            dateDisp = `${d.getMonth() + 1}/${d.getDate()} ${ord.date}`;
+          }
+        }
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-size:0.85rem; font-weight:700; color:#495057;">${dateDisp}</td>
+          <td><strong>${ord.userName}</strong></td>
+          <td>${ord.bentoName}</td>
+          <td><span class="pill-btn" style="font-size:0.75rem;">${ord.category || ''}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // 折りたたみ / 展開 ボタン表示コントロール
+      const expandContainer = document.getElementById('orderHistoryExpandContainer');
+      if (expandContainer) {
+        const hiddenCount = orderHistory.length - displayItems.length;
+        if (hiddenCount > 0 && !isOrderHistoryExpanded) {
+          expandContainer.style.display = 'block';
+          expandContainer.innerHTML = `<button type="button" class="btn btn-sm btn-outline" style="font-weight:800; border-radius:20px; padding:6px 22px; color:#1864ab; border-color:#91c7ff; background:#eef7ff; cursor:pointer;" onclick="toggleOrderHistoryExpand()">▼ 過去の履歴を表示する (過去 ${hiddenCount}件)</button>`;
+        } else if (isOrderHistoryExpanded) {
+          expandContainer.style.display = 'block';
+          expandContainer.innerHTML = `<button type="button" class="btn btn-sm btn-outline" style="font-weight:800; border-radius:20px; padding:6px 22px; color:#495057; border-color:#ced4da; background:#ffffff; cursor:pointer;" onclick="toggleOrderHistoryExpand()">▲ 最新データのみに折りたたむ</button>`;
+        } else {
+          expandContainer.style.display = 'none';
         }
       }
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="font-size:0.85rem; font-weight:700; color:#495057;">${dateDisp}</td>
-        <td><strong>${ord.userName}</strong></td>
-        <td>${ord.bentoName}</td>
-        <td><span class="pill-btn" style="font-size:0.75rem;">${ord.category}</span></td>
-        <td><button class="btn btn-sm btn-outline-danger" onclick="cancelOrderHistory(${index})">取消</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
+    }
   }
 }
 
@@ -2993,17 +3035,6 @@ function parsePorteCsvFile(file) {
   const copySummaryBtn = document.getElementById('copyOrderSummaryBtn');
   if (copySummaryBtn) copySummaryBtn.addEventListener('click', copyCateringOrderTally);
 
-  const clearTodayBtn = document.getElementById('clearTodayOrdersBtn');
-  if (clearTodayBtn) {
-    clearTodayBtn.addEventListener('click', () => {
-      if (confirm('本日の注文履歴をクリアしますか？')) {
-        orderHistory = [];
-        saveOrderHistory();
-        renderAll();
-        showToast('履歴をクリアしました', 'info');
-      }
-    });
-  }
 
   const exportCsvBtn = document.getElementById('exportHistoryCsvBtn');
   if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportHistoryCsv);

@@ -166,7 +166,6 @@
             <h3>📜 注文・受付履歴ログ</h3>
             <div style="display:flex; gap:8px;">
               <button class="btn btn-sm btn-outline" id="exportHistoryCsvBtn">📥 注文履歴CSV出力</button>
-              <button class="btn btn-sm btn-danger-outline" id="clearTodayOrdersBtn">本日注文のクリア</button>
             </div>
           </div>
           <div class="card-body p-0">
@@ -178,7 +177,6 @@
                     <th>利用者名</th>
                     <th>注文お弁当</th>
                     <th>カテゴリ</th>
-                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody id="orderHistoryTableBody">
@@ -186,6 +184,7 @@
                 </tbody>
               </table>
             </div>
+            <div id="orderHistoryExpandContainer" style="padding:10px; text-align:center; background:#f8f9fa; border-top:1px solid #e9ecef;"></div>
           </div>
         </div>
 
