@@ -1003,8 +1003,13 @@ window.closeStaffAllMenuModalAdmin = function() {
 };
 
 window.onChooseStaffSpecialBentoAdmin = function(bentoId) {
-  closeStaffAllMenuModalAdmin();
   const item = bentoMaster.find(b => b.id === bentoId);
+  if (!item || item.stock <= 0) {
+    showToast('⚠️ 在庫がない（完売）ため選択できません', 'info');
+    renderAll();
+    return;
+  }
+  closeStaffAllMenuModalAdmin();
   openStaffSelectForBentoModal(item || bentoId);
 };
 
@@ -1103,29 +1108,47 @@ function renderStaffPickerList(searchQuery) {
 }
 
 window.selectStaffOrder = function(staffIdOrName) {
-  let user = porteUsers.find(u => u.id === staffIdOrName || u.name === staffIdOrName);
-  if (!user) {
-    user = {
+  if (isTodayOrderConfirmed()) {
+    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「確定を解除」してください。', 'warning');
+    return;
+  }
+
+  let userIndex = porteUsers.findIndex(u => u.id === staffIdOrName || u.name === staffIdOrName);
+  if (userIndex < 0) {
+    const userObj = {
       id: 'staff_' + Date.now(),
-      name: staffIdOrName.replace('👔', '').trim(),
+      name: String(staffIdOrName).replace('👔', '').trim(),
       type: '👔 スタッフ',
       isStaff: true,
       wantsBento: true,
+      bentoCount: 1,
+      selectedBentoIds: [],
       selectedBentoId: null
     };
-    porteUsers.push(user);
+    porteUsers.push(userObj);
+    userIndex = porteUsers.length - 1;
   }
+
+  const user = porteUsers[userIndex];
+  normalizeUserData(user);
+  if (user.bentoCount < 1) user.bentoCount = 1;
+  user.wantsBento = true;
+  user.type = '👔 スタッフ';
+  user.isStaff = true;
 
   const bento = bentoMaster.find(b => b.id === currentStaffSelectingBentoId);
   if (!bento) return;
 
-  user.selectedBentoId = bento.id;
-  user.type = '👔 スタッフ';
+  if (bento.stock <= 0) {
+    showToast(`⚠️ 『${bento.name}』は完売（在庫なし）のため選択できません`, 'info');
+    closeStaffSelectForBentoModal();
+    renderAll();
+    return;
+  }
+
+  assignUserBentoSlot(userIndex, 0, bento.id);
 
   closeStaffSelectForBentoModal();
-  renderPorteSection();
-  renderTodaysMenu();
-  savePorteData();
   showToast(`🎉 ${user.name} スタッフのお弁当を『${bento.name}』に登録しました！`, 'success');
 };
 
@@ -1396,6 +1419,14 @@ window.confirmAssignUserForBento = function(userId) {
   }
   if (!currentSelectingBentoId) return;
 
+  const bentoItem = bentoMaster.find(b => b.id === currentSelectingBentoId);
+  if (!bentoItem || bentoItem.stock <= 0) {
+    showToast(`⚠️ 『${bentoItem ? bentoItem.name : 'お弁当'}』は完売（在庫なし）のため選択できません`, 'info');
+    closeUserSelectForBentoModal();
+    renderAll();
+    return;
+  }
+
   const user = porteUsers[userIndex];
   normalizeUserData(user);
 
@@ -1410,7 +1441,6 @@ window.confirmAssignUserForBento = function(userId) {
   if (targetSlot < 0) targetSlot = 0;
 
   assignUserBentoSlot(userIndex, targetSlot, currentSelectingBentoId);
-  const bentoItem = bentoMaster.find(b => b.id === currentSelectingBentoId);
 
   closeUserSelectForBentoModal();
 
@@ -1506,7 +1536,7 @@ function renderPorteSection() {
             const isSoldOut = b.stock <= 0 && currentBentoId !== b.id;
             const isSelected = currentBentoId === b.id;
             optionsHtml += `<option value="${b.id}" ${isSelected ? 'selected' : ''} ${isSoldOut ? 'disabled' : ''}>
-              ${b.icon} ${b.name}
+              ${b.icon} ${b.name} ${isSoldOut ? '(完売)' : ''}
             </option>`;
           });
 
@@ -1638,6 +1668,18 @@ window.assignUserBentoSlot = function(userIndex, slotIndex, newBentoId) {
   const oldBentoId = user.selectedBentoIds[slotIndex];
   if (oldBentoId === newBentoId) return;
 
+  // Validate new bento stock FIRST before modifying old bento stock
+  if (newBentoId) {
+    const newBento = bentoMaster.find(b => b.id === newBentoId);
+    if (newBento) {
+      if (newBento.stock <= 0) {
+        showToast(`⚠️ 『${newBento.name}』は完売（在庫なし）のため選択できません`, 'info');
+        renderAll();
+        return;
+      }
+    }
+  }
+
   if (oldBentoId) {
     const oldBento = bentoMaster.find(b => b.id === oldBentoId);
     if (oldBento) {
@@ -1648,14 +1690,6 @@ window.assignUserBentoSlot = function(userIndex, slotIndex, newBentoId) {
   if (newBentoId) {
     const newBento = bentoMaster.find(b => b.id === newBentoId);
     if (newBento) {
-      if (newBento.stock <= 0) {
-        showToast('売り切れのため選択できません', 'info');
-        user.selectedBentoIds[slotIndex] = '';
-        user.selectedBentoId = user.selectedBentoIds[0] || '';
-        renderAll();
-        return;
-      }
-
       user.wantsBento = true;
       deductBentoStockFIFO(newBento, 1);
 
