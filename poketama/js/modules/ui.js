@@ -975,19 +975,6 @@ const UIController = {
             playerContainer.innerHTML = html;
         }
 
-        // Render Target Select Buttons
-        const targetBtnContainer = document.getElementById('target-enemy-buttons-container');
-        if (targetBtnContainer) {
-            let html = '';
-            battleEngine.enemyGroup.forEach((enemy, idx) => {
-                if (!enemy.isFainted) {
-                    const isSelected = (battleEngine.selectedTargetIndex || 0) === idx;
-                    html += `<button class="btn-target-select ${isSelected ? 'active' : ''}" onclick="UIController.setBattleTarget(${idx})">🎯 ${enemy.nickname}</button>`;
-                }
-            });
-            targetBtnContainer.innerHTML = html;
-        }
-
         // Render Current Actor's 4 Moves with PP Limits
         if (actor && actor.moves) {
             for (let i = 0; i < 4; i++) {
