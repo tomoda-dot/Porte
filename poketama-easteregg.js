@@ -1,13 +1,12 @@
 /**
- * PokéTama Easter Egg Launcher for Porte
- * Tap header/logo 5 times or type 'poketama' to unlock the secret game!
+ * PokéTama Easter Egg Launcher for Porte TOP Page
+ * Exclusive hidden trigger: Tap the TOP Page Mobile Header / Sidebar Title "ひとつぎ" 5 times!
  */
 (function() {
     let tapCount = 0;
     let tapTimer = null;
 
     window.openPoketamaGame = function() {
-        // Show Easter Egg Modal with iframe for seamless mobile/tablet play inside Porte!
         let modal = document.getElementById('poketama-modal-overlay');
         if (!modal) {
             modal = document.createElement('div');
@@ -47,16 +46,15 @@
 
         if (tapCount >= 5) {
             tapCount = 0;
-            // Play secret fanfare sound if possible and open game!
             try {
                 let ctx = new (window.AudioContext || window.webkitAudioContext)();
                 let osc = ctx.createOscillator();
                 let gain = ctx.createGain();
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
-                osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2); // G5
-                osc.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.3); // C6
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2);
+                osc.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.3);
                 gain.gain.setValueAtTime(0.15, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
                 osc.connect(gain);
@@ -74,23 +72,16 @@
         }
     }
 
-    // Attach listeners on DOM ready
-    document.addEventListener('DOMContentLoaded', function() {
-        // 1. Secret click/tap on side-hd, login-logo, or app title
-        let targets = document.querySelectorAll('.side-hd, .login-logo, .hd-title, .app-header, header .hd-name');
-        targets.forEach(function(el) {
-            el.addEventListener('click', triggerEgg);
-        });
+    // Attach 5-tap trigger ONLY to TOP page mobile header title (.side-hd)
+    window.initPoketamaMobileTrigger = function() {
+        let mobileHitotsugiTarget = document.querySelector('.side-hd');
+        if (mobileHitotsugiTarget) {
+            mobileHitotsugiTarget.removeEventListener('click', triggerEgg);
+            mobileHitotsugiTarget.addEventListener('click', triggerEgg);
+        }
+    };
 
-        // 2. Secret keyboard sequence: 'poketama'
-        let keys = '';
-        window.addEventListener('keydown', function(e) {
-            keys += e.key.toLowerCase();
-            if (keys.length > 20) keys = keys.substring(keys.length - 20);
-            if (keys.endsWith('poketama')) {
-                keys = '';
-                window.openPoketamaGame();
-            }
-        });
+    document.addEventListener('DOMContentLoaded', function() {
+        window.initPoketamaMobileTrigger();
     });
 })();
