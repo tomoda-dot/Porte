@@ -1095,8 +1095,8 @@ const UIController = {
                 this.showToast('🎉 ダンジョン完全踏破！エリアボス撃破おめでとう！', 'success');
                 this.exitBattleArena();
             } else if (nextStageRes && nextStageRes.eventType) {
-                document.getElementById('battle-arena-view').style.display = 'none';
                 this.startWalkingExplorationSequence(nextStageRes);
+                document.getElementById('battle-arena-view').style.display = 'none';
             } else {
                 this.exitBattleArena();
             }
