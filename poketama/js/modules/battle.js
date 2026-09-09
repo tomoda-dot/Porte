@@ -218,6 +218,8 @@ class BattleEngine {
             }
             if (!target) break; // All enemies defeated!
 
+            const hpBefore = target.hp;
+
             const rawMove = attacker.moves[cmd.moveIndex] || attacker.moves[0] || 'tackle';
             const moveId = typeof rawMove === 'string' ? rawMove : (rawMove ? rawMove.id : 'tackle');
             const move = MOVES_DATABASE[moveId] || MOVES_DATABASE.tackle;
@@ -249,6 +251,7 @@ class BattleEngine {
                 damage: res.damage,
                 isCrit: res.isCrit,
                 typeMult: res.typeMult,
+                targetHpBefore: hpBefore,
                 targetHpRemaining: target.hp,
                 targetMaxHp: target.maxHp,
                 targetFainted: target.isFainted,
@@ -276,6 +279,8 @@ class BattleEngine {
             const targetPartyMember = aiAct.targetMember;
             const move = aiAct.move;
 
+            const hpBefore = targetPartyMember.hp;
+
             const res = calculateBattleDamage(enemy, targetPartyMember, move);
             targetPartyMember.hp = Math.max(0, targetPartyMember.hp - res.damage);
 
@@ -301,6 +306,7 @@ class BattleEngine {
                 damage: res.damage,
                 isCrit: res.isCrit,
                 typeMult: res.typeMult,
+                targetHpBefore: hpBefore,
                 targetHpRemaining: targetPartyMember.hp,
                 targetMaxHp: targetPartyMember.maxHp,
                 targetFainted: targetPartyMember.isFainted,

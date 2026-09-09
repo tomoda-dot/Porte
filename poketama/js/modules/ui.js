@@ -888,8 +888,6 @@ const UIController = {
                     <div class="shop-card-title">
                         <h4>${egg.name}</h4>
                         <small style="color: var(--color-accent);">属性タマゴ</small>
-                    </div>
-                </div>
                 <p class="shop-card-desc">${egg.description}</p>
                 <div class="shop-card-action">
                     <span class="shop-price-tag">💰 ${shopEgg.buyPrice} G</span>
@@ -901,25 +899,145 @@ const UIController = {
         catalogGrid.innerHTML = html;
     },
 
-    buyShopItem(itemId) {
-        const res = ShopModule.buyItem(itemId);
-        this.showToast(res.message, res.success ? 'success' : 'warning');
-        this.renderAll();
+    async playBattleRoundSequence(res) {
+        if (!res || !res.steps) return;
+
+        // Disable move buttons during resolution
+        for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById(`btn-move-${i}`);
+            if (btn) btn.disabled = true;
+        }
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        const fxLayer = document.getElementById('battle-fx-layer');
+
+        // Track HP for each monster prior to step execution
+        const enemyHpState = {};
+        if (res.steps.length > 0) {
+            res.steps.forEach(s => {
+                if (s.targetSide === 'enemy' && enemyHpState[s.targetIndex] === undefined) {
+                    enemyHpState[s.targetIndex] = s.targetHpBefore !== undefined ? s.targetHpBefore : s.targetMaxHp;
+                }
+            });
+        }
+        const playerHpState = {};
+        if (res.steps.length > 0) {
+            res.steps.forEach(s => {
+                if (s.targetSide === 'player' && playerHpState[s.targetIndex] === undefined) {
+                    playerHpState[s.targetIndex] = s.targetHpBefore !== undefined ? s.targetHpBefore : s.targetMaxHp;
+                }
+            });
+        }
+
+        for (const step of res.steps) {
+            // Render arena showing HP BEFORE this step's damage
+            this.renderBattleArena({ enemyHp: enemyHpState, playerHp: playerHpState });
+
+            // Clear battle log box and show ONLY active step log line!
+            const logBox = document.getElementById('battle-log-box');
+            if (logBox) {
+                logBox.innerHTML = `<p class="log-line">${step.logText}</p>`;
+                logBox.scrollTop = logBox.scrollHeight;
+            }
+
+            const targetCardId = step.targetSide === 'enemy' ? `enemy-card-${step.targetIndex}` : `player-card-${step.targetIndex}`;
+            const attackerCardId = step.attackerSide === 'player' ? `player-card-${step.attackerIndex}` : `enemy-card-${step.attackerIndex}`;
+
+            const attackerEl = document.getElementById(attackerCardId);
+            const targetEl = document.getElementById(targetCardId);
+
+            // 1. Attacker steps forward
+            if (attackerEl) {
+                attackerEl.classList.add(step.attackerSide === 'player' ? 'step-attacker-player' : 'step-attacker-enemy');
+            }
+
+            // 2. Play Audio SE & Elemental Spell FX
+            if (step.isCrit) audioFX.playCrit();
+            else audioFX.playHit();
+
+            if (fxLayer && targetEl) {
+                const rect = targetEl.getBoundingClientRect();
+                const frameRect = document.querySelector('.ff-battle-frame')?.getBoundingClientRect() || { left: 0, top: 0 };
+
+                const fxDiv = document.createElement('div');
+                const moveType = step.moveObj ? step.moveObj.type : 'normal';
+                fxDiv.className = `attack-fx-overlay attack-fx-${moveType}`;
+                fxDiv.style.position = 'absolute';
+                fxDiv.style.left = `${rect.left - frameRect.left + rect.width / 2 - 35}px`;
+                fxDiv.style.top = `${rect.top - frameRect.top + rect.height / 2 - 35}px`;
+                fxDiv.style.width = '70px';
+                fxDiv.style.height = '70px';
+                fxDiv.style.pointerEvents = 'none';
+                fxDiv.style.zIndex = '80';
+                fxDiv.innerHTML = `<span style="font-size:42px;">${ELEMENT_TYPES[moveType]?.icon || '⚔️'}</span>`;
+
+                fxLayer.appendChild(fxDiv);
+                setTimeout(() => fxDiv.remove(), 600);
+            }
+
+            // 3. Target Flash & Shake + Animated HP Reduction + Floating Damage Text
+            if (targetEl) {
+                targetEl.classList.add('hit');
+
+                // Animate HP Bar Reduction on Target Card upon hit!
+                if (step.targetSide === 'enemy') {
+                    enemyHpState[step.targetIndex] = step.targetHpRemaining;
+                } else {
+                    playerHpState[step.targetIndex] = step.targetHpRemaining;
+                }
+
+                const hpPct = Math.floor((step.targetHpRemaining / step.targetMaxHp) * 100);
+                const hpBarFill = targetEl.querySelector('.progress-bar-fill');
+                const hpText = targetEl.querySelector('small');
+                if (hpBarFill) hpBarFill.style.width = `${hpPct}%`;
+                if (hpText) hpText.innerText = `HP: ${step.targetHpRemaining}/${step.targetMaxHp}`;
+
+                if (step.targetFainted) {
+                    targetEl.classList.add('fainted');
+                }
+
+                const pop = document.createElement('div');
+                pop.className = `floating-damage-popup ${step.isCrit ? 'crit' : ''}`;
+                pop.innerText = `${step.isCrit ? '💥 CRITICAL! ' : ''}-${step.damage} HP`;
+                targetEl.appendChild(pop);
+
+                setTimeout(() => pop.remove(), 850);
+            }
+
+            await sleep(750);
+
+            // Clean up classes
+            if (attackerEl) {
+                attackerEl.classList.remove('step-attacker-player', 'step-attacker-enemy');
+            }
+            if (targetEl) {
+                targetEl.classList.remove('hit');
+            }
+        }
+
+        // Re-enable buttons
+        for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById(`btn-move-${i}`);
+            if (btn) btn.disabled = false;
+        }
+
+        this.renderBattleArena();
+
+        if (res.status === 'victory') {
+            this.handleVictorySequence(res.victoryData || res);
+        } else if (res.status === 'defeat') {
+            this.handleDefeatSequence(res);
+        } else {
+            // Clear log box and set clean turn prompt for next action
+            const logBox = document.getElementById('battle-log-box');
+            if (logBox) {
+                const actor = battleEngine.getCurrentActor();
+                logBox.innerHTML = `<p class="log-line">⚔️ ▶ 【${actor ? actor.nickname : '仲間'}】 のコマンドを選択してください！</p>`;
+            }
+        }
     },
 
-    buyShopEgg(eggId) {
-        const res = ShopModule.buyEgg(eggId);
-        this.showToast(res.message, res.success ? 'success' : 'warning');
-        this.renderAll();
-    },
-
-    sellShopItem(itemId) {
-        const res = ShopModule.sellItem(itemId);
-        this.showToast(res.message, res.success ? 'success' : 'info');
-        this.renderAll();
-    },
-
-    renderBattleArena() {
+    renderBattleArena(hpState = null) {
         if (!battleEngine.inBattle) return;
 
         const actor = battleEngine.getCurrentActor();
@@ -938,16 +1056,18 @@ const UIController = {
             let html = '';
             battleEngine.enemyGroup.forEach((enemy, idx) => {
                 const elem = ELEMENT_TYPES[enemy.element];
-                const hpPct = Math.floor((enemy.hp / enemy.maxHp) * 100);
+                const displayHp = (hpState && hpState.enemyHp && hpState.enemyHp[idx] !== undefined) ? hpState.enemyHp[idx] : enemy.hp;
+                const isFainted = (hpState && hpState.enemyHp && hpState.enemyHp[idx] !== undefined) ? (hpState.enemyHp[idx] <= 0) : enemy.isFainted;
+                const hpPct = Math.floor((displayHp / enemy.maxHp) * 100);
                 const isSelected = (battleEngine.selectedTargetIndex || 0) === idx;
 
                 html += `
-                <div class="unit-party-card ${enemy.isFainted ? 'fainted' : ''} ${isSelected ? 'target-selected' : ''}" id="enemy-card-${idx}" onclick="UIController.setBattleTarget(${idx})">
-                    <div class="unit-mini-sprite">${renderMonsterSVG(enemy.speciesId, { emotion: enemy.isFainted ? 'sleep' : 'angry' })}</div>
+                <div class="unit-party-card ${isFainted ? 'fainted' : ''} ${isSelected ? 'target-selected' : ''}" id="enemy-card-${idx}" onclick="UIController.setBattleTarget(${idx})">
+                    <div class="unit-mini-sprite">${renderMonsterSVG(enemy.speciesId, { emotion: isFainted ? 'sleep' : 'angry' })}</div>
                     <div class="unit-info-box">
                         <div class="unit-name">${enemy.nickname} <small style="color:${elem.color}">Lv.${enemy.level}</small></div>
                         <div class="progress-bar-bg"><div class="progress-bar-fill fill-hunger" style="width:${hpPct}%"></div></div>
-                        <small style="font-size:10px;">HP: ${enemy.hp}/${enemy.maxHp}</small>
+                        <small style="font-size:10px;">HP: ${displayHp}/${enemy.maxHp}</small>
                     </div>
                 </div>`;
             });
@@ -960,16 +1080,18 @@ const UIController = {
             let html = '';
             battleEngine.playerParty.forEach((member, idx) => {
                 const elem = ELEMENT_TYPES[member.element];
-                const hpPct = Math.floor((member.hp / member.maxHp) * 100);
+                const displayHp = (hpState && hpState.playerHp && hpState.playerHp[idx] !== undefined) ? hpState.playerHp[idx] : member.hp;
+                const isFainted = (hpState && hpState.playerHp && hpState.playerHp[idx] !== undefined) ? (hpState.playerHp[idx] <= 0) : member.isFainted;
+                const hpPct = Math.floor((displayHp / member.maxHp) * 100);
                 const isCurrentActor = actor && battleEngine.currentActorIndex === idx;
 
                 html += `
-                <div class="unit-party-card ${member.isFainted ? 'fainted' : ''} ${isCurrentActor ? 'active-turn' : ''}" id="player-card-${idx}">
-                    <div class="unit-mini-sprite">${renderMonsterSVG(member.speciesId, { emotion: member.isFainted ? 'sleep' : (isCurrentActor ? 'happy' : 'battle') })}</div>
+                <div class="unit-party-card ${isFainted ? 'fainted' : ''} ${isCurrentActor ? 'active-turn' : ''}" id="player-card-${idx}">
+                    <div class="unit-mini-sprite">${renderMonsterSVG(member.speciesId, { emotion: isFainted ? 'sleep' : (isCurrentActor ? 'happy' : 'battle') })}</div>
                     <div class="unit-info-box">
                         <div class="unit-name">${member.nickname} <small style="color:${elem.color}">Lv.${member.level}</small></div>
                         <div class="progress-bar-bg"><div class="progress-bar-fill fill-hunger" style="width:${hpPct}%"></div></div>
-                        <small style="font-size:10px;">HP: ${member.hp}/${member.maxHp}</small>
+                        <small style="font-size:10px;">HP: ${displayHp}/${member.maxHp}</small>
                     </div>
                 </div>`;
             });
