@@ -303,7 +303,7 @@ const MONSTERS_DATABASE = {
 };
 
 /**
- * Render Dynamic Cute Animal-Style SVG Artwork
+ * Render Authentic Retro Pixel Art (ドット絵) SVG Artwork
  */
 function renderMonsterSVG(id, options = {}) {
     const isEgg = id.startsWith('egg_');
@@ -312,220 +312,225 @@ function renderMonsterSVG(id, options = {}) {
     if (isEgg) {
         const eggData = EGGS_DATABASE[id] || EGGS_DATABASE.egg_fire;
         const crack = options.crackProgress || 0; // 0 to 1
+
         return `
-        <svg viewBox="0 0 200 240" width="100%" height="100%" class="monster-svg egg-svg">
-            <defs>
-                <radialGradient id="eggGlow_${id}" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="${eggData.patternColor}" stop-opacity="0.9"/>
-                    <stop offset="100%" stop-color="${eggData.color}" stop-opacity="0"/>
-                </radialGradient>
-                <linearGradient id="eggGrad_${id}" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="${eggData.patternColor}"/>
-                    <stop offset="50%" stop-color="${eggData.color}"/>
-                    <stop offset="100%" stop-color="#1a1c2e"/>
-                </linearGradient>
-            </defs>
+        <svg viewBox="0 0 24 24" width="100%" height="100%" class="monster-svg egg-svg" shape-rendering="crispEdges">
+            <!-- Shadow -->
+            <rect x="6" y="22" width="12" height="1" fill="rgba(0,0,0,0.3)" />
+            <rect x="8" y="21" width="8" height="1" fill="rgba(0,0,0,0.4)" />
 
-            <!-- Aura Shadow -->
-            <ellipse cx="100" cy="215" rx="55" ry="14" fill="rgba(0,0,0,0.35)" />
-            <ellipse cx="100" cy="130" rx="75" ry="85" fill="url(#eggGlow_${id})" opacity="0.6"/>
+            <!-- Egg Outer Pixel Border -->
+            <rect x="8" y="2" width="8" height="1" fill="#111" />
+            <rect x="6" y="3" width="2" height="2" fill="#111" />
+            <rect x="16" y="3" width="2" height="2" fill="#111" />
+            <rect x="4" y="5" width="2" height="13" fill="#111" />
+            <rect x="18" y="5" width="2" height="13" fill="#111" />
+            <rect x="6" y="18" width="2" height="3" fill="#111" />
+            <rect x="16" y="18" width="2" height="3" fill="#111" />
+            <rect x="8" y="20" width="8" height="1" fill="#111" />
 
-            <!-- Egg Main Shell -->
-            <path d="M 100,25 C 152,25 172,80 172,140 C 172,195 142,210 100,210 C 58,210 28,195 28,140 C 28,80 48,25 100,25 Z" 
-                  fill="url(#eggGrad_${id})" stroke="#ffffff" stroke-width="3.5" />
+            <!-- Egg Body Fill -->
+            <rect x="8" y="3" width="8" height="2" fill="${eggData.color}" />
+            <rect x="6" y="5" width="12" height="13" fill="${eggData.color}" />
+            <rect x="8" y="18" width="8" height="2" fill="${eggData.color}" />
 
-            <!-- Cute Ribbon Accent on Egg -->
-            <path d="M 85,60 Q 100,70 115,60 Q 125,50 115,40 Q 100,50 85,40 Q 75,50 85,60 Z" fill="#ff77aa" opacity="0.9" />
+            <!-- Egg Highlight Pixels -->
+            <rect x="9" y="4" width="3" height="1" fill="#ffffff" opacity="0.8" />
+            <rect x="7" y="5" width="2" height="4" fill="#ffffff" opacity="0.6" />
 
-            <!-- Egg Cute Spot Patterns -->
-            <circle cx="75" cy="100" r="16" fill="${eggData.patternColor}" opacity="0.8" />
-            <circle cx="130" cy="135" r="20" fill="${eggData.patternColor}" opacity="0.8" />
-            <circle cx="70" cy="165" r="14" fill="${eggData.patternColor}" opacity="0.8" />
+            <!-- Pixel Spot Patterns -->
+            <rect x="8" y="8" width="3" height="3" fill="${eggData.patternColor}" />
+            <rect x="14" y="11" width="3" height="3" fill="${eggData.patternColor}" />
+            <rect x="9" y="15" width="2" height="2" fill="${eggData.patternColor}" />
 
-            <!-- Crack Overlay if Warming -->
-            ${crack > 0.3 ? `<path d="M 90,75 L 105,90 L 95,105 L 115,120" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round"/>` : ''}
-            ${crack > 0.7 ? `<path d="M 125,135 L 110,150 L 130,165 L 115,185" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round"/>` : ''}
-
-            <!-- Shine Highlight -->
-            <path d="M 65,45 Q 90,35 110,40 C 80,48 55,75 55,105 C 55,80 60,55 65,45 Z" fill="#ffffff" opacity="0.45" />
+            <!-- Crack Pixels if warming -->
+            ${crack > 0.3 ? `<rect x="11" y="7" width="2" height="1" fill="#fff" /><rect x="12" y="8" width="1" height="2" fill="#fff" /><rect x="10" y="10" width="2" height="1" fill="#fff" />` : ''}
+            ${crack > 0.7 ? `<rect x="8" y="12" width="2" height="1" fill="#fff" /><rect x="7" y="13" width="1" height="3" fill="#fff" /><rect x="8" y="15" width="2" height="1" fill="#fff" />` : ''}
         </svg>`;
     }
 
     const monster = MONSTERS_DATABASE[id] || MONSTERS_DATABASE.fire_1;
     const elem = ELEMENT_TYPES[monster.element];
 
-    // --- ANIME ANIMAL EYES & FACE RENDERING ---
-    let eyeLeft = `
-        <circle cx="76" cy="94" r="11" fill="#1e1e2e"/>
-        <circle cx="73" cy="90" r="4.5" fill="#ffffff"/>
-        <circle cx="79" cy="97" r="2" fill="#ffffff"/>`;
-
-    let eyeRight = `
-        <circle cx="124" cy="94" r="11" fill="#1e1e2e"/>
-        <circle cx="121" cy="90" r="4.5" fill="#ffffff"/>
-        <circle cx="127" cy="97" r="2" fill="#ffffff"/>`;
-
-    let mouth = `<path d="M 92,106 Q 100,114 108,106" fill="none" stroke="#1e1e2e" stroke-width="3" stroke-linecap="round"/>`;
-    let cheeks = `
-        <circle cx="63" cy="106" r="8" fill="#ff6699" opacity="0.65"/>
-        <circle cx="137" cy="106" r="8" fill="#ff6699" opacity="0.65"/>`;
-    let extraOverlay = '';
-
-    if (emotion === 'sleep') {
-        eyeLeft = `<path d="M 67,95 Q 76,102 85,95" fill="none" stroke="#1e1e2e" stroke-width="3.5" stroke-linecap="round"/>`;
-        eyeRight = `<path d="M 115,95 Q 124,102 133,95" fill="none" stroke="#1e1e2e" stroke-width="3.5" stroke-linecap="round"/>`;
-        mouth = `<ellipse cx="100" cy="110" rx="3.5" ry="5" fill="#ff6699"/>`;
-        extraOverlay = `<text x="142" y="65" fill="#99ccff" font-family="'M PLUS Rounded 1c', sans-serif" font-weight="900" font-size="24">Zzz...</text>`;
-    } else if (emotion === 'hungry') {
-        mouth = `<path d="M 92,112 Q 100,102 108,112 Z" fill="#ff6699" stroke="#1e1e2e" stroke-width="2"/>`;
-        extraOverlay = `<path d="M 132,72 Q 138,82 132,92" fill="none" stroke="#55ccff" stroke-width="3.5" stroke-linecap="round"/>`;
-    } else if (emotion === 'angry' || emotion === 'battle') {
-        eyeLeft = `
-            <circle cx="76" cy="94" r="11" fill="#1e1e2e"/>
-            <circle cx="74" cy="91" r="4" fill="#ffdd44"/>
-            <path d="M 64,82 L 86,90" stroke="#1e1e2e" stroke-width="3" stroke-linecap="round"/>`;
-        eyeRight = `
-            <circle cx="124" cy="94" r="11" fill="#1e1e2e"/>
-            <circle cx="122" cy="91" r="4" fill="#ffdd44"/>
-            <path d="M 136,82 L 114,90" stroke="#1e1e2e" stroke-width="3" stroke-linecap="round"/>`;
-        mouth = `<path d="M 92,112 Q 100,104 108,112 Z" fill="#ff4444"/>`;
-        extraOverlay = `<path d="M 45,45 L 55,60 M 155,45 L 145,60" stroke="${elem.color}" stroke-width="4.5" stroke-linecap="round"/>`;
-    }
-
-    // --- ANIMAL SPECIFIC BODY & EARS ARTWORK ---
-    let animalFeaturePath = '';
     let mainColor = elem.color;
     let accentColor = '#ffffff';
+    let earColor = '#ffffff';
 
     if (monster.element === 'fire') {
         accentColor = '#ffcc00';
-        animalFeaturePath = `
-            <!-- Fluffy Fox Ears (Large Fluffy Ears) -->
-            <path d="M 68,68 Q 30,25 58,15 Q 82,25 80,62 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
-            <path d="M 64,60 Q 42,32 58,25 Q 74,32 74,56 Z" fill="${accentColor}"/>
-
-            <path d="M 132,68 Q 170,25 142,15 Q 118,25 120,62 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
-            <path d="M 136,60 Q 158,32 142,25 Q 126,32 126,56 Z" fill="${accentColor}"/>
-
-            <!-- Fluffy Flame Fox Tail -->
-            <path d="M 42,145 Q 10,110 30,75 Q 58,105 60,135 Z" fill="${accentColor}"/>
-            <path d="M 32,130 Q 15,112 28,90 Q 48,110 50,130 Z" fill="${mainColor}"/>
-
-            <!-- Chubby Animal Body -->
-            <ellipse cx="100" cy="115" rx="54" ry="48" fill="${mainColor}"/>
-            <!-- Soft White Belly Patch -->
-            <ellipse cx="100" cy="130" rx="30" ry="24" fill="#ffffff" opacity="0.9"/>
-
-            <!-- Cute Paws -->
-            <ellipse cx="74" cy="154" rx="12" ry="8" fill="#ffffff"/>
-            <ellipse cx="126" cy="154" rx="12" ry="8" fill="#ffffff"/>
-        `;
+        earColor = '#ff9900';
     } else if (monster.element === 'water') {
         accentColor = '#88e0ff';
-        animalFeaturePath = `
-            <!-- Floppy Water Bunny / Seal Ears -->
-            <path d="M 70,68 Q 25,65 30,105 Q 60,110 74,74 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
-            <path d="M 66,74 Q 35,72 38,98 Q 58,102 70,78 Z" fill="${accentColor}"/>
-
-            <path d="M 130,68 Q 175,65 170,105 Q 140,110 126,74 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
-            <path d="M 134,74 Q 165,72 162,98 Q 142,102 130,78 Z" fill="${accentColor}"/>
-
-            <!-- Aquatic Swirl Tail -->
-            <path d="M 100,162 Q 130,185 155,160 Q 145,145 120,150 Z" fill="${accentColor}"/>
-
-            <!-- Round Squishy Body -->
-            <ellipse cx="100" cy="115" rx="55" ry="50" fill="${mainColor}"/>
-            <!-- White Cream Belly -->
-            <ellipse cx="100" cy="126" rx="34" ry="28" fill="#ffffff" opacity="0.9"/>
-
-            <!-- Small Flippers / Paws -->
-            <ellipse cx="68" cy="150" rx="14" ry="8" fill="${accentColor}"/>
-            <ellipse cx="132" cy="150" rx="14" ry="8" fill="${accentColor}"/>
-        `;
+        earColor = '#3388ff';
     } else if (monster.element === 'grass') {
         accentColor = '#aaff66';
-        animalFeaturePath = `
-            <!-- Leafy Fennec / Squirrel Ears -->
-            <path d="M 72,66 Q 35,20 50,10 Q 75,20 82,58 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
-            <path d="M 68,60 Q 42,26 52,18 Q 70,26 76,54 Z" fill="${accentColor}"/>
-
-            <path d="M 128,66 Q 165,20 150,10 Q 125,20 118,58 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
-            <path d="M 132,60 Q 158,26 148,18 Q 130,26 124,54 Z" fill="${accentColor}"/>
-
-            <!-- Giant Bushy Leaf Tail -->
-            <path d="M 45,140 Q 15,115 20,70 Q 55,85 62,130 Z" fill="${accentColor}"/>
-            <!-- Flower Head Ornament -->
-            <circle cx="120" cy="45" r="10" fill="#ff77aa"/>
-            <circle cx="120" cy="45" r="4" fill="#ffffaa"/>
-
-            <!-- Round Body -->
-            <ellipse cx="100" cy="115" rx="52" ry="46" fill="${mainColor}"/>
-            <ellipse cx="100" cy="128" rx="32" ry="24" fill="#ffffff" opacity="0.9"/>
-
-            <!-- Cute Little Paws -->
-            <circle cx="74" cy="152" r="9" fill="${accentColor}"/>
-            <circle cx="126" cy="152" r="9" fill="${accentColor}"/>
-        `;
-    } else { // Cyber / Electric (電気ハムスター・ネコ)
+        earColor = '#33cc55';
+    } else { // cyber
         accentColor = '#00ffff';
-        animalFeaturePath = `
-            <!-- Twitchy Cat/Hamster Ears -->
-            <path d="M 72,65 Q 48,25 65,20 Q 82,32 80,60 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
-            <path d="M 70,58 Q 54,28 65,25 Q 76,32 76,54 Z" fill="${accentColor}"/>
+        earColor = '#aa00ff';
+    }
 
-            <path d="M 128,65 Q 152,25 135,20 Q 118,32 120,60 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
-            <path d="M 130,58 Q 146,28 135,25 Q 124,32 124,54 Z" fill="${accentColor}"/>
+    // --- PIXEL EXPRESSION OVERLAYS ---
+    let eyePixels = `
+        <rect x="8" y="10" width="2" height="3" fill="#111" />
+        <rect x="8" y="10" width="1" height="1" fill="#fff" />
+        <rect x="14" y="10" width="2" height="3" fill="#111" />
+        <rect x="14" y="10" width="1" height="1" fill="#fff" />`;
 
-            <!-- Lightning Bolt Tail -->
-            <path d="M 45,135 L 20,110 L 35,110 L 15,85 L 50,110 Z" fill="${accentColor}"/>
+    let mouthPixels = `<rect x="11" y="13" width="2" height="1" fill="#111" />`;
+    let emotionOverlay = '';
 
-            <!-- Visor Accent / Headband -->
-            <rect x="75" y="60" width="50" height="8" rx="4" fill="${accentColor}" opacity="0.8"/>
+    if (emotion === 'sleep') {
+        eyePixels = `
+            <rect x="8" y="11" width="3" height="1" fill="#111" />
+            <rect x="13" y="11" width="3" height="1" fill="#111" />`;
+        mouthPixels = `<rect x="11" y="13" width="2" height="2" fill="#ff77aa" />`;
+        emotionOverlay = `
+            <rect x="17" y="5" width="2" height="1" fill="#99ccff" />
+            <rect x="19" y="4" width="2" height="1" fill="#99ccff" />
+            <rect x="18" y="6" width="3" height="1" fill="#99ccff" />`;
+    } else if (emotion === 'hungry') {
+        mouthPixels = `
+            <rect x="10" y="13" width="4" height="2" fill="#ff4466" />
+            <rect x="11" y="13" width="2" height="1" fill="#fff" />`;
+        emotionOverlay = `<rect x="17" y="9" width="1" height="3" fill="#55ccff" />`;
+    } else if (emotion === 'angry' || emotion === 'battle') {
+        eyePixels = `
+            <rect x="8" y="10" width="2" height="3" fill="#111" />
+            <rect x="8" y="11" width="1" height="1" fill="#ffdd44" />
+            <rect x="7" y="9" width="3" height="1" fill="#111" />
+            <rect x="14" y="10" width="2" height="3" fill="#111" />
+            <rect x="14" y="11" width="1" height="1" fill="#ffdd44" />
+            <rect x="14" y="9" width="3" height="1" fill="#111" />`;
+        mouthPixels = `
+            <rect x="10" y="13" width="4" height="2" fill="#ff2244" />
+            <rect x="11" y="13" width="2" height="1" fill="#fff" />`;
+    }
+
+    // --- ANIMAL SPECIFIC PIXEL ART BODY ---
+    let pixelFeatureSvg = '';
+
+    if (monster.element === 'fire') { // 子狐・キツネ
+        pixelFeatureSvg = `
+            <!-- Pixel Fox Ears -->
+            <rect x="4" y="3" width="4" height="4" fill="${mainColor}" />
+            <rect x="5" y="4" width="2" height="2" fill="${accentColor}" />
+            <rect x="16" y="3" width="4" height="4" fill="${mainColor}" />
+            <rect x="17" y="4" width="2" height="2" fill="${accentColor}" />
+
+            <!-- Pixel Fluffy Fox Tail -->
+            <rect x="1" y="12" width="4" height="5" fill="${accentColor}" />
+            <rect x="2" y="13" width="3" height="4" fill="${mainColor}" />
+
+            <!-- Pixel Chubby Body -->
+            <rect x="6" y="7" width="12" height="10" fill="${mainColor}" />
+            <!-- White Cream Belly -->
+            <rect x="9" y="11" width="6" height="5" fill="#ffffff" />
+
+            <!-- Rosy Cheeks -->
+            <rect x="6" y="12" width="2" height="1" fill="#ff6699" />
+            <rect x="16" y="12" width="2" height="1" fill="#ff6699" />
+
+            <!-- Paws -->
+            <rect x="7" y="17" width="3" height="2" fill="#ffffff" />
+            <rect x="14" y="17" width="3" height="2" fill="#ffffff" />
+        `;
+    } else if (monster.element === 'water') { // たれ耳うさぎ
+        pixelFeatureSvg = `
+            <!-- Floppy Pixel Bunny Ears -->
+            <rect x="2" y="5" width="4" height="6" fill="${mainColor}" />
+            <rect x="3" y="6" width="2" height="4" fill="${accentColor}" />
+            <rect x="18" y="5" width="4" height="6" fill="${mainColor}" />
+            <rect x="19" y="6" width="2" height="4" fill="${accentColor}" />
+
+            <!-- Aquatic Swirl Tail -->
+            <rect x="17" y="14" width="5" height="3" fill="${accentColor}" />
+
+            <!-- Round Pixel Body -->
+            <rect x="5" y="7" width="14" height="10" fill="${mainColor}" />
+            <!-- White Belly -->
+            <rect x="8" y="11" width="8" height="5" fill="#ffffff" />
+
+            <!-- Rosy Cheeks -->
+            <rect x="6" y="12" width="2" height="1" fill="#ff6699" />
+            <rect x="16" y="12" width="2" height="1" fill="#ff6699" />
+
+            <!-- Paws -->
+            <rect x="7" y="17" width="3" height="2" fill="${accentColor}" />
+            <rect x="14" y="17" width="3" height="2" fill="${accentColor}" />
+        `;
+    } else if (monster.element === 'grass') { // 子リス
+        pixelFeatureSvg = `
+            <!-- Leaf Ears & Flower -->
+            <rect x="4" y="2" width="4" height="5" fill="${mainColor}" />
+            <rect x="5" y="3" width="2" height="3" fill="${accentColor}" />
+            <rect x="16" y="2" width="4" height="5" fill="${mainColor}" />
+            <rect x="17" y="3" width="2" height="3" fill="${accentColor}" />
+            <rect x="15" y="2" width="2" height="2" fill="#ff77aa" />
+
+            <!-- Giant Leaf Bushy Tail -->
+            <rect x="1" y="10" width="5" height="7" fill="${accentColor}" />
+            <rect x="2" y="11" width="3" height="5" fill="${mainColor}" />
+
+            <!-- Round Squirrel Body -->
+            <rect x="5" y="7" width="14" height="10" fill="${mainColor}" />
+            <rect x="8" y="11" width="8" height="5" fill="#ffffff" />
+
+            <!-- Rosy Cheeks -->
+            <rect x="6" y="12" width="2" height="1" fill="#ff6699" />
+            <rect x="16" y="12" width="2" height="1" fill="#ff6699" />
+
+            <!-- Paws -->
+            <rect x="7" y="17" width="3" height="2" fill="${accentColor}" />
+            <rect x="14" y="17" width="3" height="2" fill="${accentColor}" />
+        `;
+    } else { // Cyber / Electric (電気ハムスター)
+        pixelFeatureSvg = `
+            <!-- Twitchy Hamster Ears & Visor -->
+            <rect x="4" y="3" width="4" height="4" fill="${mainColor}" />
+            <rect x="5" y="4" width="2" height="2" fill="${accentColor}" />
+            <rect x="16" y="3" width="4" height="4" fill="${mainColor}" />
+            <rect x="17" y="4" width="2" height="2" fill="${accentColor}" />
+            <rect x="7" y="7" width="10" height="2" fill="${accentColor}" />
+
+            <!-- Lightning Tail -->
+            <rect x="1" y="10" width="2" height="3" fill="${accentColor}" />
+            <rect x="2" y="12" width="3" height="2" fill="${accentColor}" />
 
             <!-- Body -->
-            <ellipse cx="100" cy="115" rx="53" ry="47" fill="${mainColor}"/>
-            <ellipse cx="100" cy="128" rx="30" ry="24" fill="#ffffff" opacity="0.9"/>
+            <rect x="5" y="7" width="14" height="10" fill="${mainColor}" />
+            <rect x="8" y="11" width="8" height="5" fill="#ffffff" />
 
-            <!-- Cute Paws -->
-            <ellipse cx="72" cy="152" rx="10" ry="7" fill="#ffffff"/>
-            <ellipse cx="128" cy="152" rx="10" ry="7" fill="#ffffff"/>
+            <!-- Rosy Cheeks -->
+            <rect x="6" y="12" width="2" height="1" fill="#ff6699" />
+            <rect x="16" y="12" width="2" height="1" fill="#ff6699" />
+
+            <!-- Paws -->
+            <rect x="7" y="17" width="3" height="2" fill="#ffffff" />
+            <rect x="14" y="17" width="3" height="2" fill="#ffffff" />
         `;
     }
 
     return `
-    <svg viewBox="0 0 200 200" width="100%" height="100%" class="monster-svg stage-${monster.stage}">
-        <defs>
-            <filter id="glow_${id}">
-                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-            </filter>
-        </defs>
+    <svg viewBox="0 0 24 24" width="100%" height="100%" class="monster-svg stage-${monster.stage}" shape-rendering="crispEdges">
+        <!-- Shadow -->
+        <rect x="6" y="19" width="12" height="1" fill="rgba(0,0,0,0.3)" />
+        <rect x="8" y="20" width="8" height="1" fill="rgba(0,0,0,0.4)" />
 
-        <!-- Soft Shadow -->
-        <ellipse cx="100" cy="176" rx="46" ry="10" fill="rgba(0,0,0,0.3)" />
-
-        <!-- Cute Animal Body Group -->
+        <!-- Pixel Monster Body & Features -->
         <g class="monster-body-group">
-            ${animalFeaturePath}
+            ${pixelFeatureSvg}
 
-            <!-- Rosy Cheeks -->
-            ${cheeks}
-
-            <!-- Anime Eyes & Cute Nose/Mouth -->
+            <!-- Pixel Face Expressions -->
             <g class="monster-face">
-                ${eyeLeft}
-                ${eyeRight}
-
-                <!-- Cute Animal Button Nose -->
-                <ellipse cx="100" cy="101" rx="3" ry="2.2" fill="#1e1e2e"/>
-
-                ${mouth}
+                ${eyePixels}
+                <!-- Nose Pixel -->
+                <rect x="11" y="12" width="2" height="1" fill="#111" />
+                ${mouthPixels}
             </g>
 
-            ${extraOverlay}
+            ${emotionOverlay}
         </g>
     </svg>`;
 }
+

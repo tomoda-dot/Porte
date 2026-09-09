@@ -29,11 +29,8 @@
 }
 
 body {
-    background: radial-gradient(circle at 50% 20%, #1a3620 0%, #09140c 100%);
-    background-image: 
-        radial-gradient(circle at 15% 25%, rgba(162, 217, 106, 0.18) 0%, transparent 45%),
-        radial-gradient(circle at 85% 75%, rgba(255, 209, 92, 0.14) 0%, transparent 45%),
-        radial-gradient(circle at 50% 50%, #142a1a 0%, #071009 100%);
+    background: url('../images/forest_bg.png') no-repeat center center fixed;
+    background-size: cover;
     color: #f4fbf1;
     font-family: var(--font-family);
     min-height: 100vh;
@@ -42,6 +39,14 @@ body {
     align-items: center;
     padding: 12px;
     overflow-x: hidden;
+}
+
+/* Pixel Art crisp rendering for monsters */
+.monster-svg, .pet-screen-stage svg, .battle-sprite-box svg, .box-sprite svg, .dex-sprite svg, .egg-preview svg {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    image-rendering: -moz-crisp-edges;
+    shape-rendering: crispEdges;
 }
 
 /* App Container Frame */
