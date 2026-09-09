@@ -568,20 +568,10 @@ const UIController = {
         const textHp = document.getElementById('text-care-hp-val');
         const barHunger = document.getElementById('bar-care-hunger');
         const barFriendship = document.getElementById('bar-care-friendship');
-        const barPlayerEnergy = document.getElementById('bar-player-energy');
-        const textPlayerEnergy = document.getElementById('text-player-energy-val');
         const barCleanliness = document.getElementById('bar-care-cleanliness');
         const barExp = document.getElementById('bar-care-exp');
 
         const player = gameEngine.player || { gender: 'boy', name: '主人公', energy: 100, maxEnergy: 100 };
-
-        if (barPlayerEnergy) {
-            const energyPct = Math.floor((player.energy / (player.maxEnergy || 100)) * 100);
-            barPlayerEnergy.style.width = `${energyPct}%`;
-        }
-        if (textPlayerEnergy) {
-            textPlayerEnergy.innerText = `${player.energy}/${player.maxEnergy || 100}`;
-        }
 
         const mon = gameEngine.activeMonster;
 
