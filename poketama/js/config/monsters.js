@@ -1,11 +1,11 @@
 /**
- * PokéTama Monster Configurations & SVG Artwork Generators
+ * PokéTama Monster Configurations & Cute Animal-Style SVG Artwork Generators
  */
 
 const ELEMENT_TYPES = {
-    fire: { name: '炎', color: '#ff4d4d', bg: 'rgba(255, 77, 77, 0.15)', icon: '🔥', weak: 'water', strong: 'grass' },
-    water: { name: '水', color: '#3399ff', bg: 'rgba(51, 153, 255, 0.15)', icon: '💧', weak: 'grass', strong: 'fire' },
-    grass: { name: '草', color: '#4dff88', bg: 'rgba(77, 255, 136, 0.15)', icon: '🌿', weak: 'fire', strong: 'water' },
+    fire: { name: '炎', color: '#ff5544', bg: 'rgba(255, 85, 68, 0.15)', icon: '🔥', weak: 'water', strong: 'grass' },
+    water: { name: '水', color: '#33aaff', bg: 'rgba(51, 170, 255, 0.15)', icon: '💧', weak: 'grass', strong: 'fire' },
+    grass: { name: '草', color: '#44dd66', bg: 'rgba(68, 221, 102, 0.15)', icon: '🌿', weak: 'fire', strong: 'water' },
     cyber: { name: '電脳', color: '#cc66ff', bg: 'rgba(204, 102, 255, 0.15)', icon: '🔮', weak: 'grass', strong: 'water' }
 };
 
@@ -22,17 +22,17 @@ const EGGS_DATABASE = {
         id: 'egg_fire',
         name: 'フレアタマゴ',
         element: 'fire',
-        description: 'ほのかに温かい、情熱の炎を秘めたタマゴ。',
+        description: 'ほのかに温かい、可愛い火狐の模様がついたタマゴ。',
         hatchesTo: 'fire_1',
         warmthNeeded: 100,
-        color: '#ff5533',
+        color: '#ff5544',
         patternColor: '#ffcc00'
     },
     egg_water: {
         id: 'egg_water',
         name: 'アクアタマゴ',
         element: 'water',
-        description: '澄んだ水流の音が聞こえる清らかなタマゴ。',
+        description: '水玉模様が浮かぶ、すずしい海のタマゴ。',
         hatchesTo: 'water_1',
         warmthNeeded: 100,
         color: '#33aaff',
@@ -42,7 +42,7 @@ const EGGS_DATABASE = {
         id: 'egg_grass',
         name: 'リーフタマゴ',
         element: 'grass',
-        description: '若葉の香りが漂う神秘的な生命のタマゴ。',
+        description: '四つ葉のクローバーの刺繍がある植物のタマゴ。',
         hatchesTo: 'grass_1',
         warmthNeeded: 100,
         color: '#44dd66',
@@ -61,7 +61,7 @@ const EGGS_DATABASE = {
 };
 
 const MONSTERS_DATABASE = {
-    // --- FIRE EVOLUTION LINE ---
+    // --- FIRE EVOLUTION LINE (火狐・きつね＆ライオン系) ---
     fire_1: {
         id: 'fire_1',
         name: 'ヒノコ',
@@ -75,7 +75,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'fire_2',
         evoLevel: 5,
         evoFriendship: 30,
-        description: 'あたまの小さな炎がごきげんのしるし。元気に跳ね回る。'
+        description: 'ふんわりフサフサのシッポを持つ火狐の子犬。元気に甘えて跳ね回る。'
     },
     fire_2: {
         id: 'fire_2',
@@ -90,7 +90,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'fire_3',
         evoLevel: 12,
         evoFriendship: 60,
-        description: '背中の炎が大きくなり、熱い情熱で仲間を守る竜の子。'
+        description: '小さな羽がついたドラゴンフォックス。熱い友情で仲間を守る。'
     },
     fire_3: {
         id: 'fire_3',
@@ -105,7 +105,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'fire_4',
         evoLevel: 25,
         evoFriendship: 90,
-        description: '灼熱の牙と爪を持つ熱血モンスター。口から爆炎を吐き出す。'
+        description: '燃えるタテガミを持つ可愛い炎ライオン。頼りになる兄貴分。'
     },
     fire_4: {
         id: 'fire_4',
@@ -118,10 +118,10 @@ const MONSTERS_DATABASE = {
         spd: 115,
         moves: ['fire_claw', 'lava_surge', 'overheat', 'giga_flare'],
         nextEvolution: null,
-        description: '全ての炎を司る伝説の爆炎竜。その威光は戦場全体を焦がす。'
+        description: '九尾の炎と光の翼を纏う伝説の神聖フォックスドラゴン。'
     },
 
-    // --- WATER EVOLUTION LINE ---
+    // --- WATER EVOLUTION LINE (水うさぎ・あざらし系) ---
     water_1: {
         id: 'water_1',
         name: 'アクアプニ',
@@ -135,7 +135,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'water_2',
         evoLevel: 5,
         evoFriendship: 30,
-        description: 'プニプニした水の身体を持つ。甘えん坊で水を吹きかける。'
+        description: 'たれ耳と丸い身体がキュートな水うさぎ。プニプニしてて癒やされる。'
     },
     water_2: {
         id: 'water_2',
@@ -150,7 +150,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'water_3',
         evoLevel: 12,
         evoFriendship: 60,
-        description: '頑丈な甲羅と優しさを持ち、水のバリアで攻撃を防ぐ。'
+        description: '貝殻のリュックを背負ったラッコちゃん。水てっぽうが得意。'
     },
     water_3: {
         id: 'water_3',
@@ -165,7 +165,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'water_4',
         evoLevel: 25,
         evoFriendship: 90,
-        description: '大いなる海原の守護者。津波を呼ぶ豪快な尾ビレを持つ。'
+        description: '海の泡に乗って空を飛ぶクジラウサギ。おっとり優しい性格。'
     },
     water_4: {
         id: 'water_4',
@@ -178,10 +178,10 @@ const MONSTERS_DATABASE = {
         spd: 90,
         moves: ['aqua_tail', 'surf_wave', 'hydro_pump', 'ocean_cataclysm'],
         nextEvolution: null,
-        description: '海洋の絶対絶対王者。三叉の槍で深海の大渦を統べる。'
+        description: 'クリスタル王冠を戴く深海のアザラシナイト。優しき海の守護神。'
     },
 
-    // --- GRASS EVOLUTION LINE ---
+    // --- GRASS EVOLUTION LINE (森のリス・フェネック系) ---
     grass_1: {
         id: 'grass_1',
         name: 'ポコリーフ',
@@ -195,7 +195,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'grass_2',
         evoLevel: 5,
         evoFriendship: 30,
-        description: '頭の葉っぱで日光浴をするのが大好きな癒やし系。'
+        description: '大きな葉っぱ耳とクルンとしたシッポを持つ子リス。日向ぼっこが大好き。'
     },
     grass_2: {
         id: 'grass_2',
@@ -210,7 +210,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'grass_3',
         evoLevel: 12,
         evoFriendship: 60,
-        description: '森林をすばしっこく駆け回る。鋭いツルを鞭のように扱う。'
+        description: '大きな耳でお花の歌を聞くフェネックキツネ。すばしっこく駆け回る。'
     },
     grass_3: {
         id: 'grass_3',
@@ -225,7 +225,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'grass_4',
         evoLevel: 25,
         evoFriendship: 90,
-        description: '花びらの舞とともに疾走する森の騎士。回復と俊敏な攻撃が得意。'
+        description: '桜の花びらを散らしながら駆ける可愛らしいシカナイト。'
     },
     grass_4: {
         id: 'grass_4',
@@ -238,10 +238,10 @@ const MONSTERS_DATABASE = {
         spd: 125,
         moves: ['leaf_blade', 'petal_storm', 'solar_beam', 'world_tree_blessing'],
         nextEvolution: null,
-        description: '世界樹の加護を受けし神聖なる聖獣。大自然の生命力を束ねる。'
+        description: '世界樹のハスと光の翼を持つ大自然の聖なる妖精フォックス。'
     },
 
-    // --- CYBER EVOLUTION LINE ---
+    // --- CYBER EVOLUTION LINE (電気ハムスター・ネコ系) ---
     cyber_1: {
         id: 'cyber_1',
         name: 'スパークン',
@@ -255,7 +255,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'cyber_2',
         evoLevel: 5,
         evoFriendship: 30,
-        description: '静電気でパチパチ光る。デジタルデータが大好き。'
+        description: 'ほっぺがピカピカ光る電気ハムスター。きのみを頬張る姿が激カワ。'
     },
     cyber_2: {
         id: 'cyber_2',
@@ -270,7 +270,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'cyber_3',
         evoLevel: 12,
         evoFriendship: 60,
-        description: '光速のシッポで電波を発信する。素早い連続攻撃が得意。'
+        description: 'ネコミミバイザーをつけた電脳子ネコ。イナズマのシッポを振る。'
     },
     cyber_3: {
         id: 'cyber_3',
@@ -285,7 +285,7 @@ const MONSTERS_DATABASE = {
         nextEvolution: 'cyber_4',
         evoLevel: 25,
         evoFriendship: 90,
-        description: '電脳空間を雷光となって駆け抜ける獣。稲妻の爪で敵を討つ。'
+        description: 'ネオンの肉球とプラズマツインテールを持つ雷電ライガー。'
     },
     cyber_4: {
         id: 'cyber_4',
@@ -298,17 +298,16 @@ const MONSTERS_DATABASE = {
         spd: 140,
         moves: ['laser_claw', 'plasma_surge', 'giga_volt', 'cyber_overclock'],
         nextEvolution: null,
-        description: '電脳神の領域に達した究極体。演算速度と圧倒的雷撃で敵を圧倒。'
+        description: 'デジタル天使の羽を纏う最強の電脳キャット神。光速の雷撃を放つ。'
     }
 };
 
 /**
- * Render Dynamic SVG artwork for Eggs & Monsters
+ * Render Dynamic Cute Animal-Style SVG Artwork
  */
 function renderMonsterSVG(id, options = {}) {
     const isEgg = id.startsWith('egg_');
     const emotion = options.emotion || 'happy'; // happy, sleep, hungry, angry, battle
-    const scale = options.scale || 1;
 
     if (isEgg) {
         const eggData = EGGS_DATABASE[id] || EGGS_DATABASE.egg_fire;
@@ -317,120 +316,179 @@ function renderMonsterSVG(id, options = {}) {
         <svg viewBox="0 0 200 240" width="100%" height="100%" class="monster-svg egg-svg">
             <defs>
                 <radialGradient id="eggGlow_${id}" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="${eggData.patternColor}" stop-opacity="0.8"/>
+                    <stop offset="0%" stop-color="${eggData.patternColor}" stop-opacity="0.9"/>
                     <stop offset="100%" stop-color="${eggData.color}" stop-opacity="0"/>
                 </radialGradient>
                 <linearGradient id="eggGrad_${id}" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="${eggData.patternColor}"/>
-                    <stop offset="60%" stop-color="${eggData.color}"/>
-                    <stop offset="100%" stop-color="#111122"/>
+                    <stop offset="50%" stop-color="${eggData.color}"/>
+                    <stop offset="100%" stop-color="#1a1c2e"/>
                 </linearGradient>
-                <filter id="glow_${id}">
-                    <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
-                    <feMerge>
-                        <feMergeNode in="coloredBlur"/>
-                        <feMergeNode in="SourceGraphic"/>
-                    </feMerge>
-                </filter>
             </defs>
 
             <!-- Aura Shadow -->
-            <ellipse cx="100" cy="215" rx="55" ry="14" fill="rgba(0,0,0,0.4)" />
-            <ellipse cx="100" cy="130" rx="75" ry="85" fill="url(#eggGlow_${id})" filter="url(#glow_${id})" opacity="0.6"/>
+            <ellipse cx="100" cy="215" rx="55" ry="14" fill="rgba(0,0,0,0.35)" />
+            <ellipse cx="100" cy="130" rx="75" ry="85" fill="url(#eggGlow_${id})" opacity="0.6"/>
 
             <!-- Egg Main Shell -->
-            <path d="M 100,25 C 150,25 170,80 170,140 C 170,195 140,210 100,210 C 60,210 30,195 30,140 C 30,80 50,25 100,25 Z" 
-                  fill="url(#eggGrad_${id})" stroke="#ffffff" stroke-width="3" filter="url(#glow_${id})" />
+            <path d="M 100,25 C 152,25 172,80 172,140 C 172,195 142,210 100,210 C 58,210 28,195 28,140 C 28,80 48,25 100,25 Z" 
+                  fill="url(#eggGrad_${id})" stroke="#ffffff" stroke-width="3.5" />
 
-            <!-- Egg Patterns -->
-            <circle cx="75" cy="85" r="16" fill="${eggData.patternColor}" opacity="0.7" />
-            <circle cx="130" cy="120" r="22" fill="${eggData.patternColor}" opacity="0.7" />
-            <circle cx="70" cy="160" r="14" fill="${eggData.patternColor}" opacity="0.7" />
+            <!-- Cute Ribbon Accent on Egg -->
+            <path d="M 85,60 Q 100,70 115,60 Q 125,50 115,40 Q 100,50 85,40 Q 75,50 85,60 Z" fill="#ff77aa" opacity="0.9" />
 
-            <!-- Crack overlay if warming -->
-            ${crack > 0.3 ? `<path d="M 90,70 L 105,85 L 95,100 L 115,115" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round"/>` : ''}
-            ${crack > 0.7 ? `<path d="M 120,130 L 105,145 L 125,160 L 110,180" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round"/>` : ''}
+            <!-- Egg Cute Spot Patterns -->
+            <circle cx="75" cy="100" r="16" fill="${eggData.patternColor}" opacity="0.8" />
+            <circle cx="130" cy="135" r="20" fill="${eggData.patternColor}" opacity="0.8" />
+            <circle cx="70" cy="165" r="14" fill="${eggData.patternColor}" opacity="0.8" />
+
+            <!-- Crack Overlay if Warming -->
+            ${crack > 0.3 ? `<path d="M 90,75 L 105,90 L 95,105 L 115,120" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round"/>` : ''}
+            ${crack > 0.7 ? `<path d="M 125,135 L 110,150 L 130,165 L 115,185" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round"/>` : ''}
 
             <!-- Shine Highlight -->
-            <path d="M 65,45 Q 90,35 110,40 C 80,48 55,75 55,105 C 55,80 60,55 65,45 Z" fill="#ffffff" opacity="0.4" />
+            <path d="M 65,45 Q 90,35 110,40 C 80,48 55,75 55,105 C 55,80 60,55 65,45 Z" fill="#ffffff" opacity="0.45" />
         </svg>`;
     }
 
     const monster = MONSTERS_DATABASE[id] || MONSTERS_DATABASE.fire_1;
     const elem = ELEMENT_TYPES[monster.element];
 
-    // Face features according to emotion
-    let eyeLeft = `<circle cx="80" cy="95" r="7" fill="#ffffff"/><circle cx="82" cy="93" r="3" fill="#111"/>`;
-    let eyeRight = `<circle cx="120" cy="95" r="7" fill="#ffffff"/><circle cx="118" cy="93" r="3" fill="#111"/>`;
-    let mouth = `<path d="M 90,115 Q 100,125 110,115" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>`;
-    let extraFX = '';
+    // --- ANIME ANIMAL EYES & FACE RENDERING ---
+    let eyeLeft = `
+        <circle cx="76" cy="94" r="11" fill="#1e1e2e"/>
+        <circle cx="73" cy="90" r="4.5" fill="#ffffff"/>
+        <circle cx="79" cy="97" r="2" fill="#ffffff"/>`;
+
+    let eyeRight = `
+        <circle cx="124" cy="94" r="11" fill="#1e1e2e"/>
+        <circle cx="121" cy="90" r="4.5" fill="#ffffff"/>
+        <circle cx="127" cy="97" r="2" fill="#ffffff"/>`;
+
+    let mouth = `<path d="M 92,106 Q 100,114 108,106" fill="none" stroke="#1e1e2e" stroke-width="3" stroke-linecap="round"/>`;
+    let cheeks = `
+        <circle cx="63" cy="106" r="8" fill="#ff6699" opacity="0.65"/>
+        <circle cx="137" cy="106" r="8" fill="#ff6699" opacity="0.65"/>`;
+    let extraOverlay = '';
 
     if (emotion === 'sleep') {
-        eyeLeft = `<path d="M 72,95 Q 80,102 88,95" fill="none" stroke="#ffffff" stroke-width="3"/>`;
-        eyeRight = `<path d="M 112,95 Q 120,102 128,95" fill="none" stroke="#ffffff" stroke-width="3"/>`;
-        mouth = `<circle cx="100" cy="115" r="4" fill="#ffffff"/>`;
-        extraFX = `<text x="140" y="70" fill="#aaccff" font-family="monospace" font-weight="bold" font-size="24">Zzz...</text>`;
+        eyeLeft = `<path d="M 67,95 Q 76,102 85,95" fill="none" stroke="#1e1e2e" stroke-width="3.5" stroke-linecap="round"/>`;
+        eyeRight = `<path d="M 115,95 Q 124,102 133,95" fill="none" stroke="#1e1e2e" stroke-width="3.5" stroke-linecap="round"/>`;
+        mouth = `<ellipse cx="100" cy="110" rx="3.5" ry="5" fill="#ff6699"/>`;
+        extraOverlay = `<text x="142" y="65" fill="#99ccff" font-family="'M PLUS Rounded 1c', sans-serif" font-weight="900" font-size="24">Zzz...</text>`;
     } else if (emotion === 'hungry') {
-        eyeLeft = `<circle cx="80" cy="95" r="7" fill="#ffffff"/><circle cx="80" cy="95" r="2" fill="#ff3333"/>`;
-        eyeRight = `<circle cx="120" cy="95" r="7" fill="#ffffff"/><circle cx="120" cy="95" r="2" fill="#ff3333"/>`;
-        mouth = `<path d="M 90,122 Q 100,112 110,122" fill="none" stroke="#ffffff" stroke-width="3"/>`;
-        extraFX = `<path d="M 125,75 Q 130,85 125,95" fill="none" stroke="#66ccff" stroke-width="3"/>`; // Sweat drop
+        mouth = `<path d="M 92,112 Q 100,102 108,112 Z" fill="#ff6699" stroke="#1e1e2e" stroke-width="2"/>`;
+        extraOverlay = `<path d="M 132,72 Q 138,82 132,92" fill="none" stroke="#55ccff" stroke-width="3.5" stroke-linecap="round"/>`;
     } else if (emotion === 'angry' || emotion === 'battle') {
-        eyeLeft = `<polygon points="72,88 88,98 74,102" fill="#ffcc00"/>`;
-        eyeRight = `<polygon points="128,88 112,98 126,102" fill="#ffcc00"/>`;
-        mouth = `<path d="M 88,120 Q 100,108 112,120 Z" fill="#ff3333"/>`;
-        extraFX = `<path d="M 50,50 L 60,65 M 150,50 L 140,65" stroke="${elem.color}" stroke-width="4"/>`;
+        eyeLeft = `
+            <circle cx="76" cy="94" r="11" fill="#1e1e2e"/>
+            <circle cx="74" cy="91" r="4" fill="#ffdd44"/>
+            <path d="M 64,82 L 86,90" stroke="#1e1e2e" stroke-width="3" stroke-linecap="round"/>`;
+        eyeRight = `
+            <circle cx="124" cy="94" r="11" fill="#1e1e2e"/>
+            <circle cx="122" cy="91" r="4" fill="#ffdd44"/>
+            <path d="M 136,82 L 114,90" stroke="#1e1e2e" stroke-width="3" stroke-linecap="round"/>`;
+        mouth = `<path d="M 92,112 Q 100,104 108,112 Z" fill="#ff4444"/>`;
+        extraOverlay = `<path d="M 45,45 L 55,60 M 155,45 L 145,60" stroke="${elem.color}" stroke-width="4.5" stroke-linecap="round"/>`;
     }
 
-    // Element Body Shapes & Accents
-    let bodyPath = '';
-    let bodyColor = elem.color;
-    let secondaryColor = '#ffffff';
+    // --- ANIMAL SPECIFIC BODY & EARS ARTWORK ---
+    let animalFeaturePath = '';
+    let mainColor = elem.color;
+    let accentColor = '#ffffff';
 
     if (monster.element === 'fire') {
-        secondaryColor = '#ffcc00';
-        bodyPath = `
-            <!-- Tail Flame -->
-            <path d="M 45,150 Q 20,130 35,90 Q 55,120 65,140 Z" fill="${secondaryColor}" filter="url(#glow_${id})"/>
-            <!-- Body -->
-            <circle cx="100" cy="115" r="55" fill="${bodyColor}"/>
-            <!-- Horn / Ears -->
-            <path d="M 70,70 L 60,35 L 85,60 Z" fill="${secondaryColor}"/>
-            <path d="M 130,70 L 140,35 L 115,60 Z" fill="${secondaryColor}"/>
+        accentColor = '#ffcc00';
+        animalFeaturePath = `
+            <!-- Fluffy Fox Ears (Large Fluffy Ears) -->
+            <path d="M 68,68 Q 30,25 58,15 Q 82,25 80,62 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
+            <path d="M 64,60 Q 42,32 58,25 Q 74,32 74,56 Z" fill="${accentColor}"/>
+
+            <path d="M 132,68 Q 170,25 142,15 Q 118,25 120,62 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
+            <path d="M 136,60 Q 158,32 142,25 Q 126,32 126,56 Z" fill="${accentColor}"/>
+
+            <!-- Fluffy Flame Fox Tail -->
+            <path d="M 42,145 Q 10,110 30,75 Q 58,105 60,135 Z" fill="${accentColor}"/>
+            <path d="M 32,130 Q 15,112 28,90 Q 48,110 50,130 Z" fill="${mainColor}"/>
+
+            <!-- Chubby Animal Body -->
+            <ellipse cx="100" cy="115" rx="54" ry="48" fill="${mainColor}"/>
+            <!-- Soft White Belly Patch -->
+            <ellipse cx="100" cy="130" rx="30" ry="24" fill="#ffffff" opacity="0.9"/>
+
+            <!-- Cute Paws -->
+            <ellipse cx="74" cy="154" rx="12" ry="8" fill="#ffffff"/>
+            <ellipse cx="126" cy="154" rx="12" ry="8" fill="#ffffff"/>
         `;
     } else if (monster.element === 'water') {
-        secondaryColor = '#88e0ff';
-        bodyPath = `
-            <!-- Fins -->
-            <path d="M 35,115 Q 10,115 30,140 Z" fill="${secondaryColor}"/>
-            <path d="M 165,115 Q 190,115 170,140 Z" fill="${secondaryColor}"/>
-            <!-- Body -->
-            <path d="M 100,50 C 150,50 160,100 150,150 C 130,175 70,175 50,150 C 40,100 50,50 100,50 Z" fill="${bodyColor}"/>
-            <!-- Water Drop Head Ornament -->
-            <path d="M 100,30 Q 110,48 100,55 Q 90,48 100,30 Z" fill="${secondaryColor}"/>
+        accentColor = '#88e0ff';
+        animalFeaturePath = `
+            <!-- Floppy Water Bunny / Seal Ears -->
+            <path d="M 70,68 Q 25,65 30,105 Q 60,110 74,74 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
+            <path d="M 66,74 Q 35,72 38,98 Q 58,102 70,78 Z" fill="${accentColor}"/>
+
+            <path d="M 130,68 Q 175,65 170,105 Q 140,110 126,74 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
+            <path d="M 134,74 Q 165,72 162,98 Q 142,102 130,78 Z" fill="${accentColor}"/>
+
+            <!-- Aquatic Swirl Tail -->
+            <path d="M 100,162 Q 130,185 155,160 Q 145,145 120,150 Z" fill="${accentColor}"/>
+
+            <!-- Round Squishy Body -->
+            <ellipse cx="100" cy="115" rx="55" ry="50" fill="${mainColor}"/>
+            <!-- White Cream Belly -->
+            <ellipse cx="100" cy="126" rx="34" ry="28" fill="#ffffff" opacity="0.9"/>
+
+            <!-- Small Flippers / Paws -->
+            <ellipse cx="68" cy="150" rx="14" ry="8" fill="${accentColor}"/>
+            <ellipse cx="132" cy="150" rx="14" ry="8" fill="${accentColor}"/>
         `;
     } else if (monster.element === 'grass') {
-        secondaryColor = '#aaff66';
-        bodyPath = `
-            <!-- Leaf Ears -->
-            <path d="M 70,70 Q 30,30 55,20 Q 80,30 80,60 Z" fill="${secondaryColor}"/>
-            <path d="M 130,70 Q 170,30 145,20 Q 120,30 120,60 Z" fill="${secondaryColor}"/>
-            <!-- Body -->
-            <ellipse cx="100" cy="120" rx="52" ry="48" fill="${bodyColor}"/>
-            <!-- Chest Flower Ornament -->
-            <circle cx="100" cy="145" r="10" fill="#ff66aa"/>
+        accentColor = '#aaff66';
+        animalFeaturePath = `
+            <!-- Leafy Fennec / Squirrel Ears -->
+            <path d="M 72,66 Q 35,20 50,10 Q 75,20 82,58 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
+            <path d="M 68,60 Q 42,26 52,18 Q 70,26 76,54 Z" fill="${accentColor}"/>
+
+            <path d="M 128,66 Q 165,20 150,10 Q 125,20 118,58 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
+            <path d="M 132,60 Q 158,26 148,18 Q 130,26 124,54 Z" fill="${accentColor}"/>
+
+            <!-- Giant Bushy Leaf Tail -->
+            <path d="M 45,140 Q 15,115 20,70 Q 55,85 62,130 Z" fill="${accentColor}"/>
+            <!-- Flower Head Ornament -->
+            <circle cx="120" cy="45" r="10" fill="#ff77aa"/>
+            <circle cx="120" cy="45" r="4" fill="#ffffaa"/>
+
+            <!-- Round Body -->
+            <ellipse cx="100" cy="115" rx="52" ry="46" fill="${mainColor}"/>
+            <ellipse cx="100" cy="128" rx="32" ry="24" fill="#ffffff" opacity="0.9"/>
+
+            <!-- Cute Little Paws -->
+            <circle cx="74" cy="152" r="9" fill="${accentColor}"/>
+            <circle cx="126" cy="152" r="9" fill="${accentColor}"/>
         `;
-    } else { // cyber
-        secondaryColor = '#00ffff';
-        bodyPath = `
-            <!-- Cyber Wings/Panels -->
-            <path d="M 40,90 L 15,60 L 45,120 Z" fill="${secondaryColor}" opacity="0.8"/>
-            <path d="M 160,90 L 185,60 L 155,120 Z" fill="${secondaryColor}" opacity="0.8"/>
+    } else { // Cyber / Electric (電気ハムスター・ネコ)
+        accentColor = '#00ffff';
+        animalFeaturePath = `
+            <!-- Twitchy Cat/Hamster Ears -->
+            <path d="M 72,65 Q 48,25 65,20 Q 82,32 80,60 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
+            <path d="M 70,58 Q 54,28 65,25 Q 76,32 76,54 Z" fill="${accentColor}"/>
+
+            <path d="M 128,65 Q 152,25 135,20 Q 118,32 120,60 Z" fill="${mainColor}" stroke="#ffffff" stroke-width="2.5"/>
+            <path d="M 130,58 Q 146,28 135,25 Q 124,32 124,54 Z" fill="${accentColor}"/>
+
+            <!-- Lightning Bolt Tail -->
+            <path d="M 45,135 L 20,110 L 35,110 L 15,85 L 50,110 Z" fill="${accentColor}"/>
+
+            <!-- Visor Accent / Headband -->
+            <rect x="75" y="60" width="50" height="8" rx="4" fill="${accentColor}" opacity="0.8"/>
+
             <!-- Body -->
-            <rect x="52" y="65" width="96" height="96" rx="28" fill="${bodyColor}"/>
-            <!-- Visor/Antenna -->
-            <line x1="100" y1="65" x2="100" y2="40" stroke="${secondaryColor}" stroke-width="4"/>
-            <circle cx="100" cy="36" r="6" fill="${secondaryColor}"/>
+            <ellipse cx="100" cy="115" rx="53" ry="47" fill="${mainColor}"/>
+            <ellipse cx="100" cy="128" rx="30" ry="24" fill="#ffffff" opacity="0.9"/>
+
+            <!-- Cute Paws -->
+            <ellipse cx="72" cy="152" rx="10" ry="7" fill="#ffffff"/>
+            <ellipse cx="128" cy="152" rx="10" ry="7" fill="#ffffff"/>
         `;
     }
 
@@ -438,7 +496,7 @@ function renderMonsterSVG(id, options = {}) {
     <svg viewBox="0 0 200 200" width="100%" height="100%" class="monster-svg stage-${monster.stage}">
         <defs>
             <filter id="glow_${id}">
-                <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
                 <feMerge>
                     <feMergeNode in="coloredBlur"/>
                     <feMergeNode in="SourceGraphic"/>
@@ -446,25 +504,28 @@ function renderMonsterSVG(id, options = {}) {
             </filter>
         </defs>
 
-        <!-- Shadow -->
-        <ellipse cx="100" cy="180" rx="50" ry="12" fill="rgba(0,0,0,0.35)" />
+        <!-- Soft Shadow -->
+        <ellipse cx="100" cy="176" rx="46" ry="10" fill="rgba(0,0,0,0.3)" />
 
-        <!-- Creature Body Base -->
+        <!-- Cute Animal Body Group -->
         <g class="monster-body-group">
-            ${bodyPath}
+            ${animalFeaturePath}
 
-            <!-- Cheeks -->
-            <circle cx="68" cy="108" r="8" fill="#ff6688" opacity="0.6"/>
-            <circle cx="132" cy="108" r="8" fill="#ff6688" opacity="0.6"/>
+            <!-- Rosy Cheeks -->
+            ${cheeks}
 
-            <!-- Face -->
+            <!-- Anime Eyes & Cute Nose/Mouth -->
             <g class="monster-face">
                 ${eyeLeft}
                 ${eyeRight}
+
+                <!-- Cute Animal Button Nose -->
+                <ellipse cx="100" cy="101" rx="3" ry="2.2" fill="#1e1e2e"/>
+
                 ${mouth}
             </g>
 
-            ${extraFX}
+            ${extraOverlay}
         </g>
     </svg>`;
 }
