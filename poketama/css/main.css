@@ -311,7 +311,7 @@ body {
 .progress-bar-fill {
     height: 100%;
     border-radius: 10px;
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fill-hunger { background: linear-gradient(90deg, #ff5252, #ff7b54); }
@@ -976,5 +976,84 @@ body {
     .guide-steps-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+}
+
+/* ==========================================================================
+   Shop Tab Styling (木もれびショップ)
+   ========================================================================== */
+.shop-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.shop-banner {
+    background: linear-gradient(135deg, rgba(35, 55, 40, 0.9), rgba(15, 30, 20, 0.9));
+    border: 1.5px solid var(--color-accent);
+    border-radius: 20px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.shop-card {
+    background: var(--bg-glass);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.shop-card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 209, 92, 0.25);
+}
+
+.shop-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.shop-card-icon {
+    font-size: 32px;
+}
+
+.shop-card-title h4 {
+    font-size: 14px;
+    color: #ffffff;
+    font-weight: 800;
+}
+
+.shop-card-desc {
+    font-size: 11px;
+    color: #94a3b8;
+    line-height: 1.4;
+    flex: 1;
+}
+
+.shop-card-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.shop-price-tag {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--color-accent);
 }
 

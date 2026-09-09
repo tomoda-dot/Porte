@@ -16,7 +16,7 @@
         <div class="brand-logo">
             <a href="../index.html" class="btn-back-porte">◀ Porte</a>
             <span class="brand-icon">🥚✨</span>
-            <h1>ポケタマ <span class="app-version-badge" style="font-size: 11px; color: var(--color-primary-light, #76c84c); background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 2px 7px; border-radius: 12px; font-family: sans-serif; vertical-align: middle; margin-left: 4px;">v1.5.1</span></h1>
+            <h1>ポケタマ <span class="app-version-badge" style="font-size: 11px; color: var(--color-primary-light, #76c84c); background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 2px 7px; border-radius: 12px; font-family: sans-serif; vertical-align: middle; margin-left: 4px;">v1.6.0</span></h1>
         </div>
         <div class="header-status">
             <div class="gold-pill" id="header-gold-val">300 G</div>
@@ -133,6 +133,11 @@
                                 <!-- Rendered dynamically -->
                             </div>
 
+                            <!-- Right-to-Left Approaching Encounter Object -->
+                            <div class="walking-approaching-target" id="walking-approaching-target" style="display: none;">
+                                <!-- Chest or Enemy slide-in sprite rendered dynamically -->
+                            </div>
+
                             <!-- Encounter Popup / Event Overlay -->
                             <div class="encounter-event-overlay" id="walking-event-overlay" style="display: none;">
                                 <!-- Treasure chest / Enemy alert pops up here -->
@@ -145,7 +150,7 @@
                                 <p id="adventure-biome-desc" style="color: #b3d9b9; font-size: 12px; margin-top: 2px;">緑豊かな静かな森林。可愛い草属性のモンスターが生息する。</p>
                             </div>
                             <button class="btn" id="btn-explore-search" style="font-size: 15px; padding: 12px 28px; font-weight: 900;">
-                                🧭 探索開始！ (元気-12)
+                                🧭 探索開始！ (元気-5)
                             </button>
                         </div>
                     </div>
@@ -153,7 +158,10 @@
 
                 <!-- BATTLE ARENA VIEW (FF Style Multi-Party Battle) -->
                 <div id="battle-arena-view" style="display: none;">
-                    <div class="ff-battle-frame">
+                    <div class="ff-battle-frame" style="position: relative;">
+                        <!-- Attack FX Layer Overlay -->
+                        <div class="battle-fx-layer" id="battle-fx-layer"></div>
+
                         <div class="battle-turn-header" id="battle-turn-indicator">
                             ⚔️ バトルターン：指示を出す仲間を選択中
                         </div>
@@ -199,7 +207,25 @@
                 </div>
             </section>
 
-            <!-- TAB 4: PARTNER HOUSE & PARTY BUILDER BOX -->
+            <!-- TAB 4: SHOP PAGE (木もれびショップ) -->
+            <section id="tab-shop" class="tab-page">
+                <h2 style="margin-bottom: 16px; color: var(--color-accent);">🛒 木もれびショップ（駄菓子・用品店）</h2>
+                <div class="shop-container">
+                    <div class="shop-banner">
+                        <span style="font-size: 32px;">🏪</span>
+                        <div>
+                            <h4 style="color: var(--color-primary); font-size: 15px;">いらっしゃいませ！木もれびショップへようこそ！</h4>
+                            <p style="font-size: 12px; color: #b3d9b9; margin-top: 2px;">冒険やバトルで手に入れたゴールド(G)でお買い物ができます。新しいタマゴや美味しい食べ物を買い揃えましょう！</p>
+                        </div>
+                    </div>
+
+                    <div class="shop-grid" id="shop-catalog-grid">
+                        <!-- Catalog rendered dynamically by UIController -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: PARTNER HOUSE & PARTY BUILDER BOX -->
             <section id="tab-box" class="tab-page">
                 <h2 style="margin-bottom: 12px; color: var(--color-primary);">🏠 パートナーハウス ＆ 出撃パーティ編成</h2>
                 
@@ -235,7 +261,7 @@
                 </div>
             </section>
 
-            <!-- TAB 5: MONSTER DEX -->
+            <!-- TAB 6: MONSTER DEX -->
             <section id="tab-dex" class="tab-page">
                 <h2 style="margin-bottom: 16px; color: var(--color-primary);">📖 モンスター＆タマゴ図鑑</h2>
                 <div class="dex-grid" id="dex-grid">
@@ -255,6 +281,9 @@
             </button>
             <button class="nav-btn" data-tab="adventure">
                 <span>⚔️</span> <span>冒険</span>
+            </button>
+            <button class="nav-btn" data-tab="shop">
+                <span>🛒</span> <span>ショップ</span>
             </button>
             <button class="nav-btn" data-tab="box">
                 <span>🐾</span> <span>仲間</span>
@@ -309,6 +338,7 @@
 <script src="js/core/game.js"></script>
 <script src="js/modules/tamagotchi.js"></script>
 <script src="js/modules/incubator.js"></script>
+<script src="js/modules/shop.js"></script>
 <script src="js/modules/battle.js"></script>
 <script src="js/modules/adventure.js"></script>
 <script src="js/modules/ui.js"></script>

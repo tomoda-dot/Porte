@@ -1,5 +1,5 @@
 /**
- * PokéTama Multi-Party Battle Engine Module (Classic FF Style 3v3)
+ * PokéTama Multi-Party Battle Engine Module (Classic FF Style 3v3) - v1.6.0
  */
 
 class BattleEngine {
@@ -8,10 +8,11 @@ class BattleEngine {
         this.playerParty = []; // Array of active player monsters
         this.enemyGroup = [];  // Array of 1~3 enemy monsters
         this.currentActorIndex = 0; // Which player party member is selecting command
-        this.queuedCommands = []; // Moves queued for current round: [{ memberIndex, moveIndex, targetIndex }]
+        this.queuedCommands = []; // Moves queued for current round
         this.battleLog = [];
         this.isBossBattle = false;
         this.selectedTargetIndex = 0;
+        this.turnCount = 1;
     }
 
     startPartyBattle(partyList, enemySpeciesList, isBoss = false) {
@@ -30,7 +31,7 @@ class BattleEngine {
             const base = MONSTERS_DATABASE[specId] || MONSTERS_DATABASE.fire_1;
             const avgLevel = Math.max(1, Math.floor(this.playerParty.reduce((acc, m) => acc + m.level, 0) / this.playerParty.length));
             const levelScale = avgLevel + (isBoss ? 2 : 0);
-            const maxHp = Math.floor(base.maxHp * (1.1 + levelScale * 0.2));
+            const maxHp = Math.floor(base.maxHp * (1.15 + levelScale * 0.22));
 
             return {
                 groupIndex: idx,
@@ -40,9 +41,9 @@ class BattleEngine {
                 level: levelScale,
                 hp: maxHp,
                 maxHp: maxHp,
-                atk: Math.floor(base.atk * (0.75 + levelScale * 0.1)),
-                def: Math.floor(base.def * (0.75 + levelScale * 0.1)),
-                spd: Math.floor(base.spd * (0.75 + levelScale * 0.1)),
+                atk: Math.floor(base.atk * (0.8 + levelScale * 0.1)),
+                def: Math.floor(base.def * (0.8 + levelScale * 0.1)),
+                spd: Math.floor(base.spd * (0.8 + levelScale * 0.1)),
                 element: base.element,
                 stage: base.stage,
                 moves: [...base.moves],
@@ -56,6 +57,7 @@ class BattleEngine {
         this.currentActorIndex = 0;
         this.queuedCommands = [];
         this.selectedTargetIndex = 0;
+        this.turnCount = 1;
 
         const enemyNames = this.enemyGroup.map(e => e.nickname).join('・');
         this.battleLog = [`⚔️ 【戦闘開始】 野生のモンスター軍団 (${enemyNames}) が現れた！`];
@@ -86,7 +88,6 @@ class BattleEngine {
         const actor = this.getCurrentActor();
         if (!actor) return null;
 
-        // Auto correct target index if fainted
         let targetIdx = targetEnemyIndex;
         if (!this.enemyGroup[targetIdx] || this.enemyGroup[targetIdx].isFainted) {
             targetIdx = this.enemyGroup.findIndex(e => !e.isFainted);
@@ -101,10 +102,8 @@ class BattleEngine {
 
         this.currentActorIndex++;
 
-        // Check if all active members queued their moves
         const nextActor = this.getCurrentActor();
         if (!nextActor) {
-            // All party members entered commands! Execute full round!
             return this.executeRound();
         }
 
@@ -115,14 +114,50 @@ class BattleEngine {
         };
     }
 
+    getEnemyAction(enemy) {
+        const aliveParty = this.playerParty.filter(p => p.hp > 0 && !p.isFainted);
+        if (aliveParty.length === 0) return null;
+
+        let targetMember = null;
+
+        // Tactical AI Target Selection
+        if (enemy.isBoss) {
+            targetMember = aliveParty.reduce((prev, curr) => (curr.hp / curr.maxHp) < (prev.hp / prev.maxHp) ? curr : prev, aliveParty[0]);
+        } else if (enemy.element === 'fire') {
+            targetMember = aliveParty.reduce((prev, curr) => curr.hp < prev.hp ? curr : prev, aliveParty[0]);
+        } else if (enemy.element === 'water' || enemy.element === 'grass') {
+            targetMember = aliveParty.find(p => ELEMENT_TYPES[p.element]?.weakness === enemy.element) || aliveParty[Math.floor(Math.random() * aliveParty.length)];
+        } else {
+            targetMember = aliveParty[Math.floor(Math.random() * aliveParty.length)];
+        }
+
+        if (!targetMember) targetMember = aliveParty[0];
+
+        // Move Selection Strategy
+        let selectedMoveId = enemy.moves[0];
+        if (enemy.isBoss && enemy.hp < enemy.maxHp * 0.4) {
+            selectedMoveId = enemy.moves.reduce((best, mId) => {
+                const p1 = (MOVES_DATABASE[mId] || {}).power || 0;
+                const p2 = (MOVES_DATABASE[best] || {}).power || 0;
+                return p1 > p2 ? mId : best;
+            }, enemy.moves[0]);
+        } else {
+            selectedMoveId = enemy.moves[Math.floor(Math.random() * enemy.moves.length)];
+        }
+
+        const move = MOVES_DATABASE[selectedMoveId] || MOVES_DATABASE.tackle;
+        return { targetMember, move };
+    }
+
     executeRound() {
-        // --- PHASE 1: Player Party Turn Resolution ---
+        const steps = [];
+
+        // --- PHASE 1: Player Party Turn Steps ---
         for (const cmd of this.queuedCommands) {
             const attacker = this.playerParty[cmd.memberIndex];
             if (!attacker || attacker.hp <= 0 || attacker.isFainted) continue;
 
             let target = this.enemyGroup[cmd.targetEnemyIndex];
-            // If target already fainted by previous member, redirect to first alive enemy
             if (!target || target.isFainted) {
                 target = this.enemyGroup.find(e => !e.isFainted);
             }
@@ -140,32 +175,50 @@ class BattleEngine {
             if (res.typeMult < 1.0) logText += 'いまひとつのようだ... ';
             logText += `${target.nickname} に ${res.damage} ダメージ！`;
 
-            this.battleLog.push(logText);
-
-            if (res.isCrit) audioFX.playCrit();
-            else audioFX.playHit();
-
             if (target.hp <= 0) {
                 target.isFainted = true;
-                this.battleLog.push(`💥 ${target.nickname} は倒れた！`);
+                logText += ` 💥 ${target.nickname} は倒れた！`;
             }
+
+            this.battleLog.push(logText);
+
+            steps.push({
+                attackerSide: 'player',
+                attackerIndex: cmd.memberIndex,
+                attackerName: attacker.nickname,
+                targetSide: 'enemy',
+                targetIndex: target.groupIndex,
+                targetName: target.nickname,
+                moveObj: move,
+                damage: res.damage,
+                isCrit: res.isCrit,
+                typeMult: res.typeMult,
+                targetHpRemaining: target.hp,
+                targetMaxHp: target.maxHp,
+                targetFainted: target.isFainted,
+                logText
+            });
         }
 
         // Check Victory
         const aliveEnemies = this.enemyGroup.filter(e => !e.isFainted);
         if (aliveEnemies.length === 0) {
-            return this.handlePartyVictory();
+            const vicData = this.handlePartyVictory();
+            return {
+                status: 'victory',
+                steps,
+                victoryData: vicData,
+                log: this.battleLog
+            };
         }
 
-        // --- PHASE 2: Enemy Group Counterattack Turn ---
+        // --- PHASE 2: Enemy Group Tactical Counterattack ---
         for (const enemy of aliveEnemies) {
-            const aliveParty = this.playerParty.filter(p => p.hp > 0 && !p.isFainted);
-            if (aliveParty.length === 0) break; // All party members fainted!
+            const aiAct = this.getEnemyAction(enemy);
+            if (!aiAct) break;
 
-            // Pick random alive party member
-            const targetPartyMember = aliveParty[Math.floor(Math.random() * aliveParty.length)];
-            const randomMoveId = enemy.moves[Math.floor(Math.random() * enemy.moves.length)];
-            const move = MOVES_DATABASE[randomMoveId] || MOVES_DATABASE.tackle;
+            const targetPartyMember = aiAct.targetMember;
+            const move = aiAct.move;
 
             const res = calculateBattleDamage(enemy, targetPartyMember, move);
             targetPartyMember.hp = Math.max(0, targetPartyMember.hp - res.damage);
@@ -174,13 +227,29 @@ class BattleEngine {
             if (res.isCrit) logText += '急所に当たった！ ';
             logText += `${targetPartyMember.nickname} に ${res.damage} ダメージ！`;
 
-            this.battleLog.push(logText);
-            audioFX.playHit();
-
             if (targetPartyMember.hp <= 0) {
                 targetPartyMember.isFainted = true;
-                this.battleLog.push(`💔 ${targetPartyMember.nickname} は倒れてしまった...`);
+                logText += ` 💔 ${targetPartyMember.nickname} は倒れてしまった...`;
             }
+
+            this.battleLog.push(logText);
+
+            steps.push({
+                attackerSide: 'enemy',
+                attackerIndex: enemy.groupIndex,
+                attackerName: enemy.nickname,
+                targetSide: 'player',
+                targetIndex: targetPartyMember.partyIndex,
+                targetName: targetPartyMember.nickname,
+                moveObj: move,
+                damage: res.damage,
+                isCrit: res.isCrit,
+                typeMult: res.typeMult,
+                targetHpRemaining: targetPartyMember.hp,
+                targetMaxHp: targetPartyMember.maxHp,
+                targetFainted: targetPartyMember.isFainted,
+                logText
+            });
         }
 
         // Check Defeat
@@ -190,16 +259,18 @@ class BattleEngine {
             this.battleLog.push(`💀 パーティ全員が倒れてしまった...`);
             return {
                 status: 'defeat',
+                steps,
                 log: this.battleLog
             };
         }
 
-        // Reset turn command queue for next round
         this.currentActorIndex = 0;
         this.queuedCommands = [];
+        this.turnCount++;
 
         return {
             status: 'round_complete',
+            steps,
             nextActor: this.getCurrentActor(),
             log: this.battleLog
         };
@@ -230,7 +301,6 @@ class BattleEngine {
 
         audioFX.playFeed();
 
-        // Advance command turn
         this.currentActorIndex++;
         const nextActor = this.getCurrentActor();
         if (!nextActor) {
@@ -265,7 +335,6 @@ class BattleEngine {
 
         const evoCandidates = [];
 
-        // Distribute EXP to all surviving party members
         this.playerParty.forEach(member => {
             if (member.hp > 0 && !member.isFainted) {
                 const expRes = TamagotchiModule.addExp(member, expGained);
@@ -281,7 +350,6 @@ class BattleEngine {
 
         this.battleLog.push(`🎉 勝利！ ゴールド +${goldGained}G 獲得！`);
 
-        // Egg Drop Chance
         let eggDropped = null;
         if (Math.random() < (this.isBossBattle ? 0.9 : 0.4)) {
             const firstElem = this.enemyGroup[0].element || 'fire';

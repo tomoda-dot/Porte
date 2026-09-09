@@ -1,5 +1,5 @@
 /**
- * PokéTama User Interface Controller & Render Engine
+ * PokéTama User Interface Controller & Render Engine - v1.6.0
  */
 
 const UIController = {
@@ -49,7 +49,6 @@ const UIController = {
         if (btnFeed) {
             btnFeed.addEventListener('click', () => {
                 if (!gameEngine.activeMonster) return;
-                // Show Food selection modal
                 this.openFoodModal();
             });
         }
@@ -130,16 +129,11 @@ const UIController = {
             return;
         }
 
-        const leader = aliveParty[0];
-        if (leader.energy < 10) {
-            this.showToast('⚠️ リーダーが疲れています！睡眠でお休みさせてください。(元気10以上必要)', 'warning');
-            return;
-        }
-
         const bgStage = document.getElementById('walking-bg-stage');
         const eventOverlay = document.getElementById('walking-event-overlay');
         const descEl = document.getElementById('adventure-biome-desc');
         const btnExplore = document.getElementById('btn-explore-search');
+        const approachEl = document.getElementById('walking-approaching-target');
 
         if (eventOverlay) eventOverlay.style.display = 'none';
         if (btnExplore) btnExplore.disabled = true;
@@ -148,11 +142,35 @@ const UIController = {
 
         audioFX.playClick();
 
-        // Fast 1.2s animated walking before encounter!
-        setTimeout(() => {
+        const res = AdventureModule.explore(gameEngine.currentBiome);
+        if (!res.eventType) {
+            this.showToast(res.message, 'warning');
             if (btnExplore) btnExplore.disabled = false;
+            return;
+        }
 
-            const res = AdventureModule.explore(gameEngine.currentBiome);
+        // Trigger Right-to-Left Approaching Animation Sprite!
+        if (approachEl) {
+            if (res.eventType === 'chest') {
+                approachEl.innerHTML = `<div style="font-size: 50px; filter: drop-shadow(0 0 10px #ffd15c);" class="walking-party-member">🎁</div>`;
+            } else if (res.eventType === 'battle' || res.eventType === 'boss') {
+                const enemySpec = res.battleData.enemyGroup[0].speciesId;
+                approachEl.innerHTML = `
+                    <div style="width: 70px; height: 70px;" class="walking-party-member">
+                        ${renderMonsterSVG(enemySpec, { emotion: 'angry' })}
+                    </div>`;
+            }
+            approachEl.style.display = 'block';
+            approachEl.className = 'walking-approaching-target approaching-slide-active';
+        }
+
+        // Fast 1.1s animated approaching before encounter triggers!
+        setTimeout(() => {
+            if (approachEl) {
+                approachEl.style.display = 'none';
+                approachEl.className = 'walking-approaching-target';
+            }
+            if (btnExplore) btnExplore.disabled = false;
 
             if (res.eventType === 'chest') {
                 if (eventOverlay) {
@@ -189,7 +207,7 @@ const UIController = {
                     this.renderBattleArena();
                 }, 800);
             }
-        }, 1200);
+        }, 1100);
     },
 
     closeWalkingEventOverlay() {
@@ -207,12 +225,10 @@ const UIController = {
                     if (!battleEngine.inBattle) return;
 
                     const res = battleEngine.selectMemberMove(i, battleEngine.selectedTargetIndex || 0);
-                    this.renderBattleArena();
-
-                    if (res && res.status === 'victory') {
-                        this.handleVictorySequence(res);
-                    } else if (res && res.status === 'defeat') {
-                        this.handleDefeatSequence(res);
+                    if (res && res.steps) {
+                        this.playBattleRoundSequence(res);
+                    } else {
+                        this.renderBattleArena();
                     }
                 });
             }
@@ -236,8 +252,102 @@ const UIController = {
         }
     },
 
+    async playBattleRoundSequence(res) {
+        if (!res || !res.steps) return;
+
+        // Disable move buttons during resolution
+        for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById(`btn-move-${i}`);
+            if (btn) btn.disabled = true;
+        }
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        const fxLayer = document.getElementById('battle-fx-layer');
+
+        for (const step of res.steps) {
+            this.renderBattleArena();
+
+            const targetCardId = step.targetSide === 'enemy' ? `enemy-card-${step.targetIndex}` : `player-card-${step.targetIndex}`;
+            const attackerCardId = step.attackerSide === 'player' ? `player-card-${step.attackerIndex}` : `enemy-card-${step.attackerIndex}`;
+
+            const attackerEl = document.getElementById(attackerCardId);
+            const targetEl = document.getElementById(targetCardId);
+
+            // 1. Attacker steps forward
+            if (attackerEl) {
+                attackerEl.classList.add(step.attackerSide === 'player' ? 'step-attacker-player' : 'step-attacker-enemy');
+            }
+
+            // 2. Play Audio SE & Elemental Spell FX
+            if (step.isCrit) audioFX.playCrit();
+            else audioFX.playHit();
+
+            if (fxLayer && targetEl) {
+                const rect = targetEl.getBoundingClientRect();
+                const frameRect = document.querySelector('.ff-battle-frame')?.getBoundingClientRect() || { left: 0, top: 0 };
+
+                const fxDiv = document.createElement('div');
+                const moveType = step.moveObj ? step.moveObj.type : 'normal';
+                fxDiv.className = `attack-fx-overlay attack-fx-${moveType}`;
+                fxDiv.style.position = 'absolute';
+                fxDiv.style.left = `${rect.left - frameRect.left + rect.width / 2 - 35}px`;
+                fxDiv.style.top = `${rect.top - frameRect.top + rect.height / 2 - 35}px`;
+                fxDiv.style.width = '70px';
+                fxDiv.style.height = '70px';
+                fxDiv.style.pointerEvents = 'none';
+                fxDiv.style.zIndex = '80';
+                fxDiv.innerHTML = `<span style="font-size:42px;">${ELEMENT_TYPES[moveType]?.icon || '⚔️'}</span>`;
+
+                fxLayer.appendChild(fxDiv);
+                setTimeout(() => fxDiv.remove(), 600);
+            }
+
+            // 3. Target Flash & Shake + Floating Damage Text
+            if (targetEl) {
+                targetEl.classList.add('hit');
+
+                const pop = document.createElement('div');
+                pop.className = `floating-damage-popup ${step.isCrit ? 'crit' : ''}`;
+                pop.innerText = `${step.isCrit ? '💥 CRITICAL! ' : ''}-${step.damage} HP`;
+                targetEl.appendChild(pop);
+
+                setTimeout(() => pop.remove(), 850);
+            }
+
+            // 4. Update log box
+            const logBox = document.getElementById('battle-log-box');
+            if (logBox) {
+                logBox.innerHTML += `<p class="log-line">${step.logText}</p>`;
+                logBox.scrollTop = logBox.scrollHeight;
+            }
+
+            await sleep(650);
+
+            // Clean up classes
+            if (attackerEl) {
+                attackerEl.classList.remove('step-attacker-player', 'step-attacker-enemy');
+            }
+            if (targetEl) {
+                targetEl.classList.remove('hit');
+            }
+        }
+
+        // Re-enable buttons
+        for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById(`btn-move-${i}`);
+            if (btn) btn.disabled = false;
+        }
+
+        this.renderBattleArena();
+
+        if (res.status === 'victory') {
+            this.handleVictorySequence(res.victoryData || res);
+        } else if (res.status === 'defeat') {
+            this.handleDefeatSequence(res);
+        }
+    },
+
     bindShopButtons() {
-        // Audio mute toggle
         const btnMute = document.getElementById('btn-mute-toggle');
         if (btnMute) {
             btnMute.addEventListener('click', () => {
@@ -246,7 +356,6 @@ const UIController = {
             });
         }
 
-        // Reset game save data button
         const btnReset = document.getElementById('btn-reset-save');
         if (btnReset) {
             btnReset.addEventListener('click', () => {
@@ -272,6 +381,7 @@ const UIController = {
         if (this.activeTab === 'care') this.renderCarePage();
         else if (this.activeTab === 'incubator') this.renderIncubatorPage();
         else if (this.activeTab === 'adventure') this.renderAdventurePage();
+        else if (this.activeTab === 'shop') this.renderShopPage();
         else if (this.activeTab === 'box') this.renderBoxPage();
         else if (this.activeTab === 'dex') this.renderDexPage();
     },
@@ -319,7 +429,6 @@ const UIController = {
             infoElement.style.color = elem.color;
         }
 
-        // Render Vitals Bars
         if (barHunger) barHunger.style.width = `${mon.hunger}%`;
         if (barFriendship) barFriendship.style.width = `${mon.friendship}%`;
         if (barEnergy) barEnergy.style.width = `${mon.energy}%`;
@@ -328,7 +437,6 @@ const UIController = {
         const expPct = Math.floor((mon.exp / mon.maxExp) * 100);
         if (barExp) barExp.style.width = `${expPct}%`;
 
-        // Render SVG Creature Stage
         if (stageContainer) {
             stageContainer.innerHTML = renderMonsterSVG(mon.speciesId, { emotion: mood });
         }
@@ -342,7 +450,7 @@ const UIController = {
             grid.innerHTML = `
                 <div class="empty-nursery">
                     <p>🥚 現在温めているタマゴはありません。</p>
-                    <p>冒険に出かけると新しいタマゴを発見できます！</p>
+                    <p>冒険に出かけるかショップで新しいタマゴを購入できます！</p>
                 </div>`;
             return;
         }
@@ -455,6 +563,101 @@ const UIController = {
         if (descEl) descEl.innerText = biome.description;
     },
 
+    renderShopPage() {
+        const catalogGrid = document.getElementById('shop-catalog-grid');
+        if (!catalogGrid) return;
+
+        let html = '';
+
+        // 1. Food Items
+        SHOP_CATALOG.food.forEach(shopItem => {
+            const item = ITEMS_DATABASE[shopItem.id];
+            const ownCount = gameEngine.inventory[shopItem.id] || 0;
+            html += `
+            <div class="shop-card">
+                <div class="shop-card-header">
+                    <span class="shop-card-icon">${item.icon}</span>
+                    <div class="shop-card-title">
+                        <h4>${item.name}</h4>
+                        <small style="color: #44dd66;">所持数: ${ownCount} 個</small>
+                    </div>
+                </div>
+                <p class="shop-card-desc">${item.description}</p>
+                <div class="shop-card-action">
+                    <span class="shop-price-tag">💰 ${shopItem.buyPrice} G</span>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="btn btn-sm" onclick="UIController.buyShopItem('${shopItem.id}')">購入</button>
+                        ${ownCount > 0 ? `<button class="btn btn-sm" style="background: #442233; color: #ff88aa;" onclick="UIController.sellShopItem('${shopItem.id}')">売却(${shopItem.sellPrice}G)</button>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        // 2. Medicine & Tools
+        SHOP_CATALOG.medicine.forEach(shopItem => {
+            const item = ITEMS_DATABASE[shopItem.id];
+            const ownCount = gameEngine.inventory[shopItem.id] || 0;
+            html += `
+            <div class="shop-card">
+                <div class="shop-card-header">
+                    <span class="shop-card-icon">${item.icon}</span>
+                    <div class="shop-card-title">
+                        <h4>${item.name}</h4>
+                        <small style="color: #33aaff;">所持数: ${ownCount} 個</small>
+                    </div>
+                </div>
+                <p class="shop-card-desc">${item.description}</p>
+                <div class="shop-card-action">
+                    <span class="shop-price-tag">💰 ${shopItem.buyPrice} G</span>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="btn btn-sm" onclick="UIController.buyShopItem('${shopItem.id}')">購入</button>
+                        ${ownCount > 0 ? `<button class="btn btn-sm" style="background: #442233; color: #ff88aa;" onclick="UIController.sellShopItem('${shopItem.id}')">売却(${shopItem.sellPrice}G)</button>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        // 3. Eggs
+        SHOP_CATALOG.eggs.forEach(shopEgg => {
+            const egg = EGGS_DATABASE[shopEgg.id];
+            html += `
+            <div class="shop-card" style="border-color: rgba(255, 209, 92, 0.4);">
+                <div class="shop-card-header">
+                    <span class="shop-card-icon">🥚</span>
+                    <div class="shop-card-title">
+                        <h4>${egg.name}</h4>
+                        <small style="color: var(--color-accent);">属性タマゴ</small>
+                    </div>
+                </div>
+                <p class="shop-card-desc">${egg.description}</p>
+                <div class="shop-card-action">
+                    <span class="shop-price-tag">💰 ${shopEgg.buyPrice} G</span>
+                    <button class="btn btn-sm" style="background: linear-gradient(90deg, #ffaa00, #ffd15c);" onclick="UIController.buyShopEgg('${shopEgg.id}')">🥚 タマゴ購入</button>
+                </div>
+            </div>`;
+        });
+
+        catalogGrid.innerHTML = html;
+    },
+
+    buyShopItem(itemId) {
+        const res = ShopModule.buyItem(itemId);
+        this.showToast(res.message, res.success ? 'success' : 'warning');
+        this.renderAll();
+    },
+
+    buyShopEgg(eggId) {
+        const res = ShopModule.buyEgg(eggId);
+        this.showToast(res.message, res.success ? 'success' : 'warning');
+        this.renderAll();
+    },
+
+    sellShopItem(itemId) {
+        const res = ShopModule.sellItem(itemId);
+        this.showToast(res.message, res.success ? 'success' : 'info');
+        this.renderAll();
+    },
+
     renderBattleArena() {
         if (!battleEngine.inBattle) return;
 
@@ -462,7 +665,7 @@ const UIController = {
         const turnHeader = document.getElementById('battle-turn-indicator');
         if (turnHeader) {
             if (actor) {
-                turnHeader.innerHTML = `⚔️ 行動入力 (メンバー ${battleEngine.currentActorIndex + 1}/${battleEngine.playerParty.length})： <strong>▶ 【${actor.nickname}】</strong> のコマンドを選択`;
+                turnHeader.innerHTML = `⚔️ ターン${battleEngine.turnCount} (メンバー ${battleEngine.currentActorIndex + 1}/${battleEngine.playerParty.length})： <strong>▶ 【${actor.nickname}】</strong> のコマンドを選択`;
             } else {
                 turnHeader.innerHTML = `⚔️ バトル実行中...`;
             }
@@ -478,7 +681,7 @@ const UIController = {
                 const isSelected = (battleEngine.selectedTargetIndex || 0) === idx;
 
                 html += `
-                <div class="unit-party-card ${enemy.isFainted ? 'fainted' : ''} ${isSelected ? 'target-selected' : ''}" onclick="UIController.setBattleTarget(${idx})">
+                <div class="unit-party-card ${enemy.isFainted ? 'fainted' : ''} ${isSelected ? 'target-selected' : ''}" id="enemy-card-${idx}" onclick="UIController.setBattleTarget(${idx})">
                     <div class="unit-mini-sprite">${renderMonsterSVG(enemy.speciesId, { emotion: enemy.isFainted ? 'sleep' : 'angry' })}</div>
                     <div class="unit-info-box">
                         <div class="unit-name">${enemy.nickname} <small style="color:${elem.color}">Lv.${enemy.level}</small></div>
@@ -500,7 +703,7 @@ const UIController = {
                 const isCurrentActor = actor && battleEngine.currentActorIndex === idx;
 
                 html += `
-                <div class="unit-party-card ${member.isFainted ? 'fainted' : ''} ${isCurrentActor ? 'active-turn' : ''}">
+                <div class="unit-party-card ${member.isFainted ? 'fainted' : ''} ${isCurrentActor ? 'active-turn' : ''}" id="player-card-${idx}">
                     <div class="unit-mini-sprite">${renderMonsterSVG(member.speciesId, { emotion: member.isFainted ? 'sleep' : (isCurrentActor ? 'happy' : 'battle') })}</div>
                     <div class="unit-info-box">
                         <div class="unit-name">${member.nickname} <small style="color:${elem.color}">Lv.${member.level}</small></div>
@@ -606,7 +809,6 @@ const UIController = {
         const modal = document.getElementById('modal-evolution');
         const preSprite = document.getElementById('evo-before-sprite');
         const postSprite = document.getElementById('evo-after-sprite');
-        const titleText = document.getElementById('evo-title-text');
 
         if (preSprite) preSprite.innerHTML = renderMonsterSVG(monster.speciesId);
         if (postSprite) postSprite.innerHTML = renderMonsterSVG(nextEvoId);
@@ -685,7 +887,6 @@ const UIController = {
         const target = allPartners[index];
         if (!target) return;
 
-        // Move current active to box, set target as active
         const remaining = allPartners.filter(m => m !== target);
         gameEngine.activeMonster = target;
         gameEngine.monsterBox = remaining;
@@ -701,7 +902,6 @@ const UIController = {
 
         let html = '';
         
-        // Render Egg entries & Monster entries
         Object.keys(EGGS_DATABASE).forEach(eggId => {
             const unlocked = !!gameEngine.dex[eggId];
             const egg = EGGS_DATABASE[eggId];
@@ -754,7 +954,7 @@ const UIController = {
         });
 
         if (html === '') {
-            html = '<p class="empty-inventory">ごはんアイテムがありません！冒険の宝箱で獲得しましょう。</p>';
+            html = '<p class="empty-inventory">ごはんアイテムがありません！ショップで購入するか冒険の宝箱で獲得しましょう。</p>';
         }
 
         container.innerHTML = html;
@@ -790,7 +990,7 @@ const UIController = {
         });
 
         if (html === '') {
-            html = '<p class="empty-inventory">バトルで使用できる回復薬がありません！</p>';
+            html = '<p class="empty-inventory">バトルで使用できる回復薬がありません！ショップで購入しましょう。</p>';
         }
 
         container.innerHTML = html;
@@ -799,8 +999,12 @@ const UIController = {
 
     useBattleItemAction(itemId) {
         document.getElementById('modal-food-select').style.display = 'none';
-        battleEngine.useBattleItem(itemId);
-        this.renderBattleArena();
+        const res = battleEngine.useBattleItem(itemId);
+        if (res && res.steps) {
+            this.playBattleRoundSequence(res);
+        } else {
+            this.renderBattleArena();
+        }
     },
 
     showToast(message, type = 'info') {

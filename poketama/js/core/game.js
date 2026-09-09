@@ -59,22 +59,29 @@ class GameEngine {
     }
 
     getBattleParty() {
-        if (!this.battleParty || this.battleParty.length === 0) {
-            if (this.activeMonster) this.battleParty = [this.activeMonster];
-            else if (this.monsterBox && this.monsterBox.length > 0) this.battleParty = [this.monsterBox[0]];
-            else this.battleParty = [];
+        if (this.activeMonster && (!this.battleParty || this.battleParty.length === 0)) {
+            this.battleParty = [this.activeMonster];
+        } else if (!this.activeMonster && this.monsterBox && this.monsterBox.length > 0) {
+            this.activeMonster = this.monsterBox[0];
+            this.battleParty = [this.activeMonster];
         }
 
-        let validParty = this.battleParty.filter(m => m !== null && m !== undefined);
+        let validParty = (this.battleParty || []).filter(m => m !== null && m !== undefined);
+        
+        // Ensure activeMonster is included if validParty is empty
         if (validParty.length === 0 && this.activeMonster) {
             validParty = [this.activeMonster];
             this.battleParty = validParty;
         }
 
-        // Auto revive leader with 30 HP if all party members fainted
+        // Guarantee hp initialization and revive leader with 40% HP if fainted
+        validParty.forEach(m => {
+            if (m.hp === undefined || m.hp === null) m.hp = m.maxHp || 50;
+        });
+
         const alive = validParty.filter(m => m.hp > 0);
         if (alive.length === 0 && validParty.length > 0) {
-            validParty[0].hp = Math.max(30, Math.floor(validParty[0].maxHp * 0.4));
+            validParty[0].hp = Math.max(30, Math.floor((validParty[0].maxHp || 50) * 0.4));
         }
 
         return validParty;
