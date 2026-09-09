@@ -367,101 +367,6 @@ const UIController = {
         }
     },
 
-    async playBattleRoundSequence(res) {
-        if (!res || !res.steps) return;
-
-        // Disable move buttons during resolution
-        for (let i = 0; i < 4; i++) {
-            const btn = document.getElementById(`btn-move-${i}`);
-            if (btn) btn.disabled = true;
-        }
-
-        const sleep = ms => new Promise(r => setTimeout(r, ms));
-        const fxLayer = document.getElementById('battle-fx-layer');
-
-        for (const step of res.steps) {
-            this.renderBattleArena();
-
-            const targetCardId = step.targetSide === 'enemy' ? `enemy-card-${step.targetIndex}` : `player-card-${step.targetIndex}`;
-            const attackerCardId = step.attackerSide === 'player' ? `player-card-${step.attackerIndex}` : `enemy-card-${step.attackerIndex}`;
-
-            const attackerEl = document.getElementById(attackerCardId);
-            const targetEl = document.getElementById(targetCardId);
-
-            // 1. Attacker steps forward
-            if (attackerEl) {
-                attackerEl.classList.add(step.attackerSide === 'player' ? 'step-attacker-player' : 'step-attacker-enemy');
-            }
-
-            // 2. Play Audio SE & Elemental Spell FX
-            if (step.isCrit) audioFX.playCrit();
-            else audioFX.playHit();
-
-            if (fxLayer && targetEl) {
-                const rect = targetEl.getBoundingClientRect();
-                const frameRect = document.querySelector('.ff-battle-frame')?.getBoundingClientRect() || { left: 0, top: 0 };
-
-                const fxDiv = document.createElement('div');
-                const moveType = step.moveObj ? step.moveObj.type : 'normal';
-                fxDiv.className = `attack-fx-overlay attack-fx-${moveType}`;
-                fxDiv.style.position = 'absolute';
-                fxDiv.style.left = `${rect.left - frameRect.left + rect.width / 2 - 35}px`;
-                fxDiv.style.top = `${rect.top - frameRect.top + rect.height / 2 - 35}px`;
-                fxDiv.style.width = '70px';
-                fxDiv.style.height = '70px';
-                fxDiv.style.pointerEvents = 'none';
-                fxDiv.style.zIndex = '80';
-                fxDiv.innerHTML = `<span style="font-size:42px;">${ELEMENT_TYPES[moveType]?.icon || '⚔️'}</span>`;
-
-                fxLayer.appendChild(fxDiv);
-                setTimeout(() => fxDiv.remove(), 600);
-            }
-
-            // 3. Target Flash & Shake + Floating Damage Text
-            if (targetEl) {
-                targetEl.classList.add('hit');
-
-                const pop = document.createElement('div');
-                pop.className = `floating-damage-popup ${step.isCrit ? 'crit' : ''}`;
-                pop.innerText = `${step.isCrit ? '💥 CRITICAL! ' : ''}-${step.damage} HP`;
-                targetEl.appendChild(pop);
-
-                setTimeout(() => pop.remove(), 850);
-            }
-
-            // 4. Update log box
-            const logBox = document.getElementById('battle-log-box');
-            if (logBox) {
-                logBox.innerHTML += `<p class="log-line">${step.logText}</p>`;
-                logBox.scrollTop = logBox.scrollHeight;
-            }
-
-            await sleep(650);
-
-            // Clean up classes
-            if (attackerEl) {
-                attackerEl.classList.remove('step-attacker-player', 'step-attacker-enemy');
-            }
-            if (targetEl) {
-                targetEl.classList.remove('hit');
-            }
-        }
-
-        // Re-enable buttons
-        for (let i = 0; i < 4; i++) {
-            const btn = document.getElementById(`btn-move-${i}`);
-            if (btn) btn.disabled = false;
-        }
-
-        this.renderBattleArena();
-
-        if (res.status === 'victory') {
-            this.handleVictorySequence(res.victoryData || res);
-        } else if (res.status === 'defeat') {
-            this.handleDefeatSequence(res);
-        }
-    },
-
     bindShopButtons() {
         const btnMute = document.getElementById('btn-mute-toggle');
         if (btnMute) {
@@ -1144,6 +1049,12 @@ const UIController = {
         const logBox = document.getElementById('battle-log-box');
         const hasDungeon = !!AdventureModule.currentDungeon;
 
+        // Disable move buttons during victory transition
+        for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById(`btn-move-${i}`);
+            if (btn) btn.disabled = true;
+        }
+
         // Trigger Level-Up Effects on Party Member Cards
         if (battleEngine.playerParty) {
             battleEngine.playerParty.forEach((member, idx) => {
@@ -1238,6 +1149,7 @@ const UIController = {
     },
 
     exitBattleArena() {
+        battleEngine.inBattle = false;
         document.getElementById('battle-arena-view').style.display = 'none';
         document.getElementById('adventure-explore-view').style.display = 'block';
         this.renderAll();

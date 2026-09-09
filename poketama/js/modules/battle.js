@@ -412,8 +412,6 @@ class BattleEngine {
     }
 
     handlePartyVictory() {
-        this.inBattle = false;
-
         const totalEnemyLevel = this.enemyGroup.reduce((acc, e) => acc + e.level, 0);
         const expGained = Math.floor(30 * totalEnemyLevel * (this.isBossBattle ? 2.5 : 1.0));
         const goldGained = Math.floor(40 * totalEnemyLevel * (this.isBossBattle ? 2.0 : 1.0));
