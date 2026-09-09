@@ -338,10 +338,16 @@ class BattleEngine {
         if (!this.playerParty) return;
         this.playerParty.forEach(member => {
             if (member._ref) {
+                member._ref.level = member.level;
+                member._ref.exp = member.exp;
+                member._ref.maxExp = member.maxExp;
+                member._ref.maxHp = member.maxHp;
                 member._ref.hp = member.hp;
+                member._ref.atk = member.atk;
+                member._ref.def = member.def;
+                member._ref.spd = member.spd;
                 member._ref.moves = member.moves;
-                if (member.hp <= 0) member._ref.isFainted = true;
-                else member._ref.isFainted = false;
+                member._ref.isFainted = (member.hp <= 0);
             }
         });
         if (gameEngine && gameEngine.saveState) {
@@ -373,6 +379,7 @@ class BattleEngine {
         }
 
         audioFX.playFeed();
+        this.syncPartyStateBack();
 
         this.currentActorIndex++;
         const nextActor = this.getCurrentActor();
@@ -391,6 +398,7 @@ class BattleEngine {
         if (!this.inBattle) return null;
         this.inBattle = false;
         this.battleLog.push('🏃 うまく逃げ切れた！');
+        this.syncPartyStateBack();
         return {
             status: 'fled',
             log: this.battleLog
@@ -410,7 +418,19 @@ class BattleEngine {
 
         this.playerParty.forEach(member => {
             if (member.hp > 0 && !member.isFainted) {
-                const expRes = TamagotchiModule.addExp(member, expGained);
+                const targetObj = member._ref || member;
+                const expRes = TamagotchiModule.addExp(targetObj, expGained);
+
+                // Reflect back on battle member copy
+                member.level = targetObj.level;
+                member.exp = targetObj.exp;
+                member.maxExp = targetObj.maxExp;
+                member.maxHp = targetObj.maxHp;
+                member.hp = targetObj.hp;
+                member.atk = targetObj.atk;
+                member.def = targetObj.def;
+                member.spd = targetObj.spd;
+
                 this.battleLog.push(`🌟 ${member.nickname}: EXP +${expGained}`);
                 if (expRes.leveledUp) {
                     member.leveledUp = true;
@@ -418,7 +438,7 @@ class BattleEngine {
                     this.battleLog.push(`✨ 🌟 LEVEL UP! ${member.nickname} は Lv.${member.level} にアップ！`);
                 }
                 if (expRes.canEvolve) {
-                    evoCandidates.push({ member, nextEvoId: expRes.nextEvoId });
+                    evoCandidates.push({ member: targetObj, nextEvoId: expRes.nextEvoId });
                 }
             }
         });
