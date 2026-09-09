@@ -167,12 +167,17 @@ const TamagotchiModule = {
 
         // EXP gain
         const expGained = 30;
-        this.addExp(monster, expGained);
+        const expRes = this.addExp(monster, expGained);
 
-        audioFX.playHit();
+        if (!expRes.leveledUp) {
+            audioFX.playHit();
+        }
+
         return {
             success: true,
-            message: `${monster.nickname}と特訓！ (EXP+${expGained}, なつき度+8, HP-${hpLoss}, おなか-15, 主人公元気-8)`
+            leveledUp: expRes.leveledUp,
+            newLevel: monster.level,
+            message: `${monster.nickname}と特訓！ (EXP+${expGained}, なつき度+8, HP-${hpLoss}, おなか-15, 主人公元気-8)${expRes.leveledUp ? ` ✨ LEVEL UP! (Lv.${monster.level})` : ''}`
         };
     },
 

@@ -207,3 +207,72 @@
 .attack-fx-water { animation: fxWaterSurge 0.6s ease-out forwards; }
 .attack-fx-grass { animation: fxGrassSlash 0.6s ease-out forwards; }
 .attack-fx-cyber { animation: fxCyberBeam 0.6s ease-out forwards; }
+
+/* --- Level Up Celebration Animation Effects --- */
+@keyframes levelUpFlash {
+    0% { filter: brightness(1) drop-shadow(0 0 0px #ffd15c); transform: scale(1); }
+    20% { filter: brightness(2.5) drop-shadow(0 0 40px #ffd15c); transform: scale(1.15) rotate(-4deg); }
+    40% { filter: brightness(3) drop-shadow(0 0 50px #00ffff); transform: scale(1.25) rotate(4deg); }
+    60% { filter: brightness(2.2) drop-shadow(0 0 40px #ff00ea); transform: scale(1.15); }
+    100% { filter: brightness(1) drop-shadow(0 0 10px #ffd15c); transform: scale(1); }
+}
+
+@keyframes levelUpBannerFloat {
+    0% { opacity: 0; transform: translate(-50%, 25px) scale(0.4); }
+    15% { opacity: 1; transform: translate(-50%, -10px) scale(1.25); }
+    35% { opacity: 1; transform: translate(-50%, -20px) scale(1.0); }
+    75% { opacity: 1; transform: translate(-50%, -35px) scale(1.0); }
+    100% { opacity: 0; transform: translate(-50%, -55px) scale(0.9); }
+}
+
+@keyframes sparkleParticle {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    50% { opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.8); opacity: 0; }
+}
+
+.level-up-target {
+    animation: levelUpFlash 1.8s ease-in-out forwards;
+    position: relative;
+}
+
+.level-up-banner {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ffe066, #ff9900, #ff0077);
+    background-size: 200% 200%;
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 15px;
+    padding: 5px 16px;
+    border-radius: 20px;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 20px #ffaa00, 0 0 40px #ffd15c;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    white-space: nowrap;
+    z-index: 120;
+    pointer-events: none;
+    animation: levelUpBannerFloat 2.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.level-up-sparkle-box {
+    position: absolute;
+    inset: -15px;
+    pointer-events: none;
+    z-index: 110;
+    overflow: visible;
+}
+
+.level-up-sparkle-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 10px #ffd15c, 0 0 20px #ff0077;
+    animation: sparkleParticle 1.5s ease-out forwards;
+}

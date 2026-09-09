@@ -394,7 +394,9 @@ class BattleEngine {
                 const expRes = TamagotchiModule.addExp(member, expGained);
                 this.battleLog.push(`🌟 ${member.nickname}: EXP +${expGained}`);
                 if (expRes.leveledUp) {
-                    this.battleLog.push(`✨ ${member.nickname} は Lv.${member.level} にレベルアップ！`);
+                    member.leveledUp = true;
+                    member.newLevel = member.level;
+                    this.battleLog.push(`✨ 🌟 LEVEL UP! ${member.nickname} は Lv.${member.level} にアップ！`);
                 }
                 if (expRes.canEvolve) {
                     evoCandidates.push({ member, nextEvoId: expRes.nextEvoId });

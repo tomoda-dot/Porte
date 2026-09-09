@@ -97,6 +97,10 @@ const UIController = {
                 const res = TamagotchiModule.train(gameEngine.activeMonster);
                 this.showToast(res.message, res.success ? 'success' : 'warning');
                 this.renderAll();
+                if (res.leveledUp) {
+                    const stageContainer = document.getElementById('care-stage-container');
+                    this.triggerLevelUpEffect(stageContainer, res.newLevel);
+                }
             });
         }
 
@@ -975,6 +979,19 @@ const UIController = {
         const logBox = document.getElementById('battle-log-box');
         const hasDungeon = !!AdventureModule.currentDungeon;
 
+        // Trigger Level-Up Effects on Party Member Cards
+        if (battleEngine.playerParty) {
+            battleEngine.playerParty.forEach((member, idx) => {
+                if (member.leveledUp) {
+                    const cardEl = document.getElementById(`player-card-${idx}`);
+                    if (cardEl) {
+                        this.triggerLevelUpEffect(cardEl, member.newLevel || member.level);
+                    }
+                    member.leveledUp = false;
+                }
+            });
+        }
+
         if (logBox) {
             logBox.innerHTML += `
                 <div style="margin-top: 10px; text-align: center; background: rgba(162, 217, 106, 0.25); border: 2px solid var(--color-primary); border-radius: 14px; padding: 10px;">
@@ -1275,6 +1292,43 @@ const UIController = {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, 3000);
+    },
+
+    triggerLevelUpEffect(targetElement, newLevel = null) {
+        if (!targetElement) return;
+
+        audioFX.playLevelUp();
+
+        targetElement.classList.add('level-up-target');
+
+        const banner = document.createElement('div');
+        banner.className = 'level-up-banner';
+        banner.innerHTML = `🌟 LEVEL UP! ${newLevel ? 'Lv.' + newLevel : ''} 🌟`;
+        targetElement.appendChild(banner);
+
+        const sparkleBox = document.createElement('div');
+        sparkleBox.className = 'level-up-sparkle-box';
+
+        const colors = ['#ffd15c', '#ff5599', '#00ffff', '#76c84c', '#ffffff'];
+        for (let i = 0; i < 14; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'level-up-sparkle-dot';
+            const angle = (i / 14) * Math.PI * 2;
+            const dist = 45 + Math.random() * 45;
+            const dx = (Math.cos(angle) * dist).toFixed(1) + 'px';
+            const dy = (Math.sin(angle) * dist).toFixed(1) + 'px';
+            dot.style.setProperty('--dx', dx);
+            dot.style.setProperty('--dy', dy);
+            dot.style.background = colors[i % colors.length];
+            sparkleBox.appendChild(dot);
+        }
+        targetElement.appendChild(sparkleBox);
+
+        setTimeout(() => {
+            targetElement.classList.remove('level-up-target');
+            banner.remove();
+            sparkleBox.remove();
+        }, 2400);
     }
 };
 
