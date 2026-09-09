@@ -131,8 +131,8 @@ const UIController = {
         }
 
         const leader = aliveParty[0];
-        if (leader.energy < 12) {
-            this.showToast('⚠️ リーダーが疲れています！睡眠でお休みさせてください。(元気12以上必要)', 'warning');
+        if (leader.energy < 10) {
+            this.showToast('⚠️ リーダーが疲れています！睡眠でお休みさせてください。(元気10以上必要)', 'warning');
             return;
         }
 
@@ -144,15 +144,12 @@ const UIController = {
         if (eventOverlay) eventOverlay.style.display = 'none';
         if (btnExplore) btnExplore.disabled = true;
 
-        // Start scrolling background animation
-        if (bgStage) bgStage.classList.add('walking-stage-active');
-        if (descEl) descEl.innerText = `🚶 【${biome.name}】をパーティで探索中... (距離: 20m... 50m... 80m)`;
+        if (descEl) descEl.innerText = `🚶 【${biome.name}】をパーティで探検中... (距離: 25m... 60m... 90m)`;
 
         audioFX.playClick();
 
-        // After 2.4s of walking animation, trigger encounter!
+        // Fast 1.2s animated walking before encounter!
         setTimeout(() => {
-            if (bgStage) bgStage.classList.remove('walking-stage-active');
             if (btnExplore) btnExplore.disabled = false;
 
             const res = AdventureModule.explore(gameEngine.currentBiome);
@@ -190,9 +187,9 @@ const UIController = {
                     document.getElementById('adventure-explore-view').style.display = 'none';
                     document.getElementById('battle-arena-view').style.display = 'block';
                     this.renderBattleArena();
-                }, 1200);
+                }, 800);
             }
-        }, 2400);
+        }, 1200);
     },
 
     closeWalkingEventOverlay() {
