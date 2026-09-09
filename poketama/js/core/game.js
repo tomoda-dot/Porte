@@ -213,8 +213,10 @@ class GameEngine {
 
         // Tick active monster vitals
         if (this.activeMonster && !this.activeMonster.isSleeping) {
-            // Hunger drops slowly
-            this.activeMonster.hunger = Math.max(0, this.activeMonster.hunger - 1);
+            // Hunger drops much slower (25% chance every 5s tick = -1 per 20s)
+            if (Math.random() < 0.25) {
+                this.activeMonster.hunger = Math.max(0, this.activeMonster.hunger - 1);
+            }
             
             // Cleanliness drops over time
             if (Math.random() < 0.15) {

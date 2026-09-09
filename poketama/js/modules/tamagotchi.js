@@ -54,6 +54,11 @@ const TamagotchiModule = {
         monster.hunger = Math.min(100, monster.hunger + item.hungerRestore);
         monster.friendship = Math.min(100, monster.friendship + item.friendshipGain);
 
+        // Food also slightly refreshes Player Energy (+5)
+        if (gameEngine.player) {
+            gameEngine.player.energy = Math.min(gameEngine.player.maxEnergy || 100, gameEngine.player.energy + 5);
+        }
+
         // Deduct inventory item
         if (gameEngine.inventory[itemId] > 0) {
             gameEngine.inventory[itemId]--;
@@ -62,7 +67,7 @@ const TamagotchiModule = {
         audioFX.playFeed();
         return {
             success: true,
-            message: `${monster.nickname}に ${item.name} をあげた！ (おなか+${item.hungerRestore}, なつき度+${item.friendshipGain})`
+            message: `${monster.nickname}に ${item.name} をあげた！ (おなか+${item.hungerRestore}, なつき度+${item.friendshipGain}, 主人公元気+5)`
         };
     },
 
@@ -72,8 +77,15 @@ const TamagotchiModule = {
             return { success: false, message: `${monster.nickname}は静かに眠っています...` };
         }
 
-        monster.friendship = Math.min(100, monster.friendship + 6);
-        monster.energy = Math.max(0, monster.energy - 2);
+        if (gameEngine.player && gameEngine.player.energy < 3) {
+            return { success: false, message: '主人公の元気(スタミナ)が不足しています！(元気3必要)' };
+        }
+
+        if (gameEngine.player) {
+            gameEngine.player.energy = Math.max(0, gameEngine.player.energy - 3);
+        }
+
+        monster.friendship = Math.min(100, monster.friendship + 10);
 
         // Also warm egg in incubator if present!
         if (gameEngine.incubator && gameEngine.incubator.length > 0) {
@@ -86,51 +98,81 @@ const TamagotchiModule = {
         audioFX.playPet();
         return {
             success: true,
-            message: `${monster.nickname}を可愛がった！絆が深まった。(なつき度+6)`
+            message: `${monster.nickname}を可愛がった！絆が深まった。(なつき度+10, 主人公元気-3)`
         };
     },
 
     clean(monster) {
         if (!monster) return { success: false };
+
+        if (gameEngine.player && gameEngine.player.energy < 3) {
+            return { success: false, message: '主人公の元気(スタミナ)が不足しています！(元気3必要)' };
+        }
+
+        if (gameEngine.player) {
+            gameEngine.player.energy = Math.max(0, gameEngine.player.energy - 3);
+        }
+
         monster.cleanliness = 100;
         audioFX.playFeed();
         return {
             success: true,
-            message: `${monster.nickname}のまわりをキレイにお掃除した！(せいけつ度100%)`
+            message: `${monster.nickname}のまわりをキレイにお掃除した！(せいけつ度100%, 主人公元気-3)`
         };
     },
 
     toggleSleep(monster) {
         if (!monster) return { success: false };
         monster.isSleeping = !monster.isSleeping;
+
+        if (monster.isSleeping && gameEngine.player) {
+            gameEngine.player.energy = Math.min(gameEngine.player.maxEnergy || 100, gameEngine.player.energy + 20);
+        }
+
         audioFX.playClick();
         return {
             success: true,
-            message: monster.isSleeping ? `${monster.nickname}はおやすみモードに入りました...` : `${monster.nickname}が目を覚ましました！`
+            message: monster.isSleeping ? `${monster.nickname}とおやすみモードに入りました... (主人公元気+20回復)` : `${monster.nickname}が目を覚ましました！`
         };
     },
 
     train(monster) {
         if (!monster) return { success: false };
-        if (monster.energy < 20) {
-            return { success: false, message: '元気不足のため、今は特訓できません。(回復させてください)' };
+
+        if (gameEngine.player && gameEngine.player.energy < 8) {
+            return { success: false, message: '主人公の元気(スタミナ)が不足しています！(元気8必要)' };
         }
 
-        monster.energy -= 20;
+        if (monster.hp <= 10) {
+            return { success: false, message: `${monster.nickname}の体力が少なすぎます！キズぐすりで回復してください。` };
+        }
+
+        if (monster.hunger <= 10) {
+            return { success: false, message: `${monster.nickname}のおなかが空きすぎています！ごはんをあげてください。` };
+        }
+
+        // Deduct Player Energy & Monster HP / Hunger
+        if (gameEngine.player) {
+            gameEngine.player.energy = Math.max(0, gameEngine.player.energy - 8);
+        }
+
+        const hpLoss = Math.max(5, Math.floor((monster.maxHp || 50) * 0.15));
+        monster.hp = Math.max(1, monster.hp - hpLoss);
         monster.hunger = Math.max(0, monster.hunger - 15);
+        monster.friendship = Math.min(100, monster.friendship + 8);
         
-        // Stats increase slightly
-        monster.atk += 1;
+        // Stats increase
+        monster.atk += 2;
         monster.def += 1;
 
         // EXP gain
-        const expGained = 25;
+        const expGained = 30;
         this.addExp(monster, expGained);
 
         audioFX.playHit();
         return {
             success: true,
-            message: `${monster.nickname}と特訓を行った！攻撃力+1, 防御力+1, 経験値+${expGained}`
+            message: `${monster.nickname}と特訓！ (EXP+${expGained}, なつき度+8, HP-${hpLoss}, おなか-15, 主人公元気-8)`
         };
     },
 

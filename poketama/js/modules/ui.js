@@ -180,13 +180,22 @@ const UIController = {
         }
     },
 
-    startWalkingExplorationSequence() {
+    startWalkingExplorationSequence(stageEventRes = null) {
         const biome = BIOMES_DATABASE[gameEngine.currentBiome || 'forest'];
         const party = gameEngine.getBattleParty();
         const aliveParty = party.filter(m => m && m.hp > 0);
 
         if (aliveParty.length === 0) {
             this.showToast('⚠️ 出撃できるパートナーのHPがありません。まずお世話・回復をしてください。', 'warning');
+            return;
+        }
+
+        const res = stageEventRes || AdventureModule.explore(gameEngine.currentBiome);
+        if (!res || !res.eventType) {
+            if (res && res.message) this.showToast(res.message, 'warning');
+            const btnExplore = document.getElementById('btn-explore-search');
+            if (btnExplore) btnExplore.disabled = false;
+            this.closeFullscreenExploreModal();
             return;
         }
 
@@ -204,8 +213,8 @@ const UIController = {
 
         // 1. Open Fullscreen Explore Overlay
         if (modalExplore) modalExplore.style.display = 'flex';
-        if (titleEl) titleEl.innerText = `${biome.icon} ${biome.name} 探検中`;
-        if (statusEl) statusEl.innerText = `🚶 【${party.length}体】のパートナーで冒険中...`;
+        if (titleEl) titleEl.innerText = `${biome.icon} ${biome.name} (ステージ ${res.stageNumber}/${res.totalStages})`;
+        if (statusEl) statusEl.innerText = `🚩 [ステージ ${res.stageNumber}/${res.totalStages}] 🚶 【${party.length}体】で進行中...`;
 
         if (bgStage) {
             bgStage.className = `fullscreen-walking-viewport biome-bg-${gameEngine.currentBiome || 'forest'}`;
@@ -227,14 +236,6 @@ const UIController = {
         }
 
         audioFX.playClick();
-
-        const res = AdventureModule.explore(gameEngine.currentBiome);
-        if (!res.eventType) {
-            this.showToast(res.message, 'warning');
-            if (btnExplore) btnExplore.disabled = false;
-            this.closeFullscreenExploreModal();
-            return;
-        }
 
         // 3. Trigger Right-to-Left Approaching Animation Sprite!
         if (approachEl) {
@@ -266,7 +267,7 @@ const UIController = {
                             <span style="font-size: 56px;">🎁</span>
                             <h3 style="color: var(--color-accent); font-size: 20px;">【宝箱を発見！】</h3>
                             <p style="font-size: 14px; color: #fff; margin: 8px 0;">${res.goldFound} G と 「${res.itemFound.name}」 を手に入れた！</p>
-                            <button class="btn btn-sm" style="font-size: 15px; padding: 10px 24px; font-weight: 800; background: linear-gradient(90deg, #76c84c, #ffd15c); border: 1px solid #fff; color: #0b1a0e;" onclick="UIController.closeWalkingEventOverlay()">✨ 宝箱を回収して戻る</button>
+                            <button class="btn btn-sm" style="font-size: 15px; padding: 10px 24px; font-weight: 800; background: linear-gradient(90deg, #76c84c, #ffd15c); border: 1px solid #fff; color: #0b1a0e;" onclick="UIController.closeWalkingEventOverlay()">✨ 宝箱を回収して次へ</button>
                         </div>`;
                     eventOverlay.style.display = 'flex';
                 }
@@ -309,7 +310,16 @@ const UIController = {
     closeWalkingEventOverlay() {
         const eventOverlay = document.getElementById('fullscreen-event-overlay');
         if (eventOverlay) eventOverlay.style.display = 'none';
-        this.closeFullscreenExploreModal();
+        
+        const nextStageRes = AdventureModule.advanceToNextStage();
+        if (nextStageRes && nextStageRes.completed) {
+            this.showToast('🎉 ダンジョン完全踏破クリア！', 'success');
+            this.closeFullscreenExploreModal();
+        } else if (nextStageRes && nextStageRes.eventType) {
+            this.startWalkingExplorationSequence(nextStageRes);
+        } else {
+            this.closeFullscreenExploreModal();
+        }
     },
 
     bindBattleButtons() {
@@ -321,6 +331,10 @@ const UIController = {
                     if (!battleEngine.inBattle) return;
 
                     const res = battleEngine.selectMemberMove(i, battleEngine.selectedTargetIndex || 0);
+                    if (res && res.isError) {
+                        this.showToast(res.message, 'warning');
+                        return;
+                    }
                     if (res && res.steps) {
                         this.playBattleRoundSequence(res);
                     } else {
@@ -919,7 +933,7 @@ const UIController = {
             targetBtnContainer.innerHTML = html;
         }
 
-        // Render Current Actor's 4 Moves
+        // Render Current Actor's 4 Moves with PP Limits
         if (actor) {
             for (let i = 0; i < 4; i++) {
                 const btnMove = document.getElementById(`btn-move-${i}`);
@@ -928,7 +942,13 @@ const UIController = {
                     if (moveId) {
                         const moveObj = MOVES_DATABASE[moveId];
                         const elem = ELEMENT_TYPES[moveObj.type] || { icon: '⚔️', color: '#fff' };
-                        btnMove.innerHTML = `<span>${elem.icon} ${moveObj.name}</span><small>威力:${moveObj.power}</small>`;
+                        const ppVal = (moveObj.pp !== undefined) ? moveObj.pp : (moveObj.maxPp || 20);
+                        const maxPpVal = moveObj.maxPp || 20;
+                        const isZeroPp = ppVal <= 0;
+
+                        btnMove.innerHTML = `<span>${elem.icon} ${moveObj.name}</span><small style="${isZeroPp ? 'color:#ff6666;' : ''}">PP: ${ppVal}/${maxPpVal}</small>`;
+                        btnMove.disabled = isZeroPp;
+                        btnMove.style.opacity = isZeroPp ? '0.5' : '1.0';
                         btnMove.style.display = 'block';
                     } else {
                         btnMove.style.display = 'none';
@@ -953,11 +973,15 @@ const UIController = {
     handleVictorySequence(res) {
         this.renderBattleArena();
         const logBox = document.getElementById('battle-log-box');
+        const hasDungeon = !!AdventureModule.currentDungeon;
+
         if (logBox) {
             logBox.innerHTML += `
                 <div style="margin-top: 10px; text-align: center; background: rgba(162, 217, 106, 0.25); border: 2px solid var(--color-primary); border-radius: 14px; padding: 10px;">
                     <h3 style="color: var(--color-accent); font-size: 16px; margin-bottom: 6px;">🎉 パートナー軍団の勝利！</h3>
-                    <button class="btn btn-sm" id="btn-battle-exit-confirm" style="margin-top: 4px; font-weight: 800; background: linear-gradient(90deg, #76c84c, #ffd15c);">🧭 冒険エリアに戻る</button>
+                    <button class="btn btn-sm" id="btn-battle-exit-confirm" style="margin-top: 4px; font-weight: 800; background: linear-gradient(90deg, #76c84c, #ffd15c);">
+                        ${hasDungeon ? '🧭 次のステージへ進む ▶' : '🧭 冒険エリアに戻る'}
+                    </button>
                 </div>`;
             logBox.scrollTop = logBox.scrollHeight;
 
@@ -968,10 +992,27 @@ const UIController = {
                         const firstEvo = res.evoCandidates[0];
                         this.triggerEvolutionModal(firstEvo.member, firstEvo.nextEvoId);
                     } else {
-                        this.exitBattleArena();
+                        this.finishBattleAndAdvanceDungeon();
                     }
                 };
             }
+        }
+    },
+
+    finishBattleAndAdvanceDungeon() {
+        if (AdventureModule.currentDungeon) {
+            const nextStageRes = AdventureModule.advanceToNextStage();
+            if (nextStageRes && nextStageRes.completed) {
+                this.showToast('🎉 ダンジョン完全踏破！エリアボス撃破おめでとう！', 'success');
+                this.exitBattleArena();
+            } else if (nextStageRes && nextStageRes.eventType) {
+                document.getElementById('battle-arena-view').style.display = 'none';
+                this.startWalkingExplorationSequence(nextStageRes);
+            } else {
+                this.exitBattleArena();
+            }
+        } else {
+            this.exitBattleArena();
         }
     },
 
@@ -1013,7 +1054,7 @@ const UIController = {
                 if (modal) modal.style.display = 'none';
 
                 this.showToast(`✨ おめでとう！ ${evoRes.oldName} は 「${evoRes.newName}」 に進化した！`, 'success');
-                this.exitBattleArena();
+                this.finishBattleAndAdvanceDungeon();
             };
         }
     },

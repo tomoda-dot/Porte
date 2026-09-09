@@ -1,5 +1,5 @@
 /**
- * PokéTama Battle Moves & Elemental Effectiveness Matrix
+ * PokéTama Battle Moves & Elemental Effectiveness Matrix - v1.8.0
  */
 
 const MOVES_DATABASE = {
@@ -10,7 +10,7 @@ const MOVES_DATABASE = {
         type: 'normal',
         power: 35,
         accuracy: 95,
-        spCost: 0,
+        maxPp: 30,
         description: '体全体でぶつかって攻撃する基本技。',
         fx: 'physical_hit'
     },
@@ -20,7 +20,7 @@ const MOVES_DATABASE = {
         type: 'water',
         power: 40,
         accuracy: 100,
-        spCost: 5,
+        maxPp: 20,
         description: '冷たい水滴を勢いよく射出する。',
         fx: 'water_splash'
     },
@@ -30,7 +30,7 @@ const MOVES_DATABASE = {
         type: 'fire',
         power: 40,
         accuracy: 100,
-        spCost: 5,
+        maxPp: 20,
         description: '小さな火の粉を飛ばして攻撃する。',
         fx: 'fire_spark'
     },
@@ -40,7 +40,7 @@ const MOVES_DATABASE = {
         type: 'grass',
         power: 40,
         accuracy: 100,
-        spCost: 5,
+        maxPp: 20,
         description: '鋭い葉っぱを連射して切り裂く。',
         fx: 'leaf_slice'
     },
@@ -50,7 +50,7 @@ const MOVES_DATABASE = {
         type: 'cyber',
         power: 42,
         accuracy: 95,
-        spCost: 5,
+        maxPp: 20,
         description: 'パチパチとはじける静電気を叩きつける。',
         fx: 'cyber_bolt'
     },
@@ -62,7 +62,7 @@ const MOVES_DATABASE = {
         type: 'fire',
         power: 60,
         accuracy: 90,
-        spCost: 12,
+        maxPp: 15,
         description: '炎を纏って突進。自分のすばやさを高める。',
         fx: 'fire_spark'
     },
@@ -72,7 +72,7 @@ const MOVES_DATABASE = {
         type: 'fire',
         power: 75,
         accuracy: 90,
-        spCost: 18,
+        maxPp: 15,
         description: '激しい灼熱の炎を相手に吹き付ける。',
         fx: 'fire_spark'
     },
@@ -82,7 +82,7 @@ const MOVES_DATABASE = {
         type: 'water',
         power: 60,
         accuracy: 95,
-        spCost: 12,
+        maxPp: 15,
         description: '大量の泡を勢いよく連続発射する。',
         fx: 'water_splash'
     },
@@ -92,7 +92,7 @@ const MOVES_DATABASE = {
         type: 'water',
         power: 75,
         accuracy: 90,
-        spCost: 18,
+        maxPp: 15,
         description: '水を纏った大きなシッポで強烈に叩く。',
         fx: 'water_splash'
     },
@@ -102,7 +102,7 @@ const MOVES_DATABASE = {
         type: 'grass',
         power: 60,
         accuracy: 95,
-        spCost: 12,
+        maxPp: 15,
         description: 'しなやかなツルで鞭打つように攻撃する。',
         fx: 'leaf_slice'
     },
@@ -112,7 +112,7 @@ const MOVES_DATABASE = {
         type: 'grass',
         power: 75,
         accuracy: 90,
-        spCost: 18,
+        maxPp: 15,
         description: '剣のように鋭い葉で一閃する。',
         fx: 'leaf_slice'
     },
@@ -122,7 +122,7 @@ const MOVES_DATABASE = {
         type: 'cyber',
         power: 65,
         accuracy: 95,
-        spCost: 14,
+        maxPp: 15,
         description: '強い電撃を叩きつけて麻痺させることがある。',
         fx: 'cyber_bolt'
     },
@@ -132,7 +132,7 @@ const MOVES_DATABASE = {
         type: 'cyber',
         power: 78,
         accuracy: 90,
-        spCost: 18,
+        maxPp: 15,
         description: '光線で強化された爪で敵を一刺し。',
         fx: 'cyber_bolt'
     },
@@ -144,7 +144,7 @@ const MOVES_DATABASE = {
         type: 'fire',
         power: 95,
         accuracy: 85,
-        spCost: 24,
+        maxPp: 10,
         description: '燃え盛る爪で相手を裂き、大ダメージを与える。',
         fx: 'fire_spark'
     },
@@ -154,7 +154,7 @@ const MOVES_DATABASE = {
         type: 'fire',
         power: 110,
         accuracy: 80,
-        spCost: 30,
+        maxPp: 10,
         description: '地表からマグマの噴柱を呼び起こす大技。',
         fx: 'fire_spark'
     },
@@ -164,7 +164,7 @@ const MOVES_DATABASE = {
         type: 'fire',
         power: 130,
         accuracy: 85,
-        spCost: 40,
+        maxPp: 8,
         description: '出せる限りの限界火力を叩き出す必殺技。',
         fx: 'fire_spark'
     },
@@ -174,7 +174,7 @@ const MOVES_DATABASE = {
         type: 'fire',
         power: 160,
         accuracy: 75,
-        spCost: 55,
+        maxPp: 5,
         description: '究極体のみが放てる伝説の超爆炎波。',
         fx: 'fire_spark'
     },
@@ -185,7 +185,7 @@ const MOVES_DATABASE = {
         type: 'water',
         power: 90,
         accuracy: 90,
-        spCost: 22,
+        maxPp: 10,
         description: '巨大な波を起こして敵を飲み込む。',
         fx: 'water_splash'
     },
@@ -195,7 +195,7 @@ const MOVES_DATABASE = {
         type: 'water',
         power: 120,
         accuracy: 80,
-        spCost: 35,
+        maxPp: 8,
         description: '超高圧の水流を発射して全てを押し流す。',
         fx: 'water_splash'
     },
@@ -205,7 +205,7 @@ const MOVES_DATABASE = {
         type: 'water',
         power: 155,
         accuracy: 80,
-        spCost: 50,
+        maxPp: 5,
         description: '深海の大渦を発生させて全てを水没させる。',
         fx: 'water_splash'
     },
@@ -216,7 +216,7 @@ const MOVES_DATABASE = {
         type: 'grass',
         power: 90,
         accuracy: 90,
-        spCost: 22,
+        maxPp: 10,
         description: '無数の鋭い花びらの渦で包み込む。',
         fx: 'leaf_slice'
     },
@@ -226,7 +226,7 @@ const MOVES_DATABASE = {
         type: 'grass',
         power: 125,
         accuracy: 85,
-        spCost: 35,
+        maxPp: 8,
         description: '光エネルギーを集束して一気に放射する。',
         fx: 'leaf_slice'
     },
@@ -236,7 +236,7 @@ const MOVES_DATABASE = {
         type: 'grass',
         power: 150,
         accuracy: 80,
-        spCost: 50,
+        maxPp: 5,
         description: '大自然の怒りを光の柱として降らせる。',
         fx: 'leaf_slice'
     },
@@ -247,7 +247,7 @@ const MOVES_DATABASE = {
         type: 'cyber',
         power: 92,
         accuracy: 90,
-        spCost: 22,
+        maxPp: 10,
         description: '高圧プラズマを全方位に放散する。',
         fx: 'cyber_bolt'
     },
@@ -257,7 +257,7 @@ const MOVES_DATABASE = {
         type: 'cyber',
         power: 130,
         accuracy: 85,
-        spCost: 38,
+        maxPp: 8,
         description: '落雷のような超高電圧を直撃させる。',
         fx: 'cyber_bolt'
     },
@@ -267,7 +267,7 @@ const MOVES_DATABASE = {
         type: 'cyber',
         power: 160,
         accuracy: 75,
-        spCost: 55,
+        maxPp: 5,
         description: '限界突破の演算速度で放つ究極の電磁爆発。',
         fx: 'cyber_bolt'
     }
@@ -293,31 +293,42 @@ function getTypeMultiplier(moveType, targetElement) {
 }
 
 /**
- * Calculate Battle Damage Formula
+ * Calculate Battle Damage Formula (with Friendship & Fullness Critical Hit Boosts)
  */
-function calculateBattleDamage(attacker, defender, move, friendshipBonus = 0) {
-    const moveData = MOVES_DATABASE[move.id || move] || MOVES_DATABASE.tackle;
+function calculateBattleDamage(attacker, defender, move) {
+    const moveId = move.id || move;
+    const moveData = MOVES_DATABASE[moveId] || MOVES_DATABASE.tackle;
     
-    // Base damage formula
     const atk = attacker.atk || 20;
     const def = defender.def || 15;
     const power = moveData.power;
 
     const typeMult = getTypeMultiplier(moveData.type, defender.element);
     
+    const friendshipVal = attacker.friendship !== undefined ? attacker.friendship : 50;
+    const hungerVal = attacker.hunger !== undefined ? attacker.hunger : 50;
+
     // Friendship Bonus (0% to 20% extra damage)
-    const friendshipMult = 1.0 + (friendshipBonus / 500);
+    const friendshipMult = 1.0 + (friendshipVal / 500);
 
-    // Random variance 0.9 to 1.1
-    const randomMult = 0.9 + Math.random() * 0.2;
+    // Random variance 0.95 to 1.15
+    const randomMult = 0.95 + Math.random() * 0.2;
 
-    // Critical Hit chance (higher if friendship high)
-    const isCrit = Math.random() < (0.08 + (friendshipBonus / 1000));
-    const critMult = isCrit ? 1.5 : 1.0;
+    // Critical Hit Rate Formula:
+    // Base 8% + Friendship bonus (up to +30%) + Hunger fullness bonus (up to +30%)
+    let critChance = 0.08;
+    if (friendshipVal >= 70) {
+        critChance += 0.15 + ((friendshipVal - 70) / 100);
+    }
+    if (hungerVal >= 70) {
+        critChance += 0.15 + ((hungerVal - 70) / 100);
+    }
 
-    // Balanced damage formula (3-6 turns per battle)
-    let damage = Math.floor(((atk * 0.55 * power) / (def * 0.95) + 4) * typeMult * friendshipMult * randomMult * critMult);
-    damage = Math.max(3, damage);
+    const isCrit = Math.random() < Math.min(0.80, critChance);
+    const critMult = isCrit ? 1.6 : 1.0;
+
+    let damage = Math.floor(((atk * 0.65 * power) / (def * 0.9) + 6) * typeMult * friendshipMult * randomMult * critMult);
+    damage = Math.max(5, damage);
 
     return {
         damage,

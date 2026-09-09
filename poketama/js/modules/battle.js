@@ -21,17 +21,58 @@ class BattleEngine {
             return { success: false, message: '出撃できるパートナーのHPがありません！お世話をして回復させてください。' };
         }
 
-        this.playerParty = validParty.map((m, idx) => ({
-            ...m,
-            partyIndex: idx,
-            isFainted: false
-        }));
+        this.playerParty = validParty.map((m, idx) => {
+            const baseSpec = MONSTERS_DATABASE[m.speciesId] || MONSTERS_DATABASE.fire_1;
+            let moveList = m.moves || baseSpec.moves;
+            
+            // Expand to 4 moves if needed
+            const defaultPools = {
+                fire: ['tackle', 'ember', 'flame_charge', 'fire_breath', 'fire_claw', 'lava_surge'],
+                water: ['tackle', 'water_drop', 'bubble_beam', 'aqua_tail', 'surf_wave', 'hydro_pump'],
+                grass: ['tackle', 'leaf_shot', 'vine_whip', 'leaf_blade', 'petal_storm', 'solar_beam'],
+                cyber: ['tackle', 'spark', 'thunder_bolt', 'laser_claw', 'discharge', 'giga_volt']
+            };
+            const pool = defaultPools[m.element || baseSpec.element] || defaultPools.fire;
+            const expandedIds = [...(moveList.map(moveItem => typeof moveItem === 'string' ? moveItem : moveItem.id))];
+            
+            pool.forEach(pId => {
+                if (expandedIds.length < 4 && !expandedIds.includes(pId)) {
+                    expandedIds.push(pId);
+                }
+            });
+
+            const movesObjList = expandedIds.slice(0, 4).map((mId, moveIdx) => {
+                const existing = Array.isArray(m.moves) && typeof m.moves[moveIdx] === 'object' ? m.moves[moveIdx] : null;
+                const mData = MOVES_DATABASE[mId] || MOVES_DATABASE.tackle;
+                const maxPp = mData.maxPp || 15;
+                const currentPp = existing && existing.pp !== undefined ? existing.pp : maxPp;
+                return {
+                    id: mData.id,
+                    name: mData.name,
+                    type: mData.type,
+                    power: mData.power,
+                    accuracy: mData.accuracy,
+                    maxPp: maxPp,
+                    pp: currentPp
+                };
+            });
+
+            m.moves = movesObjList;
+
+            return {
+                ...m,
+                partyIndex: idx,
+                isFainted: false
+            };
+        });
 
         this.enemyGroup = (enemySpeciesList || ['fire_1']).map((specId, idx) => {
             const base = MONSTERS_DATABASE[specId] || MONSTERS_DATABASE.fire_1;
             const avgLevel = Math.max(1, Math.floor(this.playerParty.reduce((acc, m) => acc + m.level, 0) / this.playerParty.length));
-            const levelScale = avgLevel + (isBoss ? 2 : 0);
-            const maxHp = Math.floor(base.maxHp * (1.15 + levelScale * 0.22));
+            const levelScale = avgLevel + (isBoss ? 1 : 0);
+            
+            // Balanced Enemy Max HP so battles are fair and beatable!
+            const maxHp = Math.floor(base.maxHp * (isBoss ? (0.85 + levelScale * 0.12) : (0.55 + levelScale * 0.08)));
 
             return {
                 groupIndex: idx,
@@ -41,9 +82,9 @@ class BattleEngine {
                 level: levelScale,
                 hp: maxHp,
                 maxHp: maxHp,
-                atk: Math.floor(base.atk * (0.8 + levelScale * 0.1)),
-                def: Math.floor(base.def * (0.8 + levelScale * 0.1)),
-                spd: Math.floor(base.spd * (0.8 + levelScale * 0.1)),
+                atk: Math.floor(base.atk * (0.65 + levelScale * 0.08)),
+                def: Math.floor(base.def * (0.65 + levelScale * 0.08)),
+                spd: Math.floor(base.spd * (0.65 + levelScale * 0.08)),
                 element: base.element,
                 stage: base.stage,
                 moves: [...base.moves],
@@ -87,6 +128,19 @@ class BattleEngine {
         if (!this.inBattle) return null;
         const actor = this.getCurrentActor();
         if (!actor) return null;
+
+        const moveObj = actor.moves[moveIndex];
+        if (moveObj && moveObj.pp !== undefined && moveObj.pp <= 0) {
+            return {
+                isError: true,
+                message: `⚠️ 【${moveObj.name}】の技回数(PP)が切れています！別の技を選択してください。`
+            };
+        }
+
+        // Deduct Move PP
+        if (moveObj && moveObj.pp > 0) {
+            moveObj.pp--;
+        }
 
         let targetIdx = targetEnemyIndex;
         if (!this.enemyGroup[targetIdx] || this.enemyGroup[targetIdx].isFainted) {
