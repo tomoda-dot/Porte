@@ -137,43 +137,44 @@ body {
 }
 
 .app-nav {
-    width: 195px;
+    width: 68px;
     background: rgba(12, 24, 15, 0.95);
     border-right: 1.5px solid rgba(162, 217, 106, 0.2);
     display: flex;
     flex-direction: column;
-    padding: 14px 10px;
-    gap: 8px;
+    padding: 14px 6px;
+    gap: 12px;
     flex-shrink: 0;
+    align-items: center;
 }
 
 .nav-btn {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
     background: transparent;
     border: none;
     border-radius: 16px;
     color: #b3d9b9;
-    font-size: 14px;
+    font-size: 24px;
     font-weight: 800;
     cursor: pointer;
     transition: all 0.25s ease;
-    text-align: left;
-    min-height: 46px;
 }
 
 .nav-btn:hover {
-    background: rgba(162, 217, 106, 0.15);
-    color: #a2d96a;
+    background: rgba(162, 217, 106, 0.2);
+    transform: scale(1.08);
 }
 
 .nav-btn.active {
-    background: linear-gradient(90deg, rgba(162, 217, 106, 0.3), rgba(255, 209, 92, 0.25));
+    background: linear-gradient(135deg, rgba(162, 217, 106, 0.4), rgba(255, 209, 92, 0.35));
     border: 1.5px solid var(--color-primary);
-    color: #ffffff;
-    box-shadow: 0 0 16px rgba(162, 217, 106, 0.3);
+    box-shadow: 0 0 16px rgba(162, 217, 106, 0.4);
+    transform: scale(1.05);
 }
 
 .main-content {

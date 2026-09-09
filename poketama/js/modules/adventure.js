@@ -47,6 +47,12 @@ const AdventureModule = {
         if (!biome) return { success: false, message: '無効なエリアです。' };
 
         const party = gameEngine.getBattleParty();
+        party.forEach(m => {
+            if (m && (m.hp === undefined || m.hp <= 0) && (m.energy === undefined || m.energy >= 5)) {
+                m.hp = m.maxHp || 50;
+                m.isFainted = false;
+            }
+        });
         const aliveParty = party.filter(m => m && m.hp > 0);
 
         if (aliveParty.length === 0) {

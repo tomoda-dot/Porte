@@ -58,33 +58,72 @@ class GameEngine {
         this.currentBiome = saved.currentBiome || 'forest';
     }
 
+    getAllOwnedMonsters() {
+        let list = [];
+        if (this.activeMonster) {
+            list.push(this.activeMonster);
+        }
+        if (this.monsterBox && Array.isArray(this.monsterBox)) {
+            this.monsterBox.forEach(m => {
+                if (m && !list.some(existing => (existing.id === m.id && existing.nickname === m.nickname) || existing === m)) {
+                    list.push(m);
+                }
+            });
+        }
+        return list;
+    }
+
+    switchActiveMonster(direction = 1) {
+        const owned = this.getAllOwnedMonsters();
+        if (owned.length <= 1) return this.activeMonster;
+
+        let currentIndex = owned.findIndex(m => m === this.activeMonster || (m.id === this.activeMonster?.id && m.nickname === this.activeMonster?.nickname));
+        if (currentIndex === -1) currentIndex = 0;
+
+        let nextIndex = (currentIndex + direction + owned.length) % owned.length;
+        this.activeMonster = owned[nextIndex];
+        this.saveState();
+        return this.activeMonster;
+    }
+
     getBattleParty() {
-        if (this.activeMonster && (!this.battleParty || this.battleParty.length === 0)) {
-            this.battleParty = [this.activeMonster];
-        } else if (!this.activeMonster && this.monsterBox && this.monsterBox.length > 0) {
-            this.activeMonster = this.monsterBox[0];
-            this.battleParty = [this.activeMonster];
-        }
+        const owned = this.getAllOwnedMonsters();
+        if (owned.length === 0) return [];
 
-        let validParty = (this.battleParty || []).filter(m => m !== null && m !== undefined);
+        // Auto-fill battleParty up to 3 members if not fully set
+        let party = (this.battleParty || []).filter(m => m && owned.some(o => o === m || (o.id === m.id && o.nickname === m.nickname)));
         
-        // Ensure activeMonster is included if validParty is empty
-        if (validParty.length === 0 && this.activeMonster) {
-            validParty = [this.activeMonster];
-            this.battleParty = validParty;
+        if (party.length === 0 && this.activeMonster) {
+            party = [this.activeMonster];
         }
 
-        // Guarantee hp initialization and revive leader with 40% HP if fainted
-        validParty.forEach(m => {
-            if (m.hp === undefined || m.hp === null) m.hp = m.maxHp || 50;
+        // Fill up to 3 monsters from owned
+        owned.forEach(m => {
+            if (party.length < 3 && !party.some(p => p === m || (p.id === m.id && p.nickname === m.nickname))) {
+                party.push(m);
+            }
         });
 
-        const alive = validParty.filter(m => m.hp > 0);
-        if (alive.length === 0 && validParty.length > 0) {
-            validParty[0].hp = Math.max(30, Math.floor((validParty[0].maxHp || 50) * 0.4));
+        this.battleParty = party;
+
+        // Guarantee hp initialization and revive members if energy >= 5
+        this.battleParty.forEach(m => {
+            if (m.maxHp === undefined || m.maxHp === null) m.maxHp = 50;
+            if (m.hp === undefined || m.hp === null || m.hp <= 0) {
+                if (m.energy === undefined || m.energy >= 5) {
+                    m.hp = m.maxHp;
+                    m.isFainted = false;
+                }
+            }
+        });
+
+        let alive = this.battleParty.filter(m => m.hp > 0);
+        if (alive.length === 0 && this.battleParty.length > 0) {
+            this.battleParty[0].hp = this.battleParty[0].maxHp;
+            this.battleParty[0].isFainted = false;
         }
 
-        return validParty;
+        return this.battleParty;
     }
 
     exportSaveState() {

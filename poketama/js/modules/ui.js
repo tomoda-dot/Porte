@@ -92,6 +92,53 @@ const UIController = {
                 this.renderAll();
             });
         }
+
+        // Care Monster Prev/Next Arrow Controls
+        const btnPrev = document.getElementById('btn-care-prev');
+        if (btnPrev) {
+            btnPrev.addEventListener('click', () => {
+                gameEngine.switchActiveMonster(-1);
+                audioFX.playClick();
+                this.renderAll();
+            });
+        }
+
+        const btnNext = document.getElementById('btn-care-next');
+        if (btnNext) {
+            btnNext.addEventListener('click', () => {
+                gameEngine.switchActiveMonster(1);
+                audioFX.playClick();
+                this.renderAll();
+            });
+        }
+
+        // Care Stage Horizontal Touch Swipe Gesture Handler
+        const lcdShell = document.getElementById('care-lcd-shell') || document.getElementById('care-stage-container');
+        if (lcdShell && !this.careSwipeBound) {
+            this.careSwipeBound = true;
+            let touchStartX = 0;
+            lcdShell.addEventListener('touchstart', (e) => {
+                if (e.touches && e.touches.length > 0) {
+                    touchStartX = e.touches[0].clientX;
+                }
+            }, { passive: true });
+
+            lcdShell.addEventListener('touchend', (e) => {
+                if (e.changedTouches && e.changedTouches.length > 0) {
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const diff = touchEndX - touchStartX;
+                    if (Math.abs(diff) > 40) {
+                        if (diff < 0) {
+                            gameEngine.switchActiveMonster(1); // Swipe left -> Next
+                        } else {
+                            gameEngine.switchActiveMonster(-1); // Swipe right -> Prev
+                        }
+                        audioFX.playClick();
+                        this.renderAll();
+                    }
+                }
+            }, { passive: true });
+        }
     },
 
     bindIncubatorButtons() {
@@ -398,6 +445,8 @@ const UIController = {
         const infoLevel = document.getElementById('care-monster-level');
         const infoElement = document.getElementById('care-monster-element');
 
+        const barHp = document.getElementById('bar-care-hp');
+        const textHp = document.getElementById('text-care-hp-val');
         const barHunger = document.getElementById('bar-care-hunger');
         const barFriendship = document.getElementById('bar-care-friendship');
         const barEnergy = document.getElementById('bar-care-energy');
@@ -417,6 +466,12 @@ const UIController = {
             return;
         }
 
+        // Auto recover HP if monster has energy
+        if (mon.hp === undefined || mon.hp === null || (mon.hp <= 0 && mon.energy >= 5)) {
+            mon.hp = mon.maxHp || 50;
+            mon.isFainted = false;
+        }
+
         const mood = TamagotchiModule.getMonsterMood(mon);
         const spec = MONSTERS_DATABASE[mon.speciesId] || MONSTERS_DATABASE.fire_1;
         const elem = ELEMENT_TYPES[mon.element];
@@ -429,6 +484,10 @@ const UIController = {
             infoElement.style.color = elem.color;
         }
 
+        const hpPct = Math.floor((mon.hp / (mon.maxHp || 50)) * 100);
+        if (barHp) barHp.style.width = `${hpPct}%`;
+        if (textHp) textHp.innerText = `${mon.hp}/${mon.maxHp || 50}`;
+
         if (barHunger) barHunger.style.width = `${mon.hunger}%`;
         if (barFriendship) barFriendship.style.width = `${mon.friendship}%`;
         if (barEnergy) barEnergy.style.width = `${mon.energy}%`;
@@ -436,6 +495,19 @@ const UIController = {
         
         const expPct = Math.floor((mon.exp / mon.maxExp) * 100);
         if (barExp) barExp.style.width = `${expPct}%`;
+
+        const owned = gameEngine.getAllOwnedMonsters();
+        const switcherBar = document.getElementById('care-monster-switcher-bar');
+        const counterEl = document.getElementById('care-monster-counter');
+
+        if (owned.length > 1) {
+            let activeIdx = owned.findIndex(m => m === mon || (m.id === mon.id && m.nickname === mon.nickname));
+            if (activeIdx === -1) activeIdx = 0;
+            if (switcherBar) switcherBar.style.display = 'flex';
+            if (counterEl) counterEl.innerText = `${activeIdx + 1} / ${owned.length}`;
+        } else {
+            if (switcherBar) switcherBar.style.display = 'none';
+        }
 
         if (stageContainer) {
             stageContainer.innerHTML = renderMonsterSVG(mon.speciesId, { emotion: mood });
