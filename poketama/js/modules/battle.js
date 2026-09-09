@@ -204,6 +204,16 @@ class BattleEngine {
         return { targetMember, move };
     }
 
+    autoSelectAliveTarget() {
+        if (!this.enemyGroup || this.enemyGroup.length === 0) return;
+        if (!this.enemyGroup[this.selectedTargetIndex] || this.enemyGroup[this.selectedTargetIndex].isFainted) {
+            const nextAliveIdx = this.enemyGroup.findIndex(e => !e.isFainted);
+            if (nextAliveIdx !== -1) {
+                this.selectedTargetIndex = nextAliveIdx;
+            }
+        }
+    }
+
     executeRound() {
         const steps = [];
 
@@ -212,7 +222,10 @@ class BattleEngine {
             const attacker = this.playerParty[cmd.memberIndex];
             if (!attacker || attacker.hp <= 0 || attacker.isFainted) continue;
 
-            let target = this.enemyGroup[cmd.targetEnemyIndex];
+            let origTarget = this.enemyGroup[cmd.targetEnemyIndex];
+            const wasRedirected = origTarget && origTarget.isFainted;
+
+            let target = origTarget;
             if (!target || target.isFainted) {
                 target = this.enemyGroup.find(e => !e.isFainted);
             }
@@ -227,7 +240,7 @@ class BattleEngine {
             const res = calculateBattleDamage(attacker, target, move, attacker.friendship);
             target.hp = Math.max(0, target.hp - res.damage);
 
-            let logText = `⚔️ ${attacker.nickname} の 【${res.moveName}】！ `;
+            let logText = `${wasRedirected ? '🎯(ターゲット変更) ' : ''}⚔️ ${attacker.nickname} の 【${res.moveName}】！ `;
             if (res.isCrit) logText += '急所に当たった！ ';
             if (res.typeMult > 1.0) logText += 'ばつぐんだ！ ';
             if (res.typeMult < 1.0) logText += 'いまひとつのようだ... ';
@@ -236,6 +249,7 @@ class BattleEngine {
             if (target.hp <= 0) {
                 target.isFainted = true;
                 logText += ` 💥 ${target.nickname} は倒れた！`;
+                this.autoSelectAliveTarget();
             }
 
             this.battleLog.push(logText);

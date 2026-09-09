@@ -945,6 +945,10 @@ const UIController = {
     renderBattleArena(hpState = null) {
         if (!battleEngine.inBattle) return;
 
+        if (battleEngine.autoSelectAliveTarget) {
+            battleEngine.autoSelectAliveTarget();
+        }
+
         const actor = battleEngine.getCurrentActor();
         const turnHeader = document.getElementById('battle-turn-indicator');
         if (turnHeader) {
@@ -964,7 +968,7 @@ const UIController = {
                 const displayHp = (hpState && hpState.enemyHp && hpState.enemyHp[idx] !== undefined) ? hpState.enemyHp[idx] : enemy.hp;
                 const isFainted = (hpState && hpState.enemyHp && hpState.enemyHp[idx] !== undefined) ? (hpState.enemyHp[idx] <= 0) : enemy.isFainted;
                 const hpPct = Math.floor((displayHp / enemy.maxHp) * 100);
-                const isSelected = (battleEngine.selectedTargetIndex || 0) === idx;
+                const isSelected = (!isFainted) && ((battleEngine.selectedTargetIndex || 0) === idx);
 
                 html += `
                 <div class="unit-party-card ${isFainted ? 'fainted' : ''} ${isSelected ? 'target-selected' : ''}" id="enemy-card-${idx}" onclick="UIController.setBattleTarget(${idx})">
@@ -1030,18 +1034,13 @@ const UIController = {
                 }
             }
         }
-
-        // Render Battle Log
-        const logBox = document.getElementById('battle-log-box');
-        if (logBox) {
-            logBox.innerHTML = battleEngine.battleLog.map(msg => `<p class="log-line">${msg}</p>`).join('');
-            logBox.scrollTop = logBox.scrollHeight;
-        }
     },
 
     setBattleTarget(targetIdx) {
-        battleEngine.selectedTargetIndex = targetIdx;
-        this.renderBattleArena();
+        if (battleEngine.enemyGroup && battleEngine.enemyGroup[targetIdx] && !battleEngine.enemyGroup[targetIdx].isFainted) {
+            battleEngine.selectedTargetIndex = targetIdx;
+            this.renderBattleArena();
+        }
     },
 
     handleVictorySequence(res) {
