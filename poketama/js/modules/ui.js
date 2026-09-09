@@ -293,7 +293,8 @@ const UIController = {
                     if (bgStage) bgStage.classList.remove('encounter-flash-active');
                     if (eventOverlay) eventOverlay.style.display = 'none';
 
-                    this.closeFullscreenExploreModal();
+                    const modalExplore = document.getElementById('modal-fullscreen-explore');
+                    if (modalExplore) modalExplore.style.display = 'none';
 
                     document.getElementById('adventure-explore-view').style.display = 'none';
                     document.getElementById('battle-arena-view').style.display = 'block';
@@ -1036,26 +1037,22 @@ const UIController = {
 
         if (logBox) {
             logBox.innerHTML += `
-                <div style="margin-top: 10px; text-align: center; background: rgba(162, 217, 106, 0.25); border: 2px solid var(--color-primary); border-radius: 14px; padding: 10px;">
-                    <h3 style="color: var(--color-accent); font-size: 16px; margin-bottom: 6px;">🎉 パートナー軍団の勝利！</h3>
-                    <button class="btn btn-sm" id="btn-battle-exit-confirm" style="margin-top: 4px; font-weight: 800; background: linear-gradient(90deg, #76c84c, #ffd15c);">
-                        ${hasDungeon ? '🧭 次のステージへ進む ▶' : '🧭 冒険エリアに戻る'}
-                    </button>
+                <div style="margin-top: 10px; text-align: center; background: rgba(162, 217, 106, 0.25); border: 2px solid var(--color-primary); border-radius: 14px; padding: 12px; animation: popIn 0.3s ease-out;">
+                    <h3 style="color: var(--color-accent); font-size: 18px; margin-bottom: 4px;">🎉 VICTORY！ バトル勝利！</h3>
+                    <p style="font-size: 13px; color: #e0ffe0; margin: 0;">${hasDungeon ? '仲間モンスターの勝利！ 2秒後に次のステージへ進みます...' : '仲間モンスターの勝利！ 2秒後に冒険画面へ戻ります...'}</p>
                 </div>`;
             logBox.scrollTop = logBox.scrollHeight;
-
-            const btnExit = document.getElementById('btn-battle-exit-confirm');
-            if (btnExit) {
-                btnExit.onclick = () => {
-                    if (res.evoCandidates && res.evoCandidates.length > 0) {
-                        const firstEvo = res.evoCandidates[0];
-                        this.triggerEvolutionModal(firstEvo.member, firstEvo.nextEvoId);
-                    } else {
-                        this.finishBattleAndAdvanceDungeon();
-                    }
-                };
-            }
         }
+
+        // Automatic transition after 2 seconds (no button required!)
+        setTimeout(() => {
+            if (res.evoCandidates && res.evoCandidates.length > 0) {
+                const firstEvo = res.evoCandidates[0];
+                this.triggerEvolutionModal(firstEvo.member, firstEvo.nextEvoId);
+            } else {
+                this.finishBattleAndAdvanceDungeon();
+            }
+        }, 2000);
     },
 
     finishBattleAndAdvanceDungeon() {
