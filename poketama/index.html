@@ -16,7 +16,7 @@
         <div class="brand-logo">
             <a href="../index.html" class="btn-back-porte">◀ Porte</a>
             <span class="brand-icon">🥚✨</span>
-            <h1>ポケタマ <span class="app-version-badge" style="font-size: 11px; color: var(--color-primary-light, #76c84c); background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 2px 7px; border-radius: 12px; font-family: sans-serif; vertical-align: middle; margin-left: 4px;">v1.4.0</span></h1>
+            <h1>ポケタマ <span class="app-version-badge" style="font-size: 11px; color: var(--color-primary-light, #76c84c); background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 2px 7px; border-radius: 12px; font-family: sans-serif; vertical-align: middle; margin-left: 4px;">v1.5.0</span></h1>
         </div>
         <div class="header-status">
             <div class="gold-pill" id="header-gold-val">300 G</div>
@@ -97,7 +97,8 @@
             <section id="tab-adventure" class="tab-page">
                 <!-- EXPLORE VIEW -->
                 <div id="adventure-explore-view">
-                    <h2 style="margin-bottom: 16px; color: var(--color-primary);">⚔️ エリア選択・探索</h2>
+                    <h2 style="margin-bottom: 16px; color: var(--color-primary);">⚔️ エリア選択・ライブ探索</h2>
+                    
                     <div class="biome-selector">
                         <div class="biome-card selected" data-biome="forest">
                             <span style="font-size: 28px;">🌳</span>
@@ -121,12 +122,32 @@
                         </div>
                     </div>
 
-                    <div style="background: var(--bg-glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; text-align: center;">
-                        <h3 id="adventure-biome-title">🌳 はじまりの森</h3>
-                        <p id="adventure-biome-desc" style="color: #94a3b8; margin: 10px 0 16px 0; font-size: 13px;">緑豊かな静かな森林。可愛い草属性のモンスターが生息する。</p>
-                        <button class="btn" id="btn-explore-search" style="font-size: 16px; width: 100%; max-width: 320px;">
-                            🧭 エリアを探索する！ (元気-15)
-                        </button>
+                    <!-- Live Walking Exploration Screen Stage -->
+                    <div class="walking-explore-card">
+                        <div class="walking-stage-viewport" id="walking-bg-stage">
+                            <!-- Parallax Ground & Path -->
+                            <div class="walking-path-ground"></div>
+                            
+                            <!-- Walking Party Sprites Container -->
+                            <div class="walking-party-box" id="walking-party-sprites-box">
+                                <!-- Rendered dynamically -->
+                            </div>
+
+                            <!-- Encounter Popup / Event Overlay -->
+                            <div class="encounter-event-overlay" id="walking-event-overlay" style="display: none;">
+                                <!-- Treasure chest / Enemy alert pops up here -->
+                            </div>
+                        </div>
+
+                        <div class="walking-control-bar">
+                            <div class="walking-status-info">
+                                <h3 id="adventure-biome-title">🌳 はじまりの森</h3>
+                                <p id="adventure-biome-desc" style="color: #b3d9b9; font-size: 12px; margin-top: 2px;">緑豊かな静かな森林。可愛い草属性のモンスターが生息する。</p>
+                            </div>
+                            <button class="btn" id="btn-explore-search" style="font-size: 15px; padding: 12px 28px; font-weight: 900;">
+                                🧭 探索開始！ (元気-12)
+                            </button>
+                        </div>
                     </div>
                 </div>
 

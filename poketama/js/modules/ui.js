@@ -115,24 +115,90 @@ const UIController = {
         if (btnExplore) {
             btnExplore.addEventListener('click', () => {
                 if (battleEngine.inBattle) return;
-                const res = AdventureModule.explore(gameEngine.currentBiome, gameEngine.activeMonster);
-                if (!res.success && res.message) {
-                    this.showToast(res.message, 'warning');
-                    return;
+                this.startWalkingExplorationSequence();
+            });
+        }
+    },
+
+    startWalkingExplorationSequence() {
+        const biome = BIOMES_DATABASE[gameEngine.currentBiome || 'forest'];
+        const party = gameEngine.getBattleParty();
+        const aliveParty = party.filter(m => m && m.hp > 0);
+
+        if (aliveParty.length === 0) {
+            this.showToast('⚠️ 出撃できるパートナーのHPがありません。まずお世話・回復をしてください。', 'warning');
+            return;
+        }
+
+        const leader = aliveParty[0];
+        if (leader.energy < 12) {
+            this.showToast('⚠️ リーダーが疲れています！睡眠でお休みさせてください。(元気12以上必要)', 'warning');
+            return;
+        }
+
+        const bgStage = document.getElementById('walking-bg-stage');
+        const eventOverlay = document.getElementById('walking-event-overlay');
+        const descEl = document.getElementById('adventure-biome-desc');
+        const btnExplore = document.getElementById('btn-explore-search');
+
+        if (eventOverlay) eventOverlay.style.display = 'none';
+        if (btnExplore) btnExplore.disabled = true;
+
+        // Start scrolling background animation
+        if (bgStage) bgStage.classList.add('walking-stage-active');
+        if (descEl) descEl.innerText = `🚶 【${biome.name}】をパーティで探索中... (距離: 20m... 50m... 80m)`;
+
+        audioFX.playClick();
+
+        // After 2.4s of walking animation, trigger encounter!
+        setTimeout(() => {
+            if (bgStage) bgStage.classList.remove('walking-stage-active');
+            if (btnExplore) btnExplore.disabled = false;
+
+            const res = AdventureModule.explore(gameEngine.currentBiome);
+
+            if (res.eventType === 'chest') {
+                if (eventOverlay) {
+                    eventOverlay.innerHTML = `
+                        <div class="encounter-event-box chest-popup">
+                            <span style="font-size: 48px;">🎁</span>
+                            <h3 style="color: var(--color-accent); font-size: 18px;">【宝箱を発見！】</h3>
+                            <p style="font-size: 13px; color: #fff;">${res.goldFound} G と 「${res.itemFound.name}」 を手に入れた！</p>
+                            <button class="btn btn-sm" style="margin-top: 6px; font-weight: 800;" onclick="UIController.closeWalkingEventOverlay()">✨ 宝箱を回収する</button>
+                        </div>`;
+                    eventOverlay.style.display = 'flex';
+                }
+                this.renderAdventurePage();
+            } else if (res.eventType === 'battle' || res.eventType === 'boss') {
+                if (bgStage) bgStage.classList.add('encounter-flash-active');
+                if (eventOverlay) {
+                    eventOverlay.innerHTML = `
+                        <div class="encounter-event-box" style="border-color: #ff4444; box-shadow: 0 0 30px rgba(255, 68, 68, 0.6);">
+                            <span style="font-size: 48px;">⚔️</span>
+                            <h3 style="color: #ff4466; font-size: 18px;">【${res.eventType === 'boss' ? '⚠️ エリアボス軍団と遭遇！' : '野生モンスター遭遇！'}】</h3>
+                            <p style="font-size: 13px; color: #fff;">${res.message}</p>
+                        </div>`;
+                    eventOverlay.style.display = 'flex';
                 }
 
-                this.showToast(res.message, res.eventType === 'chest' ? 'success' : 'info');
+                audioFX.playHit();
 
-                if (res.eventType === 'battle' || res.eventType === 'boss') {
-                    // Show Battle Arena view
+                setTimeout(() => {
+                    if (bgStage) bgStage.classList.remove('encounter-flash-active');
+                    if (eventOverlay) eventOverlay.style.display = 'none';
+
                     document.getElementById('adventure-explore-view').style.display = 'none';
                     document.getElementById('battle-arena-view').style.display = 'block';
                     this.renderBattleArena();
-                } else {
-                    this.renderAdventurePage();
-                }
-            });
-        }
+                }, 1200);
+            }
+        }, 2400);
+    },
+
+    closeWalkingEventOverlay() {
+        const eventOverlay = document.getElementById('walking-event-overlay');
+        if (eventOverlay) eventOverlay.style.display = 'none';
+        this.renderAdventurePage();
     },
 
     bindBattleButtons() {
@@ -365,6 +431,25 @@ const UIController = {
 
         if (viewExplore) viewExplore.style.display = 'block';
         if (viewBattle) viewBattle.style.display = 'none';
+
+        const bgStage = document.getElementById('walking-bg-stage');
+        if (bgStage) {
+            bgStage.className = `walking-stage-viewport biome-bg-${gameEngine.currentBiome || 'forest'}`;
+        }
+
+        const partyBox = document.getElementById('walking-party-sprites-box');
+        if (partyBox) {
+            const party = gameEngine.getBattleParty();
+            let html = '';
+            party.forEach(mon => {
+                html += `
+                <div class="walking-party-unit walking-party-member">
+                    <span class="unit-name-tag">${mon.nickname}</span>
+                    ${renderMonsterSVG(mon.speciesId, { emotion: 'happy' })}
+                </div>`;
+            });
+            partyBox.innerHTML = html;
+        }
 
         const titleEl = document.getElementById('adventure-biome-title');
         const descEl = document.getElementById('adventure-biome-desc');

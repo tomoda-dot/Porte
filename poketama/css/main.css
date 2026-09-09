@@ -658,6 +658,112 @@ body {
 }
 
 /* ==========================================================================
+   Live Walking Exploration Stage & Biome Backgrounds
+   ========================================================================== */
+
+.walking-explore-card {
+    background: var(--bg-glass);
+    border: 2px solid var(--border-nature);
+    border-radius: 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+}
+
+.walking-stage-viewport {
+    height: 250px;
+    position: relative;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    background-repeat: repeat-x;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 20px 30px;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.7);
+}
+
+.biome-bg-forest { background-image: url('../images/forest_bg.png'); }
+.biome-bg-volcano { background-image: url('../images/volcano_bg.png'); }
+.biome-bg-sea { background-image: url('../images/sea_bg.png'); }
+.biome-bg-ruins { background-image: url('../images/ruins_bg.png'); }
+
+.walking-party-box {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    position: absolute;
+    bottom: 25px;
+    left: 40px;
+    z-index: 10;
+    transition: left 3s linear;
+}
+
+.walking-party-unit {
+    width: 65px;
+    height: 65px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.walking-party-unit .unit-name-tag {
+    font-size: 10px;
+    font-weight: 800;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.65);
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+}
+
+.encounter-event-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 16px;
+}
+
+.encounter-event-box {
+    background: var(--bg-card);
+    border: 2px solid var(--color-accent);
+    border-radius: 20px;
+    padding: 16px 24px;
+    box-shadow: 0 10px 30px rgba(255, 209, 92, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.walking-control-bar {
+    padding: 16px 20px;
+    background: rgba(10, 20, 12, 0.95);
+    border-top: 1.5px solid var(--border-nature);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+}
+
+.walking-status-info {
+    flex: 1;
+}
+
+/* ==========================================================================
    FF-Style 3v3 Multi-Party Battle & Raising Guide Styling
    ========================================================================== */
 
