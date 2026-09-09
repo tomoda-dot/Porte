@@ -1164,7 +1164,15 @@ const UIController = {
                     <span style="color: ${elem.color}">${elem.icon} ${elem.name}</span>
                 </div>
                 <div class="box-sprite">${renderMonsterSVG(mon.speciesId)}</div>
-                <div style="display: flex; gap: 6px; margin-top: 6px; width: 100%;">
+                <div style="font-size: 11px; font-weight: bold; color: #fff; margin-top: 4px; text-align: center;">
+                    ${mon.nickname} <small style="color:#ffd15c;">Lv.${mon.level}</small>
+                </div>
+                <div style="display: flex; gap: 6px; font-size: 10px; color: #dcedc8; background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 8px; margin: 2px 0;">
+                    <span>⚔️${mon.atk || spec.atk}</span>
+                    <span>🛡️${mon.def || spec.def}</span>
+                    <span>💨${mon.spd || spec.spd}</span>
+                </div>
+                <div style="display: flex; gap: 6px; margin-top: 4px; width: 100%;">
                     ${!isLeader ? `
                         <button class="btn btn-sm" style="flex:1; font-size:11px;" onclick="UIController.switchActivePartner(${index})">メインお世話</button>
                     ` : ''}
@@ -1246,7 +1254,11 @@ const UIController = {
                 <div class="dex-sprite">${unlocked ? renderMonsterSVG(specId) : '❓'}</div>
                 <div class="dex-info">
                     <h4>${unlocked ? mon.name : '？？？？'}</h4>
-                    ${unlocked ? `<p style="color: ${elem.color}">${elem.icon} ${STAGES[mon.stage]} - ${elem.name}属性</p><p class="dex-desc">${mon.description}</p>` : '<p>未発見のモンスター</p>'}
+                    ${unlocked ? `
+                        <p style="color: ${elem.color}">${elem.icon} ${STAGES[mon.stage]} - ${elem.name}属性</p>
+                        <p style="font-size: 11px; color: #ffd15c; font-weight: bold; margin: 3px 0;">⚔️攻撃:${mon.atk} 🛡️防御:${mon.def} 💨早さ:${mon.spd}</p>
+                        <p class="dex-desc">${mon.description}</p>
+                    ` : '<p>未発見のモンスター</p>'}
                 </div>
             </div>`;
         });

@@ -112,6 +112,19 @@ class GameEngine {
         });
 
         this.monsterBox = unique;
+
+        // Backfill ATK, DEF, SPD if missing on older save instances
+        this.monsterBox.forEach(mon => {
+            if (mon) {
+                const spec = MONSTERS_DATABASE[mon.speciesId] || MONSTERS_DATABASE.fire_1;
+                if (!mon.atk) mon.atk = spec.atk || 20;
+                if (!mon.def) mon.def = spec.def || 15;
+                if (!mon.spd) mon.spd = spec.spd || 15;
+                if (!mon.maxHp) mon.maxHp = spec.maxHp || 80;
+                if (mon.hp === undefined || mon.hp === null) mon.hp = mon.maxHp;
+            }
+        });
+
         return this.monsterBox;
     }
 
@@ -213,8 +226,8 @@ class GameEngine {
 
         // Tick active monster vitals
         if (this.activeMonster && !this.activeMonster.isSleeping) {
-            // Hunger drops much slower (25% chance every 5s tick = -1 per 20s)
-            if (Math.random() < 0.25) {
+            // Hunger drops very slowly (1 per 10 minutes = 1/120 chance every 5s tick)
+            if (Math.random() < (1 / 120)) {
                 this.activeMonster.hunger = Math.max(0, this.activeMonster.hunger - 1);
             }
             
