@@ -42,36 +42,46 @@ const BIOMES_DATABASE = {
 };
 
 const AdventureModule = {
-    explore(biomeId, playerMonster) {
+    explore(biomeId) {
         const biome = BIOMES_DATABASE[biomeId];
         if (!biome) return { success: false, message: '無効なエリアです。' };
 
-        if (!playerMonster || playerMonster.hp <= 0) {
-            return { success: false, message: 'パートナーのHPがありません。まずお世話・回復をしてください。' };
+        const party = gameEngine.getBattleParty();
+        const aliveParty = party.filter(m => m && m.hp > 0);
+
+        if (aliveParty.length === 0) {
+            return { success: false, message: '出撃できるパートナーのHPがありません。まずお世話・回復をしてください。' };
         }
 
-        if (playerMonster.energy < 15) {
-            return { success: false, message: 'パートナーが疲れています！睡眠でお休みさせてください。(元気15以上必要)' };
+        // Check if leader has enough energy
+        const leader = aliveParty[0];
+        if (leader.energy < 12) {
+            return { success: false, message: 'リーダーが疲れています！睡眠でお休みさせてください。(元気12以上必要)' };
         }
 
-        // Consume energy
-        playerMonster.energy -= 15;
+        // Consume energy for active party members
+        aliveParty.forEach(m => m.energy = Math.max(0, m.energy - 12));
 
-        // Roll event (70% Enemy Battle, 20% Treasure Chest, 10% Boss Encounter)
+        // Roll event (70% Wild Party Battle, 20% Treasure Chest, 10% Boss Group Encounter)
         const roll = Math.random();
 
         if (roll < 0.70) {
-            // Wild Battle
-            const enemyId = biome.enemies[Math.floor(Math.random() * biome.enemies.length)];
-            const bRes = battleEngine.startBattle(playerMonster, enemyId, false);
+            // Wild Group Battle (1 to 3 enemies)
+            const enemyCount = Math.min(3, Math.max(1, Math.floor(Math.random() * aliveParty.length) + (Math.random() < 0.5 ? 1 : 0)));
+            const enemySpeciesList = [];
+            for (let i = 0; i < enemyCount; i++) {
+                enemySpeciesList.push(biome.enemies[Math.floor(Math.random() * biome.enemies.length)]);
+            }
+
+            const bRes = battleEngine.startPartyBattle(aliveParty, enemySpeciesList, false);
             return {
                 eventType: 'battle',
                 battleData: bRes,
-                message: `【${biome.name}】を探索中、野生のモンスターに遭遇した！`
+                message: `【${biome.name}】を探索中、${enemyCount}体の野生モンスター軍団に遭遇した！`
             };
         } else if (roll < 0.90) {
             // Treasure Chest
-            const goldFound = Math.floor(80 + Math.random() * 120);
+            const goldFound = Math.floor(100 + Math.random() * 150);
             gameEngine.gold += goldFound;
 
             const possibleItems = ['berry_red', 'berry_blue', 'berry_golden', 'potion_small', 'egg_blanket'];
@@ -89,12 +99,16 @@ const AdventureModule = {
                 message: `【宝箱を発見！】 ${goldFound}G と「${itemObj.name}」を入手した！`
             };
         } else {
-            // Boss Encounter
-            const bRes = battleEngine.startBattle(playerMonster, biome.boss, true);
+            // Boss Group Encounter (Boss + 1 or 2 Minions)
+            const minionSpec = biome.enemies[Math.floor(Math.random() * biome.enemies.length)];
+            const bossGroup = [biome.boss, minionSpec];
+            if (aliveParty.length >= 2) bossGroup.push(minionSpec);
+
+            const bRes = battleEngine.startPartyBattle(aliveParty, bossGroup, true);
             return {
                 eventType: 'boss',
                 battleData: bRes,
-                message: `【警告！】 ${biome.name} のエリアボスが現れた！`
+                message: `【警告！】 ${biome.name} のエリアボス軍団が現れた！`
             };
         }
     }

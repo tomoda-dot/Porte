@@ -15,6 +15,7 @@ class GameEngine {
             potion_small: 3,
             egg_blanket: 2
         };
+        this.battleParty = []; // Party members for battle (up to 3 monsters)
         this.dex = {};
         this.gold = 300;
         this.currentBiome = 'forest';
@@ -50,10 +51,19 @@ class GameEngine {
         this.activeMonster = saved.activeMonster || null;
         this.incubator = saved.incubator || [];
         this.monsterBox = saved.monsterBox || [];
+        this.battleParty = saved.battleParty || (this.activeMonster ? [this.activeMonster] : []);
         this.inventory = saved.inventory || this.inventory;
         this.dex = saved.dex || {};
         this.gold = saved.gold || 300;
         this.currentBiome = saved.currentBiome || 'forest';
+    }
+
+    getBattleParty() {
+        if (!this.battleParty || this.battleParty.length === 0) {
+            if (this.activeMonster) this.battleParty = [this.activeMonster];
+            else this.battleParty = [];
+        }
+        return this.battleParty.filter(m => m !== null && m !== undefined);
     }
 
     exportSaveState() {
@@ -61,6 +71,7 @@ class GameEngine {
             activeMonster: this.activeMonster,
             incubator: this.incubator,
             monsterBox: this.monsterBox,
+            battleParty: this.battleParty,
             inventory: this.inventory,
             dex: this.dex,
             gold: this.gold,

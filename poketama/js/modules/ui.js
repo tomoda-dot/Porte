@@ -141,22 +141,15 @@ const UIController = {
             const btnMove = document.getElementById(`btn-move-${i}`);
             if (btnMove) {
                 btnMove.addEventListener('click', () => {
-                    if (!battleEngine.inBattle || battleEngine.turn !== 'player') return;
+                    if (!battleEngine.inBattle) return;
 
-                    const res = battleEngine.playerExecuteMove(i);
+                    const res = battleEngine.selectMemberMove(i, battleEngine.selectedTargetIndex || 0);
                     this.renderBattleArena();
 
-                    if (res && res.status === 'ongoing') {
-                        // Enemy counterattack after 800ms
-                        setTimeout(() => {
-                            const enemyRes = battleEngine.enemyExecuteMove();
-                            this.renderBattleArena();
-                            if (enemyRes && enemyRes.status === 'defeat') {
-                                this.handleDefeatSequence(enemyRes);
-                            }
-                        }, 800);
-                    } else if (res && res.status === 'victory') {
+                    if (res && res.status === 'victory') {
                         this.handleVictorySequence(res);
+                    } else if (res && res.status === 'defeat') {
+                        this.handleDefeatSequence(res);
                     }
                 });
             }
@@ -174,7 +167,7 @@ const UIController = {
         const btnBattleItem = document.getElementById('btn-battle-item');
         if (btnBattleItem) {
             btnBattleItem.addEventListener('click', () => {
-                if (!battleEngine.inBattle || battleEngine.turn !== 'player') return;
+                if (!battleEngine.inBattle) return;
                 this.openBattleItemModal();
             });
         }
@@ -383,49 +376,87 @@ const UIController = {
     renderBattleArena() {
         if (!battleEngine.inBattle) return;
 
-        const pMon = battleEngine.playerMon;
-        const eMon = battleEngine.enemyMon;
+        const actor = battleEngine.getCurrentActor();
+        const turnHeader = document.getElementById('battle-turn-indicator');
+        if (turnHeader) {
+            if (actor) {
+                turnHeader.innerHTML = `⚔️ 行動入力 (メンバー ${battleEngine.currentActorIndex + 1}/${battleEngine.playerParty.length})： <strong>▶ 【${actor.nickname}】</strong> のコマンドを選択`;
+            } else {
+                turnHeader.innerHTML = `⚔️ バトル実行中...`;
+            }
+        }
 
-        // Render Player side
-        const pName = document.getElementById('battle-player-name');
-        const pLevel = document.getElementById('battle-player-level');
-        const pHpBar = document.getElementById('bar-battle-player-hp');
-        const pHpText = document.getElementById('text-battle-player-hp');
-        const pStage = document.getElementById('battle-player-sprite');
+        // Render Enemies Column (Left Side)
+        const enemyContainer = document.getElementById('enemy-group-container');
+        if (enemyContainer) {
+            let html = '';
+            battleEngine.enemyGroup.forEach((enemy, idx) => {
+                const elem = ELEMENT_TYPES[enemy.element];
+                const hpPct = Math.floor((enemy.hp / enemy.maxHp) * 100);
+                const isSelected = (battleEngine.selectedTargetIndex || 0) === idx;
 
-        if (pName) pName.innerText = pMon.nickname;
-        if (pLevel) pLevel.innerText = `Lv. ${pMon.level}`;
-        const pHpPct = Math.floor((pMon.hp / pMon.maxHp) * 100);
-        if (pHpBar) pHpBar.style.width = `${pHpPct}%`;
-        if (pHpText) pHpText.innerText = `${pMon.hp} / ${pMon.maxHp}`;
-        if (pStage) pStage.innerHTML = renderMonsterSVG(pMon.speciesId, { emotion: 'battle' });
+                html += `
+                <div class="unit-party-card ${enemy.isFainted ? 'fainted' : ''} ${isSelected ? 'target-selected' : ''}" onclick="UIController.setBattleTarget(${idx})">
+                    <div class="unit-mini-sprite">${renderMonsterSVG(enemy.speciesId, { emotion: enemy.isFainted ? 'sleep' : 'angry' })}</div>
+                    <div class="unit-info-box">
+                        <div class="unit-name">${enemy.nickname} <small style="color:${elem.color}">Lv.${enemy.level}</small></div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill fill-hunger" style="width:${hpPct}%"></div></div>
+                        <small style="font-size:10px;">HP: ${enemy.hp}/${enemy.maxHp}</small>
+                    </div>
+                </div>`;
+            });
+            enemyContainer.innerHTML = html;
+        }
 
-        // Render Enemy side
-        const eName = document.getElementById('battle-enemy-name');
-        const eLevel = document.getElementById('battle-enemy-level');
-        const eHpBar = document.getElementById('bar-battle-enemy-hp');
-        const eHpText = document.getElementById('text-battle-enemy-hp');
-        const eStage = document.getElementById('battle-enemy-sprite');
+        // Render Player Party Column (Right Side)
+        const playerContainer = document.getElementById('player-party-container');
+        if (playerContainer) {
+            let html = '';
+            battleEngine.playerParty.forEach((member, idx) => {
+                const elem = ELEMENT_TYPES[member.element];
+                const hpPct = Math.floor((member.hp / member.maxHp) * 100);
+                const isCurrentActor = actor && battleEngine.currentActorIndex === idx;
 
-        if (eName) eName.innerText = eMon.nickname;
-        if (eLevel) eLevel.innerText = `Lv. ${eMon.level}`;
-        const eHpPct = Math.floor((eMon.hp / eMon.maxHp) * 100);
-        if (eHpBar) eHpBar.style.width = `${eHpPct}%`;
-        if (eHpText) eHpText.innerText = `${eMon.hp} / ${eMon.maxHp}`;
-        if (eStage) eStage.innerHTML = renderMonsterSVG(eMon.speciesId, { emotion: 'angry' });
+                html += `
+                <div class="unit-party-card ${member.isFainted ? 'fainted' : ''} ${isCurrentActor ? 'active-turn' : ''}">
+                    <div class="unit-mini-sprite">${renderMonsterSVG(member.speciesId, { emotion: member.isFainted ? 'sleep' : (isCurrentActor ? 'happy' : 'battle') })}</div>
+                    <div class="unit-info-box">
+                        <div class="unit-name">${member.nickname} <small style="color:${elem.color}">Lv.${member.level}</small></div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill fill-hunger" style="width:${hpPct}%"></div></div>
+                        <small style="font-size:10px;">HP: ${member.hp}/${member.maxHp}</small>
+                    </div>
+                </div>`;
+            });
+            playerContainer.innerHTML = html;
+        }
 
-        // Render 4 Moves
-        for (let i = 0; i < 4; i++) {
-            const btnMove = document.getElementById(`btn-move-${i}`);
-            if (btnMove) {
-                const moveId = pMon.moves[i];
-                if (moveId) {
-                    const moveObj = MOVES_DATABASE[moveId];
-                    const elem = ELEMENT_TYPES[moveObj.type] || { icon: '⚔️', color: '#fff' };
-                    btnMove.innerHTML = `<span>${elem.icon} ${moveObj.name}</span><small>威力:${moveObj.power}</small>`;
-                    btnMove.style.display = 'block';
-                } else {
-                    btnMove.style.display = 'none';
+        // Render Target Select Buttons
+        const targetBtnContainer = document.getElementById('target-enemy-buttons-container');
+        if (targetBtnContainer) {
+            let html = '';
+            battleEngine.enemyGroup.forEach((enemy, idx) => {
+                if (!enemy.isFainted) {
+                    const isSelected = (battleEngine.selectedTargetIndex || 0) === idx;
+                    html += `<button class="btn-target-select ${isSelected ? 'active' : ''}" onclick="UIController.setBattleTarget(${idx})">🎯 ${enemy.nickname}</button>`;
+                }
+            });
+            targetBtnContainer.innerHTML = html;
+        }
+
+        // Render Current Actor's 4 Moves
+        if (actor) {
+            for (let i = 0; i < 4; i++) {
+                const btnMove = document.getElementById(`btn-move-${i}`);
+                if (btnMove) {
+                    const moveId = actor.moves[i];
+                    if (moveId) {
+                        const moveObj = MOVES_DATABASE[moveId];
+                        const elem = ELEMENT_TYPES[moveObj.type] || { icon: '⚔️', color: '#fff' };
+                        btnMove.innerHTML = `<span>${elem.icon} ${moveObj.name}</span><small>威力:${moveObj.power}</small>`;
+                        btnMove.style.display = 'block';
+                    } else {
+                        btnMove.style.display = 'none';
+                    }
                 }
             }
         }
@@ -438,13 +469,18 @@ const UIController = {
         }
     },
 
+    setBattleTarget(targetIdx) {
+        battleEngine.selectedTargetIndex = targetIdx;
+        this.renderBattleArena();
+    },
+
     handleVictorySequence(res) {
         this.renderBattleArena();
         const logBox = document.getElementById('battle-log-box');
         if (logBox) {
             logBox.innerHTML += `
                 <div style="margin-top: 10px; text-align: center; background: rgba(162, 217, 106, 0.25); border: 2px solid var(--color-primary); border-radius: 14px; padding: 10px;">
-                    <h3 style="color: var(--color-accent); font-size: 16px; margin-bottom: 6px;">🎉 バトル勝利！</h3>
+                    <h3 style="color: var(--color-accent); font-size: 16px; margin-bottom: 6px;">🎉 パートナー軍団の勝利！</h3>
                     <button class="btn btn-sm" id="btn-battle-exit-confirm" style="margin-top: 4px; font-weight: 800; background: linear-gradient(90deg, #76c84c, #ffd15c);">🧭 冒険エリアに戻る</button>
                 </div>`;
             logBox.scrollTop = logBox.scrollHeight;
@@ -452,8 +488,9 @@ const UIController = {
             const btnExit = document.getElementById('btn-battle-exit-confirm');
             if (btnExit) {
                 btnExit.onclick = () => {
-                    if (res.canEvolve) {
-                        this.triggerEvolutionModal(battleEngine.playerMon, res.nextEvoId);
+                    if (res.evoCandidates && res.evoCandidates.length > 0) {
+                        const firstEvo = res.evoCandidates[0];
+                        this.triggerEvolutionModal(firstEvo.member, firstEvo.nextEvoId);
                     } else {
                         this.exitBattleArena();
                     }
@@ -468,7 +505,7 @@ const UIController = {
         if (logBox) {
             logBox.innerHTML += `
                 <div style="margin-top: 10px; text-align: center; background: rgba(255, 68, 68, 0.25); border: 2px solid #ff4444; border-radius: 14px; padding: 10px;">
-                    <h3 style="color: #ff6666; font-size: 16px; margin-bottom: 6px;">💀 パートナーが倒れてしまった...</h3>
+                    <h3 style="color: #ff6666; font-size: 16px; margin-bottom: 6px;">💀 全員倒れてしまった...</h3>
                     <p style="font-size: 12px; margin-bottom: 6px; color: #ffcccc;">お世話をして回復させてから再挑戦しましょう！</p>
                     <button class="btn btn-sm" id="btn-battle-exit-confirm" style="background: #552233; margin-top: 4px; border: 1px solid #ff4444;">🏠 冒険エリアに戻る</button>
                 </div>`;
@@ -525,30 +562,36 @@ const UIController = {
             return;
         }
 
+        const currentParty = gameEngine.getBattleParty();
+
         let html = '';
         allPartners.forEach((mon, index) => {
-            const isActive = gameEngine.activeMonster && gameEngine.activeMonster === mon;
+            const isLeader = gameEngine.activeMonster && gameEngine.activeMonster === mon;
+            const inParty = currentParty.includes(mon);
+            const partySlot = currentParty.indexOf(mon) + 1;
+
             const spec = MONSTERS_DATABASE[mon.speciesId];
             const elem = ELEMENT_TYPES[mon.element];
 
             html += `
-            <div class="box-card ${isActive ? 'active-partner' : ''}">
+            <div class="box-card ${isLeader ? 'active-partner' : ''}">
                 <div class="box-card-header">
-                    <span class="box-badge">${isActive ? '相棒★' : '控え'}</span>
+                    <span class="box-badge" style="background:${inParty ? '#ffd15c' : '#76c84c'}; color:#0b1a0e;">
+                        ${isLeader ? 'リーダー★' : (inParty ? `パーティ ${partySlot}枠` : '控え')}
+                    </span>
                     <span style="color: ${elem.color}">${elem.icon} ${elem.name}</span>
                 </div>
                 <div class="box-sprite">${renderMonsterSVG(mon.speciesId)}</div>
-                <div class="box-card-body">
-                    <h4>${mon.nickname}</h4>
-                    <p class="box-spec-name">Lv.${mon.level} ${spec.name}</p>
-                    <p class="box-stats">HP:${mon.hp}/${mon.maxHp} | 攻撃:${mon.atk} | なつき:${mon.friendship}</p>
+                <div style="display: flex; gap: 6px; margin-top: 6px; width: 100%;">
+                    ${!isLeader ? `
+                        <button class="btn btn-sm" style="flex:1; font-size:11px;" onclick="UIController.switchActivePartner(${index})">メインお世話</button>
+                    ` : ''}
+                    <button class="btn btn-sm" style="flex:1; font-size:11px; background:${inParty ? '#442233' : '#225533'}; border:1px solid ${inParty ? '#ff4444' : '#44dd66'};" onclick="UIController.togglePartyMember(${index})">
+                        ${inParty ? '❌ パーティ解除' : '⚔️ パーティ編入'}
+                    </button>
                 </div>
-                ${!isActive ? `
-                    <button class="btn btn-sm btn-select-partner" onclick="UIController.switchActivePartner(${index})">相棒にする</button>
-                ` : ''}
             </div>`;
         });
-
         grid.innerHTML = html;
     },
 

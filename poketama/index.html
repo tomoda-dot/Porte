@@ -16,7 +16,7 @@
         <div class="brand-logo">
             <a href="../index.html" class="btn-back-porte">◀ Porte</a>
             <span class="brand-icon">🥚✨</span>
-            <h1>ポケタマ <span class="app-version-badge" style="font-size: 11px; color: var(--color-primary-light, #76c84c); background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 2px 7px; border-radius: 12px; font-family: sans-serif; vertical-align: middle; margin-left: 4px;">v1.3.1</span></h1>
+            <h1>ポケタマ <span class="app-version-badge" style="font-size: 11px; color: var(--color-primary-light, #76c84c); background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 2px 7px; border-radius: 12px; font-family: sans-serif; vertical-align: middle; margin-left: 4px;">v1.4.0</span></h1>
         </div>
         <div class="header-status">
             <div class="gold-pill" id="header-gold-val">300 G</div>
@@ -130,53 +130,85 @@
                     </div>
                 </div>
 
-                <!-- BATTLE ARENA VIEW (Hidden by default) -->
+                <!-- BATTLE ARENA VIEW (FF Style Multi-Party Battle) -->
                 <div id="battle-arena-view" style="display: none;">
-                    <div class="battle-arena-box">
-                        <div class="battle-stage">
-                            <!-- Player Mon -->
-                            <div class="battle-unit-card">
-                                <h4 id="battle-player-name">---</h4>
-                                <span id="battle-player-level" class="box-badge" style="position: static;">Lv.1</span>
-                                <div class="progress-bar-bg" style="margin: 6px 0;"><div class="progress-bar-fill fill-hunger" id="bar-battle-player-hp"></div></div>
-                                <small id="text-battle-player-hp">---/---</small>
-                                <div class="battle-sprite-box" id="battle-player-sprite"></div>
+                    <div class="ff-battle-frame">
+                        <div class="battle-turn-header" id="battle-turn-indicator">
+                            ⚔️ バトルターン：指示を出す仲間を選択中
+                        </div>
+
+                        <div class="ff-battle-stage">
+                            <!-- Left: Enemy Group (1 to 3 Enemies) -->
+                            <div class="enemy-group-col" id="enemy-group-container">
+                                <!-- Rendered dynamically -->
                             </div>
 
-                            <span style="font-size: 24px; font-weight: 900; color: #ff0055;">VS</span>
+                            <div class="vs-divider">VS</div>
 
-                            <!-- Enemy Mon -->
-                            <div class="battle-unit-card">
-                                <h4 id="battle-enemy-name">---</h4>
-                                <span id="battle-enemy-level" class="box-badge" style="position: static; background: #ff0055;">Lv.1</span>
-                                <div class="progress-bar-bg" style="margin: 6px 0;"><div class="progress-bar-fill fill-hunger" id="bar-battle-enemy-hp"></div></div>
-                                <small id="text-battle-enemy-hp">---/---</small>
-                                <div class="battle-sprite-box" id="battle-enemy-sprite"></div>
+                            <!-- Right: Player Party (1 to 3 Party Members) -->
+                            <div class="player-party-col" id="player-party-container">
+                                <!-- Rendered dynamically -->
                             </div>
+                        </div>
+
+                        <!-- Target Enemy Selection Bar -->
+                        <div class="target-select-bar" id="target-enemy-select-bar">
+                            <span style="font-size: 12px; font-weight: 800; color: #ffd15c;">🎯 攻撃対象を選択:</span>
+                            <div id="target-enemy-buttons-container" style="display: flex; gap: 8px;"></div>
                         </div>
 
                         <!-- Battle Log -->
                         <div class="battle-log-box" id="battle-log-box"></div>
 
-                        <!-- Battle Controls -->
-                        <div class="battle-controls">
-                            <button class="btn-move" id="btn-move-0">---</button>
-                            <button class="btn-move" id="btn-move-1">---</button>
-                            <button class="btn-move" id="btn-move-2">---</button>
-                            <button class="btn-move" id="btn-move-3">---</button>
-                        </div>
+                        <!-- FF Blue Command Box -->
+                        <div class="ff-command-box">
+                            <div class="battle-controls">
+                                <button class="btn-move" id="btn-move-0">---</button>
+                                <button class="btn-move" id="btn-move-1">---</button>
+                                <button class="btn-move" id="btn-move-2">---</button>
+                                <button class="btn-move" id="btn-move-3">---</button>
+                            </div>
 
-                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 6px;">
-                            <button class="btn btn-sm" id="btn-battle-item" style="background: #334466;">🧪 回復薬</button>
-                            <button class="btn btn-sm" id="btn-battle-flee" style="background: #442233;">🏃 逃げる</button>
+                            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 8px;">
+                                <button class="btn btn-sm" id="btn-battle-item" style="background: #334466;">🧪 回復薬</button>
+                                <button class="btn btn-sm" id="btn-battle-flee" style="background: #442233;">🏃 逃げる</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- TAB 4: PARTNER HOUSE BOX -->
+            <!-- TAB 4: PARTNER HOUSE & PARTY BUILDER BOX -->
             <section id="tab-box" class="tab-page">
-                <h2 style="margin-bottom: 16px; color: var(--color-primary);">🏠 パートナーハウス (仲間モンスター)</h2>
+                <h2 style="margin-bottom: 12px; color: var(--color-primary);">🏠 パートナーハウス ＆ 出撃パーティ編成</h2>
+                
+                <!-- Monster Raising & Training Guide Banner -->
+                <div class="raising-guide-banner">
+                    <h4>📜 【仲間モンスターの育て方ガイド】</h4>
+                    <div class="guide-steps-grid">
+                        <div class="guide-step">
+                            <span class="step-num">1</span>
+                            <strong>🥚 温めて孵化</strong>
+                            <small>孵化室で手を当てて生命を誕生させる</small>
+                        </div>
+                        <div class="guide-step">
+                            <span class="step-num">2</span>
+                            <strong>🏠 愛情お世話</strong>
+                            <small>ごはん・なでる(絆)・そうじ・睡眠で健康維持</small>
+                        </div>
+                        <div class="guide-step">
+                            <span class="step-num">3</span>
+                            <strong>🥊 特訓 ＆ 冒険</strong>
+                            <small>特訓やバトルでEXPを獲得しレベルUP</small>
+                        </div>
+                        <div class="guide-step">
+                            <span class="step-num">4</span>
+                            <strong>✨ 姿と技の進化</strong>
+                            <small>一定レベル＋絆で究極体へ覚醒！</small>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="box-grid" id="monster-box-grid">
                     <!-- Raised partners listed here -->
                 </div>

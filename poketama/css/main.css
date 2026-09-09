@@ -656,3 +656,217 @@ body {
         height: 90px;
     }
 }
+
+/* ==========================================================================
+   FF-Style 3v3 Multi-Party Battle & Raising Guide Styling
+   ========================================================================== */
+
+.ff-battle-frame {
+    background: radial-gradient(circle at 50% 30%, #173322 0%, #08140c 100%);
+    border: 3px solid #8d6e63;
+    outline: 2px solid var(--border-nature);
+    border-radius: 24px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+}
+
+.battle-turn-header {
+    background: rgba(162, 217, 106, 0.18);
+    border: 1.5px solid var(--color-primary);
+    color: #ffffff;
+    padding: 8px 14px;
+    border-radius: 14px;
+    font-weight: 800;
+    font-size: 13px;
+    text-align: center;
+}
+
+.ff-battle-stage {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    min-height: 220px;
+}
+
+.enemy-group-col, .player-party-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 46%;
+}
+
+.unit-party-card {
+    background: rgba(15, 30, 20, 0.9);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.unit-party-card.active-turn {
+    border-color: #ffd15c;
+    box-shadow: 0 0 14px rgba(255, 209, 92, 0.4);
+    transform: translateX(-4px);
+}
+
+.unit-party-card.fainted {
+    opacity: 0.45;
+    filter: grayscale(1);
+}
+
+.unit-party-card.target-selected {
+    border-color: #ff4444;
+    box-shadow: 0 0 14px rgba(255, 68, 68, 0.5);
+}
+
+.unit-mini-sprite {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.unit-info-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.unit-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vs-divider {
+    font-size: 24px;
+    font-weight: 900;
+    color: #ff4466;
+    text-shadow: 0 0 10px rgba(255, 68, 102, 0.5);
+}
+
+.target-select-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 209, 92, 0.3);
+    border-radius: 14px;
+    padding: 6px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.btn-target-select {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    cursor: pointer;
+}
+
+.btn-target-select.active {
+    background: #ff4444;
+    border-color: #ff8888;
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+}
+
+.ff-command-box {
+    background: linear-gradient(180deg, #102238 0%, #061120 100%);
+    border: 2px solid #3366cc;
+    border-radius: 18px;
+    padding: 12px;
+    box-shadow: inset 0 0 15px rgba(51, 102, 204, 0.4);
+}
+
+/* Raising Guide Banner */
+.raising-guide-banner {
+    background: rgba(20, 40, 26, 0.9);
+    border: 1.5px solid var(--color-primary);
+    border-radius: 20px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+}
+
+.raising-guide-banner h4 {
+    color: var(--color-accent);
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.guide-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.guide-step {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+}
+
+.step-num {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    width: 20px;
+    height: 20px;
+    background: var(--color-primary);
+    color: #0c180e;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.guide-step strong {
+    font-size: 12px;
+    color: var(--color-primary);
+    margin-top: 4px;
+}
+
+.guide-step small {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+    .ff-battle-stage {
+        flex-direction: column;
+    }
+    .enemy-group-col, .player-party-col {
+        width: 100%;
+    }
+    .vs-divider {
+        font-size: 18px;
+    }
+    .guide-steps-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
