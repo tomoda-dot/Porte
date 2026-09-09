@@ -164,6 +164,13 @@ const UIController = {
                 this.startWalkingExplorationSequence();
             });
         }
+
+        const btnCancelExplore = document.getElementById('btn-cancel-explore');
+        if (btnCancelExplore) {
+            btnCancelExplore.addEventListener('click', () => {
+                this.closeFullscreenExploreModal();
+            });
+        }
     },
 
     startWalkingExplorationSequence() {
@@ -176,16 +183,41 @@ const UIController = {
             return;
         }
 
-        const bgStage = document.getElementById('walking-bg-stage');
-        const eventOverlay = document.getElementById('walking-event-overlay');
-        const descEl = document.getElementById('adventure-biome-desc');
+        const modalExplore = document.getElementById('modal-fullscreen-explore');
+        const titleEl = document.getElementById('fullscreen-biome-title');
+        const statusEl = document.getElementById('fullscreen-explore-status');
+        const bgStage = document.getElementById('fullscreen-walking-bg');
+        const trioBox = document.getElementById('fullscreen-party-trio-box');
+        const approachEl = document.getElementById('fullscreen-approaching-target');
+        const eventOverlay = document.getElementById('fullscreen-event-overlay');
         const btnExplore = document.getElementById('btn-explore-search');
-        const approachEl = document.getElementById('walking-approaching-target');
 
-        if (eventOverlay) eventOverlay.style.display = 'none';
         if (btnExplore) btnExplore.disabled = true;
+        if (eventOverlay) eventOverlay.style.display = 'none';
 
-        if (descEl) descEl.innerText = `🚶 【${biome.name}】をパーティで探検中... (距離: 25m... 60m... 90m)`;
+        // 1. Open Fullscreen Explore Overlay
+        if (modalExplore) modalExplore.style.display = 'flex';
+        if (titleEl) titleEl.innerText = `${biome.icon} ${biome.name} 探検中`;
+        if (statusEl) statusEl.innerText = `🚶 【${party.length}体】のパートナーで冒険中...`;
+
+        if (bgStage) {
+            bgStage.className = `fullscreen-walking-viewport biome-bg-${gameEngine.currentBiome || 'forest'}`;
+        }
+
+        // 2. Render All Party Monsters (up to 3) in Trio Walking Formation!
+        if (trioBox) {
+            let html = '';
+            party.forEach((mon, index) => {
+                html += `
+                <div class="party-trio-unit">
+                    <span class="unit-name-tag" style="font-size:10px; background:rgba(0,0,0,0.6); padding:1px 6px; border-radius:8px; color:#fff; white-space:nowrap; margin-bottom:2px;">
+                        ${mon.nickname} ${index === 0 ? '★' : ''}
+                    </span>
+                    ${renderMonsterSVG(mon.speciesId, { emotion: 'happy' })}
+                </div>`;
+            });
+            trioBox.innerHTML = html;
+        }
 
         audioFX.playClick();
 
@@ -193,17 +225,18 @@ const UIController = {
         if (!res.eventType) {
             this.showToast(res.message, 'warning');
             if (btnExplore) btnExplore.disabled = false;
+            this.closeFullscreenExploreModal();
             return;
         }
 
-        // Trigger Right-to-Left Approaching Animation Sprite!
+        // 3. Trigger Right-to-Left Approaching Animation Sprite!
         if (approachEl) {
             if (res.eventType === 'chest') {
-                approachEl.innerHTML = `<div style="font-size: 50px; filter: drop-shadow(0 0 10px #ffd15c);" class="walking-party-member">🎁</div>`;
+                approachEl.innerHTML = `<div style="font-size: 64px; filter: drop-shadow(0 0 16px #ffd15c);" class="walking-party-member">🎁</div>`;
             } else if (res.eventType === 'battle' || res.eventType === 'boss') {
                 const enemySpec = res.battleData.enemyGroup[0].speciesId;
                 approachEl.innerHTML = `
-                    <div style="width: 70px; height: 70px;" class="walking-party-member">
+                    <div style="width: 90px; height: 90px;" class="walking-party-member">
                         ${renderMonsterSVG(enemySpec, { emotion: 'angry' })}
                     </div>`;
             }
@@ -211,7 +244,7 @@ const UIController = {
             approachEl.className = 'walking-approaching-target approaching-slide-active';
         }
 
-        // Fast 1.1s animated approaching before encounter triggers!
+        // 4. Fast 1.2s animated approaching before encounter triggers!
         setTimeout(() => {
             if (approachEl) {
                 approachEl.style.display = 'none';
@@ -223,22 +256,21 @@ const UIController = {
                 if (eventOverlay) {
                     eventOverlay.innerHTML = `
                         <div class="encounter-event-box chest-popup">
-                            <span style="font-size: 48px;">🎁</span>
-                            <h3 style="color: var(--color-accent); font-size: 18px;">【宝箱を発見！】</h3>
-                            <p style="font-size: 13px; color: #fff;">${res.goldFound} G と 「${res.itemFound.name}」 を手に入れた！</p>
-                            <button class="btn btn-sm" style="margin-top: 6px; font-weight: 800;" onclick="UIController.closeWalkingEventOverlay()">✨ 宝箱を回収する</button>
+                            <span style="font-size: 56px;">🎁</span>
+                            <h3 style="color: var(--color-accent); font-size: 20px;">【宝箱を発見！】</h3>
+                            <p style="font-size: 14px; color: #fff; margin: 8px 0;">${res.goldFound} G と 「${res.itemFound.name}」 を手に入れた！</p>
+                            <button class="btn btn-sm" style="font-size: 15px; padding: 10px 24px; font-weight: 800; background: linear-gradient(90deg, #76c84c, #ffd15c); border: 1px solid #fff; color: #0b1a0e;" onclick="UIController.closeWalkingEventOverlay()">✨ 宝箱を回収して戻る</button>
                         </div>`;
                     eventOverlay.style.display = 'flex';
                 }
-                this.renderAdventurePage();
             } else if (res.eventType === 'battle' || res.eventType === 'boss') {
                 if (bgStage) bgStage.classList.add('encounter-flash-active');
                 if (eventOverlay) {
                     eventOverlay.innerHTML = `
-                        <div class="encounter-event-box" style="border-color: #ff4444; box-shadow: 0 0 30px rgba(255, 68, 68, 0.6);">
-                            <span style="font-size: 48px;">⚔️</span>
-                            <h3 style="color: #ff4466; font-size: 18px;">【${res.eventType === 'boss' ? '⚠️ エリアボス軍団と遭遇！' : '野生モンスター遭遇！'}】</h3>
-                            <p style="font-size: 13px; color: #fff;">${res.message}</p>
+                        <div class="encounter-event-box" style="border-color: #ff4444; box-shadow: 0 0 35px rgba(255, 68, 68, 0.7);">
+                            <span style="font-size: 56px;">⚔️</span>
+                            <h3 style="color: #ff4466; font-size: 20px;">【${res.eventType === 'boss' ? '⚠️ エリアボス軍団と遭遇！' : '野生モンスター遭遇！'}】</h3>
+                            <p style="font-size: 14px; color: #fff;">${res.message}</p>
                         </div>`;
                     eventOverlay.style.display = 'flex';
                 }
@@ -249,18 +281,28 @@ const UIController = {
                     if (bgStage) bgStage.classList.remove('encounter-flash-active');
                     if (eventOverlay) eventOverlay.style.display = 'none';
 
+                    this.closeFullscreenExploreModal();
+
                     document.getElementById('adventure-explore-view').style.display = 'none';
                     document.getElementById('battle-arena-view').style.display = 'block';
                     this.renderBattleArena();
-                }, 800);
+                }, 900);
             }
-        }, 1100);
+        }, 1200);
+    },
+
+    closeFullscreenExploreModal() {
+        const modalExplore = document.getElementById('modal-fullscreen-explore');
+        const btnExplore = document.getElementById('btn-explore-search');
+        if (modalExplore) modalExplore.style.display = 'none';
+        if (btnExplore) btnExplore.disabled = false;
+        this.renderAdventurePage();
     },
 
     closeWalkingEventOverlay() {
-        const eventOverlay = document.getElementById('walking-event-overlay');
+        const eventOverlay = document.getElementById('fullscreen-event-overlay');
         if (eventOverlay) eventOverlay.style.display = 'none';
-        this.renderAdventurePage();
+        this.closeFullscreenExploreModal();
     },
 
     bindBattleButtons() {

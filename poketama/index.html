@@ -134,37 +134,13 @@
                         </div>
                     </div>
 
-                    <!-- Live Walking Exploration Screen Stage -->
-                    <div class="walking-explore-card">
-                        <div class="walking-stage-viewport" id="walking-bg-stage">
-                            <!-- Parallax Ground & Path -->
-                            <div class="walking-path-ground"></div>
-                            
-                            <!-- Walking Party Sprites Container -->
-                            <div class="walking-party-box" id="walking-party-sprites-box">
-                                <!-- Rendered dynamically -->
-                            </div>
-
-                            <!-- Right-to-Left Approaching Encounter Object -->
-                            <div class="walking-approaching-target" id="walking-approaching-target" style="display: none;">
-                                <!-- Chest or Enemy slide-in sprite rendered dynamically -->
-                            </div>
-
-                            <!-- Encounter Popup / Event Overlay -->
-                            <div class="encounter-event-overlay" id="walking-event-overlay" style="display: none;">
-                                <!-- Treasure chest / Enemy alert pops up here -->
-                            </div>
-                        </div>
-
-                        <div class="walking-control-bar">
-                            <div class="walking-status-info">
-                                <h3 id="adventure-biome-title">🌳 はじまりの森</h3>
-                                <p id="adventure-biome-desc" style="color: #b3d9b9; font-size: 12px; margin-top: 2px;">緑豊かな静かな森林。可愛い草属性のモンスターが生息する。</p>
-                            </div>
-                            <button class="btn" id="btn-explore-search" style="font-size: 15px; padding: 12px 28px; font-weight: 900;">
-                                🧭 探索開始！ (元気-5)
-                            </button>
-                        </div>
+                    <!-- Biome Selection Action Banner (Static Area Select - No Animation Preview) -->
+                    <div class="biome-info-banner" style="background: var(--bg-glass); border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 24px; padding: 28px; text-align: center; margin-top: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
+                        <h3 id="adventure-biome-title" style="font-size: 22px; color: var(--color-primary); margin-bottom: 8px;">🌳 はじまりの森</h3>
+                        <p id="adventure-biome-desc" style="color: #b3d9b9; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">緑豊かな静かな森林。可愛い草属性のモンスターが生息する。</p>
+                        <button class="btn" id="btn-explore-search" style="font-size: 18px; padding: 14px 44px; font-weight: 900; background: linear-gradient(90deg, #ff0055, #ff7700); border: 2px solid #ffcc00; box-shadow: 0 0 25px rgba(255, 0, 85, 0.5); border-radius: 30px; cursor: pointer;">
+                            🧭 探索開始！ (元気-5)
+                        </button>
                     </div>
                 </div>
 
@@ -311,6 +287,35 @@
         </div>
         <p id="evo-title-text" style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">姿と能力が真の進化を遂げる！</p>
         <button class="btn" id="btn-confirm-evo" style="width: 100%;">🌟 進化を受け入れる！</button>
+    </div>
+</div>
+
+<!-- MODAL 4: FULLSCREEN WALKING EXPLORATION STAGE OVERLAY -->
+<div class="fullscreen-explore-overlay" id="modal-fullscreen-explore" style="display: none;">
+    <div class="fullscreen-explore-header">
+        <div class="explore-header-title" id="fullscreen-biome-title">🌳 はじまりの森 探索中</div>
+        <div class="explore-header-status" id="fullscreen-explore-status">🚶 探検を進めています...</div>
+        <button class="btn btn-sm" id="btn-cancel-explore" style="background: rgba(255,0,0,0.4); border: 1px solid #ff4444; color: #fff;">✖ 中断</button>
+    </div>
+
+    <!-- Parallax Walking Viewport (Full Screen) -->
+    <div class="fullscreen-walking-viewport" id="fullscreen-walking-bg">
+        <div class="walking-path-ground"></div>
+        
+        <!-- Multi-Character Trio Walking Formation Box -->
+        <div class="fullscreen-party-trio" id="fullscreen-party-trio-box">
+            <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Approaching Target -->
+        <div class="walking-approaching-target" id="fullscreen-approaching-target" style="display: none;">
+            <!-- Target sprite slide-in -->
+        </div>
+
+        <!-- Event Overlay Popup -->
+        <div class="encounter-event-overlay" id="fullscreen-event-overlay" style="display: none;">
+            <!-- Chest or Encounter alert -->
+        </div>
     </div>
 </div>
 
