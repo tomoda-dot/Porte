@@ -61,6 +61,7 @@ class BattleEngine {
 
             return {
                 ...m,
+                _ref: m,
                 partyIndex: idx,
                 isFainted: false
             };
@@ -319,6 +320,8 @@ class BattleEngine {
             };
         }
 
+        this.syncPartyStateBack();
+
         this.currentActorIndex = 0;
         this.queuedCommands = [];
         this.turnCount++;
@@ -329,6 +332,21 @@ class BattleEngine {
             nextActor: this.getCurrentActor(),
             log: this.battleLog
         };
+    }
+
+    syncPartyStateBack() {
+        if (!this.playerParty) return;
+        this.playerParty.forEach(member => {
+            if (member._ref) {
+                member._ref.hp = member.hp;
+                member._ref.moves = member.moves;
+                if (member.hp <= 0) member._ref.isFainted = true;
+                else member._ref.isFainted = false;
+            }
+        });
+        if (gameEngine && gameEngine.saveState) {
+            gameEngine.saveState();
+        }
     }
 
     useBattleItem(itemId, targetMemberIndex = 0) {
@@ -406,6 +424,7 @@ class BattleEngine {
         });
 
         this.battleLog.push(`🎉 勝利！ ゴールド +${goldGained}G 獲得！`);
+        this.syncPartyStateBack();
 
         let eggDropped = null;
         if (Math.random() < (this.isBossBattle ? 0.9 : 0.4)) {
