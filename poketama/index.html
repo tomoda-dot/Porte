@@ -93,6 +93,30 @@
                             <div class="stat-label"><span>経験値 (EXP)</span><span>🌟</span></div>
                             <div class="progress-bar-bg"><div class="progress-bar-fill fill-exp" id="bar-care-exp"></div></div>
                         </div>
+
+                        <!-- Battle Parameters: ATK, DEF, SPD -->
+                        <div class="care-battle-stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                            <div>
+                                <div style="font-size: 11px; color: #ff8877;">⚔️ 攻撃力</div>
+                                <strong id="val-care-atk" style="font-size: 14px; color: #fff;">--</strong>
+                            </div>
+                            <div>
+                                <div style="font-size: 11px; color: #66ccff;">🛡️ 防御力</div>
+                                <strong id="val-care-def" style="font-size: 14px; color: #fff;">--</strong>
+                            </div>
+                            <div>
+                                <div style="font-size: 11px; color: #aaff66;">💨 すばやさ</div>
+                                <strong id="val-care-spd" style="font-size: 14px; color: #fff;">--</strong>
+                            </div>
+                        </div>
+
+                        <!-- 4 Attack Move Patterns -->
+                        <div class="care-moves-container" style="margin-top: 12px;">
+                            <div style="font-size: 12px; font-weight: bold; color: var(--color-warning); margin-bottom: 6px;">⚔️ 攻撃パターン (所持技 4種)</div>
+                            <div id="care-moves-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                                <!-- 4 moves rendered dynamically -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

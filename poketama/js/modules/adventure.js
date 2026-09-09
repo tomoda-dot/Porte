@@ -130,6 +130,12 @@ const AdventureModule = {
 
                 gameEngine.inventory[itemFoundId] = (gameEngine.inventory[itemFoundId] || 0) + 1;
 
+                // Award EXP +20 to all alive party members
+                const expFound = 20;
+                aliveParty.forEach(m => {
+                    TamagotchiModule.addExp(m, expFound);
+                });
+
                 audioFX.playFeed();
 
                 return {
@@ -137,8 +143,9 @@ const AdventureModule = {
                     stageNumber: stage,
                     totalStages: total,
                     goldFound,
+                    expFound,
                     itemFound: itemObj,
-                    message: `🚩 【ステージ ${stage}/${total}】 🎁 宝箱を発見！ ${goldFound}G と「${itemObj.name}」を入手した！`
+                    message: `🚩 【ステージ ${stage}/${total}】 🎁 宝箱を発見！ ${goldFound}G 、「${itemObj.name}」、EXP+${expFound} を入手した！`
                 };
             } else {
                 // Wild Monster Battle (1 to 3 enemies)

@@ -633,6 +633,57 @@ const UIController = {
         const expPct = Math.floor((mon.exp / mon.maxExp) * 100);
         if (barExp) barExp.style.width = `${expPct}%`;
 
+        // Render ATK, DEF, SPD Values
+        const valAtk = document.getElementById('val-care-atk');
+        const valDef = document.getElementById('val-care-def');
+        const valSpd = document.getElementById('val-care-spd');
+        const movesListEl = document.getElementById('care-moves-list');
+
+        if (valAtk) valAtk.innerText = mon.atk || spec.atk || 10;
+        if (valDef) valDef.innerText = mon.def || spec.def || 10;
+        if (valSpd) valSpd.innerText = mon.spd || spec.spd || 10;
+
+        // Render 4 Attack Move Patterns with Elemental Icons & PP
+        if (movesListEl) {
+            const defaultPools = {
+                fire: ['tackle', 'ember', 'flame_charge', 'fire_breath', 'fire_claw', 'lava_surge'],
+                water: ['tackle', 'water_drop', 'bubble_beam', 'aqua_tail', 'surf_wave', 'hydro_pump'],
+                grass: ['tackle', 'leaf_shot', 'vine_whip', 'leaf_blade', 'petal_storm', 'solar_beam'],
+                cyber: ['tackle', 'spark', 'thunder_bolt', 'laser_claw', 'discharge', 'giga_volt']
+            };
+            const pool = defaultPools[mon.element || spec.element] || defaultPools.fire;
+            const currentMoveItems = [...(mon.moves || spec.moves)];
+
+            const moveIds = currentMoveItems.map(m => typeof m === 'string' ? m : (m ? m.id : 'tackle'));
+            pool.forEach(pId => {
+                if (moveIds.length < 4 && !moveIds.includes(pId)) {
+                    moveIds.push(pId);
+                }
+            });
+
+            let movesHtml = '';
+            moveIds.slice(0, 4).forEach((mId, moveIdx) => {
+                const mObj = MOVES_DATABASE[mId] || MOVES_DATABASE.tackle;
+                const mElem = ELEMENT_TYPES[mObj.type] || { icon: '⚔️', color: '#fff' };
+                const existing = currentMoveItems[moveIdx];
+                const ppVal = (typeof existing === 'object' && existing && existing.pp !== undefined) ? existing.pp : (mObj.maxPp || 20);
+                const maxPpVal = mObj.maxPp || 20;
+
+                movesHtml += `
+                <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px;">
+                    <div style="font-size: 11px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        ${mElem.icon} ${mObj.name}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
+                        <span>威力:${mObj.power}</span>
+                        <span style="color: ${ppVal <= 0 ? '#ff6666' : '#ffd15c'}; font-weight: bold;">PP:${ppVal}/${maxPpVal}</span>
+                    </div>
+                </div>`;
+            });
+
+            movesListEl.innerHTML = movesHtml;
+        }
+
         const owned = gameEngine.getAllOwnedMonsters();
         const switcherBar = document.getElementById('care-monster-switcher-bar');
         const counterEl = document.getElementById('care-monster-counter');
