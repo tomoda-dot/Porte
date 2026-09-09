@@ -59,18 +59,16 @@ const AdventureModule = {
             return { success: false, message: '出撃できるパートナーのHPがありません。まずお世話・回復をしてください。' };
         }
 
-        const leader = aliveParty[0];
-        // Auto wake up sleeping leader
-        if (leader.isSleeping) {
-            leader.isSleeping = false;
+        if (!gameEngine.player) {
+            gameEngine.player = { gender: 'boy', name: '主人公', energy: 100, maxEnergy: 100 };
         }
 
-        if (leader.energy < 5) {
-            return { success: false, message: '元気(スタミナ)が切れそうです！「おやすみ」で睡眠させて回復してください。(元気5以上必要)' };
+        if (gameEngine.player.energy < 5) {
+            return { success: false, message: '主人公の元気(スタミナ)が不足しています！(元気5以上必要)。時間経過・おやすみで回復してください。' };
         }
 
-        // Consume energy for active party members (5 energy per adventure)
-        aliveParty.forEach(m => m.energy = Math.max(0, m.energy - 5));
+        // Consume Player Energy (5 energy per adventure)
+        gameEngine.player.energy = Math.max(0, gameEngine.player.energy - 5);
 
         // Roll event (70% Wild Party Battle, 20% Treasure Chest, 10% Boss Group Encounter)
         const roll = Math.random();

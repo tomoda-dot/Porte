@@ -16,9 +16,14 @@
         <div class="brand-logo">
             <a href="../index.html" class="btn-back-porte">◀ Porte</a>
             <span class="brand-icon">🥚✨</span>
-            <h1>ポケタマ <span class="app-version-badge" style="font-size: 11px; color: var(--color-primary-light, #76c84c); background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 2px 7px; border-radius: 12px; font-family: sans-serif; vertical-align: middle; margin-left: 4px;">v1.6.0</span></h1>
+            <h1>ポケタマ <span class="app-version-badge" style="font-size: 11px; color: var(--color-primary-light, #76c84c); background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); padding: 2px 7px; border-radius: 12px; font-family: sans-serif; vertical-align: middle; margin-left: 4px;">v1.7.0</span></h1>
         </div>
         <div class="header-status">
+            <button class="trainer-avatar-btn" id="btn-open-trainer-select" title="主人公プロフィール変更" style="background: transparent; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 6px;">
+                <img id="header-trainer-img" src="img/trainer_boy.png" alt="主人公" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--color-primary); image-rendering: pixelated; object-fit: cover; background: #000;">
+                <span id="header-trainer-name" style="font-size: 12px; font-weight: 800; color: #fff;">主人公</span>
+            </button>
+            <div class="energy-pill" id="header-player-energy-val" style="background: rgba(255, 85, 85, 0.18); border: 1.5px solid rgba(255, 85, 85, 0.5); color: #ff9999; padding: 5px 10px; border-radius: 18px; font-weight: 800; font-size: 12px;">⚡ 100/100</div>
             <div class="gold-pill" id="header-gold-val">300 G</div>
             <button class="btn btn-sm" id="btn-mute-toggle">🔊 SE</button>
             <button class="btn btn-sm" id="btn-reset-save" style="background: #331122; border: 1px solid #ff0055;">🔄</button>
@@ -80,8 +85,18 @@
                         </div>
 
                         <div class="stat-row">
-                            <div class="stat-label"><span>げんき (スタミナ)</span><span>⚡</span></div>
-                            <div class="progress-bar-bg"><div class="progress-bar-fill fill-energy" id="bar-care-energy"></div></div>
+                            <div class="stat-label"><span>主人公の元気 (スタミナ)</span><span id="text-player-energy-val" style="color: #ff9999;">100/100</span></div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill fill-energy" id="bar-player-energy"></div></div>
+                        </div>
+
+                        <div class="stat-row">
+                            <div class="stat-label"><span>せいけつ度</span><span>✨</span></div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill fill-cleanliness" id="bar-care-cleanliness"></div></div>
+                        </div>
+
+                        <div class="stat-row" style="margin-top: 8px;">
+                            <div class="stat-label"><span>経験値 (EXP)</span><span>🌟</span></div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill fill-exp" id="bar-care-exp"></div></div>
                         </div>
 
                         <div class="stat-row">
@@ -316,6 +331,32 @@
         <div class="encounter-event-overlay" id="fullscreen-event-overlay" style="display: none;">
             <!-- Chest or Encounter alert -->
         </div>
+    </div>
+</div>
+
+<!-- MODAL 5: PLAYER TRAINER AVATAR SELECTION MODAL -->
+<div class="modal-overlay" id="modal-player-select" style="display: none;">
+    <div class="modal-content" style="text-align: center; max-width: 420px;">
+        <h2 style="color: var(--color-primary); font-size: 22px; margin-bottom: 6px;">🎮 主人公（トレーナー）の選択</h2>
+        <p style="font-size: 13px; color: #b3d9b9; margin-bottom: 16px;">ドット絵の主人公を選んで名前を設定してください：</p>
+
+        <div class="trainer-choice-grid" style="display: flex; justify-content: center; gap: 16px; margin-bottom: 16px;">
+            <div class="trainer-card selected" id="choice-trainer-boy" onclick="UIController.selectGenderChoice('boy')" style="background: rgba(255,255,255,0.08); border: 2.5px solid var(--color-primary); border-radius: 16px; padding: 12px; cursor: pointer; width: 140px; text-align: center; transition: all 0.2s;">
+                <img src="img/trainer_boy.png" alt="男の子" style="width: 80px; height: 80px; border-radius: 12px; image-rendering: pixelated; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);">
+                <h4 style="margin-top: 8px; color: #fff; font-size: 14px;">👦 男の子</h4>
+            </div>
+            <div class="trainer-card" id="choice-trainer-girl" onclick="UIController.selectGenderChoice('girl')" style="background: rgba(255,255,255,0.08); border: 2.5px solid rgba(255,255,255,0.2); border-radius: 16px; padding: 12px; cursor: pointer; width: 140px; text-align: center; transition: all 0.2s;">
+                <img src="img/trainer_girl.png" alt="女の子" style="width: 80px; height: 80px; border-radius: 12px; image-rendering: pixelated; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);">
+                <h4 style="margin-top: 8px; color: #fff; font-size: 14px;">👧 女の子</h4>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 18px;">
+            <label style="font-size: 13px; color: #ffd15c; font-weight: bold; display: block; margin-bottom: 6px;">主人公の名前:</label>
+            <input type="text" id="input-trainer-name" value="主人公" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border-neon); background: rgba(0,0,0,0.6); color: #fff; text-align: center; font-size: 15px; font-weight: bold;">
+        </div>
+
+        <button class="btn" id="btn-confirm-player" style="width: 100%; font-weight: bold; font-size: 16px;">✨ 主人公を決定！</button>
     </div>
 </div>
 

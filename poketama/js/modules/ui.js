@@ -16,6 +16,13 @@ const UIController = {
 
         // Initial DOM Render
         this.renderAll();
+
+        // Prompt Trainer setup modal on first launch
+        if (!gameEngine.player || !gameEngine.player.hasChosen) {
+            setTimeout(() => {
+                this.openTrainerSelectModal();
+            }, 400);
+        }
     },
 
     bindNavigation() {
@@ -463,6 +470,61 @@ const UIController = {
                 if (modal) modal.style.display = 'none';
             });
         });
+
+        const btnOpenTrainer = document.getElementById('btn-open-trainer-select');
+        if (btnOpenTrainer) {
+            btnOpenTrainer.addEventListener('click', () => {
+                this.openTrainerSelectModal();
+            });
+        }
+
+        const btnConfirmPlayer = document.getElementById('btn-confirm-player');
+        if (btnConfirmPlayer) {
+            btnConfirmPlayer.addEventListener('click', () => {
+                const inputName = document.getElementById('input-trainer-name');
+                const name = inputName ? inputName.value.trim() || '主人公' : '主人公';
+                if (!gameEngine.player) gameEngine.player = { energy: 100, maxEnergy: 100 };
+                gameEngine.player.gender = this.selectedGender || 'boy';
+                gameEngine.player.name = name;
+                gameEngine.player.hasChosen = true;
+                gameEngine.saveState();
+
+                const modal = document.getElementById('modal-player-select');
+                if (modal) modal.style.display = 'none';
+
+                this.showToast(`✨ 主人公「${name}」を設定しました！`, 'success');
+                this.renderAll();
+            });
+        }
+    },
+
+    openTrainerSelectModal() {
+        const modal = document.getElementById('modal-player-select');
+        const player = gameEngine.player || { gender: 'boy', name: '主人公' };
+        this.selectGenderChoice(player.gender || 'boy');
+        const inputName = document.getElementById('input-trainer-name');
+        if (inputName) inputName.value = player.name || '主人公';
+        if (modal) modal.style.display = 'flex';
+    },
+
+    selectGenderChoice(gender) {
+        this.selectedGender = gender;
+        const cardBoy = document.getElementById('choice-trainer-boy');
+        const cardGirl = document.getElementById('choice-trainer-girl');
+
+        if (cardBoy && cardGirl) {
+            if (gender === 'boy') {
+                cardBoy.style.borderColor = 'var(--color-primary)';
+                cardBoy.classList.add('selected');
+                cardGirl.style.borderColor = 'rgba(255,255,255,0.2)';
+                cardGirl.classList.remove('selected');
+            } else {
+                cardGirl.style.borderColor = 'var(--color-primary)';
+                cardGirl.classList.add('selected');
+                cardBoy.style.borderColor = 'rgba(255,255,255,0.2)';
+                cardBoy.classList.remove('selected');
+            }
+        }
     },
 
     renderAll() {
@@ -478,6 +540,21 @@ const UIController = {
     renderHeader() {
         const goldEl = document.getElementById('header-gold-val');
         if (goldEl) goldEl.innerText = `${gameEngine.gold} G`;
+
+        const player = gameEngine.player || { gender: 'boy', name: '主人公', energy: 100, maxEnergy: 100 };
+        const trainerImg = document.getElementById('header-trainer-img');
+        const trainerName = document.getElementById('header-trainer-name');
+        const energyPill = document.getElementById('header-player-energy-val');
+
+        if (trainerImg) {
+            trainerImg.src = player.gender === 'girl' ? 'img/trainer_girl.png' : 'img/trainer_boy.png';
+        }
+        if (trainerName) {
+            trainerName.innerText = player.name || '主人公';
+        }
+        if (energyPill) {
+            energyPill.innerText = `⚡ 元気: ${player.energy}/${player.maxEnergy || 100}`;
+        }
     },
 
     renderCarePage() {
@@ -491,9 +568,20 @@ const UIController = {
         const textHp = document.getElementById('text-care-hp-val');
         const barHunger = document.getElementById('bar-care-hunger');
         const barFriendship = document.getElementById('bar-care-friendship');
-        const barEnergy = document.getElementById('bar-care-energy');
+        const barPlayerEnergy = document.getElementById('bar-player-energy');
+        const textPlayerEnergy = document.getElementById('text-player-energy-val');
         const barCleanliness = document.getElementById('bar-care-cleanliness');
         const barExp = document.getElementById('bar-care-exp');
+
+        const player = gameEngine.player || { gender: 'boy', name: '主人公', energy: 100, maxEnergy: 100 };
+
+        if (barPlayerEnergy) {
+            const energyPct = Math.floor((player.energy / (player.maxEnergy || 100)) * 100);
+            barPlayerEnergy.style.width = `${energyPct}%`;
+        }
+        if (textPlayerEnergy) {
+            textPlayerEnergy.innerText = `${player.energy}/${player.maxEnergy || 100}`;
+        }
 
         const mon = gameEngine.activeMonster;
 
@@ -508,8 +596,8 @@ const UIController = {
             return;
         }
 
-        // Auto recover HP if monster has energy
-        if (mon.hp === undefined || mon.hp === null || (mon.hp <= 0 && mon.energy >= 5)) {
+        // Auto recover HP if player has energy
+        if (mon.hp === undefined || mon.hp === null || (mon.hp <= 0 && player.energy >= 5)) {
             mon.hp = mon.maxHp || 50;
             mon.isFainted = false;
         }
@@ -532,7 +620,6 @@ const UIController = {
 
         if (barHunger) barHunger.style.width = `${mon.hunger}%`;
         if (barFriendship) barFriendship.style.width = `${mon.friendship}%`;
-        if (barEnergy) barEnergy.style.width = `${mon.energy}%`;
         if (barCleanliness) barCleanliness.style.width = `${mon.cleanliness}%`;
         
         const expPct = Math.floor((mon.exp / mon.maxExp) * 100);

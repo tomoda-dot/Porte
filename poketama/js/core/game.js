@@ -15,6 +15,12 @@ class GameEngine {
             potion_small: 3,
             egg_blanket: 2
         };
+        this.player = {
+            gender: 'boy',
+            name: '主人公',
+            energy: 100,
+            maxEnergy: 100
+        };
         this.battleParty = []; // Party members for battle (up to 3 monsters)
         this.dex = {};
         this.gold = 300;
@@ -48,6 +54,7 @@ class GameEngine {
     }
 
     loadFromState(saved) {
+        this.player = saved.player || { gender: 'boy', name: '主人公', energy: 100, maxEnergy: 100 };
         this.incubator = saved.incubator || [];
         this.monsterBox = saved.monsterBox || [];
         this.inventory = saved.inventory || this.inventory;
@@ -163,6 +170,7 @@ class GameEngine {
 
     exportSaveState() {
         return {
+            player: this.player,
             activeMonster: this.activeMonster,
             incubator: this.incubator,
             monsterBox: this.monsterBox,
@@ -192,6 +200,17 @@ class GameEngine {
     }
 
     onGameTick() {
+        // Tick Player Energy (recover +2 every 5 seconds up to maxEnergy)
+        if (!this.player) {
+            this.player = { gender: 'boy', name: '主人公', energy: 100, maxEnergy: 100 };
+        }
+        if (this.player.energy === undefined) this.player.energy = 100;
+        if (this.player.maxEnergy === undefined) this.player.maxEnergy = 100;
+
+        if (this.player.energy < this.player.maxEnergy) {
+            this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 2);
+        }
+
         // Tick active monster vitals
         if (this.activeMonster && !this.activeMonster.isSleeping) {
             // Hunger drops slowly
@@ -202,15 +221,13 @@ class GameEngine {
                 this.activeMonster.cleanliness = Math.max(0, this.activeMonster.cleanliness - 5);
             }
 
-            // Energy drops if hunger low or dirty
             if (this.activeMonster.hunger < 20 || this.activeMonster.cleanliness < 20) {
-                this.activeMonster.energy = Math.max(0, this.activeMonster.energy - 2);
                 this.activeMonster.friendship = Math.max(0, this.activeMonster.friendship - 1);
             }
         } else if (this.activeMonster && this.activeMonster.isSleeping) {
-            // Sleep recovers energy
-            this.activeMonster.energy = Math.min(100, this.activeMonster.energy + 10);
-            if (this.activeMonster.energy >= 100) {
+            // Sleep recovers player energy faster
+            this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 10);
+            if (this.player.energy >= this.player.maxEnergy) {
                 this.activeMonster.isSleeping = false;
             }
         }
