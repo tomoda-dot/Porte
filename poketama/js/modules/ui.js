@@ -989,21 +989,25 @@ const UIController = {
         }
 
         // Render Current Actor's 4 Moves with PP Limits
-        if (actor) {
+        if (actor && actor.moves) {
             for (let i = 0; i < 4; i++) {
                 const btnMove = document.getElementById(`btn-move-${i}`);
                 if (btnMove) {
-                    const moveId = actor.moves[i];
-                    if (moveId) {
-                        const moveObj = MOVES_DATABASE[moveId];
-                        const elem = ELEMENT_TYPES[moveObj.type] || { icon: '⚔️', color: '#fff' };
-                        const ppVal = (moveObj.pp !== undefined) ? moveObj.pp : (moveObj.maxPp || 20);
-                        const maxPpVal = moveObj.maxPp || 20;
+                    const moveItem = actor.moves[i];
+                    if (moveItem) {
+                        const moveId = typeof moveItem === 'string' ? moveItem : moveItem.id;
+                        const baseMoveObj = MOVES_DATABASE[moveId] || MOVES_DATABASE.tackle;
+                        const moveName = (typeof moveItem === 'object' && moveItem.name) ? moveItem.name : baseMoveObj.name;
+                        const moveType = (typeof moveItem === 'object' && moveItem.type) ? moveItem.type : baseMoveObj.type;
+                        const ppVal = (typeof moveItem === 'object' && moveItem.pp !== undefined) ? moveItem.pp : (baseMoveObj.maxPp || 20);
+                        const maxPpVal = (typeof moveItem === 'object' && moveItem.maxPp !== undefined) ? moveItem.maxPp : (baseMoveObj.maxPp || 20);
+
+                        const elem = ELEMENT_TYPES[moveType] || { icon: '⚔️', color: '#fff' };
                         const isZeroPp = ppVal <= 0;
 
-                        btnMove.innerHTML = `<span>${elem.icon} ${moveObj.name}</span><small style="${isZeroPp ? 'color:#ff6666;' : ''}">PP: ${ppVal}/${maxPpVal}</small>`;
+                        btnMove.innerHTML = `<span>${elem.icon} ${moveName}</span><small style="${isZeroPp ? 'color:#ff6666;' : 'color:#ffd15c; font-weight:bold;'}">PP: ${ppVal}/${maxPpVal}</small>`;
                         btnMove.disabled = isZeroPp;
-                        btnMove.style.opacity = isZeroPp ? '0.5' : '1.0';
+                        btnMove.style.opacity = isZeroPp ? '0.4' : '1.0';
                         btnMove.style.display = 'block';
                     } else {
                         btnMove.style.display = 'none';

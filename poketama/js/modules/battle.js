@@ -217,7 +217,8 @@ class BattleEngine {
             }
             if (!target) break; // All enemies defeated!
 
-            const moveId = attacker.moves[cmd.moveIndex] || attacker.moves[0] || 'tackle';
+            const rawMove = attacker.moves[cmd.moveIndex] || attacker.moves[0] || 'tackle';
+            const moveId = typeof rawMove === 'string' ? rawMove : (rawMove ? rawMove.id : 'tackle');
             const move = MOVES_DATABASE[moveId] || MOVES_DATABASE.tackle;
 
             const res = calculateBattleDamage(attacker, target, move, attacker.friendship);
