@@ -543,7 +543,7 @@ const UIController = {
         const counterEl = document.getElementById('care-monster-counter');
 
         if (owned.length > 1) {
-            let activeIdx = owned.findIndex(m => m === mon || (m.id === mon.id && m.nickname === mon.nickname));
+            let activeIdx = owned.findIndex(m => m === mon || (m.uid && m.uid === mon.uid));
             if (activeIdx === -1) activeIdx = 0;
             if (switcherBar) switcherBar.style.display = 'flex';
             if (counterEl) counterEl.innerText = `${activeIdx + 1} / ${owned.length}`;
@@ -951,11 +951,9 @@ const UIController = {
         const grid = document.getElementById('monster-box-grid');
         if (!grid) return;
 
-        const allPartners = [];
-        if (gameEngine.activeMonster) allPartners.push(gameEngine.activeMonster);
-        if (gameEngine.monsterBox) allPartners.push(...gameEngine.monsterBox);
+        const owned = gameEngine.getAllOwnedMonsters();
 
-        if (allPartners.length === 0) {
+        if (owned.length === 0) {
             grid.innerHTML = '<p class="empty-box">手元にモンスターがいません。タマゴを孵化させましょう！</p>';
             return;
         }
@@ -963,12 +961,12 @@ const UIController = {
         const currentParty = gameEngine.getBattleParty();
 
         let html = '';
-        allPartners.forEach((mon, index) => {
-            const isLeader = gameEngine.activeMonster && gameEngine.activeMonster === mon;
-            const inParty = currentParty.includes(mon);
-            const partySlot = currentParty.indexOf(mon) + 1;
+        owned.forEach((mon, index) => {
+            const isLeader = gameEngine.activeMonster && (gameEngine.activeMonster === mon || (mon.uid && mon.uid === gameEngine.activeMonster.uid));
+            const inParty = currentParty.some(p => p === mon || (p.uid && p.uid === mon.uid));
+            const partySlot = currentParty.findIndex(p => p === mon || (p.uid && p.uid === mon.uid)) + 1;
 
-            const spec = MONSTERS_DATABASE[mon.speciesId];
+            const spec = MONSTERS_DATABASE[mon.speciesId] || MONSTERS_DATABASE.fire_1;
             const elem = ELEMENT_TYPES[mon.element];
 
             html += `
@@ -994,19 +992,43 @@ const UIController = {
     },
 
     switchActivePartner(index) {
-        const allPartners = [];
-        if (gameEngine.activeMonster) allPartners.push(gameEngine.activeMonster);
-        if (gameEngine.monsterBox) allPartners.push(...gameEngine.monsterBox);
-
-        const target = allPartners[index];
+        const owned = gameEngine.getAllOwnedMonsters();
+        const target = owned[index];
         if (!target) return;
 
-        const remaining = allPartners.filter(m => m !== target);
         gameEngine.activeMonster = target;
-        gameEngine.monsterBox = remaining;
+        gameEngine.saveState();
 
         audioFX.playClick();
         this.showToast(`「${target.nickname}」をメイン相棒に変更しました！`, 'success');
+        this.renderAll();
+    },
+
+    togglePartyMember(index) {
+        const owned = gameEngine.getAllOwnedMonsters();
+        const target = owned[index];
+        if (!target) return;
+
+        if (!gameEngine.battleParty) gameEngine.battleParty = [];
+
+        const existingIdx = gameEngine.battleParty.findIndex(p => p === target || (p.uid && p.uid === target.uid));
+        if (existingIdx !== -1) {
+            if (gameEngine.battleParty.length <= 1) {
+                this.showToast('⚠️ 出撃パーティには最低1体が必要です。', 'warning');
+                return;
+            }
+            gameEngine.battleParty.splice(existingIdx, 1);
+            this.showToast(`「${target.nickname}」をパーティから外しました。`, 'info');
+        } else {
+            if (gameEngine.battleParty.length >= 3) {
+                this.showToast('⚠️ パーティに編入できるのは最大3体までです。', 'warning');
+                return;
+            }
+            gameEngine.battleParty.push(target);
+            this.showToast(`⚔️ 「${target.nickname}」をパーティに編入しました！`, 'success');
+        }
+
+        gameEngine.saveState();
         this.renderAll();
     },
 

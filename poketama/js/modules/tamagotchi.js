@@ -7,6 +7,7 @@ const TamagotchiModule = {
     createNewMonsterInstance(speciesId, name = null) {
         const base = MONSTERS_DATABASE[speciesId] || MONSTERS_DATABASE.fire_1;
         return {
+            uid: 'mon_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
             id: base.id,
             nickname: name || base.name,
             speciesId: base.id,

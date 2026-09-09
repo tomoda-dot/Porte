@@ -48,36 +48,71 @@ class GameEngine {
     }
 
     loadFromState(saved) {
-        this.activeMonster = saved.activeMonster || null;
         this.incubator = saved.incubator || [];
         this.monsterBox = saved.monsterBox || [];
-        this.battleParty = saved.battleParty || (this.activeMonster ? [this.activeMonster] : []);
         this.inventory = saved.inventory || this.inventory;
         this.dex = saved.dex || {};
         this.gold = saved.gold || 300;
         this.currentBiome = saved.currentBiome || 'forest';
+
+        // Ensure all monsters have unique uids
+        this.monsterBox.forEach((m, idx) => {
+            if (m && !m.uid) {
+                m.uid = 'mon_' + idx + '_' + (m.speciesId || 'mon') + '_' + Date.now();
+            }
+        });
+
+        if (saved.activeMonster) {
+            if (!saved.activeMonster.uid) {
+                saved.activeMonster.uid = 'mon_active_' + Date.now();
+            }
+            // Find existing instance in monsterBox by uid or reference
+            const match = this.monsterBox.find(m => m && (m.uid === saved.activeMonster.uid || (m.speciesId === saved.activeMonster.speciesId && m.nickname === saved.activeMonster.nickname)));
+            if (match) {
+                this.activeMonster = match;
+            } else {
+                this.monsterBox.unshift(saved.activeMonster);
+                this.activeMonster = saved.activeMonster;
+            }
+        } else if (this.monsterBox.length > 0) {
+            this.activeMonster = this.monsterBox[0];
+        } else {
+            this.activeMonster = null;
+        }
+
+        this.battleParty = saved.battleParty || (this.activeMonster ? [this.activeMonster] : []);
     }
 
     getAllOwnedMonsters() {
-        let list = [];
-        if (this.activeMonster) {
-            list.push(this.activeMonster);
+        if (!this.monsterBox || !Array.isArray(this.monsterBox)) {
+            this.monsterBox = [];
         }
-        if (this.monsterBox && Array.isArray(this.monsterBox)) {
-            this.monsterBox.forEach(m => {
-                if (m && !list.some(existing => (existing.id === m.id && existing.nickname === m.nickname) || existing === m)) {
-                    list.push(m);
-                }
-            });
+
+        // Clean nulls
+        this.monsterBox = this.monsterBox.filter(m => m !== null && m !== undefined);
+
+        // Ensure activeMonster is in monsterBox
+        if (this.activeMonster && !this.monsterBox.some(m => m === this.activeMonster || (m.uid && m.uid === this.activeMonster.uid))) {
+            this.monsterBox.unshift(this.activeMonster);
         }
-        return list;
+
+        // Deduplicate monsterBox by uid or reference
+        const unique = [];
+        this.monsterBox.forEach(m => {
+            if (m && !unique.some(u => u === m || (m.uid && u.uid === m.uid))) {
+                unique.push(m);
+            }
+        });
+
+        this.monsterBox = unique;
+        return this.monsterBox;
     }
 
     switchActiveMonster(direction = 1) {
         const owned = this.getAllOwnedMonsters();
         if (owned.length <= 1) return this.activeMonster;
 
-        let currentIndex = owned.findIndex(m => m === this.activeMonster || (m.id === this.activeMonster?.id && m.nickname === this.activeMonster?.nickname));
+        let currentIndex = owned.findIndex(m => m === this.activeMonster || (m.uid && m.uid === this.activeMonster?.uid));
         if (currentIndex === -1) currentIndex = 0;
 
         let nextIndex = (currentIndex + direction + owned.length) % owned.length;
@@ -91,7 +126,7 @@ class GameEngine {
         if (owned.length === 0) return [];
 
         // Auto-fill battleParty up to 3 members if not fully set
-        let party = (this.battleParty || []).filter(m => m && owned.some(o => o === m || (o.id === m.id && o.nickname === m.nickname)));
+        let party = (this.battleParty || []).filter(m => m && owned.some(o => o === m || (o.uid && o.uid === m.uid)));
         
         if (party.length === 0 && this.activeMonster) {
             party = [this.activeMonster];
@@ -99,7 +134,7 @@ class GameEngine {
 
         // Fill up to 3 monsters from owned
         owned.forEach(m => {
-            if (party.length < 3 && !party.some(p => p === m || (p.id === m.id && p.nickname === m.nickname))) {
+            if (party.length < 3 && !party.some(p => p === m || (p.uid && p.uid === m.uid))) {
                 party.push(m);
             }
         });

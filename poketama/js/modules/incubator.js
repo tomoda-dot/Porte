@@ -59,11 +59,12 @@ const IncubatorModule = {
         // Remove egg from incubator
         gameEngine.incubator.splice(eggIndex, 1);
 
-        // If no active monster, set as active. Otherwise put into monsterBox
+        // Add to monsterBox master list
+        gameEngine.monsterBox.push(newMonster);
+
+        // If no active monster selected, set as active
         if (!gameEngine.activeMonster) {
             gameEngine.activeMonster = newMonster;
-        } else {
-            gameEngine.monsterBox.push(newMonster);
         }
 
         audioFX.playHatch();
