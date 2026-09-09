@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ポケタマ (PokéTama) - モンスターブリーダー・オデッセイ</title>
+    <meta name="description" content="タマゴから大切に育てたモンスターとともに冒険に出かける、たまごっち×ポケモン融合ブラウザゲーム！">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+
+<div id="app-wrapper">
+    <!-- Header Bar -->
+    <header class="app-header">
+        <div class="brand-logo">
+            <a href="../index.html" class="btn-back-porte">◀ Porte</a>
+            <span class="brand-icon">🥚✨</span>
+            <h1>ポケタマ <small style="font-size: 11px; color: #00f0ff;">PokéTama</small></h1>
+        </div>
+        <div class="header-status">
+            <div class="gold-pill" id="header-gold-val">300 G</div>
+            <button class="btn btn-sm" id="btn-mute-toggle">🔊 SE</button>
+            <button class="btn btn-sm" id="btn-reset-save" style="background: #331122; border: 1px solid #ff0055;">🔄</button>
+        </div>
+    </header>
+
+    <!-- Main Body -->
+    <div class="app-body">
+        <!-- Main Content Router -->
+        <main class="main-content">
+            
+            <!-- TAB 1: CARE PAGE -->
+            <section id="tab-care" class="tab-page active">
+                <div class="care-container">
+                    <div class="lcd-pet-shell">
+                        <div class="pet-screen-stage" id="care-stage-container">
+                            <!-- SVG Monster Rendered Dynamically -->
+                        </div>
+                        <div class="care-actions-panel">
+                            <button class="btn-action" id="btn-feed">🍎 ごはん</button>
+                            <button class="btn-action" id="btn-pet">✋ なでる</button>
+                            <button class="btn-action" id="btn-clean">🧹 そうじ</button>
+                            <button class="btn-action" id="btn-sleep">🌙 おやすみ</button>
+                            <button class="btn-action" id="btn-train" style="grid-column: span 2; background: linear-gradient(90deg, #7000ff, #ff0055);">
+                                🥊 特訓 (EXP & ステータスUP)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Care Stats Sidebar -->
+                    <div class="care-stats-card">
+                        <div class="monster-profile-header">
+                            <h2 id="care-monster-name">---</h2>
+                            <p id="care-monster-species" style="color: #94a3b8; font-size: 13px;">---</p>
+                            <span id="care-monster-element" style="font-weight: 700;">---</span>
+                            <span id="care-monster-level" class="box-badge" style="position: static; margin-left: 8px;">Lv. 1</span>
+                        </div>
+
+                        <div class="stat-row">
+                            <div class="stat-label"><span>おなか (満腹度)</span><span>🍎</span></div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill fill-hunger" id="bar-care-hunger"></div></div>
+                        </div>
+
+                        <div class="stat-row">
+                            <div class="stat-label"><span>なつき度 (絆)</span><span>💖</span></div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill fill-friendship" id="bar-care-friendship"></div></div>
+                        </div>
+
+                        <div class="stat-row">
+                            <div class="stat-label"><span>げんき (スタミナ)</span><span>⚡</span></div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill fill-energy" id="bar-care-energy"></div></div>
+                        </div>
+
+                        <div class="stat-row">
+                            <div class="stat-label"><span>せいけつ度</span><span>✨</span></div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill fill-cleanliness" id="bar-care-cleanliness"></div></div>
+                        </div>
+
+                        <div class="stat-row" style="margin-top: 8px;">
+                            <div class="stat-label"><span>経験値 (EXP)</span><span>🌟</span></div>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill fill-exp" id="bar-care-exp"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: INCUBATOR PAGE -->
+            <section id="tab-incubator" class="tab-page">
+                <h2 style="margin-bottom: 16px; color: var(--color-primary);">🥚 タマゴ温め器・孵化室</h2>
+                <div class="incubator-grid" id="incubator-grid">
+                    <!-- Dynamic Egg Cards Rendered Here -->
+                </div>
+            </section>
+
+            <!-- TAB 3: ADVENTURE & BATTLE PAGE -->
+            <section id="tab-adventure" class="tab-page">
+                <!-- EXPLORE VIEW -->
+                <div id="adventure-explore-view">
+                    <h2 style="margin-bottom: 16px; color: var(--color-primary);">⚔️ エリア選択・探索</h2>
+                    <div class="biome-selector">
+                        <div class="biome-card selected" data-biome="forest">
+                            <span style="font-size: 28px;">🌳</span>
+                            <h4>はじまりの森</h4>
+                            <small style="color: #44dd66;">草・ノーマル</small>
+                        </div>
+                        <div class="biome-card" data-biome="volcano">
+                            <span style="font-size: 28px;">🌋</span>
+                            <h4>灼熱の火山</h4>
+                            <small style="color: #ff5533;">炎属性</small>
+                        </div>
+                        <div class="biome-card" data-biome="sea">
+                            <span style="font-size: 28px;">🌊</span>
+                            <h4>深海ゾーン</h4>
+                            <small style="color: #33aaff;">水属性</small>
+                        </div>
+                        <div class="biome-card" data-biome="ruins">
+                            <span style="font-size: 28px;">🔮</span>
+                            <h4>電脳遺跡</h4>
+                            <small style="color: #bb44ff;">サイバー/電気</small>
+                        </div>
+                    </div>
+
+                    <div style="background: var(--bg-glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; text-align: center;">
+                        <h3 id="adventure-biome-title">🌳 はじまりの森</h3>
+                        <p id="adventure-biome-desc" style="color: #94a3b8; margin: 10px 0 16px 0; font-size: 13px;">緑豊かな静かな森林。可愛い草属性のモンスターが生息する。</p>
+                        <button class="btn" id="btn-explore-search" style="font-size: 16px; width: 100%; max-width: 320px;">
+                            🧭 エリアを探索する！ (元気-15)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BATTLE ARENA VIEW (Hidden by default) -->
+                <div id="battle-arena-view" style="display: none;">
+                    <div class="battle-arena-box">
+                        <div class="battle-stage">
+                            <!-- Player Mon -->
+                            <div class="battle-unit-card">
+                                <h4 id="battle-player-name">---</h4>
+                                <span id="battle-player-level" class="box-badge" style="position: static;">Lv.1</span>
+                                <div class="progress-bar-bg" style="margin: 6px 0;"><div class="progress-bar-fill fill-hunger" id="bar-battle-player-hp"></div></div>
+                                <small id="text-battle-player-hp">---/---</small>
+                                <div class="battle-sprite-box" id="battle-player-sprite"></div>
+                            </div>
+
+                            <span style="font-size: 24px; font-weight: 900; color: #ff0055;">VS</span>
+
+                            <!-- Enemy Mon -->
+                            <div class="battle-unit-card">
+                                <h4 id="battle-enemy-name">---</h4>
+                                <span id="battle-enemy-level" class="box-badge" style="position: static; background: #ff0055;">Lv.1</span>
+                                <div class="progress-bar-bg" style="margin: 6px 0;"><div class="progress-bar-fill fill-hunger" id="bar-battle-enemy-hp"></div></div>
+                                <small id="text-battle-enemy-hp">---/---</small>
+                                <div class="battle-sprite-box" id="battle-enemy-sprite"></div>
+                            </div>
+                        </div>
+
+                        <!-- Battle Log -->
+                        <div class="battle-log-box" id="battle-log-box"></div>
+
+                        <!-- Battle Controls -->
+                        <div class="battle-controls">
+                            <button class="btn-move" id="btn-move-0">---</button>
+                            <button class="btn-move" id="btn-move-1">---</button>
+                            <button class="btn-move" id="btn-move-2">---</button>
+                            <button class="btn-move" id="btn-move-3">---</button>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 6px;">
+                            <button class="btn btn-sm" id="btn-battle-item" style="background: #334466;">🧪 回復薬</button>
+                            <button class="btn btn-sm" id="btn-battle-flee" style="background: #442233;">🏃 逃げる</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: PARTNER HOUSE BOX -->
+            <section id="tab-box" class="tab-page">
+                <h2 style="margin-bottom: 16px; color: var(--color-primary);">🏠 パートナーハウス (仲間モンスター)</h2>
+                <div class="box-grid" id="monster-box-grid">
+                    <!-- Raised partners listed here -->
+                </div>
+            </section>
+
+            <!-- TAB 5: MONSTER DEX -->
+            <section id="tab-dex" class="tab-page">
+                <h2 style="margin-bottom: 16px; color: var(--color-primary);">📖 モンスター＆タマゴ図鑑</h2>
+                <div class="dex-grid" id="dex-grid">
+                    <!-- Dex entries rendered here -->
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Sidebar / Bottom Navigation Bar -->
+        <nav class="app-nav">
+            <button class="nav-btn active" data-tab="care">
+                <span>🏠</span> <span>お世話</span>
+            </button>
+            <button class="nav-btn" data-tab="incubator">
+                <span>🥚</span> <span>孵化器</span>
+            </button>
+            <button class="nav-btn" data-tab="adventure">
+                <span>⚔️</span> <span>冒険</span>
+            </button>
+            <button class="nav-btn" data-tab="box">
+                <span>🐾</span> <span>仲間</span>
+            </button>
+            <button class="nav-btn" data-tab="dex">
+                <span>📖</span> <span>図鑑</span>
+            </button>
+        </nav>
+    </div>
+</div>
+
+<!-- MODAL 1: FOOD SELECT MODAL -->
+<div class="modal-overlay" id="modal-food-select">
+    <div class="modal-content">
+        <h3 style="color: var(--color-primary);">🍎 ごはん・道具を選ぶ</h3>
+        <div class="food-select-grid" id="food-select-grid"></div>
+        <button class="btn modal-close" style="width: 100%; margin-top: 16px; background: #334466;">閉じる</button>
+    </div>
+</div>
+
+<!-- MODAL 2: EGG HATCHING CEREMONY MODAL -->
+<div class="modal-overlay" id="modal-hatch">
+    <div class="modal-content" style="text-align: center;">
+        <h2 style="color: var(--color-warning); font-size: 24px;">🎉 タマゴが孵化した！</h2>
+        <div id="hatch-egg-display" style="width: 160px; height: 160px; margin: 12px auto;"></div>
+        <p style="margin-bottom: 10px; font-size: 14px;">新しい命が誕生しました！名前をつけてあげましょう：</p>
+        <input type="text" id="input-hatch-nickname" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-neon); background: rgba(0,0,0,0.5); color: #fff; text-align: center; font-size: 16px; margin-bottom: 16px;">
+        <button class="btn" id="btn-confirm-hatch" style="width: 100%;">💖 仲間として迎える！</button>
+    </div>
+</div>
+
+<!-- MODAL 3: EVOLUTION CUTSCENE MODAL -->
+<div class="modal-overlay" id="modal-evolution">
+    <div class="modal-content" style="text-align: center;">
+        <h2 style="color: var(--color-primary); font-size: 24px;">✨ モンスターの様子が...！</h2>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 16px; margin: 16px 0;">
+            <div id="evo-before-sprite" style="width: 90px; height: 90px;"></div>
+            <span style="font-size: 28px; color: var(--color-warning);" class="evo-stage-anim">➔</span>
+            <div id="evo-after-sprite" style="width: 110px; height: 110px;"></div>
+        </div>
+        <p id="evo-title-text" style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">姿と能力が真の進化を遂げる！</p>
+        <button class="btn" id="btn-confirm-evo" style="width: 100%;">🌟 進化を受け入れる！</button>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/config/monsters.js"></script>
+<script src="js/config/moves.js"></script>
+<script src="js/config/items.js"></script>
+<script src="js/core/audio.js"></script>
+<script src="js/core/storage.js"></script>
+<script src="js/core/game.js"></script>
+<script src="js/modules/tamagotchi.js"></script>
+<script src="js/modules/incubator.js"></script>
+<script src="js/modules/battle.js"></script>
+<script src="js/modules/adventure.js"></script>
+<script src="js/modules/ui.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
