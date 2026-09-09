@@ -315,8 +315,9 @@ function calculateBattleDamage(attacker, defender, move, friendshipBonus = 0) {
     const isCrit = Math.random() < (0.08 + (friendshipBonus / 1000));
     const critMult = isCrit ? 1.5 : 1.0;
 
-    let damage = Math.floor(((atk * 2.2 * power) / (def * 1.5) + 5) * typeMult * friendshipMult * randomMult * critMult);
-    damage = Math.max(5, damage);
+    // Balanced damage formula (3-6 turns per battle)
+    let damage = Math.floor(((atk * 0.55 * power) / (def * 0.95) + 4) * typeMult * friendshipMult * randomMult * critMult);
+    damage = Math.max(3, damage);
 
     return {
         damage,

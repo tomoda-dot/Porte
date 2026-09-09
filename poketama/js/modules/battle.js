@@ -19,9 +19,9 @@ class BattleEngine {
 
         const enemyBase = MONSTERS_DATABASE[enemySpeciesId] || MONSTERS_DATABASE.fire_2;
         
-        // Scale enemy stats to player level
+        // Scale enemy stats to player level for exciting multi-turn battles
         const levelScale = Math.max(1, playerMonster.level + (isBoss ? 2 : 0));
-        const enemyHp = Math.floor(enemyBase.maxHp * (0.8 + levelScale * 0.15));
+        const enemyHp = Math.floor(enemyBase.maxHp * (1.3 + levelScale * 0.22));
         
         this.enemyMon = {
             id: enemyBase.id,

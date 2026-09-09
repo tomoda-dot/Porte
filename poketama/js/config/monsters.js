@@ -303,49 +303,57 @@ const MONSTERS_DATABASE = {
 };
 
 /**
- * Render Authentic Retro Pixel Art (ドット絵) SVG Artwork
+ * Render Authentic Retro Game Boy / Tamagotchi 32x32 Pixel Art (ドット絵) SVG Engine
  */
 function renderMonsterSVG(id, options = {}) {
     const isEgg = id.startsWith('egg_');
     const emotion = options.emotion || 'happy'; // happy, sleep, hungry, angry, battle
 
+    const drawP = (rects) => rects.map(([x, y, w, h, c]) => 
+        `<rect x="${x}" y="${y}" width="${w || 1}" height="${h || 1}" fill="${c}" />`
+    ).join('');
+
     if (isEgg) {
         const eggData = EGGS_DATABASE[id] || EGGS_DATABASE.egg_fire;
-        const crack = options.crackProgress || 0; // 0 to 1
+        const crack = options.crackProgress || 0;
+
+        const mainC = eggData.color;
+        const spotC = eggData.patternColor;
+        const borderC = '#152018';
 
         return `
-        <svg viewBox="0 0 24 24" width="100%" height="100%" class="monster-svg egg-svg" shape-rendering="crispEdges">
+        <svg viewBox="0 0 32 32" width="100%" height="100%" class="monster-svg egg-svg" shape-rendering="crispEdges">
             <!-- Shadow -->
-            <rect x="6" y="22" width="12" height="1" fill="rgba(0,0,0,0.3)" />
-            <rect x="8" y="21" width="8" height="1" fill="rgba(0,0,0,0.4)" />
+            <rect x="8" y="30" width="16" height="1" fill="rgba(0,0,0,0.3)" />
+            <rect x="10" y="29" width="12" height="1" fill="rgba(0,0,0,0.4)" />
 
-            <!-- Egg Outer Pixel Border -->
-            <rect x="8" y="2" width="8" height="1" fill="#111" />
-            <rect x="6" y="3" width="2" height="2" fill="#111" />
-            <rect x="16" y="3" width="2" height="2" fill="#111" />
-            <rect x="4" y="5" width="2" height="13" fill="#111" />
-            <rect x="18" y="5" width="2" height="13" fill="#111" />
-            <rect x="6" y="18" width="2" height="3" fill="#111" />
-            <rect x="16" y="18" width="2" height="3" fill="#111" />
-            <rect x="8" y="20" width="8" height="1" fill="#111" />
+            <!-- Pixel Egg Outer Border -->
+            ${drawP([
+                [11,4,10,1, borderC], [9,5,2,2, borderC], [21,5,2,2, borderC],
+                [7,7,2,3, borderC], [23,7,2,3, borderC], [5,10,2,14, borderC], [25,10,2,14, borderC],
+                [7,24,2,3, borderC], [23,24,2,3, borderC], [9,27,2,2, borderC], [21,27,2,2, borderC],
+                [11,29,10,1, borderC]
+            ])}
 
-            <!-- Egg Body Fill -->
-            <rect x="8" y="3" width="8" height="2" fill="${eggData.color}" />
-            <rect x="6" y="5" width="12" height="13" fill="${eggData.color}" />
-            <rect x="8" y="18" width="8" height="2" fill="${eggData.color}" />
+            <!-- Egg Main Color Fill -->
+            ${drawP([
+                [11,5,10,2, mainC], [9,7,14,3, mainC], [7,10,18,14, mainC],
+                [9,24,14,3, mainC], [11,27,10,2, mainC]
+            ])}
 
-            <!-- Egg Highlight Pixels -->
-            <rect x="9" y="4" width="3" height="1" fill="#ffffff" opacity="0.8" />
-            <rect x="7" y="5" width="2" height="4" fill="#ffffff" opacity="0.6" />
+            <!-- Egg Specular Highlight Pixels -->
+            ${drawP([
+                [12,6,5,1, '#ffffff'], [10,7,4,4, '#ffffff'], [8,11,2,6, '#ffffff']
+            ])}
 
-            <!-- Pixel Spot Patterns -->
-            <rect x="8" y="8" width="3" height="3" fill="${eggData.patternColor}" />
-            <rect x="14" y="11" width="3" height="3" fill="${eggData.patternColor}" />
-            <rect x="9" y="15" width="2" height="2" fill="${eggData.patternColor}" />
+            <!-- Egg Spot Patterns -->
+            ${drawP([
+                [11,11,4,4, spotC], [19,16,4,4, spotC], [13,22,3,3, spotC]
+            ])}
 
-            <!-- Crack Pixels if warming -->
-            ${crack > 0.3 ? `<rect x="11" y="7" width="2" height="1" fill="#fff" /><rect x="12" y="8" width="1" height="2" fill="#fff" /><rect x="10" y="10" width="2" height="1" fill="#fff" />` : ''}
-            ${crack > 0.7 ? `<rect x="8" y="12" width="2" height="1" fill="#fff" /><rect x="7" y="13" width="1" height="3" fill="#fff" /><rect x="8" y="15" width="2" height="1" fill="#fff" />` : ''}
+            <!-- Crack Overlay if Warming -->
+            ${crack > 0.3 ? drawP([[15,10,3,1,'#fff'], [17,11,1,4,'#fff'], [14,15,4,1,'#fff']]) : ''}
+            ${crack > 0.7 ? drawP([[10,17,3,1,'#fff'], [9,18,1,5,'#fff'], [10,23,3,1,'#fff']]) : ''}
         </svg>`;
     }
 
@@ -354,178 +362,250 @@ function renderMonsterSVG(id, options = {}) {
 
     let mainColor = elem.color;
     let accentColor = '#ffffff';
-    let earColor = '#ffffff';
+    let earInnerColor = '#ffffff';
+    let borderColor = '#121c16';
 
     if (monster.element === 'fire') {
         accentColor = '#ffcc00';
-        earColor = '#ff9900';
+        earInnerColor = '#ff9900';
     } else if (monster.element === 'water') {
         accentColor = '#88e0ff';
-        earColor = '#3388ff';
+        earInnerColor = '#3388ff';
     } else if (monster.element === 'grass') {
         accentColor = '#aaff66';
-        earColor = '#33cc55';
+        earInnerColor = '#33cc55';
     } else { // cyber
         accentColor = '#00ffff';
-        earColor = '#aa00ff';
+        earInnerColor = '#aa00ff';
     }
 
-    // --- PIXEL EXPRESSION OVERLAYS ---
-    let eyePixels = `
-        <rect x="8" y="10" width="2" height="3" fill="#111" />
-        <rect x="8" y="10" width="1" height="1" fill="#fff" />
-        <rect x="14" y="10" width="2" height="3" fill="#111" />
-        <rect x="14" y="10" width="1" height="1" fill="#fff" />`;
+    // --- 32x32 PIXEL EXPRESSIONS ---
+    let eyePixels = drawP([
+        [10,12,3,4, '#111827'], [10,12,1,2, '#ffffff'],
+        [19,12,3,4, '#111827'], [19,12,1,2, '#ffffff']
+    ]);
 
-    let mouthPixels = `<rect x="11" y="13" width="2" height="1" fill="#111" />`;
+    let mouthPixels = drawP([[15,17,2,1, '#111827']]);
     let emotionOverlay = '';
 
     if (emotion === 'sleep') {
-        eyePixels = `
-            <rect x="8" y="11" width="3" height="1" fill="#111" />
-            <rect x="13" y="11" width="3" height="1" fill="#111" />`;
-        mouthPixels = `<rect x="11" y="13" width="2" height="2" fill="#ff77aa" />`;
-        emotionOverlay = `
-            <rect x="17" y="5" width="2" height="1" fill="#99ccff" />
-            <rect x="19" y="4" width="2" height="1" fill="#99ccff" />
-            <rect x="18" y="6" width="3" height="1" fill="#99ccff" />`;
+        eyePixels = drawP([
+            [10,14,4,1, '#111827'], [18,14,4,1, '#111827']
+        ]);
+        mouthPixels = drawP([[15,16,2,2, '#ff6688']]);
+        emotionOverlay = drawP([
+            [23,6,3,1, '#88ccff'], [25,5,3,1, '#88ccff'], [24,7,4,1, '#88ccff'],
+            [27,3,2,1, '#88ccff'], [28,2,2,1, '#88ccff']
+        ]);
     } else if (emotion === 'hungry') {
-        mouthPixels = `
-            <rect x="10" y="13" width="4" height="2" fill="#ff4466" />
-            <rect x="11" y="13" width="2" height="1" fill="#fff" />`;
-        emotionOverlay = `<rect x="17" y="9" width="1" height="3" fill="#55ccff" />`;
+        mouthPixels = drawP([
+            [14,17,4,3, '#ff4466'], [15,17,2,1, '#ffffff']
+        ]);
+        emotionOverlay = drawP([[23,12,2,5, '#33bbee'], [23,17,1,1, '#33bbee']]);
     } else if (emotion === 'angry' || emotion === 'battle') {
-        eyePixels = `
-            <rect x="8" y="10" width="2" height="3" fill="#111" />
-            <rect x="8" y="11" width="1" height="1" fill="#ffdd44" />
-            <rect x="7" y="9" width="3" height="1" fill="#111" />
-            <rect x="14" y="10" width="2" height="3" fill="#111" />
-            <rect x="14" y="11" width="1" height="1" fill="#ffdd44" />
-            <rect x="14" y="9" width="3" height="1" fill="#111" />`;
-        mouthPixels = `
-            <rect x="10" y="13" width="4" height="2" fill="#ff2244" />
-            <rect x="11" y="13" width="2" height="1" fill="#fff" />`;
+        eyePixels = drawP([
+            [10,12,3,4, '#111827'], [10,13,2,2, '#ffdd44'], [9,11,4,1, '#111827'],
+            [19,12,3,4, '#111827'], [19,13,2,2, '#ffdd44'], [19,11,4,1, '#111827']
+        ]);
+        mouthPixels = drawP([
+            [14,17,4,2, '#ff2244'], [15,17,2,1, '#ffffff']
+        ]);
     }
 
-    // --- ANIMAL SPECIFIC PIXEL ART BODY ---
-    let pixelFeatureSvg = '';
+    // --- 32x32 ANIMAL SPECIFIC PIXEL ART BODY ---
+    let animalPixelArt = '';
 
-    if (monster.element === 'fire') { // 子狐・キツネ
-        pixelFeatureSvg = `
+    if (monster.element === 'fire') { // 子狐 (ヒノコ / 火狐)
+        animalPixelArt = `
             <!-- Pixel Fox Ears -->
-            <rect x="4" y="3" width="4" height="4" fill="${mainColor}" />
-            <rect x="5" y="4" width="2" height="2" fill="${accentColor}" />
-            <rect x="16" y="3" width="4" height="4" fill="${mainColor}" />
-            <rect x="17" y="4" width="2" height="2" fill="${accentColor}" />
+            ${drawP([
+                [5,3,5,1, borderColor], [4,4,2,4, borderColor], [9,4,2,4, borderColor],
+                [5,4,4,4, mainColor], [6,5,2,3, earInnerColor],
+                [22,3,5,1, borderColor], [21,4,2,4, borderColor], [26,4,2,4, borderColor],
+                [22,4,4,4, mainColor], [23,5,2,3, earInnerColor]
+            ])}
 
-            <!-- Pixel Fluffy Fox Tail -->
-            <rect x="1" y="12" width="4" height="5" fill="${accentColor}" />
-            <rect x="2" y="13" width="3" height="4" fill="${mainColor}" />
+            <!-- Fluffy Flame Tail -->
+            ${drawP([
+                [1,16,5,1, borderColor], [0,17,2,9, borderColor], [5,17,2,9, borderColor], [1,26,5,1, borderColor],
+                [2,17,3,9, accentColor], [3,18,2,7, mainColor]
+            ])}
 
-            <!-- Pixel Chubby Body -->
-            <rect x="6" y="7" width="12" height="10" fill="${mainColor}" />
+            <!-- Head & Body Outer Border -->
+            ${drawP([
+                [9,7,14,1, borderColor], [7,8,2,4, borderColor], [23,8,2,4, borderColor],
+                [6,12,2,14, borderColor], [24,12,2,14, borderColor],
+                [8,26,16,1, borderColor], [10,27,12,1, borderColor]
+            ])}
+
+            <!-- Body Fill -->
+            ${drawP([
+                [9,8,14,4, mainColor], [8,12,16,14, mainColor]
+            ])}
+
+            <!-- White Cream Chest & Belly -->
+            ${drawP([
+                [12,15,8,9, '#ffffff'], [14,24,4,2, '#ffffff']
+            ])}
+
+            <!-- Rosy Cheek Pixels -->
+            ${drawP([
+                [8,15,3,2, '#ff6688'], [21,15,3,2, '#ff6688']
+            ])}
+
+            <!-- Paws -->
+            ${drawP([
+                [10,25,4,2, '#ffffff'], [18,25,4,2, '#ffffff']
+            ])}
+        `;
+    } else if (monster.element === 'water') { // たれ耳うさぎ (アクアプニ)
+        animalPixelArt = `
+            <!-- Floppy Bunny Ears -->
+            ${drawP([
+                [2,6,6,1, borderColor], [1,7,2,10, borderColor], [7,7,2,10, borderColor], [2,17,6,1, borderColor],
+                [3,7,4,10, mainColor], [4,8,2,8, accentColor],
+                [24,6,6,1, borderColor], [23,7,2,10, borderColor], [29,7,2,10, borderColor], [24,17,6,1, borderColor],
+                [25,7,4,10, mainColor], [26,8,2,8, accentColor]
+            ])}
+
+            <!-- Swirl Aquatic Tail -->
+            ${drawP([
+                [25,18,6,1, borderColor], [24,19,2,6, borderColor], [30,19,2,6, borderColor], [25,25,6,1, borderColor],
+                [26,19,4,6, accentColor]
+            ])}
+
+            <!-- Round Body Outer Border -->
+            ${drawP([
+                [10,7,12,1, borderColor], [8,8,2,4, borderColor], [22,8,2,4, borderColor],
+                [7,12,2,14, borderColor], [23,12,2,14, borderColor],
+                [9,26,14,1, borderColor], [11,27,10,1, borderColor]
+            ])}
+
+            <!-- Body Fill -->
+            ${drawP([
+                [10,8,12,4, mainColor], [9,12,14,14, mainColor]
+            ])}
+
             <!-- White Cream Belly -->
-            <rect x="9" y="11" width="6" height="5" fill="#ffffff" />
+            ${drawP([
+                [12,15,8,9, '#ffffff']
+            ])}
 
             <!-- Rosy Cheeks -->
-            <rect x="6" y="12" width="2" height="1" fill="#ff6699" />
-            <rect x="16" y="12" width="2" height="1" fill="#ff6699" />
+            ${drawP([
+                [8,15,3,2, '#ff6688'], [21,15,3,2, '#ff6688']
+            ])}
 
             <!-- Paws -->
-            <rect x="7" y="17" width="3" height="2" fill="#ffffff" />
-            <rect x="14" y="17" width="3" height="2" fill="#ffffff" />
+            ${drawP([
+                [10,25,4,2, accentColor], [18,25,4,2, accentColor]
+            ])}
         `;
-    } else if (monster.element === 'water') { // たれ耳うさぎ
-        pixelFeatureSvg = `
-            <!-- Floppy Pixel Bunny Ears -->
-            <rect x="2" y="5" width="4" height="6" fill="${mainColor}" />
-            <rect x="3" y="6" width="2" height="4" fill="${accentColor}" />
-            <rect x="18" y="5" width="4" height="6" fill="${mainColor}" />
-            <rect x="19" y="6" width="2" height="4" fill="${accentColor}" />
-
-            <!-- Aquatic Swirl Tail -->
-            <rect x="17" y="14" width="5" height="3" fill="${accentColor}" />
-
-            <!-- Round Pixel Body -->
-            <rect x="5" y="7" width="14" height="10" fill="${mainColor}" />
-            <!-- White Belly -->
-            <rect x="8" y="11" width="8" height="5" fill="#ffffff" />
-
-            <!-- Rosy Cheeks -->
-            <rect x="6" y="12" width="2" height="1" fill="#ff6699" />
-            <rect x="16" y="12" width="2" height="1" fill="#ff6699" />
-
-            <!-- Paws -->
-            <rect x="7" y="17" width="3" height="2" fill="${accentColor}" />
-            <rect x="14" y="17" width="3" height="2" fill="${accentColor}" />
-        `;
-    } else if (monster.element === 'grass') { // 子リス
-        pixelFeatureSvg = `
+    } else if (monster.element === 'grass') { // 子リス (ポコリーフ)
+        animalPixelArt = `
             <!-- Leaf Ears & Flower -->
-            <rect x="4" y="2" width="4" height="5" fill="${mainColor}" />
-            <rect x="5" y="3" width="2" height="3" fill="${accentColor}" />
-            <rect x="16" y="2" width="4" height="5" fill="${mainColor}" />
-            <rect x="17" y="3" width="2" height="3" fill="${accentColor}" />
-            <rect x="15" y="2" width="2" height="2" fill="#ff77aa" />
+            ${drawP([
+                [5,3,5,1, borderColor], [4,4,2,4, borderColor], [9,4,2,4, borderColor],
+                [5,4,4,4, mainColor], [6,5,2,3, accentColor],
+                [22,3,5,1, borderColor], [21,4,2,4, borderColor], [26,4,2,4, borderColor],
+                [22,4,4,4, mainColor], [23,5,2,3, accentColor],
+                [20,2,3,3, '#ff66aa'], [21,3,1,1, '#ffff44']
+            ])}
 
-            <!-- Giant Leaf Bushy Tail -->
-            <rect x="1" y="10" width="5" height="7" fill="${accentColor}" />
-            <rect x="2" y="11" width="3" height="5" fill="${mainColor}" />
+            <!-- Bushy Leaf Tail -->
+            ${drawP([
+                [1,14,6,1, borderColor], [0,15,2,10, borderColor], [6,15,2,10, borderColor], [1,25,6,1, borderColor],
+                [2,15,4,10, accentColor], [3,16,2,8, mainColor]
+            ])}
 
-            <!-- Round Squirrel Body -->
-            <rect x="5" y="7" width="14" height="10" fill="${mainColor}" />
-            <rect x="8" y="11" width="8" height="5" fill="#ffffff" />
+            <!-- Body Outer Border -->
+            ${drawP([
+                [9,7,14,1, borderColor], [7,8,2,4, borderColor], [23,8,2,4, borderColor],
+                [6,12,2,14, borderColor], [24,12,2,14, borderColor],
+                [8,26,16,1, borderColor], [10,27,12,1, borderColor]
+            ])}
+
+            <!-- Body Fill -->
+            ${drawP([
+                [9,8,14,4, mainColor], [8,12,16,14, mainColor]
+            ])}
+
+            <!-- White Belly -->
+            ${drawP([
+                [12,15,8,9, '#ffffff']
+            ])}
 
             <!-- Rosy Cheeks -->
-            <rect x="6" y="12" width="2" height="1" fill="#ff6699" />
-            <rect x="16" y="12" width="2" height="1" fill="#ff6699" />
+            ${drawP([
+                [8,15,3,2, '#ff6688'], [21,15,3,2, '#ff6688']
+            ])}
 
             <!-- Paws -->
-            <rect x="7" y="17" width="3" height="2" fill="${accentColor}" />
-            <rect x="14" y="17" width="3" height="2" fill="${accentColor}" />
+            ${drawP([
+                [10,25,4,2, accentColor], [18,25,4,2, accentColor]
+            ])}
         `;
-    } else { // Cyber / Electric (電気ハムスター)
-        pixelFeatureSvg = `
+    } else { // Cyber / Electric (電気ハムスター スパークン)
+        animalPixelArt = `
             <!-- Twitchy Hamster Ears & Visor -->
-            <rect x="4" y="3" width="4" height="4" fill="${mainColor}" />
-            <rect x="5" y="4" width="2" height="2" fill="${accentColor}" />
-            <rect x="16" y="3" width="4" height="4" fill="${mainColor}" />
-            <rect x="17" y="4" width="2" height="2" fill="${accentColor}" />
-            <rect x="7" y="7" width="10" height="2" fill="${accentColor}" />
+            ${drawP([
+                [5,3,5,1, borderColor], [4,4,2,4, borderColor], [9,4,2,4, borderColor],
+                [5,4,4,4, mainColor], [6,5,2,3, earInnerColor],
+                [22,3,5,1, borderColor], [21,4,2,4, borderColor], [26,4,2,4, borderColor],
+                [22,4,4,4, mainColor], [23,5,2,3, earInnerColor],
+                [9,8,14,2, accentColor]
+            ])}
 
-            <!-- Lightning Tail -->
-            <rect x="1" y="10" width="2" height="3" fill="${accentColor}" />
-            <rect x="2" y="12" width="3" height="2" fill="${accentColor}" />
+            <!-- Lightning Bolt Tail -->
+            ${drawP([
+                [1,12,3,2, accentColor], [3,14,3,2, accentColor], [2,16,4,2, accentColor],
+                [4,18,3,2, accentColor]
+            ])}
 
-            <!-- Body -->
-            <rect x="5" y="7" width="14" height="10" fill="${mainColor}" />
-            <rect x="8" y="11" width="8" height="5" fill="#ffffff" />
+            <!-- Body Outer Border -->
+            ${drawP([
+                [9,7,14,1, borderColor], [7,8,2,4, borderColor], [23,8,2,4, borderColor],
+                [6,12,2,14, borderColor], [24,12,2,14, borderColor],
+                [8,26,16,1, borderColor], [10,27,12,1, borderColor]
+            ])}
+
+            <!-- Body Fill -->
+            ${drawP([
+                [9,8,14,4, mainColor], [8,12,16,14, mainColor]
+            ])}
+
+            <!-- White Belly -->
+            ${drawP([
+                [12,15,8,9, '#ffffff']
+            ])}
 
             <!-- Rosy Cheeks -->
-            <rect x="6" y="12" width="2" height="1" fill="#ff6699" />
-            <rect x="16" y="12" width="2" height="1" fill="#ff6699" />
+            ${drawP([
+                [8,15,3,2, '#ff6688'], [21,15,3,2, '#ff6688']
+            ])}
 
             <!-- Paws -->
-            <rect x="7" y="17" width="3" height="2" fill="#ffffff" />
-            <rect x="14" y="17" width="3" height="2" fill="#ffffff" />
+            ${drawP([
+                [10,25,4,2, '#ffffff'], [18,25,4,2, '#ffffff']
+            ])}
         `;
     }
 
     return `
-    <svg viewBox="0 0 24 24" width="100%" height="100%" class="monster-svg stage-${monster.stage}" shape-rendering="crispEdges">
+    <svg viewBox="0 0 32 32" width="100%" height="100%" class="monster-svg stage-${monster.stage}" shape-rendering="crispEdges">
         <!-- Shadow -->
-        <rect x="6" y="19" width="12" height="1" fill="rgba(0,0,0,0.3)" />
-        <rect x="8" y="20" width="8" height="1" fill="rgba(0,0,0,0.4)" />
+        <rect x="8" y="28" width="16" height="1" fill="rgba(0,0,0,0.3)" />
+        <rect x="10" y="27" width="12" height="1" fill="rgba(0,0,0,0.4)" />
 
-        <!-- Pixel Monster Body & Features -->
+        <!-- 32x32 Pixel Art Monster -->
         <g class="monster-body-group">
-            ${pixelFeatureSvg}
+            ${animalPixelArt}
 
-            <!-- Pixel Face Expressions -->
+            <!-- Face Features -->
             <g class="monster-face">
                 ${eyePixels}
                 <!-- Nose Pixel -->
-                <rect x="11" y="12" width="2" height="1" fill="#111" />
+                <rect x="15" y="15" width="2" height="1" fill="#111827" />
                 ${mouthPixels}
             </g>
 
@@ -533,4 +613,5 @@ function renderMonsterSVG(id, options = {}) {
         </g>
     </svg>`;
 }
+
 

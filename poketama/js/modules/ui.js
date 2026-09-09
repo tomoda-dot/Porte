@@ -149,8 +149,11 @@ const UIController = {
                     if (res && res.status === 'ongoing') {
                         // Enemy counterattack after 800ms
                         setTimeout(() => {
-                            battleEngine.enemyExecuteMove();
+                            const enemyRes = battleEngine.enemyExecuteMove();
                             this.renderBattleArena();
+                            if (enemyRes && enemyRes.status === 'defeat') {
+                                this.handleDefeatSequence(enemyRes);
+                            }
                         }, 800);
                     } else if (res && res.status === 'victory') {
                         this.handleVictorySequence(res);
@@ -436,15 +439,47 @@ const UIController = {
     },
 
     handleVictorySequence(res) {
-        if (res.canEvolve) {
-            // Trigger Evolution Modal!
-            setTimeout(() => {
-                this.triggerEvolutionModal(battleEngine.playerMon, res.nextEvoId);
-            }, 1000);
-        } else {
-            setTimeout(() => {
-                this.exitBattleArena();
-            }, 1200);
+        this.renderBattleArena();
+        const logBox = document.getElementById('battle-log-box');
+        if (logBox) {
+            logBox.innerHTML += `
+                <div style="margin-top: 10px; text-align: center; background: rgba(162, 217, 106, 0.25); border: 2px solid var(--color-primary); border-radius: 14px; padding: 10px;">
+                    <h3 style="color: var(--color-accent); font-size: 16px; margin-bottom: 6px;">🎉 バトル勝利！</h3>
+                    <button class="btn btn-sm" id="btn-battle-exit-confirm" style="margin-top: 4px; font-weight: 800; background: linear-gradient(90deg, #76c84c, #ffd15c);">🧭 冒険エリアに戻る</button>
+                </div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+
+            const btnExit = document.getElementById('btn-battle-exit-confirm');
+            if (btnExit) {
+                btnExit.onclick = () => {
+                    if (res.canEvolve) {
+                        this.triggerEvolutionModal(battleEngine.playerMon, res.nextEvoId);
+                    } else {
+                        this.exitBattleArena();
+                    }
+                };
+            }
+        }
+    },
+
+    handleDefeatSequence(res) {
+        this.renderBattleArena();
+        const logBox = document.getElementById('battle-log-box');
+        if (logBox) {
+            logBox.innerHTML += `
+                <div style="margin-top: 10px; text-align: center; background: rgba(255, 68, 68, 0.25); border: 2px solid #ff4444; border-radius: 14px; padding: 10px;">
+                    <h3 style="color: #ff6666; font-size: 16px; margin-bottom: 6px;">💀 パートナーが倒れてしまった...</h3>
+                    <p style="font-size: 12px; margin-bottom: 6px; color: #ffcccc;">お世話をして回復させてから再挑戦しましょう！</p>
+                    <button class="btn btn-sm" id="btn-battle-exit-confirm" style="background: #552233; margin-top: 4px; border: 1px solid #ff4444;">🏠 冒険エリアに戻る</button>
+                </div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+
+            const btnExit = document.getElementById('btn-battle-exit-confirm');
+            if (btnExit) {
+                btnExit.onclick = () => {
+                    this.exitBattleArena();
+                };
+            }
         }
     },
 
