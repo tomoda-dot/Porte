@@ -3,6 +3,22 @@
  * Application Controller & Canvas Renderer Loop for Mobile Cyber Neon Tetris
  */
 
+// Universal Canvas Polyfill for roundRect (Compatibility across all devices & browsers)
+function drawRoundedRect(ctx, x, y, w, h, r) {
+    if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(x, y, w, h, r);
+    } else {
+        r = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+}
+
 class TetrisApp {
     constructor() {
         this.engine = new TetrisEngine();
@@ -32,38 +48,57 @@ class TetrisApp {
         this.engine.onEffectTrigger = (lines, combo) => this.showEffectBanner(lines, combo);
 
         // Bind Modal & Header Controls
-        document.getElementById('btn-pause').addEventListener('click', () => this.togglePause());
-        document.getElementById('btn-resume').addEventListener('click', () => this.togglePause());
-        document.getElementById('btn-restart-pause').addEventListener('click', () => {
+        const btnPause = document.getElementById('btn-pause');
+        if (btnPause) btnPause.addEventListener('click', () => this.togglePause());
+
+        const btnResume = document.getElementById('btn-resume');
+        if (btnResume) btnResume.addEventListener('click', () => this.togglePause());
+
+        const btnRestartPause = document.getElementById('btn-restart-pause');
+        if (btnRestartPause) btnRestartPause.addEventListener('click', () => {
             this.togglePause();
             this.restartGame();
         });
-        document.getElementById('btn-play-again').addEventListener('click', () => {
-            document.getElementById('modal-gameover').classList.remove('active');
+
+        const btnPlayAgain = document.getElementById('btn-play-again');
+        if (btnPlayAgain) btnPlayAgain.addEventListener('click', () => {
+            const modal = document.getElementById('modal-gameover');
+            if (modal) modal.classList.remove('active');
             this.restartGame();
         });
 
         // Settings Toggles
         const soundToggle = document.getElementById('setting-sound');
-        soundToggle.addEventListener('change', (e) => {
-            if (window.soundEngine) window.soundEngine.enabled = e.target.checked;
-        });
+        if (soundToggle) {
+            soundToggle.addEventListener('change', (e) => {
+                if (window.soundEngine) window.soundEngine.enabled = e.target.checked;
+            });
+        }
 
-        document.getElementById('btn-sound-toggle').addEventListener('click', () => {
-            if (window.soundEngine) {
-                window.soundEngine.enabled = !window.soundEngine.enabled;
-                soundToggle.checked = window.soundEngine.enabled;
-                document.getElementById('btn-sound-toggle').textContent = window.soundEngine.enabled ? '🔊' : '🔇';
-            }
-        });
+        const btnSoundToggle = document.getElementById('btn-sound-toggle');
+        if (btnSoundToggle) {
+            btnSoundToggle.addEventListener('click', () => {
+                if (window.soundEngine) {
+                    window.soundEngine.enabled = !window.soundEngine.enabled;
+                    if (soundToggle) soundToggle.checked = window.soundEngine.enabled;
+                    btnSoundToggle.textContent = window.soundEngine.enabled ? '🔊' : '🔇';
+                }
+            });
+        }
 
-        document.getElementById('setting-haptics').addEventListener('change', (e) => {
-            this.controls.hapticsEnabled = e.target.checked;
-        });
+        const settingHaptics = document.getElementById('setting-haptics');
+        if (settingHaptics) {
+            settingHaptics.addEventListener('change', (e) => {
+                this.controls.hapticsEnabled = e.target.checked;
+            });
+        }
 
-        document.getElementById('setting-ghost').addEventListener('change', (e) => {
-            this.showGhost = e.target.checked;
-        });
+        const settingGhost = document.getElementById('setting-ghost');
+        if (settingGhost) {
+            settingGhost.addEventListener('change', (e) => {
+                this.showGhost = e.target.checked;
+            });
+        }
 
         // Start animation loop
         requestAnimationFrame((time) => this.gameLoop(time));
@@ -78,17 +113,20 @@ class TetrisApp {
         if (this.engine.isGameOver) return;
         this.engine.isPaused = !this.engine.isPaused;
         const modal = document.getElementById('modal-pause');
-        if (this.engine.isPaused) {
-            modal.classList.add('active');
-        } else {
-            modal.classList.remove('active');
+        if (modal) {
+            if (this.engine.isPaused) {
+                modal.classList.add('active');
+            } else {
+                modal.classList.remove('active');
+            }
         }
     }
 
     showEffectBanner(lines, combo) {
         const banner = document.getElementById('effect-banner');
+        if (!banner) return;
+
         const textMap = ['', 'SINGLE!', 'DOUBLE!!', 'TRIPLE!!!', '⚡ TETRIS! ⚡'];
-        
         let msg = textMap[lines] || '';
         if (combo > 0) {
             msg += ` (${combo + 1}x COMBO)`;
@@ -99,8 +137,10 @@ class TetrisApp {
 
         if (lines === 4) {
             const wrap = document.getElementById('board-wrap');
-            wrap.classList.add('shake');
-            setTimeout(() => wrap.classList.remove('shake'), 300);
+            if (wrap) {
+                wrap.classList.add('shake');
+                setTimeout(() => wrap.classList.remove('shake'), 300);
+            }
         }
 
         if (this.bannerTimeout) clearTimeout(this.bannerTimeout);
@@ -128,16 +168,23 @@ class TetrisApp {
         // Handle Game Over transition
         if (this.engine.isGameOver) {
             const modal = document.getElementById('modal-gameover');
-            if (!modal.classList.contains('active')) {
-                document.getElementById('final-score-val').textContent = this.engine.score.toLocaleString();
-                document.getElementById('final-lines-val').textContent = this.engine.lines;
-                document.getElementById('final-level-val').textContent = this.engine.level;
+            if (modal && !modal.classList.contains('active')) {
+                const finalScore = document.getElementById('final-score-val');
+                if (finalScore) finalScore.textContent = this.engine.score.toLocaleString();
+
+                const finalLines = document.getElementById('final-lines-val');
+                if (finalLines) finalLines.textContent = this.engine.lines;
+
+                const finalLevel = document.getElementById('final-level-val');
+                if (finalLevel) finalLevel.textContent = this.engine.level;
 
                 const newRecBadge = document.getElementById('new-record-badge');
-                if (this.engine.score > 0 && this.engine.score >= this.engine.highScore) {
-                    newRecBadge.style.display = 'flex';
-                } else {
-                    newRecBadge.style.display = 'none';
+                if (newRecBadge) {
+                    if (this.engine.score > 0 && this.engine.score >= this.engine.highScore) {
+                        newRecBadge.style.display = 'flex';
+                    } else {
+                        newRecBadge.style.display = 'none';
+                    }
                 }
 
                 modal.classList.add('active');
@@ -145,25 +192,38 @@ class TetrisApp {
         }
 
         // Render Frame
-        this.renderMainBoard();
-        this.renderHold();
-        this.renderNextQueue();
-        this.updateUI();
+        try {
+            this.renderMainBoard();
+            this.renderHold();
+            this.renderNextQueue();
+            this.updateUI();
+        } catch (err) {
+            console.error("Render loop error:", err);
+        }
 
         requestAnimationFrame((t) => this.gameLoop(t));
     }
 
     updateUI() {
-        document.getElementById('score-val').textContent = this.engine.score.toLocaleString();
-        document.getElementById('hi-score-val').textContent = this.engine.highScore.toLocaleString();
-        document.getElementById('level-val').textContent = this.engine.level;
-        document.getElementById('lines-val').textContent = this.engine.lines;
+        const scoreEl = document.getElementById('score-val');
+        if (scoreEl) scoreEl.textContent = this.engine.score.toLocaleString();
+
+        const hiScoreEl = document.getElementById('hi-score-val');
+        if (hiScoreEl) hiScoreEl.textContent = this.engine.highScore.toLocaleString();
+
+        const levelEl = document.getElementById('level-val');
+        if (levelEl) levelEl.textContent = this.engine.level;
+
+        const linesEl = document.getElementById('lines-val');
+        if (linesEl) linesEl.textContent = this.engine.lines;
 
         const comboEl = document.getElementById('combo-indicator');
-        if (this.engine.combo > 0) {
-            comboEl.textContent = `${this.engine.combo + 1}x COMBO`;
-        } else {
-            comboEl.textContent = '';
+        if (comboEl) {
+            if (this.engine.combo > 0) {
+                comboEl.textContent = `${this.engine.combo + 1}x COMBO`;
+            } else {
+                comboEl.textContent = '';
+            }
         }
     }
 
@@ -253,15 +313,13 @@ class TetrisApp {
 
         // Outer Neon Box
         ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.roundRect(x + pad, y + pad, size - pad * 2, size - pad * 2, radius);
+        drawRoundedRect(ctx, x + pad, y + pad, size - pad * 2, size - pad * 2, radius);
         ctx.fill();
 
         // Inner Bevel Highlight
         ctx.shadowBlur = 0;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.beginPath();
-        ctx.roundRect(x + pad + 2, y + pad + 2, size - pad * 2 - 4, (size - pad * 2) / 3, radius / 2);
+        drawRoundedRect(ctx, x + pad + 2, y + pad + 2, size - pad * 2 - 4, (size - pad * 2) / 3, radius / 2);
         ctx.fill();
 
         ctx.restore();
@@ -278,8 +336,7 @@ class TetrisApp {
         ctx.globalAlpha = 0.45;
         ctx.setLineDash([3, 3]);
 
-        ctx.beginPath();
-        ctx.roundRect(x + pad, y + pad, size - pad * 2, size - pad * 2, 4);
+        drawRoundedRect(ctx, x + pad, y + pad, size - pad * 2, size - pad * 2, 4);
         ctx.stroke();
 
         ctx.restore();
@@ -344,13 +401,24 @@ class TetrisApp {
     drawMiniBlock(ctx, x, y, size, color) {
         const pad = 1;
         ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.roundRect(x + pad, y + pad, size - pad * 2, size - pad * 2, 3);
+        drawRoundedRect(ctx, x + pad, y + pad, size - pad * 2, size - pad * 2, 3);
         ctx.fill();
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    window.app = new TetrisApp();
-    window.app.init();
-});
+function startTetrisApp() {
+    try {
+        if (!window.app) {
+            window.app = new TetrisApp();
+            window.app.init();
+        }
+    } catch (err) {
+        console.error("App startup error:", err);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startTetrisApp);
+} else {
+    startTetrisApp();
+}
