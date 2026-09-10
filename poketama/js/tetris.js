@@ -427,8 +427,8 @@ class TetrisEngine {
     }
 
     getDropInterval() {
-        // Speed formula based on level
-        return Math.max(80, 800 - (this.level - 1) * 70);
+        // Crisp drop speed: Level 1 starts at 420ms (~0.4s per step)
+        return Math.max(70, 420 - (this.level - 1) * 35);
     }
 }
 

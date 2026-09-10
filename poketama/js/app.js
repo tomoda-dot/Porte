@@ -150,14 +150,18 @@ class TetrisApp {
     }
 
     gameLoop(time = 0) {
-        if (!this.lastTime) this.lastTime = time;
-        const deltaTime = time - this.lastTime;
-        this.lastTime = time;
+        if (!this.lastTime) {
+            this.lastTime = time || performance.now();
+        }
+        const currentTime = time || performance.now();
+        const deltaTime = Math.min(100, Math.max(0, currentTime - this.lastTime));
+        this.lastTime = currentTime;
 
         if (!this.engine.isPaused && !this.engine.isGameOver) {
             this.dropCounter += deltaTime;
 
-            if (this.dropCounter > this.engine.getDropInterval()) {
+            const interval = this.engine.getDropInterval();
+            if (this.dropCounter >= interval) {
                 this.engine.drop(false);
                 this.dropCounter = 0;
             }
