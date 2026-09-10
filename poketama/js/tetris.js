@@ -232,14 +232,24 @@ class TetrisEngine {
         return false;
     }
 
-    softDrop() {
+    drop(isSoftDrop = false) {
         if (this.isGameOver || this.isPaused || !this.currentPiece) return false;
+
         if (!this.checkCollision(this.currentPiece.x, this.currentPiece.y + 1, this.currentPiece.rotation)) {
             this.currentPiece.y++;
-            this.score += 1;
+            if (isSoftDrop) {
+                this.score += 1;
+            }
             return true;
+        } else {
+            // Cannot move down further -> lock piece into grid & spawn next mino
+            this.lockPiece();
+            return false;
         }
-        return false;
+    }
+
+    softDrop() {
+        return this.drop(true);
     }
 
     hardDrop() {

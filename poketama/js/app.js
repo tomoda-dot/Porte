@@ -110,6 +110,7 @@ class TetrisApp {
     }
 
     gameLoop(time = 0) {
+        if (!this.lastTime) this.lastTime = time;
         const deltaTime = time - this.lastTime;
         this.lastTime = time;
 
@@ -117,7 +118,7 @@ class TetrisApp {
             this.dropCounter += deltaTime;
 
             if (this.dropCounter > this.engine.getDropInterval()) {
-                this.engine.softDrop();
+                this.engine.drop(false);
                 this.dropCounter = 0;
             }
 
