@@ -1,0 +1,298 @@
+/* ==========================================================================
+   Pokemon-Style 2D RPG Main Stylesheet
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap');
+
+:root {
+    --bg-main: #181c2b;
+    --bg-shell: #2c334a;
+    --bg-screen: #000000;
+    --border-gold: #ffd15c;
+    --color-primary: #ff5544;
+    --font-family: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+body {
+    background: radial-gradient(circle at 50% 30%, #1f273d 0%, #0c0f1a 100%);
+    color: #ffffff;
+    font-family: var(--font-family);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px;
+    overflow-x: hidden;
+}
+
+/* Console Game Boy Shell Frame */
+#app-wrapper {
+    width: 100%;
+    max-width: 480px;
+    background: var(--bg-shell);
+    border: 3.5px solid #455073;
+    border-radius: 28px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 209, 92, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Console Header Bar */
+.console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #191f30;
+    border-bottom: 2.5px solid #455073;
+}
+
+.brand-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--border-gold);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.header-badges {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.header-badge-item {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+/* 2D Canvas Game Screen Viewport */
+.game-viewport-container {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: var(--bg-screen);
+    position: relative;
+    overflow: hidden;
+    border-bottom: 3px solid #455073;
+}
+
+#map-canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    display: block;
+}
+
+/* Battle Overlay Screen */
+.battle-overlay-view {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(to bottom, #78c850 0%, #285018 100%);
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 12px;
+    z-index: 100;
+}
+
+.battle-overlay-view.active {
+    display: flex;
+}
+
+/* Battle Units Platform */
+.battle-stage-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    height: 58%;
+    position: relative;
+}
+
+.enemy-platform-box, .player-platform-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 48%;
+}
+
+.battle-unit-sprite {
+    width: 90px;
+    height: 90px;
+    filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.5));
+}
+
+.unit-status-card {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    border: 1.5px solid #ffffff;
+    border-radius: 12px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.unit-hp-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: #441111;
+    border-radius: 4px;
+    margin-top: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.unit-hp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4444, #76c84c);
+    transition: width 0.3s ease;
+}
+
+/* Game Boy Dialogue & Message Log Box */
+.gb-message-box {
+    height: 38%;
+    background: #0f1626;
+    border: 2px solid #ffffff;
+    border-radius: 14px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #ffffff;
+}
+
+.battle-commands-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.cmd-btn {
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+}
+
+.cmd-btn:hover, .cmd-btn:active {
+    background: #ffd15c;
+    color: #000000;
+}
+
+/* Virtual D-Pad & Control Deck */
+.console-controls-deck {
+    padding: 16px 20px;
+    background: #1f2638;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* D-Pad (Cross Keys) */
+.dpad-container {
+    width: 120px;
+    height: 120px;
+    position: relative;
+}
+
+.dpad-btn {
+    position: absolute;
+    background: #121621;
+    border: 2px solid #3d4766;
+    color: #8fa0cc;
+    font-weight: 900;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.dpad-btn:active {
+    background: #ffd15c;
+    color: #000000;
+}
+
+.dpad-up { top: 0; left: 40px; width: 40px; height: 44px; border-radius: 8px 8px 0 0; }
+.dpad-down { bottom: 0; left: 40px; width: 40px; height: 44px; border-radius: 0 0 8px 8px; }
+.dpad-left { top: 40px; left: 0; width: 44px; height: 40px; border-radius: 8px 0 0 8px; }
+.dpad-right { top: 40px; right: 0; width: 44px; height: 40px; border-radius: 0 8px 8px 0; }
+.dpad-center { top: 40px; left: 40px; width: 40px; height: 40px; background: #121621; }
+
+/* AB Action Buttons */
+.action-buttons-group {
+    display: flex;
+    gap: 14px;
+}
+
+.ab-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff4466, #cc0033);
+    border: 2.5px solid #ffffff;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.ab-btn:active {
+    transform: scale(0.92);
+    background: #ffd15c;
+    color: #000000;
+}
+
+.ab-btn-menu {
+    background: linear-gradient(135deg, #40c4ff, #0088cc);
+    font-size: 11px;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.modal-card {
+    background: #192033;
+    border: 2.5px solid var(--border-gold);
+    border-radius: 20px;
+    padding: 20px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+}
