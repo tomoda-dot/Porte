@@ -1,6 +1,6 @@
 /**
  * monsters.js
- * 200 PokéTama Monster Database & 18 Element Types with Vector SVG Art Generator
+ * 200 PokéTama Monster Database & 18 Element Types with Vector SVG / PNG Art Generator
  */
 
 // 18 Official Element Types Database
@@ -84,6 +84,21 @@ const BASE_NAME_SEEDS = [
     { base: 'パタパタ', evo: 'グランノーマル', type: 'normal' }
 ];
 
+// Custom Generated Artwork Mapping
+const ARTWORK_MAP = {
+    mon_001: 'images/starter_fire_fox.png',
+    mon_002: 'images/starter_water_bunny.png',
+    mon_003: 'images/grass_leaf_deer.png',
+    mon_004: 'images/electric_thunder_fox.png',
+    mon_005: 'images/ice_penguin.png',
+    mon_006: 'images/fighting_boxer_dog.png',
+    mon_007: 'images/poison_frog.png',
+    mon_008: 'images/ground_mole.png',
+    mon_009: 'images/flying_falcon.png',
+    mon_018: 'images/normal_bear_cub.png',
+    mon_101: 'images/boss_dragon_flame.png'
+};
+
 // Egg Database
 const EGGS_DATABASE = {
     egg_fire: { id: 'egg_fire', name: 'フレアタマゴ', element: 'fire', description: '温かい炎の模様がついたタマゴ。', hatchesTo: 'mon_001', warmthNeeded: 100, color: '#ff5544', patternColor: '#ffcc00' },
@@ -95,7 +110,6 @@ const EGGS_DATABASE = {
 // Procedural 200 Monsters Generator (#001 - #100 Base, #101 - #200 Evolved)
 const MONSTERS_DATABASE = {};
 
-// Helper generator to build full 200 database
 (function generate200Monsters() {
     const typeKeys = Object.keys(ELEMENT_TYPES);
 
@@ -124,6 +138,7 @@ const MONSTERS_DATABASE = {};
             moves: ['tackle', `move_${type}`],
             nextEvolution: evoId,
             evoLevel: 16,
+            imgSrc: ARTWORK_MAP[baseId] || null,
             description: `可愛い姿をした ${ELEMENT_TYPES[type].name} 属性の基本ポケたま。レベル16で大きな進化を遂げる！`
         };
 
@@ -141,6 +156,7 @@ const MONSTERS_DATABASE = {};
             moves: ['tackle', `move_${type}`, 'hyper_beam'],
             nextEvolution: null,
             evoLevel: 0,
+            imgSrc: ARTWORK_MAP[evoId] || null,
             description: `${baseName} がたくましく成長した ${ELEMENT_TYPES[type].name} 属性の秘められた力を持つ究極の進化形！`
         };
     }
@@ -148,7 +164,7 @@ const MONSTERS_DATABASE = {};
 
 /**
  * renderMonsterSVG
- * Renders high-quality vector SVG artwork for all 200 monsters
+ * Renders high-quality artwork (Custom PNG Image or Vector SVG) for all 200 monsters
  */
 function renderMonsterSVG(monsterOrId, size = 160) {
     let mon = typeof monsterOrId === 'string' ? MONSTERS_DATABASE[monsterOrId] : monsterOrId;
@@ -159,6 +175,34 @@ function renderMonsterSVG(monsterOrId, size = 160) {
     const elem = ELEMENT_TYPES[mon.element] || ELEMENT_TYPES.normal;
     const isEvolved = mon.dexNo > 100 || mon.stage === 'adult';
     const mainColor = elem.color;
+
+    // Check if custom PNG artwork image exists
+    const imgSrc = mon.imgSrc || ARTWORK_MAP[mon.id] || ARTWORK_MAP[mon.speciesId];
+    if (imgSrc) {
+        return `
+        <svg width="${size}" height="${size}" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="monster-svg">
+            <defs>
+                <clipPath id="clip-${mon.id}">
+                    <circle cx="100" cy="100" r="74" />
+                </clipPath>
+            </defs>
+
+            <!-- Outer Glowing Ring -->
+            <circle cx="100" cy="100" r="82" fill="none" stroke="${mainColor}" stroke-width="3" opacity="0.8">
+                <animate attributeName="stroke-opacity" values="0.4;1.0;0.4" dur="3s" repeatCount="indefinite" />
+            </circle>
+
+            <!-- PNG Artwork Image -->
+            <image href="${imgSrc}" x="22" y="22" width="156" height="156" clip-path="url(#clip-${mon.id})" preserveAspectRatio="xMidYMid slice" />
+
+            <!-- Element Badge Overlay -->
+            <text x="100" y="188" text-anchor="middle" font-size="13" font-weight="bold" fill="${mainColor}">
+                ${elem.icon} #${String(mon.dexNo).padStart(3, '0')} ${mon.name}
+            </text>
+        </svg>
+        `;
+    }
+
     const bodySize = isEvolved ? 62 : 46;
 
     let auraSvg = '';
