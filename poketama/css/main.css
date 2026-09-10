@@ -471,9 +471,15 @@ body {
     position: relative;
 }
 
-.box-card.active-partner {
-    border: 2px solid var(--color-primary);
-    box-shadow: 0 0 20px rgba(162, 217, 106, 0.35);
+.box-card.active-partner, .box-card.in-party {
+    border: 2px solid #76c84c;
+    box-shadow: 0 0 16px rgba(118, 200, 76, 0.4);
+    background: rgba(118, 200, 76, 0.08);
+}
+
+.box-card.in-reserve {
+    border: 1.5px solid rgba(255, 68, 68, 0.4);
+    background: rgba(255, 68, 68, 0.03);
 }
 
 .box-badge {
@@ -486,6 +492,53 @@ body {
     font-weight: 900;
     padding: 2px 8px;
     border-radius: 10px;
+}
+
+.box-badge.in-party {
+    background: #76c84c;
+    color: #0b1a0e;
+}
+
+.box-badge.in-reserve {
+    background: #ff4444;
+    color: #ffffff;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ff4444, #cc0000) !important;
+    color: #ffffff !important;
+}
+
+.btn-danger:hover {
+    box-shadow: 0 6px 20px rgba(255, 68, 68, 0.45) !important;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #76c84c, #489922) !important;
+    color: #0b1a0e !important;
+}
+
+.btn-success:hover {
+    box-shadow: 0 6px 20px rgba(118, 200, 76, 0.45) !important;
+}
+
+.btn-release {
+    padding: 6px 12px;
+    font-size: 11px;
+    min-height: 32px;
+    border-radius: 12px;
+    background: rgba(255, 68, 68, 0.15);
+    border: 1px solid rgba(255, 68, 68, 0.4);
+    color: #ff6666;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-release:hover {
+    background: rgba(255, 68, 68, 0.35);
+    color: #ffffff;
+    transform: translateY(-1px);
 }
 
 .box-sprite, .dex-sprite {

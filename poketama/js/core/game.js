@@ -178,6 +178,31 @@ class GameEngine {
         return this.activeMonster;
     }
 
+    releaseMonster(target) {
+        const owned = this.getAllOwnedMonsters();
+        if (owned.length <= 1) return false;
+
+        const targetUid = target.uid || target;
+        this.monsterBox = (this.monsterBox || []).filter(m => m !== target && (m.uid && m.uid !== targetUid));
+
+        if (this.battleParty) {
+            this.battleParty = this.battleParty.filter(m => m !== target && (m.uid && m.uid !== targetUid));
+        }
+
+        const remaining = this.getAllOwnedMonsters();
+        if (remaining.length > 0) {
+            if (!this.activeMonster || this.activeMonster === target || (this.activeMonster.uid && this.activeMonster.uid === targetUid)) {
+                this.activeMonster = remaining[0];
+            }
+            if (!this.battleParty || this.battleParty.length === 0) {
+                this.battleParty = [remaining[0]];
+            }
+        }
+
+        this.saveState();
+        return true;
+    }
+
     getBattleParty() {
         const owned = this.getAllOwnedMonsters();
         if (owned.length === 0) return [];

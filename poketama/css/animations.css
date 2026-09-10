@@ -81,9 +81,9 @@
 }
 
 @keyframes encounterSlideIn {
-    0% { right: -120px; opacity: 0; }
+    0% { right: -250px; opacity: 0; }
     20% { opacity: 1; }
-    100% { right: 70px; opacity: 1; }
+    100% { right: 16px; opacity: 1; }
 }
 
 @keyframes encounterFlash {
@@ -118,10 +118,6 @@
 }
 
 .approaching-slide-active {
-    position: absolute;
-    bottom: 25px;
-    right: -120px;
-    z-index: 15;
     animation: encounterSlideIn 1.1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 

@@ -287,6 +287,10 @@ const UIController = {
         const enemyBox = document.getElementById('fullscreen-enemy-group-box');
         if (!enemyBox) return;
 
+        enemyBox.classList.remove('approaching-slide-active');
+        void enemyBox.offsetWidth;
+        enemyBox.classList.add('approaching-slide-active');
+
         if (eventType === 'chest') {
             enemyBox.innerHTML = `
                 <div class="walking-enemy-unit chest-unit" style="grid-column: span 3;">
@@ -830,15 +834,15 @@ const UIController = {
             movesListEl.innerHTML = movesHtml;
         }
 
-        const owned = gameEngine.getAllOwnedMonsters();
+        const party = gameEngine.getBattleParty();
         const switcherBar = document.getElementById('care-monster-switcher-bar');
         const counterEl = document.getElementById('care-monster-counter');
 
-        if (owned.length > 1) {
-            let activeIdx = owned.findIndex(m => m === mon || (m.uid && m.uid === mon.uid));
+        if (party.length > 1) {
+            let activeIdx = party.findIndex(m => m === mon || (m.uid && m.uid === mon.uid));
             if (activeIdx === -1) activeIdx = 0;
             if (switcherBar) switcherBar.style.display = 'flex';
-            if (counterEl) counterEl.innerText = `${activeIdx + 1} / ${owned.length}`;
+            if (counterEl) counterEl.innerText = `${activeIdx + 1} / ${party.length}`;
         } else {
             if (switcherBar) switcherBar.style.display = 'none';
         }
@@ -1508,12 +1512,14 @@ const UIController = {
             const spec = MONSTERS_DATABASE[mon.speciesId] || MONSTERS_DATABASE.fire_1;
             const elem = ELEMENT_TYPES[mon.element];
 
+            const cardClass = inParty ? 'in-party' : 'in-reserve';
+            const badgeClass = inParty ? 'in-party' : 'in-reserve';
+            const badgeLabel = isLeader ? '★ リーダー' : (inParty ? `⚔️ パーティ ${partySlot}枠` : '🔴 控え');
+
             html += `
-            <div class="box-card ${isLeader ? 'active-partner' : ''}">
+            <div class="box-card ${cardClass} ${isLeader ? 'active-partner' : ''}">
                 <div class="box-card-header">
-                    <span class="box-badge" style="background:${inParty ? '#ffd15c' : '#76c84c'}; color:#0b1a0e;">
-                        ${isLeader ? 'リーダー★' : (inParty ? `パーティ ${partySlot}枠` : '控え')}
-                    </span>
+                    <span class="box-badge ${badgeClass}">${badgeLabel}</span>
                     <span style="color: ${elem.color}">${elem.icon} ${elem.name}</span>
                 </div>
                 <div class="box-sprite">${renderMonsterSVG(mon.speciesId)}</div>
@@ -1525,17 +1531,40 @@ const UIController = {
                     <span>🛡️${mon.def || spec.def}</span>
                     <span>💨${mon.spd || spec.spd}</span>
                 </div>
-                <div style="display: flex; gap: 6px; margin-top: 4px; width: 100%;">
-                    ${!isLeader ? `
-                        <button class="btn btn-sm" style="flex:1; font-size:11px;" onclick="UIController.switchActivePartner(${index})">メインお世話</button>
-                    ` : ''}
-                    <button class="btn btn-sm" style="flex:1; font-size:11px; background:${inParty ? '#442233' : '#225533'}; border:1px solid ${inParty ? '#ff4444' : '#44dd66'};" onclick="UIController.togglePartyMember(${index})">
-                        ${inParty ? '❌ パーティ解除' : '⚔️ パーティ編入'}
-                    </button>
+                <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px; width: 100%;">
+                    <div style="display: flex; gap: 6px; width: 100%;">
+                        ${!isLeader ? `
+                            <button class="btn btn-sm" style="flex:1; font-size:11px;" onclick="UIController.switchActivePartner(${index})">メイン相棒</button>
+                        ` : ''}
+                        <button class="btn btn-sm ${inParty ? 'btn-danger' : 'btn-success'}" style="flex:1; font-size:11px;" onclick="UIController.togglePartyMember(${index})">
+                            ${inParty ? '❌ パーティ解除' : '⚔️ パーティ編入'}
+                        </button>
+                    </div>
+                    <button class="btn-release" style="width: 100%;" onclick="UIController.releaseMonsterConfirm(${index})">👋 お別れする</button>
                 </div>
             </div>`;
         });
         grid.innerHTML = html;
+    },
+
+    releaseMonsterConfirm(index) {
+        const owned = gameEngine.getAllOwnedMonsters();
+        const target = owned[index];
+        if (!target) return;
+
+        if (owned.length <= 1) {
+            this.showToast('⚠️ 最後のモンスターをお別れすることはできません！', 'warning');
+            return;
+        }
+
+        if (confirm(`「${target.nickname}」(Lv.${target.level}) とお別れしますか？\n※この操作は取り消せません。`)) {
+            const res = gameEngine.releaseMonster(target);
+            if (res) {
+                audioFX.playClick();
+                this.showToast(`👋 「${target.nickname}」とお別れしました。元気でね！`, 'info');
+                this.renderAll();
+            }
+        }
     },
 
     switchActivePartner(index) {
