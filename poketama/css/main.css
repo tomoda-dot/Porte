@@ -1,0 +1,461 @@
+/* ==========================================================================
+   Monster Breeder Championship - Main Stylesheet (Pop Candy Aesthetic)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap');
+
+:root {
+    --bg-main: #140d25;
+    --bg-card: rgba(36, 22, 58, 0.9);
+    --bg-glass: rgba(56, 34, 88, 0.75);
+    --border-pop: rgba(255, 180, 220, 0.4);
+    
+    --color-primary: #ff65a3; /* Pop Pink */
+    --color-secondary: #ff9a3c; /* Bright Orange */
+    --color-accent: #ffe066; /* Sunshine Gold */
+    --color-mint: #52e077; /* Mint Green */
+    --color-cyan: #40c4ff; /* Sky Cyan */
+    --color-purple: #ab47bc; /* Lavender Purple */
+
+    --font-family: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+body {
+    background: radial-gradient(circle at 50% 20%, #2b1847 0%, #10081d 100%);
+    color: #ffffff;
+    font-family: var(--font-family);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    overflow-x: hidden;
+}
+
+#app-wrapper {
+    width: 100%;
+    max-width: 900px;
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 2.5px solid var(--border-pop);
+    border-radius: 28px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 101, 163, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: calc(100vh - 20px);
+}
+
+/* App Header */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: rgba(20, 10, 36, 0.95);
+    border-bottom: 2px solid var(--border-pop);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.brand-logo h1 {
+    font-size: 20px;
+    font-weight: 900;
+    background: linear-gradient(90deg, #ff65a3, #ff9a3c, #ffe066);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.header-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-pill {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+/* App Body & Content Tabs */
+.app-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.main-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.tab-page {
+    display: none;
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.tab-page.active {
+    display: block;
+}
+
+/* TAB 1: TRAINING GYM (特訓部屋) */
+.gym-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+@media (max-width: 720px) {
+    .gym-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+.gym-stage-card {
+    background: radial-gradient(circle at 50% 40%, #4a2868 0%, #1f0f33 100%);
+    border: 3px solid #7d449e;
+    border-radius: 24px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.6);
+}
+
+.monster-stage {
+    width: 100%;
+    height: 230px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.monster-stage svg {
+    width: 140px;
+    height: 140px;
+    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.5));
+}
+
+.condition-bar-box {
+    width: 100%;
+    margin-top: 10px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px 12px;
+    border-radius: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.training-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    width: 100%;
+    margin-top: 12px;
+}
+
+.btn-train {
+    padding: 14px 10px;
+    border-radius: 18px;
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-train:hover {
+    transform: translateY(-3px) scale(1.03);
+}
+
+.btn-train:active {
+    transform: scale(0.95);
+}
+
+.btn-atk { background: linear-gradient(135deg, #ff6b5b, #ff4081); }
+.btn-def { background: linear-gradient(135deg, #40c4ff, #00b0ff); }
+.btn-spd { background: linear-gradient(135deg, #52e077, #00e676); color: #0b1a0e; }
+.btn-sp  { background: linear-gradient(135deg, #ab47bc, #7e57c2); }
+.btn-rest { background: linear-gradient(135deg, #ffb703, #fb8500); color: #0b1a0e; grid-column: span 2; }
+
+/* Stats Panel */
+.stats-card {
+    background: var(--bg-glass);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.monster-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.monster-title {
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.rank-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 900;
+    background: linear-gradient(90deg, #ff65a3, #ffe066);
+    color: #0e071a;
+}
+
+.stat-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 800;
+    color: #d1c4e9;
+}
+
+.progress-bar-bg {
+    width: 100%;
+    height: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.fill-hp { background: linear-gradient(90deg, #ff4444, #ff7373); }
+.fill-exp { background: linear-gradient(90deg, #ffe066, #ff9a3c); }
+.fill-fatigue { background: linear-gradient(90deg, #ab47bc, #ff4081); }
+
+.stat-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 6px;
+    background: rgba(0,0,0,0.3);
+    padding: 10px;
+    border-radius: 14px;
+    text-align: center;
+}
+
+.stat-box-val {
+    font-size: 16px;
+    font-weight: 900;
+    color: #ffffff;
+}
+
+/* Shiny Evolution Alert Button */
+.btn-evolve-shiny {
+    width: 100%;
+    padding: 14px;
+    border-radius: 18px;
+    background: linear-gradient(90deg, #ffe066, #ff9a3c);
+    color: #0e071a;
+    font-size: 15px;
+    font-weight: 900;
+    border: 2px solid #ffffff;
+    cursor: pointer;
+    animation: pulseGlow 1.2s infinite ease-in-out;
+    margin-top: 8px;
+}
+
+/* TAB 2: TOURNAMENT (大会受付 & 表) */
+.tournament-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.rank-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+}
+
+.rank-card {
+    background: var(--bg-glass);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 18px;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rank-card.selected, .rank-card:hover {
+    border-color: var(--color-primary);
+    background: rgba(255, 101, 163, 0.25);
+    transform: translateY(-2px);
+}
+
+.bracket-box {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.match-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 10px 16px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+/* Bottom Nav Bar */
+.app-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: rgba(16, 8, 29, 0.95);
+    border-top: 2px solid var(--border-pop);
+    padding: 10px;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: #9d8ec2;
+    font-size: 22px;
+    padding: 8px 16px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.nav-btn span.label {
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.nav-btn.active, .nav-btn:hover {
+    color: var(--color-primary);
+    background: rgba(255, 101, 163, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(8px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.modal-content {
+    background: #24163a;
+    border: 2.5px solid var(--color-primary);
+    border-radius: 28px;
+    padding: 24px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.starter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.starter-card {
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.starter-card:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-4px) scale(1.05);
+    background: rgba(255, 101, 163, 0.25);
+}
+
+.btn {
+    padding: 12px 20px;
+    border-radius: 16px;
+    border: none;
+    font-weight: 900;
+    font-size: 14px;
+    cursor: pointer;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+    color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 101, 163, 0.5);
+}
