@@ -1,6 +1,17 @@
 /**
- * Pokemon-Style 2D RPG - Turn-based Battle & Catching Module
+ * PokéTama Story RPG - Battle & 100-Dex Catch Engine
  */
+
+const GYM_LEADERS_DATABASE = [
+    { rank: 1, name: 'タケシ', town: 'ヒワダジム', badgeName: 'グレーバッジ', enemyId: 'grass_2', level: 12, prize: 1500 },
+    { rank: 2, name: 'カスミ', town: 'ハナダジム', badgeName: 'ブルーバッジ', enemyId: 'water_2', level: 18, prize: 3000 },
+    { rank: 3, name: 'マチス', town: 'クチバジム', badgeName: 'オレンジバッジ', enemyId: 'fire_2', level: 25, prize: 5000 },
+    { rank: 4, name: 'エリカ', town: 'タマムシジム', badgeName: 'レインボーバッジ', enemyId: 'grass_3', level: 32, prize: 8000 },
+    { rank: 5, name: 'キョウ', town: 'セキチクジム', badgeName: 'ピンクバッジ', enemyId: 'water_3', level: 40, prize: 12000 },
+    { rank: 6, name: 'ナツメ', town: 'ヤマブキジム', badgeName: 'ゴールドバッジ', enemyId: 'fire_3', level: 48, prize: 18000 },
+    { rank: 7, name: 'カツラ', town: 'グレンジム', badgeName: 'クリムゾンバッジ', enemyId: 'fire_3', level: 56, prize: 25000 },
+    { rank: 8, name: 'サカキ', town: 'トキワジム (最終話)', badgeName: 'アースバッジ', enemyId: 'fire_3', level: 65, prize: 50000 }
+];
 
 const BattleModule = {
     activeBattle: null,
@@ -8,18 +19,19 @@ const BattleModule = {
     startWildEncounter() {
         if (gameEngine.party.length === 0) return;
 
-        const wildPool = ['wild_bird', 'wild_bug', 'fire_1', 'water_1', 'grass_1'];
-        const wildId = wildPool[Math.floor(Math.random() * wildPool.length)];
-        const wildLvl = Math.floor(Math.random() * 3) + 2; // Level 2~4
+        // Pick random species from ALL_100_POKETAMA_LIST
+        const randIndex = Math.floor(Math.random() * ALL_100_POKETAMA_LIST.length);
+        const spec = ALL_100_POKETAMA_LIST[randIndex] || MONSTERS_DATABASE.fire_1;
+        const wildLvl = Math.floor(Math.random() * 4) + 3; // Level 3~6
 
-        const enemyMon = gameEngine.createPokemonInstance(wildId, wildLvl);
+        const enemyMon = gameEngine.createPoketamaInstance(spec.id, wildLvl);
         const playerMon = gameEngine.party.find(p => p.hp > 0) || gameEngine.party[0];
 
         this.activeBattle = {
             isGym: false,
             playerMon,
             enemyMon,
-            log: [`あせっ！ 野生の「${enemyMon.name}」(Lv.${enemyMon.level}) が飛び出してきた！`]
+            log: [`あせっ！ 野生の「${enemyMon.name}」(図鑑#${enemyMon.dexNo}) が飛び出してきた！`]
         };
 
         if (window.UIController) {
@@ -30,15 +42,19 @@ const BattleModule = {
     startGymBattle() {
         if (gameEngine.party.length === 0) return;
 
-        const enemyMon = gameEngine.createPokemonInstance('gym_leader_1', 14);
-        enemyMon.name = 'ジムリーダー [イワザル]';
+        const badgeCount = gameEngine.player.badgeCount || 0;
+        const gym = GYM_LEADERS_DATABASE[badgeCount] || GYM_LEADERS_DATABASE[GYM_LEADERS_DATABASE.length - 1];
+
+        const enemyMon = gameEngine.createPoketamaInstance(gym.enemyId, gym.level);
+        enemyMon.name = `ジムリーダー [${gym.name}] の ${enemyMon.name}`;
         const playerMon = gameEngine.party.find(p => p.hp > 0) || gameEngine.party[0];
 
         this.activeBattle = {
             isGym: true,
+            gym,
             playerMon,
             enemyMon,
-            log: [`🏰 ジムリーダーのイワザルが勝負を仕掛けてきた！`]
+            log: [`🏆 ${gym.town}！ ジムリーダーの${gym.name}が勝負を仕掛けてきた！`]
         };
 
         if (window.UIController) {
@@ -54,7 +70,7 @@ const BattleModule = {
 
         const moveObj = MOVES_DATABASE[moveId] || MOVES_DATABASE.tackle;
 
-        // Element effectiveness
+        // Element Effectiveness
         let mult = 1.0;
         if (ELEMENT_TYPES[moveObj.type]) {
             const mType = ELEMENT_TYPES[moveObj.type];
@@ -66,27 +82,30 @@ const BattleModule = {
         const dmg = Math.floor(rawDmg * (0.85 + Math.random() * 0.3));
 
         e.hp = Math.max(0, e.hp - dmg);
-        b.log.unshift(`⚔️ ${p.name}の「${moveObj.name}」！ ${e.name}に ${dmg} ダメージ！${mult > 1 ? ' (効果抜群！)' : ''}`);
+        b.log.unshift(`⚔️ ${p.name}の「${moveObj.name}」！ ${e.name}に ${dmg} ダメージ！${mult > 1 ? ' (効果は抜群だ！)' : ''}`);
 
         // Check Enemy KO
         if (e.hp <= 0) {
             b.log.unshift(`🎉 野生の ${e.name} は倒れた！ 勝利！`);
+
+            // Register to Dex
+            gameEngine.dex[e.speciesId] = true;
             
             // EXP Gain
-            const expGained = e.level * 28;
+            const expGained = e.level * 32;
             p.exp += expGained;
-            b.log.unshift(`🌟 ${p.name}は ${expGained} EXP を獲得した！`);
+            b.log.unshift(`🌟 ${p.name}は ${expGained} EXP を獲得！`);
 
             // Level Up Check
             while (p.exp >= p.maxExp) {
                 p.exp -= p.maxExp;
                 p.level += 1;
                 p.maxExp = p.level * p.level * 8;
-                p.maxHp += 8;
+                p.maxHp += 10;
                 p.hp = p.maxHp;
-                p.atk += 5;
-                p.def += 4;
-                p.spd += 4;
+                p.atk += 6;
+                p.def += 5;
+                p.spd += 5;
                 b.log.unshift(`✨ おめでとう！ ${p.name}は Lv.${p.level} へレベルアップ！`);
 
                 // Evolution Check
@@ -96,15 +115,16 @@ const BattleModule = {
                     if (nextSpec) {
                         p.speciesId = nextSpec.id;
                         p.name = nextSpec.name;
-                        b.log.unshift(`進化！！ ${p.name}へ進化を遂げた！`);
+                        gameEngine.dex[nextSpec.id] = true;
+                        b.log.unshift(`✨ 進化！！ ${p.name}へ姿が大きく進化した！`);
                     }
                 }
             }
 
-            if (b.isGym) {
-                gameEngine.player.badgeCount += 1;
-                gameEngine.player.money += 2000;
-                b.log.unshift(`🏆 ジムバッジを獲得！ 賞金 2000 G を得た！`);
+            if (b.isGym && b.gym) {
+                gameEngine.player.badgeCount = Math.min(8, (gameEngine.player.badgeCount || 0) + 1);
+                gameEngine.player.money += b.gym.prize;
+                b.log.unshift(`🏆 【${b.gym.badgeName}】を獲得！ 賞金 ${b.gym.prize} G を手に入れた！`);
             }
 
             gameEngine.saveState();
@@ -133,7 +153,7 @@ const BattleModule = {
         b.log.unshift(`💥 ${e.name}の「${moveObj.name}」！ ${p.name}は ${dmg} ダメージを受けた！`);
 
         if (p.hp <= 0) {
-            b.log.unshift(`💀 ${p.name}は倒れてしまった... モンスターセンターで回復しましょう。`);
+            b.log.unshift(`💀 ${p.name}は倒れてしまった... ポケタマセンターで回復しましょう。`);
             gameEngine.saveState();
             setTimeout(() => {
                 if (window.UIController) window.UIController.closeBattleOverlay();
@@ -151,13 +171,13 @@ const BattleModule = {
                 return;
             }
             gameEngine.player.items.potion--;
-            b.playerMon.hp = Math.min(b.playerMon.maxHp, b.playerMon.hp + 40);
-            b.log.unshift(`🧪 キズぐすりを使用！ ${b.playerMon.name}のHPが 40 回復した！`);
+            b.playerMon.hp = Math.min(b.playerMon.maxHp, b.playerMon.hp + 45);
+            b.log.unshift(`🧪 キズぐすりを使用！ ${b.playerMon.name}のHPが 45 回復した！`);
             gameEngine.saveState();
             this.executeEnemyMove();
         } else if (itemType === 'pokeball') {
             if (b.isGym) {
-                alert('ジムリーダーのポケモンは捕まえられません！');
+                alert('ジムリーダーのポケタマは捕まえられません！');
                 return;
             }
             if (gameEngine.player.items.pokeball <= 0) {
@@ -167,16 +187,20 @@ const BattleModule = {
             gameEngine.player.items.pokeball--;
             b.log.unshift(`⚾ モンスターボールを投げた！`);
 
-            // Catch Chance formula
-            const catchRate = (b.enemyMon.maxHp - b.enemyMon.hp) / b.enemyMon.maxHp + 0.35;
+            // Catch Chance
+            const catchRate = (b.enemyMon.maxHp - b.enemyMon.hp) / b.enemyMon.maxHp + 0.4;
             if (Math.random() < catchRate) {
-                b.log.unshift(`🎉 やったー！ 野生の「${b.enemyMon.name}」を捕まえた！`);
-                gameEngine.addPokemonToPartyOrPC(b.enemyMon);
+                b.log.unshift(`🎉 やったー！ 野生の「${b.enemyMon.name}」(図鑑#${b.enemyMon.dexNo}) を捕まえた！`);
+                gameEngine.addPoketamaToParty(b.enemyMon);
+                
+                const dexProgress = gameEngine.getDexProgress();
+                b.log.unshift(`📖 全100種図鑑に登録！ （現在: ${dexProgress.caughtCount} / 100 種類）`);
+
                 setTimeout(() => {
                     if (window.UIController) window.UIController.closeBattleOverlay();
-                }, 1600);
+                }, 1800);
             } else {
-                b.log.unshift(`❌ あと一歩！ モンスターボールから抜け出された！`);
+                b.log.unshift(`❌ あと少し！ ボールから逃げ出された！`);
                 this.executeEnemyMove();
             }
         }

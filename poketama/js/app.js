@@ -1,22 +1,23 @@
 /**
- * Pokemon-Style 2D RPG - Application Entry Point
+ * app.js
+ * PokéTama Story RPG Main Application Entry Point
  */
-
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Initialize Game Engine State
-    gameEngine.init();
+    // 1. Initialize Game Engine (Load Save Data)
+    window.gameEngine.init();
 
-    // 2. Initialize 2D Canvas Map Engine
-    MapEngine.init('map-canvas');
+    // 2. Initialize UI Controller
+    window.UIController.init();
 
-    // 3. Initialize UI Controller
-    UIController.init();
-
-    // 4. Prompt Starter Pokemon Select Modal if Party is Empty
-    if (!gameEngine.party || gameEngine.party.length === 0) {
-        setTimeout(() => {
-            const starterModal = document.getElementById('modal-starter');
-            if (starterModal) starterModal.style.display = 'flex';
-        }, 400);
+    // 3. Check save state: Has the user completed Prof. Tamaki's intro?
+    if (window.gameEngine.hasSeenIntro) {
+        // Resume saved journey directly at Main Dashboard
+        window.UIController.switchView('main-dashboard');
+        window.UIController.updatePartyList();
+        window.UIController.updateProgressBanner();
+    } else {
+        // Start fresh: Begin Prof. Tamaki prologue dialogue sequence
+        window.UIController.switchView('prof-intro');
+        window.StoryModule.init();
     }
 });

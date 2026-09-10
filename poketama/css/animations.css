@@ -1,31 +1,47 @@
 /* ==========================================================================
-   Pokemon-Style 2D RPG Keyframe Animations & Micro-Interactions
+   PokéTama Story RPG Animations
    ========================================================================== */
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes profBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+@keyframes starterGlow {
+    0% { filter: drop-shadow(0 0 8px rgba(255, 101, 163, 0.4)); transform: scale(1); }
+    50% { filter: drop-shadow(0 0 22px rgba(255, 224, 102, 0.9)); transform: scale(1.05); }
+    100% { filter: drop-shadow(0 0 8px rgba(255, 101, 163, 0.4)); transform: scale(1); }
+}
+
+@keyframes blinkCursor {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
 }
 
 @keyframes encounterFlash {
     0% { filter: brightness(1) contrast(1); }
     20% { filter: brightness(4) contrast(2) drop-shadow(0 0 40px #ffffff); }
     40% { filter: brightness(0.1); }
-    60% { filter: brightness(3) drop-shadow(0 0 30px #ffdd55); }
+    60% { filter: brightness(3) drop-shadow(0 0 30px #ffe066); }
     80% { filter: brightness(0.2); }
     100% { filter: brightness(1) contrast(1); }
 }
 
 @keyframes throwBall {
-    0% { transform: translate(-100px, 120px) scale(0.5) rotate(0deg); opacity: 1; }
-    50% { transform: translate(60px, -80px) scale(1.1) rotate(360deg); opacity: 1; }
-    100% { transform: translate(140px, 10px) scale(0.8) rotate(720deg); opacity: 1; }
+    0% { transform: translate(-120px, 120px) scale(0.5) rotate(0deg); opacity: 1; }
+    50% { transform: translate(70px, -90px) scale(1.2) rotate(360deg); opacity: 1; }
+    100% { transform: translate(150px, 15px) scale(0.85) rotate(720deg); opacity: 1; }
 }
 
 @keyframes ballWasp {
     0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-22deg); }
-    75% { transform: rotate(22deg); }
+    25% { transform: rotate(-25deg); }
+    75% { transform: rotate(25deg); }
 }
 
 @keyframes hitShake {
@@ -36,24 +52,20 @@
     80% { transform: translateX(8px); }
 }
 
-@keyframes pulseGlow {
-    0% { filter: drop-shadow(0 0 5px #ffcc00); }
-    50% { filter: drop-shadow(0 0 20px #ffcc00); }
-    100% { filter: drop-shadow(0 0 5px #ffcc00); }
+.prof-avatar-active {
+    animation: profBounce 3s infinite ease-in-out;
 }
 
-.encounter-flash-active {
-    animation: encounterFlash 0.8s ease-in-out forwards;
+.starter-glow-active {
+    animation: starterGlow 2s infinite ease-in-out;
 }
 
-.throw-ball-active {
-    animation: throwBall 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-}
-
-.ball-wasp-active {
-    animation: ballWasp 0.6s ease-in-out infinite;
-}
-
-.monster-hit-active {
-    animation: hitShake 0.5s ease-in-out;
+.typewriter-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: #ffffff;
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blinkCursor 0.8s infinite;
 }

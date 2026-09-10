@@ -3,162 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ポケモン風 2Dマップ・アドベンチャーRPG</title>
-    <meta name="description" content="2Dマップを自由に歩き回り、草むらでモンスターを捕獲し、ジムリーダー戦やリーグ制覇を目指す本格HTML5レトロRPG！">
+    <title>ポケタマ 冒険RPG 〜リーグ優勝と100種図鑑〜</title>
+    <meta name="description" content="タマキ博士とともに冒険へ！各地のジムを倒しポケタマリーグ優勝、全100種類のポケタマ図鑑完成を目指すストーリー型冒険RPG！">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
 
 <div id="app-wrapper">
-    <!-- Console Header Bar -->
-    <header class="console-header">
+    <!-- Header Status Bar -->
+    <header class="app-header">
         <div class="brand-title">
             <span style="font-size: 20px;">🎒</span>
-            <span>ポケモンスターRPG</span>
+            <span>ポケタマ 冒険RPG</span>
         </div>
-        <div class="header-badges">
-            <div class="header-badge-item" style="color: #ffd15c;">🏆 バッジ: <span id="header-badges-val">0</span></div>
-            <div class="header-badge-item" style="color: #ff5544;">⚾ ボール: <span id="header-balls-val">5</span></div>
-            <div class="header-badge-item" style="color: #52e077;">🪙 <span id="header-money-val">1000</span>G</div>
+        <div class="header-progress-box">
+            <div class="progress-pill" style="color: var(--border-gold);">🏆 バッジ: <span id="header-badges-val">0</span>/8</div>
+            <div class="progress-pill" style="color: var(--color-mint);">📖 図鑑: <span id="header-dex-val">1</span>/100</div>
+            <div class="progress-pill" style="color: var(--color-cyan);">🪙 <span id="header-gold-val">1000</span>G</div>
         </div>
     </header>
 
-    <!-- Game Screen Viewport -->
-    <div class="game-viewport-container">
-        <!-- 2D Map Canvas (320x320) -->
-        <canvas id="map-canvas"></canvas>
-
-        <!-- Battle Overlay Screen -->
-        <div class="battle-overlay-view" id="battle-overlay">
-            <div class="battle-stage-row">
-                <!-- Player Unit Left -->
-                <div class="player-platform-box">
-                    <div class="unit-status-card">
-                        <div style="display:flex; justify-content:space-between;">
-                            <span id="battle-player-name" style="color:#ff65a3;">---</span>
-                            <span id="battle-player-level" style="color:#ffd15c;">Lv.5</span>
-                        </div>
-                        <div class="unit-hp-bar-bg">
-                            <div class="unit-hp-bar-fill" id="battle-player-hp-fill" style="width: 100%;"></div>
-                        </div>
-                        <div style="font-size: 9px; text-align: right; color: #aaa; margin-top: 2px;" id="battle-player-hp-text">--/--</div>
-                    </div>
-                    <div class="battle-unit-sprite" id="battle-player-sprite"></div>
-                </div>
-
-                <!-- Enemy Unit Right -->
-                <div class="enemy-platform-box">
-                    <div class="unit-status-card">
-                        <div style="display:flex; justify-content:space-between;">
-                            <span id="battle-enemy-name" style="color:#40c4ff;">---</span>
-                            <span id="battle-enemy-level" style="color:#ffd15c;">Lv.3</span>
-                        </div>
-                        <div class="unit-hp-bar-bg">
-                            <div class="unit-hp-bar-fill" id="battle-enemy-hp-fill" style="width: 100%;"></div>
-                        </div>
-                    </div>
-                    <div class="battle-unit-sprite" id="battle-enemy-sprite"></div>
-                </div>
-            </div>
-
-            <!-- Game Boy Command / Log Window -->
-            <div class="gb-message-box">
-                <div id="battle-log-text" style="height: 55px; overflow-y: auto;">
-                    あせっ！ 野生のモンスターが飛び出してきた！
-                </div>
-
-                <div class="battle-commands-grid" id="battle-cmds-box">
-                    <button class="cmd-btn" id="btn-cmd-fight">⚔️ たたかう</button>
-                    <button class="cmd-btn" id="btn-cmd-bag">🎒 どうぐ</button>
-                    <button class="cmd-btn" id="btn-cmd-party">🐾 ポケモン</button>
-                    <button class="cmd-btn" id="btn-cmd-run">🏃 にげる</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Virtual D-Pad & Control Deck -->
-    <div class="console-controls-deck">
-        <!-- Cross D-Pad -->
-        <div class="dpad-container">
-            <button class="dpad-btn dpad-up" id="btn-dpad-up">▲</button>
-            <button class="dpad-btn dpad-down" id="btn-dpad-down">▼</button>
-            <button class="dpad-btn dpad-left" id="btn-dpad-left">◀</button>
-            <button class="dpad-btn dpad-right" id="btn-dpad-right">▶</button>
-            <div class="dpad-center"></div>
-        </div>
-
-        <!-- AB Action Buttons -->
-        <div class="action-buttons-group">
-            <button class="ab-btn ab-btn-menu" id="btn-action-menu">メニュー</button>
-            <button class="ab-btn" id="btn-action-b">B</button>
-            <button class="ab-btn" id="btn-action-a">A</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL 1: STARTER POKEMON SELECT -->
-<div class="modal-overlay" id="modal-starter">
-    <div class="modal-card">
-        <h2 style="color: var(--border-gold); text-align: center; margin-bottom: 6px;">✨ パートナー選択</h2>
-        <p style="font-size: 12px; color: #b39ddb; text-align: center; margin-bottom: 14px;">最初の相棒となるポケモンを選んで冒険に出発しよう！</p>
+    <!-- Main View Router Container -->
+    <div class="app-body">
         
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-            <div class="cmd-btn" style="padding: 12px; display:flex; flex-direction:column; align-items:center;" onclick="UIController.chooseStarter('fire_1')">
-                <div style="width: 60px; height: 60px;">
-                    <!-- SVG -->
+        <!-- VIEW 1: PROFESSOR TAMAKI INTRO (タマキ博士の研究所) -->
+        <section id="view-prof-intro" class="view-page active">
+            <div class="prof-intro-container">
+                <div style="font-weight: 900; font-size: 16px; color: var(--border-gold);">👨‍🔬 ポケタマ研究所</div>
+
+                <div class="prof-stage">
+                    <div id="prof-avatar-box"></div>
                 </div>
-                <div style="font-size: 13px; color: #ff5544; font-weight: 900; margin-top: 4px;">ヒノコ</div>
-                <small style="font-size: 9px; color: #aaa;">ほのおポケモン</small>
+
+                <div class="prof-dialogue-card" id="prof-dialogue-card" onclick="StoryModule.advanceDialogue()">
+                    <div style="font-weight: 900; font-size: 13px; color: var(--color-primary); margin-bottom: 4px;">タマキ博士</div>
+                    <div id="prof-dialogue-text">---</div>
+                    <div style="text-align: right; margin-top: 8px;">
+                        <button class="btn" id="btn-dialogue-next" style="padding: 6px 14px; font-size: 12px;">次へ ➔</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: STARTER POKETAMA SELECT (パートナー選択) -->
+        <section id="view-starter-select" class="view-page">
+            <div class="starter-container">
+                <h2 style="color: var(--border-gold); text-align: center; margin-top: 10px;">🐾 最初のパートナーを選択</h2>
+                <p style="font-size: 12px; color: #b39ddb; text-align: center; margin-top: 4px;">
+                    リーグ優勝と100種図鑑完成をともに目指す相棒を選ぼう！
+                </p>
+
+                <div class="starter-cards-grid">
+                    <!-- Starter 1: Fire Fox -->
+                    <div class="starter-card starter-glow-active" onclick="UIController.chooseStarter('fire_1')">
+                        <div class="starter-illustration" id="svg-starter-fire"></div>
+                        <div style="font-weight: 900; font-size: 16px; color: var(--color-primary);">フラン</div>
+                        <span style="font-size: 11px; color: #ff9a3c; font-weight: 800;">🔥 ほのお狐ポケタマ</span>
+                        <small style="font-size: 10px; color: #d1c4e9; text-align: center;">攻撃力が高く熱いバトルが得意！</small>
+                    </div>
+
+                    <!-- Starter 2: Water Bunny -->
+                    <div class="starter-card" onclick="UIController.chooseStarter('water_1')">
+                        <div class="starter-illustration" id="svg-starter-water"></div>
+                        <div style="font-weight: 900; font-size: 16px; color: var(--color-cyan);">マリン</div>
+                        <span style="font-size: 11px; color: #a6edff; font-weight: 800;">💧 みずウサギポケタマ</span>
+                        <small style="font-size: 10px; color: #d1c4e9; text-align: center;">防御力が高く粘り強い！</small>
+                    </div>
+
+                    <!-- Starter 3: Grass Squirrel -->
+                    <div class="starter-card" onclick="UIController.chooseStarter('grass_1')">
+                        <div class="starter-illustration" id="svg-starter-grass"></div>
+                        <div style="font-weight: 900; font-size: 16px; color: var(--color-mint);">フォリス</div>
+                        <span style="font-size: 11px; color: #d6ff99; font-weight: 800;">🌿 くさリスポケタマ</span>
+                        <small style="font-size: 10px; color: #d1c4e9; text-align: center;">素早く先制攻撃が得意！</small>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;"></div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: MAIN JOURNEY DASHBOARD (冒険マップ) -->
+        <section id="view-main-dashboard" class="view-page">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h2 style="color: var(--border-gold); font-size: 18px;">🗺️ 冒険マップ・タウン</h2>
+                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px;" onclick="UIController.openDexModal()">📖 100種図鑑を見る</button>
             </div>
 
-            <div class="cmd-btn" style="padding: 12px; display:flex; flex-direction:column; align-items:center;" onclick="UIController.chooseStarter('water_1')">
-                <div style="width: 60px; height: 60px;">
-                    <!-- SVG -->
+            <div class="dashboard-grid">
+                <!-- Card 1: Wild Route 1 Exploration -->
+                <div class="dash-card">
+                    <div>
+                        <div style="font-size: 28px;">🌿</div>
+                        <h3 style="color: var(--color-mint); font-size: 16px;">1号道路・草むら探索</h3>
+                        <p style="font-size: 11px; color: #b39ddb; margin-top: 4px;">野生のポケタマと遭遇！ボールを投げて捕獲し【全100種類図鑑】を完成させよう！</p>
+                    </div>
+                    <button class="btn" style="width: 100%;" onclick="BattleModule.startWildEncounter()">
+                        🌿 草むらを探索する (野生遭遇)
+                    </button>
                 </div>
-                <div style="font-size: 13px; color: #33aaff; font-weight: 900; margin-top: 4px;">アクアプニ</div>
-                <small style="font-size: 9px; color: #aaa;">みずポケモン</small>
+
+                <!-- Card 2: Gym Leader Battle & League -->
+                <div class="dash-card">
+                    <div>
+                        <div style="font-size: 28px;">🏰</div>
+                        <h3 style="color: var(--border-gold); font-size: 16px;">ポケタマリーグ・ジム館</h3>
+                        <p style="font-size: 11px; color: #b39ddb; margin-top: 4px;">各地の8人のジムリーダーに挑戦し、バッジを集めて【ポケタマリーグ優勝】を目指そう！</p>
+                    </div>
+                    <button class="btn" style="width: 100%; background: linear-gradient(90deg, #ff9a3c, #ffe066); color: #10061e;" onclick="BattleModule.startGymBattle()">
+                        🏆 ジムリーダーに挑戦！
+                    </button>
+                </div>
+
+                <!-- Card 3: Poketama Center Heal -->
+                <div class="dash-card">
+                    <div>
+                        <div style="font-size: 28px;">🏥</div>
+                        <h3 style="color: var(--color-cyan); font-size: 16px;">ポケタマセンター</h3>
+                        <p style="font-size: 11px; color: #b39ddb; margin-top: 4px;">手持ちのパートナーたちのHPを全回復します。</p>
+                    </div>
+                    <button class="btn btn-secondary" style="width: 100%;" onclick="UIController.healParty()">
+                        💖 全員を全回復する
+                    </button>
+                </div>
+
+                <!-- Card 4: Party Overview -->
+                <div class="dash-card">
+                    <div>
+                        <div style="font-size: 28px;">🐾</div>
+                        <h3 style="color: var(--color-primary); font-size: 16px;">旅の仲間 (手持ち)</h3>
+                        <div id="dash-lead-mon-info" style="font-size: 11px; color: #ffffff; margin-top: 4px;">---</div>
+                    </div>
+                    <button class="btn" style="width: 100%; background: rgba(255,255,255,0.15);" onclick="UIController.openPartyModal()">
+                        🐾 手持ちパーティ一覧
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- OVERLAY VIEW: BATTLE VIEW -->
+    <div class="battle-overlay" id="view-battle-overlay">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 8px;">
+            <h3 id="battle-title-text" style="color: var(--border-gold);">⚔️ 野生ポケタマ戦</h3>
+            <span style="font-size: 11px; color: var(--color-mint);" id="battle-dex-badge">図鑑記録中</span>
+        </div>
+
+        <div class="battle-arena-row">
+            <!-- Player Unit Left -->
+            <div class="battle-unit-box">
+                <div class="unit-card">
+                    <div style="display:flex; justify-space-between;">
+                        <span id="battle-player-name" style="color: var(--color-primary);">---</span>
+                        <span id="battle-player-level" style="color: var(--border-gold);">Lv.5</span>
+                    </div>
+                    <div class="unit-hp-bar">
+                        <div class="unit-hp-fill" id="battle-player-hp-fill" style="width: 100%;"></div>
+                    </div>
+                </div>
+                <div style="width: 100px; height: 100px; margin-top: 6px;" id="battle-player-svg"></div>
             </div>
 
-            <div class="cmd-btn" style="padding: 12px; display:flex; flex-direction:column; align-items:center;" onclick="UIController.chooseStarter('grass_1')">
-                <div style="width: 60px; height: 60px;">
-                    <!-- SVG -->
+            <!-- Enemy Unit Right -->
+            <div class="battle-unit-box">
+                <div class="unit-card">
+                    <div style="display:flex; justify-space-between;">
+                        <span id="battle-enemy-name" style="color: var(--color-cyan);">---</span>
+                        <span id="battle-enemy-level" style="color: var(--border-gold);">Lv.3</span>
+                    </div>
+                    <div class="unit-hp-bar">
+                        <div class="unit-hp-fill" id="battle-enemy-hp-fill" style="width: 100%;"></div>
+                    </div>
                 </div>
-                <div style="font-size: 13px; color: #44dd66; font-weight: 900; margin-top: 4px;">ポコリーフ</div>
-                <small style="font-size: 9px; color: #aaa;">くさポケモン</small>
+                <div style="width: 100px; height: 100px; margin-top: 6px;" id="battle-enemy-svg"></div>
+            </div>
+        </div>
+
+        <!-- Log Box & Commands -->
+        <div style="background: rgba(10, 4, 20, 0.95); border: 2px solid var(--border-gold); border-radius: 18px; padding: 12px;">
+            <div id="battle-log-text" style="height: 60px; overflow-y: auto; font-size: 12px; line-height: 1.4; color: #ddd; margin-bottom: 8px;">
+                野生のポケタマが飛び出してきた！
+            </div>
+
+            <div class="battle-moves-grid" id="battle-cmds-box">
+                <button class="btn" onclick="UIController.showFightSubMenu()">⚔️ たたかう</button>
+                <button class="btn btn-secondary" onclick="UIController.showBagSubMenu()">🎒 どうぐ</button>
+                <button class="btn btn-secondary" onclick="UIController.openPartyModal()">🐾 交代</button>
+                <button class="btn" style="background: #555;" onclick="BattleModule.runAway()">🏃 にげる</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- MODAL 2: PARTY & BAG MENU -->
-<div class="modal-overlay" id="modal-menu">
+<!-- MODAL 1: 100-DEX MODAL -->
+<div class="modal-overlay" id="modal-dex">
     <div class="modal-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="color: var(--border-gold);">🎒 メインメニュー</h3>
-            <button class="cmd-btn" style="padding: 4px 10px;" onclick="UIController.closeMenuModal()">✕ 閉じる</button>
+            <h3 style="color: var(--border-gold);">📖 全100種類 ポケタマ図鑑</h3>
+            <button class="btn" style="padding: 4px 10px; font-size: 11px;" onclick="UIController.closeDexModal()">✕ 閉じる</button>
         </div>
 
-        <div style="margin-bottom: 14px;">
-            <h4 style="color: #ff5544; font-size: 13px; margin-bottom: 6px;">🐾 手持ちポケモン (最大6体)</h4>
-            <div id="party-list-box" style="display: flex; flex-direction: column; gap: 6px;">
-                <!-- Rendered dynamically -->
-            </div>
+        <div style="font-size: 12px; color: var(--color-mint); margin-bottom: 12px; text-align: center; font-weight: 800;">
+            図鑑達成度: <span id="dex-modal-caught-count">1</span> / 100 種類発見！
         </div>
 
-        <div>
-            <h4 style="color: #52e077; font-size: 13px; margin-bottom: 6px;">🎒 どうぐ</h4>
-            <div id="items-list-box" style="font-size: 12px; color: #ddd; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px;">
-                <!-- Rendered dynamically -->
-            </div>
+        <div id="dex-grid-100" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px;">
+            <!-- 100 Dex Entries Rendered Dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: PARTY MODAL -->
+<div class="modal-overlay" id="modal-party">
+    <div class="modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="color: var(--color-primary);">🐾 手持ちパートナー一覧</h3>
+            <button class="btn" style="padding: 4px 10px; font-size: 11px;" onclick="UIController.closePartyModal()">✕ 閉じる</button>
+        </div>
+
+        <div id="party-modal-list" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Rendered dynamically -->
         </div>
     </div>
 </div>
 
 <script src="js/config/monsters.js"></script>
-<script src="js/core/map.js"></script>
 <script src="js/core/game.js"></script>
+<script src="js/modules/story.js"></script>
 <script src="js/modules/battle.js"></script>
 <script src="js/modules/ui.js"></script>
 <script src="js/app.js"></script>
