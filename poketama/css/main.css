@@ -248,24 +248,72 @@ body {
     padding: 12px;
     min-height: 44px;
     background: var(--bg-glass);
-    border: 1.5px solid rgba(255, 255, 255, 0.15);
-    border-radius: 18px;
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
     color: #fff;
     font-size: 14px;
     font-weight: 800;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.btn-action:hover {
-    background: rgba(162, 217, 106, 0.25);
-    border-color: var(--color-primary);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(162, 217, 106, 0.35);
+#btn-feed {
+    background: linear-gradient(135deg, #ff6b5b, #ff4081);
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 15px rgba(255, 107, 91, 0.4);
+}
+#btn-feed:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 8px 22px rgba(255, 107, 91, 0.6);
+}
+
+#btn-pet {
+    background: linear-gradient(135deg, #ff65a3, #f06292);
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 15px rgba(255, 101, 163, 0.4);
+}
+#btn-pet:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 8px 22px rgba(255, 101, 163, 0.6);
+}
+
+#btn-clean {
+    background: linear-gradient(135deg, #40c4ff, #00b0ff);
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 15px rgba(64, 196, 255, 0.4);
+}
+#btn-clean:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 8px 22px rgba(64, 196, 255, 0.6);
+}
+
+#btn-sleep {
+    background: linear-gradient(135deg, #ab47bc, #7e57c2);
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 15px rgba(171, 71, 188, 0.4);
+}
+#btn-sleep:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 8px 22px rgba(171, 71, 188, 0.6);
+}
+
+#btn-train {
+    background: linear-gradient(135deg, #52e077, #00e676) !important;
+    color: #0b1a0e !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 4px 15px rgba(82, 224, 119, 0.4) !important;
+}
+#btn-train:hover {
+    transform: translateY(-3px) scale(1.03) !important;
+    box-shadow: 0 8px 22px rgba(82, 224, 119, 0.6) !important;
 }
 
 .btn-action:active {
-    transform: scale(0.97);
+    transform: scale(0.95);
 }
 
 /* Care Stats Sidebar */

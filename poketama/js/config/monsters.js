@@ -3,10 +3,10 @@
  */
 
 const ELEMENT_TYPES = {
-    fire: { name: '炎', color: '#ff5544', bg: 'rgba(255, 85, 68, 0.15)', icon: '🔥', weak: 'water', strong: 'grass' },
-    water: { name: '水', color: '#33aaff', bg: 'rgba(51, 170, 255, 0.15)', icon: '💧', weak: 'grass', strong: 'fire' },
-    grass: { name: '草', color: '#44dd66', bg: 'rgba(68, 221, 102, 0.15)', icon: '🌿', weak: 'fire', strong: 'water' },
-    cyber: { name: '電脳', color: '#cc66ff', bg: 'rgba(204, 102, 255, 0.15)', icon: '🔮', weak: 'grass', strong: 'water' }
+    fire: { name: '炎', color: '#ff6b5b', bg: 'rgba(255, 107, 91, 0.2)', icon: '🔥', weak: 'water', strong: 'grass' },
+    water: { name: '水', color: '#40c4ff', bg: 'rgba(64, 196, 255, 0.2)', icon: '💧', weak: 'grass', strong: 'fire' },
+    grass: { name: '草', color: '#52e077', bg: 'rgba(82, 224, 119, 0.2)', icon: '🌿', weak: 'fire', strong: 'water' },
+    cyber: { name: '電脳', color: '#e056fd', bg: 'rgba(224, 86, 253, 0.2)', icon: '🔮', weak: 'grass', strong: 'water' }
 };
 
 const STAGES = {
@@ -363,34 +363,40 @@ function renderMonsterSVG(id, options = {}) {
     let mainColor = elem.color;
     let accentColor = '#ffffff';
     let earInnerColor = '#ffffff';
-    let borderColor = '#121c16';
+    let borderColor = '#231830';
 
     if (monster.element === 'fire') {
-        accentColor = '#ffcc00';
-        earInnerColor = '#ff9900';
+        accentColor = '#ffdd55';
+        earInnerColor = '#ff8833';
     } else if (monster.element === 'water') {
-        accentColor = '#88e0ff';
-        earInnerColor = '#3388ff';
+        accentColor = '#a6edff';
+        earInnerColor = '#2979ff';
     } else if (monster.element === 'grass') {
-        accentColor = '#aaff66';
-        earInnerColor = '#33cc55';
+        accentColor = '#d6ff99';
+        earInnerColor = '#00e676';
     } else { // cyber
-        accentColor = '#00ffff';
-        earInnerColor = '#aa00ff';
+        accentColor = '#00e5ff';
+        earInnerColor = '#d500f9';
     }
 
-    // --- 32x32 PIXEL EXPRESSIONS ---
-    let eyePixels = drawP([
-        [10,12,3,4, '#111827'], [10,12,1,2, '#ffffff'],
-        [19,12,3,4, '#111827'], [19,12,1,2, '#ffffff']
+    // --- POP CUTE BLUSH CHEEKS ---
+    const blushPixels = drawP([
+        [7,16,3,2, 'rgba(255, 120, 160, 0.85)'],
+        [22,16,3,2, 'rgba(255, 120, 160, 0.85)']
     ]);
 
-    let mouthPixels = drawP([[15,17,2,1, '#111827']]);
+    // --- 32x32 POP EYE EXPRESSIONS ---
+    let eyePixels = drawP([
+        [10,12,3,4, '#231830'], [10,12,1,2, '#ffffff'], [12,14,1,1, '#ffffff'],
+        [19,12,3,4, '#231830'], [19,12,1,2, '#ffffff'], [21,14,1,1, '#ffffff']
+    ]);
+
+    let mouthPixels = drawP([[14,17,4,2, '#ff4477'], [15,17,2,1, '#ffffff']]);
     let emotionOverlay = '';
 
     if (emotion === 'sleep') {
         eyePixels = drawP([
-            [10,14,4,1, '#111827'], [18,14,4,1, '#111827']
+            [10,14,4,1, '#231830'], [18,14,4,1, '#231830']
         ]);
         mouthPixels = drawP([[15,16,2,2, '#ff6688']]);
         emotionOverlay = drawP([
@@ -404,8 +410,8 @@ function renderMonsterSVG(id, options = {}) {
         emotionOverlay = drawP([[23,12,2,5, '#33bbee'], [23,17,1,1, '#33bbee']]);
     } else if (emotion === 'angry' || emotion === 'battle') {
         eyePixels = drawP([
-            [10,12,3,4, '#111827'], [10,13,2,2, '#ffdd44'], [9,11,4,1, '#111827'],
-            [19,12,3,4, '#111827'], [19,13,2,2, '#ffdd44'], [19,11,4,1, '#111827']
+            [10,12,3,4, '#231830'], [10,13,2,2, '#ffdd44'], [9,11,4,1, '#231830'],
+            [19,12,3,4, '#231830'], [19,13,2,2, '#ffdd44'], [19,11,4,1, '#231830']
         ]);
         mouthPixels = drawP([
             [14,17,4,2, '#ff2244'], [15,17,2,1, '#ffffff']
