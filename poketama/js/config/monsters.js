@@ -1,623 +1,240 @@
 /**
- * PokéTama Monster Configurations & Cute Animal-Style SVG Artwork Generators
+ * monsters.js
+ * 200 PokéTama Monster Database & 18 Element Types with Vector SVG Art Generator
  */
 
+// 18 Official Element Types Database
 const ELEMENT_TYPES = {
-    fire: { name: '炎', color: '#ff6b5b', bg: 'rgba(255, 107, 91, 0.2)', icon: '🔥', weak: 'water', strong: 'grass' },
-    water: { name: '水', color: '#40c4ff', bg: 'rgba(64, 196, 255, 0.2)', icon: '💧', weak: 'grass', strong: 'fire' },
-    grass: { name: '草', color: '#52e077', bg: 'rgba(82, 224, 119, 0.2)', icon: '🌿', weak: 'fire', strong: 'water' },
-    cyber: { name: '電脳', color: '#e056fd', bg: 'rgba(224, 86, 253, 0.2)', icon: '🔮', weak: 'grass', strong: 'water' }
+    normal:   { name: 'ノーマル', color: '#aaaa99', bg: 'rgba(170, 170, 153, 0.2)', icon: '⚪' },
+    fire:     { name: 'ほのお',   color: '#ff4422', bg: 'rgba(255, 68, 34, 0.2)',    icon: '🔥' },
+    water:    { name: 'みず',     color: '#3399ff', bg: 'rgba(51, 153, 255, 0.2)',   icon: '💧' },
+    electric: { name: 'でんき',   color: '#ffcc00', bg: 'rgba(255, 204, 0, 0.2)',    icon: '⚡' },
+    grass:    { name: 'くさ',     color: '#77cc33', bg: 'rgba(119, 204, 51, 0.2)',   icon: '🌿' },
+    ice:      { name: 'こおり',   color: '#66ccff', bg: 'rgba(102, 204, 255, 0.2)',  icon: '❄️' },
+    fighting: { name: 'かくとう', color: '#bb5544', bg: 'rgba(187, 85, 68, 0.2)',    icon: '🥊' },
+    poison:   { name: 'どく',     color: '#aa5599', bg: 'rgba(170, 85, 153, 0.2)',   icon: '☠️' },
+    ground:   { name: 'じめん',   color: '#ddbb55', bg: 'rgba(221, 187, 85, 0.2)',   icon: '🏜️' },
+    flying:   { name: 'ひこう',   color: '#8899ff', bg: 'rgba(136, 153, 255, 0.2)',  icon: '🕊️' },
+    psychic:  { name: 'エスパー', color: '#ff5599', bg: 'rgba(255, 85, 153, 0.2)',   icon: '🔮' },
+    bug:      { name: 'むし',     color: '#aabb22', bg: 'rgba(170, 187, 34, 0.2)',   icon: '🐛' },
+    rock:     { name: 'いわ',     color: '#bbaa66', bg: 'rgba(187, 170, 102, 0.2)',  icon: '🪨' },
+    ghost:    { name: 'ゴースト', color: '#6666bb', bg: 'rgba(102, 102, 187, 0.2)',  icon: '👻' },
+    dragon:   { name: 'ドラゴン', color: '#7766ee', bg: 'rgba(119, 102, 238, 0.2)',  icon: '🐉' },
+    dark:     { name: 'あく',     color: '#775544', bg: 'rgba(119, 85, 68, 0.2)',    icon: '🌙' },
+    steel:    { name: 'はがね',   color: '#aaaabb', bg: 'rgba(170, 170, 187, 0.2)',  icon: '🛡️' },
+    fairy:    { name: 'フェアリー',color: '#ee99ee', bg: 'rgba(238, 153, 238, 0.2)',  icon: '✨' }
 };
+
+// 18-Type Advantage Multiplier Matrix (Exact match with official type chart)
+function getTypeMultiplier(atkType, defType) {
+    if (!atkType || !defType) return 1.0;
+
+    const chart = {
+        normal:   { rock: 0.5, ghost: 0.0, steel: 0.5 },
+        fire:     { fire: 0.5, water: 0.5, grass: 2.0, ice: 2.0, bug: 2.0, rock: 0.5, dragon: 0.5, steel: 2.0 },
+        water:    { fire: 2.0, water: 0.5, grass: 0.5, ground: 2.0, rock: 2.0, dragon: 0.5 },
+        electric: { water: 2.0, electric: 0.5, grass: 0.5, ground: 0.0, flying: 2.0, dragon: 0.5 },
+        grass:    { fire: 0.5, water: 2.0, grass: 0.5, poison: 0.5, ground: 2.0, flying: 0.5, bug: 0.5, rock: 2.0, dragon: 0.5, steel: 0.5 },
+        ice:      { fire: 0.5, water: 0.5, grass: 2.0, ice: 0.5, ground: 2.0, flying: 2.0, dragon: 2.0, steel: 0.5 },
+        fighting: { normal: 2.0, ice: 2.0, poison: 0.5, flying: 0.5, psychic: 0.5, bug: 0.5, rock: 2.0, ghost: 0.0, dark: 2.0, steel: 2.0, fairy: 0.5 },
+        poison:   { grass: 2.0, poison: 0.5, ground: 0.5, rock: 0.5, ghost: 0.5, steel: 0.0, fairy: 2.0 },
+        ground:   { fire: 2.0, electric: 2.0, grass: 0.5, poison: 2.0, flying: 0.0, bug: 0.5, rock: 2.0, steel: 2.0 },
+        flying:   { electric: 0.5, grass: 2.0, fighting: 2.0, bug: 2.0, rock: 0.5, steel: 0.5 },
+        psychic:  { fighting: 2.0, poison: 2.0, psychic: 0.5, dark: 0.0, steel: 0.5 },
+        bug:      { fire: 0.5, grass: 2.0, fighting: 0.5, poison: 0.5, flying: 0.5, psychic: 2.0, ghost: 0.5, dark: 2.0, steel: 0.5, fairy: 0.5 },
+        rock:     { fire: 2.0, ice: 2.0, fighting: 0.5, ground: 0.5, flying: 2.0, bug: 2.0, steel: 0.5 },
+        ghost:    { normal: 0.0, psychic: 2.0, ghost: 2.0, dark: 0.5 },
+        dragon:   { dragon: 2.0, steel: 0.5, fairy: 0.0 },
+        dark:     { fighting: 0.5, psychic: 2.0, ghost: 2.0, dark: 0.5, fairy: 0.5 },
+        steel:    { fire: 0.5, water: 0.5, electric: 0.5, ice: 2.0, rock: 2.0, steel: 0.5, fairy: 2.0 },
+        fairy:    { fire: 0.5, fighting: 2.0, poison: 0.5, dragon: 2.0, dark: 2.0, steel: 0.5 }
+    };
+
+    if (chart[atkType] && chart[atkType][defType] !== undefined) {
+        return chart[atkType][defType];
+    }
+    return 1.0;
+}
 
 const STAGES = {
-    egg: 'タマゴ',
     baby: '幼年期',
     child: '成長期',
-    adult: '成熟期',
-    ultimate: '究極体'
+    adult: '進化体'
 };
 
+// Base Names Seeds for 100 Base PokéTama
+const BASE_NAME_SEEDS = [
+    { base: 'ヒノコ', evo: 'フレアレオン', type: 'fire' },
+    { base: 'ポタポタ', evo: 'アクアパピヨン', type: 'water' },
+    { base: 'リーフリス', evo: 'フォリスキング', type: 'grass' },
+    { base: 'ピカポン', evo: 'ライボルトン', type: 'electric' },
+    { base: 'コリペン', evo: 'エンペルアイス', type: 'ice' },
+    { base: 'コボコボ', evo: 'ボクサードッグ', type: 'fighting' },
+    { base: 'ドクガエル', evo: 'ヴェノムキング', type: 'poison' },
+    { base: 'モグリン', evo: 'グラングラード', type: 'ground' },
+    { base: 'ツバヒコ', evo: 'ファルコンウイング', type: 'flying' },
+    { base: 'エノッチ', evo: 'サイキックマスター', type: 'psychic' },
+    { base: 'ハナムシ', evo: 'ヘラクレスビート', type: 'bug' },
+    { base: 'イワコロ', evo: 'ゴレムロック', type: 'rock' },
+    { base: 'オバケッチ', evo: 'ナイトメアホロウ', type: 'ghost' },
+    { base: 'ドラコ', evo: 'バハムートドラゴン', type: 'dragon' },
+    { base: 'ヤミイヌ', evo: 'ダークヘルハウンド', type: 'dark' },
+    { base: 'ハガネノコ', evo: 'ヴァルキリーシールド', type: 'steel' },
+    { base: 'フェアリン', evo: 'プリンセスセラフィ', type: 'fairy' },
+    { base: 'パタパタ', evo: 'グランノーマル', type: 'normal' }
+];
+
+// Egg Database
 const EGGS_DATABASE = {
-    egg_fire: {
-        id: 'egg_fire',
-        name: 'フレアタマゴ',
-        element: 'fire',
-        description: 'ほのかに温かい、可愛い火狐の模様がついたタマゴ。',
-        hatchesTo: 'fire_1',
-        warmthNeeded: 100,
-        color: '#ff5544',
-        patternColor: '#ffcc00'
-    },
-    egg_water: {
-        id: 'egg_water',
-        name: 'アクアタマゴ',
-        element: 'water',
-        description: '水玉模様が浮かぶ、すずしい海のタマゴ。',
-        hatchesTo: 'water_1',
-        warmthNeeded: 100,
-        color: '#33aaff',
-        patternColor: '#88e0ff'
-    },
-    egg_grass: {
-        id: 'egg_grass',
-        name: 'リーフタマゴ',
-        element: 'grass',
-        description: '四つ葉のクローバーの刺繍がある植物のタマゴ。',
-        hatchesTo: 'grass_1',
-        warmthNeeded: 100,
-        color: '#44dd66',
-        patternColor: '#aaff66'
-    },
-    egg_cyber: {
-        id: 'egg_cyber',
-        name: 'サイバータマゴ',
-        element: 'cyber',
-        description: 'ネオンの光線が脈動する未来都市のタマゴ。',
-        hatchesTo: 'cyber_1',
-        warmthNeeded: 120,
-        color: '#bb44ff',
-        patternColor: '#00ffff'
-    }
+    egg_fire: { id: 'egg_fire', name: 'フレアタマゴ', element: 'fire', description: '温かい炎の模様がついたタマゴ。', hatchesTo: 'mon_001', warmthNeeded: 100, color: '#ff5544', patternColor: '#ffcc00' },
+    egg_water: { id: 'egg_water', name: 'アクアタマゴ', element: 'water', description: '水玉模様が浮かぶ海のタマゴ。', hatchesTo: 'mon_002', warmthNeeded: 100, color: '#33aaff', patternColor: '#88e0ff' },
+    egg_grass: { id: 'egg_grass', name: 'リーフタマゴ', element: 'grass', description: '四つ葉の刺繍がついたタマゴ。', hatchesTo: 'mon_003', warmthNeeded: 100, color: '#44dd66', patternColor: '#aaff66' },
+    egg_electric: { id: 'egg_electric', name: 'ボルトタマゴ', element: 'electric', description: '稲妻模様の弾けるタマゴ。', hatchesTo: 'mon_004', warmthNeeded: 100, color: '#ffcc00', patternColor: '#ffffff' }
 };
 
-const MONSTERS_DATABASE = {
-    // --- FIRE EVOLUTION LINE (火狐・きつね＆ライオン系) ---
-    fire_1: {
-        id: 'fire_1',
-        name: 'ヒノコ',
-        stage: 'baby',
-        element: 'fire',
-        maxHp: 80,
-        atk: 22,
-        def: 14,
-        spd: 18,
-        moves: ['tackle', 'ember'],
-        nextEvolution: 'fire_2',
-        evoLevel: 5,
-        evoFriendship: 30,
-        description: 'ふんわりフサフサのシッポを持つ火狐の子犬。元気に甘えて跳ね回る。'
-    },
-    fire_2: {
-        id: 'fire_2',
-        name: 'ヒノリュウ',
-        stage: 'child',
-        element: 'fire',
-        maxHp: 160,
-        atk: 45,
-        def: 32,
-        spd: 38,
-        moves: ['tackle', 'flame_charge', 'fire_breath'],
-        nextEvolution: 'fire_3',
-        evoLevel: 12,
-        evoFriendship: 60,
-        description: '小さな羽がついたドラゴンフォックス。熱い友情で仲間を守る。'
-    },
-    fire_3: {
-        id: 'fire_3',
-        name: 'バーンレックス',
-        stage: 'adult',
-        element: 'fire',
-        maxHp: 280,
-        atk: 88,
-        def: 62,
-        spd: 70,
-        moves: ['flame_charge', 'fire_breath', 'fire_claw', 'lava_surge'],
-        nextEvolution: 'fire_4',
-        evoLevel: 25,
-        evoFriendship: 90,
-        description: '燃えるタテガミを持つ可愛い炎ライオン。頼りになる兄貴分。'
-    },
-    fire_4: {
-        id: 'fire_4',
-        name: 'ギガフレアドラ',
-        stage: 'ultimate',
-        element: 'fire',
-        maxHp: 460,
-        atk: 145,
-        def: 105,
-        spd: 115,
-        moves: ['fire_claw', 'lava_surge', 'overheat', 'giga_flare'],
-        nextEvolution: null,
-        description: '九尾の炎と光の翼を纏う伝説の神聖フォックスドラゴン。'
-    },
+// Procedural 200 Monsters Generator (#001 - #100 Base, #101 - #200 Evolved)
+const MONSTERS_DATABASE = {};
 
-    // --- WATER EVOLUTION LINE (水うさぎ・あざらし系) ---
-    water_1: {
-        id: 'water_1',
-        name: 'アクアプニ',
-        stage: 'baby',
-        element: 'water',
-        maxHp: 90,
-        atk: 16,
-        def: 18,
-        spd: 16,
-        moves: ['tackle', 'water_drop'],
-        nextEvolution: 'water_2',
-        evoLevel: 5,
-        evoFriendship: 30,
-        description: 'たれ耳と丸い身体がキュートな水うさぎ。プニプニしてて癒やされる。'
-    },
-    water_2: {
-        id: 'water_2',
-        name: 'アクアシェル',
-        stage: 'child',
-        element: 'water',
-        maxHp: 180,
-        atk: 36,
-        def: 48,
-        spd: 30,
-        moves: ['tackle', 'water_drop', 'bubble_beam'],
-        nextEvolution: 'water_3',
-        evoLevel: 12,
-        evoFriendship: 60,
-        description: '貝殻のリュックを背負ったラッコちゃん。水てっぽうが得意。'
-    },
-    water_3: {
-        id: 'water_3',
-        name: 'タイダルホエール',
-        stage: 'adult',
-        element: 'water',
-        maxHp: 320,
-        atk: 72,
-        def: 95,
-        spd: 55,
-        moves: ['bubble_beam', 'aqua_tail', 'surf_wave', 'hydro_pump'],
-        nextEvolution: 'water_4',
-        evoLevel: 25,
-        evoFriendship: 90,
-        description: '海の泡に乗って空を飛ぶクジラウサギ。おっとり優しい性格。'
-    },
-    water_4: {
-        id: 'water_4',
-        name: 'カイザーポセイドン',
-        stage: 'ultimate',
-        element: 'water',
-        maxHp: 520,
-        atk: 125,
-        def: 140,
-        spd: 90,
-        moves: ['aqua_tail', 'surf_wave', 'hydro_pump', 'ocean_cataclysm'],
-        nextEvolution: null,
-        description: 'クリスタル王冠を戴く深海のアザラシナイト。優しき海の守護神。'
-    },
+// Helper generator to build full 200 database
+(function generate200Monsters() {
+    const typeKeys = Object.keys(ELEMENT_TYPES);
 
-    // --- GRASS EVOLUTION LINE (森のリス・フェネック系) ---
-    grass_1: {
-        id: 'grass_1',
-        name: 'ポコリーフ',
-        stage: 'baby',
-        element: 'grass',
-        maxHp: 85,
-        atk: 18,
-        def: 16,
-        spd: 20,
-        moves: ['tackle', 'leaf_shot'],
-        nextEvolution: 'grass_2',
-        evoLevel: 5,
-        evoFriendship: 30,
-        description: '大きな葉っぱ耳とクルンとしたシッポを持つ子リス。日向ぼっこが大好き。'
-    },
-    grass_2: {
-        id: 'grass_2',
-        name: 'フォレストフェネック',
-        stage: 'child',
-        element: 'grass',
-        maxHp: 165,
-        atk: 40,
-        def: 36,
-        spd: 46,
-        moves: ['tackle', 'leaf_shot', 'vine_whip'],
-        nextEvolution: 'grass_3',
-        evoLevel: 12,
-        evoFriendship: 60,
-        description: '大きな耳でお花の歌を聞くフェネックキツネ。すばしっこく駆け回る。'
-    },
-    grass_3: {
-        id: 'grass_3',
-        name: 'フローラヴァルキリー',
-        stage: 'adult',
-        element: 'grass',
-        maxHp: 270,
-        atk: 82,
-        def: 68,
-        spd: 92,
-        moves: ['vine_whip', 'leaf_blade', 'petal_storm', 'energy_drain'],
-        nextEvolution: 'grass_4',
-        evoLevel: 25,
-        evoFriendship: 90,
-        description: '桜の花びらを散らしながら駆ける可愛らしいシカナイト。'
-    },
-    grass_4: {
-        id: 'grass_4',
-        name: 'ユグドラシエル',
-        stage: 'ultimate',
-        element: 'grass',
-        maxHp: 480,
-        atk: 135,
-        def: 115,
-        spd: 125,
-        moves: ['leaf_blade', 'petal_storm', 'solar_beam', 'world_tree_blessing'],
-        nextEvolution: null,
-        description: '世界樹のハスと光の翼を持つ大自然の聖なる妖精フォックス。'
-    },
+    for (let i = 1; i <= 100; i++) {
+        const baseId = `mon_${String(i).padStart(3, '0')}`;
+        const evoId = `mon_${String(i + 100).padStart(3, '0')}`;
+        
+        const seed = BASE_NAME_SEEDS[(i - 1) % BASE_NAME_SEEDS.length];
+        const type = typeKeys[(i - 1) % typeKeys.length];
+        
+        const suffixNum = Math.floor((i - 1) / BASE_NAME_SEEDS.length) + 1;
+        const baseName = suffixNum > 1 ? `${seed.base} Mark-${suffixNum}` : seed.base;
+        const evoName = suffixNum > 1 ? `${seed.evo} Mark-${suffixNum}` : seed.evo;
 
-    // --- CYBER EVOLUTION LINE (電気ハムスター・ネコ系) ---
-    cyber_1: {
-        id: 'cyber_1',
-        name: 'スパークン',
-        stage: 'baby',
-        element: 'cyber',
-        maxHp: 75,
-        atk: 24,
-        def: 12,
-        spd: 24,
-        moves: ['tackle', 'spark'],
-        nextEvolution: 'cyber_2',
-        evoLevel: 5,
-        evoFriendship: 30,
-        description: 'ほっぺがピカピカ光る電気ハムスター。きのみを頬張る姿が激カワ。'
-    },
-    cyber_2: {
-        id: 'cyber_2',
-        name: 'サイバーネコ',
-        stage: 'child',
-        element: 'cyber',
-        maxHp: 155,
-        atk: 48,
-        def: 30,
-        spd: 52,
-        moves: ['tackle', 'spark', 'thunder_bolt'],
-        nextEvolution: 'cyber_3',
-        evoLevel: 12,
-        evoFriendship: 60,
-        description: 'ネコミミバイザーをつけた電脳子ネコ。イナズマのシッポを振る。'
-    },
-    cyber_3: {
-        id: 'cyber_3',
-        name: 'ボルテックライガー',
-        stage: 'adult',
-        element: 'cyber',
-        maxHp: 260,
-        atk: 96,
-        def: 58,
-        spd: 105,
-        moves: ['thunder_bolt', 'laser_claw', 'discharge', 'plasma_surge'],
-        nextEvolution: 'cyber_4',
-        evoLevel: 25,
-        evoFriendship: 90,
-        description: 'ネオンの肉球とプラズマツインテールを持つ雷電ライガー。'
-    },
-    cyber_4: {
-        id: 'cyber_4',
-        name: 'ゼウスオメガ',
-        stage: 'ultimate',
-        element: 'cyber',
-        maxHp: 440,
-        atk: 160,
-        def: 95,
-        spd: 140,
-        moves: ['laser_claw', 'plasma_surge', 'giga_volt', 'cyber_overclock'],
-        nextEvolution: null,
-        description: 'デジタル天使の羽を纏う最強の電脳キャット神。光速の雷撃を放つ。'
+        // Base Form Monster (#001 - #100)
+        MONSTERS_DATABASE[baseId] = {
+            id: baseId,
+            dexNo: i,
+            name: baseName,
+            stage: 'child',
+            element: type,
+            maxHp: 75 + (i % 15) * 3,
+            atk: 20 + (i % 10) * 2,
+            def: 15 + (i % 8) * 2,
+            spd: 18 + (i % 12) * 2,
+            moves: ['tackle', `move_${type}`],
+            nextEvolution: evoId,
+            evoLevel: 16,
+            description: `可愛い姿をした ${ELEMENT_TYPES[type].name} 属性の基本ポケたま。レベル16で大きな進化を遂げる！`
+        };
+
+        // Evolved Form Monster (#101 - #200)
+        MONSTERS_DATABASE[evoId] = {
+            id: evoId,
+            dexNo: i + 100,
+            name: evoName,
+            stage: 'adult',
+            element: type,
+            maxHp: 180 + (i % 15) * 6,
+            atk: 55 + (i % 10) * 4,
+            def: 45 + (i % 8) * 4,
+            spd: 48 + (i % 12) * 4,
+            moves: ['tackle', `move_${type}`, 'hyper_beam'],
+            nextEvolution: null,
+            evoLevel: 0,
+            description: `${baseName} がたくましく成長した ${ELEMENT_TYPES[type].name} 属性の秘められた力を持つ究極の進化形！`
+        };
     }
-};
+})();
 
 /**
- * Render Authentic Retro Game Boy / Tamagotchi 32x32 Pixel Art (ドット絵) SVG Engine
+ * renderMonsterSVG
+ * Renders high-quality vector SVG artwork for all 200 monsters
  */
-function renderMonsterSVG(id, options = {}) {
-    const isEgg = id.startsWith('egg_');
-    const emotion = options.emotion || 'happy'; // happy, sleep, hungry, angry, battle
-
-    const drawP = (rects) => rects.map(([x, y, w, h, c]) => 
-        `<rect x="${x}" y="${y}" width="${w || 1}" height="${h || 1}" fill="${c}" />`
-    ).join('');
-
-    if (isEgg) {
-        const eggData = EGGS_DATABASE[id] || EGGS_DATABASE.egg_fire;
-        const crack = options.crackProgress || 0;
-
-        const mainC = eggData.color;
-        const spotC = eggData.patternColor;
-        const borderC = '#152018';
-
-        return `
-        <svg viewBox="0 0 32 32" width="100%" height="100%" class="monster-svg egg-svg" shape-rendering="crispEdges">
-            <!-- Shadow -->
-            <rect x="8" y="30" width="16" height="1" fill="rgba(0,0,0,0.3)" />
-            <rect x="10" y="29" width="12" height="1" fill="rgba(0,0,0,0.4)" />
-
-            <!-- Pixel Egg Outer Border -->
-            ${drawP([
-                [11,4,10,1, borderC], [9,5,2,2, borderC], [21,5,2,2, borderC],
-                [7,7,2,3, borderC], [23,7,2,3, borderC], [5,10,2,14, borderC], [25,10,2,14, borderC],
-                [7,24,2,3, borderC], [23,24,2,3, borderC], [9,27,2,2, borderC], [21,27,2,2, borderC],
-                [11,29,10,1, borderC]
-            ])}
-
-            <!-- Egg Main Color Fill -->
-            ${drawP([
-                [11,5,10,2, mainC], [9,7,14,3, mainC], [7,10,18,14, mainC],
-                [9,24,14,3, mainC], [11,27,10,2, mainC]
-            ])}
-
-            <!-- Egg Specular Highlight Pixels -->
-            ${drawP([
-                [12,6,5,1, '#ffffff'], [10,7,4,4, '#ffffff'], [8,11,2,6, '#ffffff']
-            ])}
-
-            <!-- Egg Spot Patterns -->
-            ${drawP([
-                [11,11,4,4, spotC], [19,16,4,4, spotC], [13,22,3,3, spotC]
-            ])}
-
-            <!-- Crack Overlay if Warming -->
-            ${crack > 0.3 ? drawP([[15,10,3,1,'#fff'], [17,11,1,4,'#fff'], [14,15,4,1,'#fff']]) : ''}
-            ${crack > 0.7 ? drawP([[10,17,3,1,'#fff'], [9,18,1,5,'#fff'], [10,23,3,1,'#fff']]) : ''}
-        </svg>`;
+function renderMonsterSVG(monsterOrId, size = 160) {
+    let mon = typeof monsterOrId === 'string' ? MONSTERS_DATABASE[monsterOrId] : monsterOrId;
+    if (!mon) {
+        mon = MONSTERS_DATABASE['mon_001'];
     }
 
-    const monster = MONSTERS_DATABASE[id] || MONSTERS_DATABASE.fire_1;
-    const elem = ELEMENT_TYPES[monster.element];
+    const elem = ELEMENT_TYPES[mon.element] || ELEMENT_TYPES.normal;
+    const isEvolved = mon.dexNo > 100 || mon.stage === 'adult';
+    const mainColor = elem.color;
+    const bodySize = isEvolved ? 62 : 46;
 
-    let mainColor = elem.color;
-    let accentColor = '#ffffff';
-    let earInnerColor = '#ffffff';
-    let borderColor = '#231830';
-
-    if (monster.element === 'fire') {
-        accentColor = '#ffdd55';
-        earInnerColor = '#ff8833';
-    } else if (monster.element === 'water') {
-        accentColor = '#a6edff';
-        earInnerColor = '#2979ff';
-    } else if (monster.element === 'grass') {
-        accentColor = '#d6ff99';
-        earInnerColor = '#00e676';
-    } else { // cyber
-        accentColor = '#00e5ff';
-        earInnerColor = '#d500f9';
+    let auraSvg = '';
+    if (isEvolved) {
+        auraSvg = `
+            <circle cx="100" cy="100" r="82" fill="none" stroke="${mainColor}" stroke-width="2" stroke-dasharray="6,4" opacity="0.6">
+                <animateTransform attributeName="transform" type="rotate" from="0 100 100" to="360 100 100" dur="12s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="100" cy="100" r="72" fill="${mainColor}" opacity="0.12" />
+        `;
     }
 
-    // --- POP CUTE BLUSH CHEEKS ---
-    const blushPixels = drawP([
-        [7,16,3,2, 'rgba(255, 120, 160, 0.85)'],
-        [22,16,3,2, 'rgba(255, 120, 160, 0.85)']
-    ]);
-
-    // --- 32x32 POP EYE EXPRESSIONS ---
-    let eyePixels = drawP([
-        [10,12,3,4, '#231830'], [10,12,1,2, '#ffffff'], [12,14,1,1, '#ffffff'],
-        [19,12,3,4, '#231830'], [19,12,1,2, '#ffffff'], [21,14,1,1, '#ffffff']
-    ]);
-
-    let mouthPixels = drawP([[14,17,4,2, '#ff4477'], [15,17,2,1, '#ffffff']]);
-    let emotionOverlay = '';
-
-    if (emotion === 'sleep') {
-        eyePixels = drawP([
-            [10,14,4,1, '#231830'], [18,14,4,1, '#231830']
-        ]);
-        mouthPixels = drawP([[15,16,2,2, '#ff6688']]);
-        emotionOverlay = drawP([
-            [23,6,3,1, '#88ccff'], [25,5,3,1, '#88ccff'], [24,7,4,1, '#88ccff'],
-            [27,3,2,1, '#88ccff'], [28,2,2,1, '#88ccff']
-        ]);
-    } else if (emotion === 'hungry') {
-        mouthPixels = drawP([
-            [14,17,4,3, '#ff4466'], [15,17,2,1, '#ffffff']
-        ]);
-        emotionOverlay = drawP([[23,12,2,5, '#33bbee'], [23,17,1,1, '#33bbee']]);
-    } else if (emotion === 'angry' || emotion === 'battle') {
-        eyePixels = drawP([
-            [10,12,3,4, '#231830'], [10,13,2,2, '#ffdd44'], [9,11,4,1, '#231830'],
-            [19,12,3,4, '#231830'], [19,13,2,2, '#ffdd44'], [19,11,4,1, '#231830']
-        ]);
-        mouthPixels = drawP([
-            [14,17,4,2, '#ff2244'], [15,17,2,1, '#ffffff']
-        ]);
-    }
-
-    // --- 32x32 ANIMAL SPECIFIC PIXEL ART BODY ---
-    let animalPixelArt = '';
-
-    if (monster.element === 'fire') { // 子狐 (ヒノコ / 火狐)
-        animalPixelArt = `
-            <!-- Pixel Fox Ears -->
-            ${drawP([
-                [5,3,5,1, borderColor], [4,4,2,4, borderColor], [9,4,2,4, borderColor],
-                [5,4,4,4, mainColor], [6,5,2,3, earInnerColor],
-                [22,3,5,1, borderColor], [21,4,2,4, borderColor], [26,4,2,4, borderColor],
-                [22,4,4,4, mainColor], [23,5,2,3, earInnerColor]
-            ])}
-
-            <!-- Fluffy Flame Tail -->
-            ${drawP([
-                [1,16,5,1, borderColor], [0,17,2,9, borderColor], [5,17,2,9, borderColor], [1,26,5,1, borderColor],
-                [2,17,3,9, accentColor], [3,18,2,7, mainColor]
-            ])}
-
-            <!-- Head & Body Outer Border -->
-            ${drawP([
-                [9,7,14,1, borderColor], [7,8,2,4, borderColor], [23,8,2,4, borderColor],
-                [6,12,2,14, borderColor], [24,12,2,14, borderColor],
-                [8,26,16,1, borderColor], [10,27,12,1, borderColor]
-            ])}
-
-            <!-- Body Fill -->
-            ${drawP([
-                [9,8,14,4, mainColor], [8,12,16,14, mainColor]
-            ])}
-
-            <!-- White Cream Chest & Belly -->
-            ${drawP([
-                [12,15,8,9, '#ffffff'], [14,24,4,2, '#ffffff']
-            ])}
-
-            <!-- Rosy Cheek Pixels -->
-            ${drawP([
-                [8,15,3,2, '#ff6688'], [21,15,3,2, '#ff6688']
-            ])}
-
-            <!-- Paws -->
-            ${drawP([
-                [10,25,4,2, '#ffffff'], [18,25,4,2, '#ffffff']
-            ])}
+    // Horns / Wings for Evolved Form
+    let extrasSvg = '';
+    if (isEvolved) {
+        extrasSvg = `
+            <!-- Wings / Horns -->
+            <path d="M 45 70 Q 15 30 35 100 Q 55 90 45 70 Z" fill="${mainColor}" opacity="0.85" />
+            <path d="M 155 70 Q 185 30 165 100 Q 145 90 155 70 Z" fill="${mainColor}" opacity="0.85" />
+            <!-- Crown / Crest -->
+            <path d="M 85 45 L 100 20 L 115 45 L 108 45 L 100 32 L 92 45 Z" fill="#ffe600" />
         `;
-    } else if (monster.element === 'water') { // たれ耳うさぎ (アクアプニ)
-        animalPixelArt = `
-            <!-- Floppy Bunny Ears -->
-            ${drawP([
-                [2,6,6,1, borderColor], [1,7,2,10, borderColor], [7,7,2,10, borderColor], [2,17,6,1, borderColor],
-                [3,7,4,10, mainColor], [4,8,2,8, accentColor],
-                [24,6,6,1, borderColor], [23,7,2,10, borderColor], [29,7,2,10, borderColor], [24,17,6,1, borderColor],
-                [25,7,4,10, mainColor], [26,8,2,8, accentColor]
-            ])}
-
-            <!-- Swirl Aquatic Tail -->
-            ${drawP([
-                [25,18,6,1, borderColor], [24,19,2,6, borderColor], [30,19,2,6, borderColor], [25,25,6,1, borderColor],
-                [26,19,4,6, accentColor]
-            ])}
-
-            <!-- Round Body Outer Border -->
-            ${drawP([
-                [10,7,12,1, borderColor], [8,8,2,4, borderColor], [22,8,2,4, borderColor],
-                [7,12,2,14, borderColor], [23,12,2,14, borderColor],
-                [9,26,14,1, borderColor], [11,27,10,1, borderColor]
-            ])}
-
-            <!-- Body Fill -->
-            ${drawP([
-                [10,8,12,4, mainColor], [9,12,14,14, mainColor]
-            ])}
-
-            <!-- White Cream Belly -->
-            ${drawP([
-                [12,15,8,9, '#ffffff']
-            ])}
-
-            <!-- Rosy Cheeks -->
-            ${drawP([
-                [8,15,3,2, '#ff6688'], [21,15,3,2, '#ff6688']
-            ])}
-
-            <!-- Paws -->
-            ${drawP([
-                [10,25,4,2, accentColor], [18,25,4,2, accentColor]
-            ])}
-        `;
-    } else if (monster.element === 'grass') { // 子リス (ポコリーフ)
-        animalPixelArt = `
-            <!-- Leaf Ears & Flower -->
-            ${drawP([
-                [5,3,5,1, borderColor], [4,4,2,4, borderColor], [9,4,2,4, borderColor],
-                [5,4,4,4, mainColor], [6,5,2,3, accentColor],
-                [22,3,5,1, borderColor], [21,4,2,4, borderColor], [26,4,2,4, borderColor],
-                [22,4,4,4, mainColor], [23,5,2,3, accentColor],
-                [20,2,3,3, '#ff66aa'], [21,3,1,1, '#ffff44']
-            ])}
-
-            <!-- Bushy Leaf Tail -->
-            ${drawP([
-                [1,14,6,1, borderColor], [0,15,2,10, borderColor], [6,15,2,10, borderColor], [1,25,6,1, borderColor],
-                [2,15,4,10, accentColor], [3,16,2,8, mainColor]
-            ])}
-
-            <!-- Body Outer Border -->
-            ${drawP([
-                [9,7,14,1, borderColor], [7,8,2,4, borderColor], [23,8,2,4, borderColor],
-                [6,12,2,14, borderColor], [24,12,2,14, borderColor],
-                [8,26,16,1, borderColor], [10,27,12,1, borderColor]
-            ])}
-
-            <!-- Body Fill -->
-            ${drawP([
-                [9,8,14,4, mainColor], [8,12,16,14, mainColor]
-            ])}
-
-            <!-- White Belly -->
-            ${drawP([
-                [12,15,8,9, '#ffffff']
-            ])}
-
-            <!-- Rosy Cheeks -->
-            ${drawP([
-                [8,15,3,2, '#ff6688'], [21,15,3,2, '#ff6688']
-            ])}
-
-            <!-- Paws -->
-            ${drawP([
-                [10,25,4,2, accentColor], [18,25,4,2, accentColor]
-            ])}
-        `;
-    } else { // Cyber / Electric (電気ハムスター スパークン)
-        animalPixelArt = `
-            <!-- Twitchy Hamster Ears & Visor -->
-            ${drawP([
-                [5,3,5,1, borderColor], [4,4,2,4, borderColor], [9,4,2,4, borderColor],
-                [5,4,4,4, mainColor], [6,5,2,3, earInnerColor],
-                [22,3,5,1, borderColor], [21,4,2,4, borderColor], [26,4,2,4, borderColor],
-                [22,4,4,4, mainColor], [23,5,2,3, earInnerColor],
-                [9,8,14,2, accentColor]
-            ])}
-
-            <!-- Lightning Bolt Tail -->
-            ${drawP([
-                [1,12,3,2, accentColor], [3,14,3,2, accentColor], [2,16,4,2, accentColor],
-                [4,18,3,2, accentColor]
-            ])}
-
-            <!-- Body Outer Border -->
-            ${drawP([
-                [9,7,14,1, borderColor], [7,8,2,4, borderColor], [23,8,2,4, borderColor],
-                [6,12,2,14, borderColor], [24,12,2,14, borderColor],
-                [8,26,16,1, borderColor], [10,27,12,1, borderColor]
-            ])}
-
-            <!-- Body Fill -->
-            ${drawP([
-                [9,8,14,4, mainColor], [8,12,16,14, mainColor]
-            ])}
-
-            <!-- White Belly -->
-            ${drawP([
-                [12,15,8,9, '#ffffff']
-            ])}
-
-            <!-- Rosy Cheeks -->
-            ${drawP([
-                [8,15,3,2, '#ff6688'], [21,15,3,2, '#ff6688']
-            ])}
-
-            <!-- Paws -->
-            ${drawP([
-                [10,25,4,2, '#ffffff'], [18,25,4,2, '#ffffff']
-            ])}
+    } else {
+        extrasSvg = `
+            <!-- Cute Ears -->
+            <ellipse cx="65" cy="60" rx="10" ry="18" fill="${mainColor}" transform="rotate(-15 65 60)" />
+            <ellipse cx="135" cy="60" rx="10" ry="18" fill="${mainColor}" transform="rotate(15 135 60)" />
         `;
     }
 
     return `
-    <svg viewBox="0 0 32 32" width="100%" height="100%" class="monster-svg stage-${monster.stage}" shape-rendering="crispEdges">
-        <!-- Shadow -->
-        <rect x="8" y="28" width="16" height="1" fill="rgba(0,0,0,0.3)" />
-        <rect x="10" y="27" width="12" height="1" fill="rgba(0,0,0,0.4)" />
+    <svg width="${size}" height="${size}" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="monster-svg">
+        <defs>
+            <radialGradient id="grad-${mon.id}" cx="40%" cy="40%" r="60%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.4" />
+                <stop offset="60%" stop-color="${mainColor}" />
+                <stop offset="100%" stop-color="#111122" />
+            </radialGradient>
+        </defs>
 
-        <!-- 32x32 Pixel Art Monster -->
-        <g class="monster-body-group">
-            ${animalPixelArt}
+        <!-- Aura -->
+        ${auraSvg}
 
-            <!-- Face Features -->
-            <g class="monster-face">
-                ${eyePixels}
-                <!-- Nose Pixel -->
-                <rect x="15" y="15" width="2" height="1" fill="#111827" />
-                ${mouthPixels}
-            </g>
+        <!-- Extras (Wings/Ears/Horns) -->
+        ${extrasSvg}
 
-            ${emotionOverlay}
-        </g>
-    </svg>`;
+        <!-- Body -->
+        <circle cx="100" cy="105" r="${bodySize}" fill="url(#grad-${mon.id})" />
+
+        <!-- Belly -->
+        <ellipse cx="100" cy="115" rx="${bodySize * 0.6}" ry="${bodySize * 0.5}" fill="#ffffff" opacity="0.85" />
+
+        <!-- Cute Eyes -->
+        <circle cx="84" cy="96" r="6" fill="#111" />
+        <circle cx="116" cy="96" r="6" fill="#111" />
+        <circle cx="86" cy="94" r="2.2" fill="#fff" />
+        <circle cx="118" cy="94" r="2.2" fill="#fff" />
+
+        <!-- Blush Cheeks -->
+        <ellipse cx="74" cy="106" rx="6" ry="4" fill="#ff6688" opacity="0.6" />
+        <ellipse cx="126" cy="106" rx="6" ry="4" fill="#ff6688" opacity="0.6" />
+
+        <!-- Mouth -->
+        <path d="M 94 104 Q 100 110 106 104" fill="none" stroke="#222" stroke-width="2.5" stroke-linecap="round" />
+
+        <!-- Element Badge Overlay -->
+        <text x="100" y="172" text-anchor="middle" font-size="14" font-weight="bold" fill="${mainColor}">
+            ${elem.icon} #${String(mon.dexNo).padStart(3, '0')} ${mon.name}
+        </text>
+    </svg>
+    `;
 }
 
-
+window.ELEMENT_TYPES = ELEMENT_TYPES;
+window.getTypeMultiplier = getTypeMultiplier;
+window.STAGES = STAGES;
+window.EGGS_DATABASE = EGGS_DATABASE;
+window.MONSTERS_DATABASE = MONSTERS_DATABASE;
+window.renderMonsterSVG = renderMonsterSVG;

@@ -314,6 +314,60 @@ class GameEngine {
             window.renderGameUI();
         }
     }
+
+    checkEvolution(mon) {
+        if (!mon) return null;
+        const currentSpec = MONSTERS_DATABASE[mon.speciesId];
+        if (!currentSpec || !currentSpec.nextEvolution) return null;
+
+        const evoTarget = MONSTERS_DATABASE[currentSpec.nextEvolution];
+        if (!evoTarget) return null;
+
+        const reqLevel = currentSpec.evoLevel || 16;
+        if ((mon.level || 1) >= reqLevel) {
+            return evoTarget;
+        }
+        return null;
+    }
+
+    evolveMonster(mon) {
+        const evoTarget = this.checkEvolution(mon);
+        if (!evoTarget) return null;
+
+        const oldSpeciesId = mon.speciesId;
+        const oldName = mon.nickname || mon.name;
+
+        // Apply Evolution Transformation
+        mon.speciesId = evoTarget.id;
+        mon.name = evoTarget.name;
+        mon.nickname = (mon.nickname === oldName || !mon.nickname) ? evoTarget.name : mon.nickname;
+        mon.element = evoTarget.element;
+        mon.stage = evoTarget.stage;
+        
+        // Boost Stats
+        mon.maxHp = (mon.maxHp || 80) + 90;
+        mon.hp = mon.maxHp;
+        mon.atk = (mon.atk || 20) + 35;
+        mon.def = (mon.def || 15) + 30;
+        mon.spd = (mon.spd || 15) + 30;
+
+        // Learn evolved moves
+        if (evoTarget.moves) {
+            mon.moves = [...evoTarget.moves];
+        }
+
+        // Register in Dex
+        this.dex[evoTarget.id] = true;
+        this.saveState();
+
+        return {
+            mon,
+            oldSpeciesId,
+            oldName,
+            newSpeciesId: evoTarget.id,
+            newName: evoTarget.name
+        };
+    }
 }
 
 const gameEngine = new GameEngine();
