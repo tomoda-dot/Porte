@@ -5,6 +5,22 @@
 const UIController = {
     activeTab: 'care',
 
+    spawnFloatingHeart(x, y) {
+        const heart = document.createElement('div');
+        heart.className = 'floating-heart-particle';
+        const icons = ['💖', '❤️', '✨', '🌟', '💕'];
+        heart.innerText = icons[Math.floor(Math.random() * icons.length)];
+        heart.style.left = `${x - 12}px`;
+        heart.style.top = `${y - 20}px`;
+        document.body.appendChild(heart);
+
+        setTimeout(() => {
+            if (heart && heart.parentNode) {
+                heart.parentNode.removeChild(heart);
+            }
+        }, 900);
+    },
+
     init() {
         this.bindNavigation();
         this.bindCareButtons();
@@ -108,6 +124,29 @@ const UIController = {
                     const stageContainer = document.getElementById('care-stage-container');
                     this.triggerLevelUpEffect(stageContainer, res.newLevel);
                 }
+            });
+        }
+
+        // Tap Monster Stage Interactive Bonding
+        const stageContainer = document.getElementById('care-stage-container');
+        if (stageContainer && !this.careStageTapBound) {
+            this.careStageTapBound = true;
+            stageContainer.addEventListener('click', (e) => {
+                if (!gameEngine.activeMonster) return;
+                const res = TamagotchiModule.pet(gameEngine.activeMonster);
+                this.spawnFloatingHeart(e.clientX, e.clientY);
+
+                const svg = stageContainer.querySelector('svg');
+                if (svg) {
+                    svg.style.animation = 'none';
+                    void svg.offsetWidth;
+                    svg.style.animation = 'petHappy 0.6s ease-in-out';
+                }
+
+                if (res && res.message) {
+                    this.showToast(res.message, res.success ? 'success' : 'info');
+                }
+                this.renderAll();
             });
         }
 
