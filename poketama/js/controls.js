@@ -1,27 +1,34 @@
 /**
  * controls.js
- * Mobile Input Controller with DAS/ARR Long-Press, Touch Swipe Gestures, Haptics & Keyboard Support
+ * Gesture & Keyboard Input Controller for Mobile Cyber Neon Tetris
+ * Tap & Drag & Flick Gestures for Smartphone (Keyboard for PC)
  */
 class InputController {
     constructor(engine) {
         this.engine = engine;
         this.hapticsEnabled = true;
 
-        // DAS / ARR Timers for smooth button holding
-        this.dasDelay = 160;  // Initial delay before auto-repeat starts (ms)
-        this.arrInterval = 40; // Speed of auto-repeat once active (ms)
-        this.repeatTimers = {};
+        // Gesture tracking variables
+        this.startX = 0;
+        this.startY = 0;
+        this.lastX = 0;
+        this.lastY = 0;
+        this.startTime = 0;
+        
+        this.accumulatedX = 0;
+        this.accumulatedY = 0;
 
-        // Touch Gesture tracking
-        this.touchStartX = 0;
-        this.touchStartY = 0;
-        this.touchStartTime = 0;
-        this.minSwipeDist = 25;
+        // Touch sensitivity thresholds
+        this.dragThresholdX = 24; // Drag distance (px) per horizontal mino step
+        this.dragThresholdY = 22; // Drag distance (px) per soft drop mino step
+        this.flickVelocityY = 0.85; // Speed threshold for hard drop flick
+
+        this.lastTapTime = 0;
     }
 
     init() {
-        this.bindTouchButtons();
-        this.bindCanvasGestures();
+        this.bindTouchGestures();
+        this.bindHoldTap();
         this.bindKeyboard();
     }
 
@@ -31,100 +38,115 @@ class InputController {
         }
     }
 
-    bindButton(btnId, actionFn, allowAutoRepeat = false) {
-        const btn = document.getElementById(btnId);
-        if (!btn) return;
-
-        const startHandler = (e) => {
-            e.preventDefault();
-            btn.classList.add('pressed');
-            this.triggerHaptic(12);
-
-            actionFn();
-
-            if (allowAutoRepeat) {
-                this.stopAutoRepeat(btnId);
-                this.repeatTimers[btnId] = setTimeout(() => {
-                    this.repeatTimers[btnId] = setInterval(() => {
-                        actionFn();
-                    }, this.arrInterval);
-                }, this.dasDelay);
-            }
-        };
-
-        const endHandler = (e) => {
-            e.preventDefault();
-            btn.classList.remove('pressed');
-            this.stopAutoRepeat(btnId);
-        };
-
-        btn.addEventListener('touchstart', startHandler, { passive: false });
-        btn.addEventListener('touchend', endHandler, { passive: false });
-        btn.addEventListener('touchcancel', endHandler, { passive: false });
-
-        btn.addEventListener('mousedown', startHandler);
-        btn.addEventListener('mouseup', endHandler);
-        btn.addEventListener('mouseleave', endHandler);
-    }
-
-    stopAutoRepeat(btnId) {
-        if (this.repeatTimers[btnId]) {
-            clearTimeout(this.repeatTimers[btnId]);
-            clearInterval(this.repeatTimers[btnId]);
-            delete this.repeatTimers[btnId];
+    bindHoldTap() {
+        // Tapping the HOLD box triggers hold
+        const holdBox = document.getElementById('hold-box');
+        if (holdBox) {
+            holdBox.style.cursor = 'pointer';
+            holdBox.addEventListener('click', () => {
+                this.triggerHaptic(20);
+                this.engine.hold();
+            });
+            holdBox.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                this.triggerHaptic(20);
+                this.engine.hold();
+            }, { passive: true });
         }
     }
 
-    bindTouchButtons() {
-        this.bindButton('btn-left', () => this.engine.moveLeft(), true);
-        this.bindButton('btn-right', () => this.engine.moveRight(), true);
-        this.bindButton('btn-down', () => this.engine.softDrop(), true);
-        this.bindButton('btn-rot-cw', () => this.engine.rotate(true), false);
-        this.bindButton('btn-rot-ccw', () => this.engine.rotate(false), false);
-        this.bindButton('btn-hard-drop', () => {
-            this.triggerHaptic(30);
-            this.engine.hardDrop();
-        }, false);
-        this.bindButton('btn-hold', () => this.engine.hold(), false);
-    }
+    bindTouchGestures() {
+        const board = document.getElementById('board-wrap') || document.getElementById('app-container');
+        if (!board) return;
 
-    bindCanvasGestures() {
-        const canvas = document.getElementById('tetris-canvas');
-        if (!canvas) return;
+        board.addEventListener('touchstart', (e) => {
+            if (this.engine.isGameOver || this.engine.isPaused) return;
 
-        canvas.addEventListener('touchstart', (e) => {
+            // Two-finger tap -> Rotate CCW
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                this.triggerHaptic(18);
+                this.engine.rotate(false);
+                return;
+            }
+
             if (e.touches.length === 1) {
                 const touch = e.touches[0];
-                this.touchStartX = touch.clientX;
-                this.touchStartY = touch.clientY;
-                this.touchStartTime = Date.now();
+                this.startX = touch.clientX;
+                this.startY = touch.clientY;
+                this.lastX = touch.clientX;
+                this.lastY = touch.clientY;
+                this.startTime = Date.now();
+
+                this.accumulatedX = 0;
+                this.accumulatedY = 0;
             }
-        }, { passive: true });
+        }, { passive: false });
 
-        canvas.addEventListener('touchend', (e) => {
-            if (e.changedTouches.length === 1) {
-                const touch = e.changedTouches[0];
-                const dx = touch.clientX - this.touchStartX;
-                const dy = touch.clientY - this.touchStartY;
-                const dt = Date.now() - this.touchStartTime;
+        board.addEventListener('touchmove', (e) => {
+            if (this.engine.isGameOver || this.engine.isPaused) return;
+            if (e.touches.length !== 1) return;
 
-                // Tap for Rotate
-                if (Math.abs(dx) < 15 && Math.abs(dy) < 15 && dt < 250) {
+            e.preventDefault(); // Prevent page scrolling during game gesture
+
+            const touch = e.touches[0];
+            const dx = touch.clientX - this.lastX;
+            const dy = touch.clientY - this.lastY;
+
+            this.lastX = touch.clientX;
+            this.lastY = touch.clientY;
+
+            this.accumulatedX += dx;
+            this.accumulatedY += dy;
+
+            // Horizontal step movement
+            while (Math.abs(this.accumulatedX) >= this.dragThresholdX) {
+                if (this.accumulatedX > 0) {
+                    if (this.engine.moveRight()) this.triggerHaptic(8);
+                    this.accumulatedX -= this.dragThresholdX;
+                } else {
+                    if (this.engine.moveLeft()) this.triggerHaptic(8);
+                    this.accumulatedX += this.dragThresholdX;
+                }
+            }
+
+            // Downward soft drop step
+            while (this.accumulatedY >= this.dragThresholdY) {
+                if (this.engine.softDrop()) this.triggerHaptic(5);
+                this.accumulatedY -= this.dragThresholdY;
+            }
+        }, { passive: false });
+
+        board.addEventListener('touchend', (e) => {
+            if (this.engine.isGameOver || this.engine.isPaused) return;
+
+            const touchDuration = Date.now() - this.startTime;
+            const totalDx = this.lastX - this.startX;
+            const totalDy = this.lastY - this.startY;
+
+            // Calculate swipe velocity (px / ms)
+            const velocityY = totalDy / Math.max(1, touchDuration);
+
+            // 1. Fast Flick Down -> Hard Drop
+            if (totalDy > 60 && velocityY > this.flickVelocityY) {
+                this.triggerHaptic(30);
+                this.engine.hardDrop();
+                return;
+            }
+
+            // 2. Single / Double Tap Check
+            if (Math.abs(totalDx) < 12 && Math.abs(totalDy) < 12 && touchDuration < 280) {
+                const now = Date.now();
+                if (now - this.lastTapTime < 250) {
+                    // Double Tap -> Rotate CCW
+                    this.triggerHaptic(18);
+                    this.engine.rotate(false);
+                    this.lastTapTime = 0;
+                } else {
+                    // Single Tap -> Rotate CW
                     this.triggerHaptic(15);
                     this.engine.rotate(true);
-                    return;
-                }
-
-                // Horizontal Swipe
-                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > this.minSwipeDist) {
-                    this.triggerHaptic(12);
-                    if (dx > 0) this.engine.moveRight();
-                    else this.engine.moveLeft();
-                }
-                // Vertical Swipe Down (Hard Drop)
-                else if (dy > this.minSwipeDist * 1.5 && Math.abs(dy) > Math.abs(dx)) {
-                    this.triggerHaptic(30);
-                    this.engine.hardDrop();
+                    this.lastTapTime = now;
                 }
             }
         }, { passive: true });

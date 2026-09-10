@@ -32,8 +32,8 @@
 
             <!-- Left Panel: HOLD & HIGH SCORE -->
             <aside class="side-panel">
-                <div class="card-box">
-                    <span class="card-title">HOLD</span>
+                <div id="hold-box" class="card-box clickable-card" title="タップでホールド">
+                    <span class="card-title">HOLD 📦</span>
                     <canvas id="hold-canvas" class="mini-canvas" width="120" height="120"></canvas>
                 </div>
 
@@ -79,22 +79,13 @@
             <div id="combo-indicator" class="stat-label" style="color: var(--accent-magenta); font-weight: bold;"></div>
         </div>
 
-        <!-- On-Screen Virtual Gamepad Controller -->
-        <nav class="controller-pad">
-            <!-- Row 1: Hold, Rotate CCW, Rotate CW, Hard Drop -->
-            <div class="control-row">
-                <button id="btn-hold" class="pad-btn pad-btn-wide">📦 HOLD</button>
-                <button id="btn-rot-ccw" class="pad-btn pad-btn-action">↩️</button>
-                <button id="btn-rot-cw" class="pad-btn pad-btn-action">🔄</button>
-                <button id="btn-hard-drop" class="pad-btn pad-btn-drop pad-btn-wide">⚡ DROP</button>
-            </div>
-            <!-- Row 2: Left, Down (Soft Drop), Right -->
-            <div class="control-row">
-                <button id="btn-left" class="pad-btn pad-btn-wide">⬅️</button>
-                <button id="btn-down" class="pad-btn pad-btn-wide">⏬</button>
-                <button id="btn-right" class="pad-btn pad-btn-wide">➡️</button>
-            </div>
-        </nav>
+        <!-- Gesture Guide Footer Bar (No Virtual Buttons) -->
+        <footer class="gesture-guide">
+            <div class="guide-item"><span>👆</span> タップ: 回転</div>
+            <div class="guide-item"><span>👈👉</span> ドラッグ: 移動</div>
+            <div class="guide-item"><span>⏬</span> 下ドラッグ: 落下</div>
+            <div class="guide-item"><span>⚡</span> 下フリック: 一発着地</div>
+        </footer>
 
     </div>
 
