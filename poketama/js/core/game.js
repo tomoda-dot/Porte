@@ -1,116 +1,319 @@
 /**
- * PokéTama Story RPG - Game Engine & Save Manager
+ * PokéTama Main Game Core State & Tick Loop
  */
 
-class PoketamaGameEngine {
+class GameEngine {
     constructor() {
-        this.hasSeenIntro = false;
-        this.player = {
-            name: '主人公',
-            money: 1000,
-            badgeCount: 0, // 0 to 8 Gym Badges
-            items: {
-                pokeball: 10,
-                potion: 5
-            }
+        this.activeMonster = null;
+        this.incubator = []; // Eggs being warmed
+        this.monsterBox = []; // Raised monsters
+        this.inventory = {
+            berry_red: 5,
+            berry_blue: 3,
+            berry_golden: 1,
+            meat_roast: 2,
+            potion_small: 3,
+            incubator_standard: 2,
+            incubator_super: 1
         };
-        this.party = []; // Max 6 Poketama
-        this.pcBox = [];
-        this.dex = {}; // e.g. dex['fire_1'] = true
-        this.STORAGE_KEY = 'poketama_story_rpg_save_v2';
+        this.player = {
+            gender: 'boy',
+            name: '主人公',
+            energy: 100,
+            maxEnergy: 100
+        };
+        this.battleParty = []; // Party members for battle (up to 3 monsters)
+        this.dex = {};
+        this.gold = 500;
+        this.currentBiome = 'forest';
+        this.tickTimer = null;
+        this.autoSaveTimer = null;
     }
 
     init() {
-        const saved = this.loadState();
-        if (saved) {
-            this.hasSeenIntro = saved.hasSeenIntro || false;
-            this.player = saved.player || this.player;
-            this.party = saved.party || [];
-            this.pcBox = saved.pcBox || [];
-            this.dex = saved.dex || {};
-        }
-    }
-
-    createPoketamaInstance(speciesId, level = 5) {
-        const base = MONSTERS_DATABASE[speciesId] || MONSTERS_DATABASE.fire_1;
-        const scale = 1 + (level - 1) * 0.14;
-
-        const maxHp = Math.floor(base.baseHp * scale);
-        const atk = Math.floor(base.baseAtk * scale);
-        const def = Math.floor(base.baseDef * scale);
-        const spd = Math.floor(base.baseSpd * scale);
-
-        const moves = base.moves.map(mId => {
-            const mObj = MOVES_DATABASE[mId] || MOVES_DATABASE.tackle;
-            return { id: mObj.id, name: mObj.name, pp: mObj.maxPp, maxPp: mObj.maxPp };
-        });
-
-        const mon = {
-            uid: 'mon_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-            speciesId: base.id,
-            dexNo: base.dexNo || 1,
-            name: base.name,
-            element: base.element,
-            stage: base.stage,
-            level,
-            exp: 0,
-            maxExp: level * level * 8,
-            hp: maxHp,
-            maxHp,
-            atk,
-            def,
-            spd,
-            moves
-        };
-
-        this.dex[base.id] = true;
-        return mon;
-    }
-
-    addPoketamaToParty(poketama) {
-        if (this.party.length < 6) {
-            this.party.push(poketama);
+        const savedData = StorageManager.loadGame();
+        if (savedData) {
+            this.loadFromState(savedData);
         } else {
-            this.pcBox.push(poketama);
+            this.setupInitialNewGame();
         }
-        this.dex[poketama.speciesId] = true;
+
+        this.startTickLoop();
+    }
+
+    setupInitialNewGame() {
+        // Start player with initial Fire Egg in incubator (30 seconds remaining to demonstrate hatching!)
+        const now = Date.now();
+        this.incubator = [
+            {
+                id: 'egg_fire',
+                isIncubating: true,
+                incubatorType: 'incubator_standard',
+                incubatorName: '孵化器',
+                startTime: now - (1770 * 1000), // 30 seconds left!
+                totalTimeSeconds: 1800,
+                hatchesTo: 'fire_1'
+            }
+        ];
+        this.dex['egg_fire'] = true;
         this.saveState();
     }
 
-    getDexProgress() {
-        const caughtCount = Object.keys(this.dex).length;
+    loadFromState(saved) {
+        this.player = saved.player || { gender: 'boy', name: '主人公', energy: 100, maxEnergy: 100 };
+        this.monsterBox = saved.monsterBox || [];
+        this.inventory = saved.inventory || this.inventory;
+
+        // Clean obsolete egg_blanket or egg_lamp if present
+        delete this.inventory.egg_blanket;
+        delete this.inventory.egg_lamp;
+
+        // Migrate legacy incubator eggs
+        this.incubator = (saved.incubator || []).map(egg => {
+            if (!egg) return null;
+            if (egg.isIncubating === undefined) {
+                if (egg.warmth !== undefined && egg.warmth >= 80) {
+                    return {
+                        id: egg.id,
+                        isIncubating: true,
+                        incubatorType: 'incubator_standard',
+                        incubatorName: '孵化器',
+                        startTime: Date.now() - (1800 * 1000),
+                        totalTimeSeconds: 1800,
+                        hatchesTo: egg.hatchesTo || 'fire_1'
+                    };
+                }
+                return {
+                    id: egg.id,
+                    isIncubating: false,
+                    incubatorType: null,
+                    incubatorName: null,
+                    startTime: null,
+                    totalTimeSeconds: null,
+                    hatchesTo: egg.hatchesTo || 'fire_1'
+                };
+            }
+            return egg;
+        }).filter(Boolean);
+        this.dex = saved.dex || {};
+        this.gold = saved.gold || 300;
+        this.currentBiome = saved.currentBiome || 'forest';
+
+        // Ensure all monsters have unique uids
+        this.monsterBox.forEach((m, idx) => {
+            if (m && !m.uid) {
+                m.uid = 'mon_' + idx + '_' + (m.speciesId || 'mon') + '_' + Date.now();
+            }
+        });
+
+        if (saved.activeMonster) {
+            if (!saved.activeMonster.uid) {
+                saved.activeMonster.uid = 'mon_active_' + Date.now();
+            }
+            // Find existing instance in monsterBox by uid or reference
+            const match = this.monsterBox.find(m => m && (m.uid === saved.activeMonster.uid || (m.speciesId === saved.activeMonster.speciesId && m.nickname === saved.activeMonster.nickname)));
+            if (match) {
+                this.activeMonster = match;
+            } else {
+                this.monsterBox.unshift(saved.activeMonster);
+                this.activeMonster = saved.activeMonster;
+            }
+        } else if (this.monsterBox.length > 0) {
+            this.activeMonster = this.monsterBox[0];
+        } else {
+            this.activeMonster = null;
+        }
+
+        this.battleParty = saved.battleParty || (this.activeMonster ? [this.activeMonster] : []);
+    }
+
+    getAllOwnedMonsters() {
+        if (!this.monsterBox || !Array.isArray(this.monsterBox)) {
+            this.monsterBox = [];
+        }
+
+        // Clean nulls
+        this.monsterBox = this.monsterBox.filter(m => m !== null && m !== undefined);
+
+        // Ensure activeMonster is in monsterBox
+        if (this.activeMonster && !this.monsterBox.some(m => m === this.activeMonster || (m.uid && m.uid === this.activeMonster.uid))) {
+            this.monsterBox.unshift(this.activeMonster);
+        }
+
+        // Deduplicate monsterBox by uid or reference
+        const unique = [];
+        this.monsterBox.forEach(m => {
+            if (m && !unique.some(u => u === m || (m.uid && u.uid === m.uid))) {
+                unique.push(m);
+            }
+        });
+
+        this.monsterBox = unique;
+
+        // Backfill ATK, DEF, SPD if missing on older save instances
+        this.monsterBox.forEach(mon => {
+            if (mon) {
+                const spec = MONSTERS_DATABASE[mon.speciesId] || MONSTERS_DATABASE.fire_1;
+                if (!mon.atk) mon.atk = spec.atk || 20;
+                if (!mon.def) mon.def = spec.def || 15;
+                if (!mon.spd) mon.spd = spec.spd || 15;
+                if (!mon.maxHp) mon.maxHp = spec.maxHp || 80;
+                if (mon.hp === undefined || mon.hp === null) mon.hp = mon.maxHp;
+            }
+        });
+
+        return this.monsterBox;
+    }
+
+    switchActiveMonster(direction = 1) {
+        const owned = this.getAllOwnedMonsters();
+        if (owned.length <= 1) return this.activeMonster;
+
+        let currentIndex = owned.findIndex(m => m === this.activeMonster || (m.uid && m.uid === this.activeMonster?.uid));
+        if (currentIndex === -1) currentIndex = 0;
+
+        let nextIndex = (currentIndex + direction + owned.length) % owned.length;
+        this.activeMonster = owned[nextIndex];
+        this.saveState();
+        return this.activeMonster;
+    }
+
+    releaseMonster(target) {
+        const owned = this.getAllOwnedMonsters();
+        if (owned.length <= 1) return false;
+
+        const targetUid = target.uid || target;
+        this.monsterBox = (this.monsterBox || []).filter(m => m !== target && (m.uid && m.uid !== targetUid));
+
+        if (this.battleParty) {
+            this.battleParty = this.battleParty.filter(m => m !== target && (m.uid && m.uid !== targetUid));
+        }
+
+        const remaining = this.getAllOwnedMonsters();
+        if (remaining.length > 0) {
+            if (!this.activeMonster || this.activeMonster === target || (this.activeMonster.uid && this.activeMonster.uid === targetUid)) {
+                this.activeMonster = remaining[0];
+            }
+            if (!this.battleParty || this.battleParty.length === 0) {
+                this.battleParty = [remaining[0]];
+            }
+        }
+
+        this.saveState();
+        return true;
+    }
+
+    getBattleParty() {
+        const owned = this.getAllOwnedMonsters();
+        if (owned.length === 0) return [];
+
+        // Auto-fill battleParty up to 3 members if not fully set
+        let party = (this.battleParty || []).filter(m => m && owned.some(o => o === m || (o.uid && o.uid === m.uid)));
+        
+        if (party.length === 0 && this.activeMonster) {
+            party = [this.activeMonster];
+        }
+
+        // Fill up to 3 monsters from owned
+        owned.forEach(m => {
+            if (party.length < 3 && !party.some(p => p === m || (p.uid && p.uid === m.uid))) {
+                party.push(m);
+            }
+        });
+
+        this.battleParty = party;
+
+        // Guarantee hp initialization and revive members if energy >= 5
+        this.battleParty.forEach(m => {
+            if (m.maxHp === undefined || m.maxHp === null) m.maxHp = 50;
+            if (m.hp === undefined || m.hp === null || m.hp <= 0) {
+                if (m.energy === undefined || m.energy >= 5) {
+                    m.hp = m.maxHp;
+                    m.isFainted = false;
+                }
+            }
+        });
+
+        let alive = this.battleParty.filter(m => m.hp > 0);
+        if (alive.length === 0 && this.battleParty.length > 0) {
+            this.battleParty[0].hp = this.battleParty[0].maxHp;
+            this.battleParty[0].isFainted = false;
+        }
+
+        return this.battleParty;
+    }
+
+    exportSaveState() {
         return {
-            caughtCount,
-            totalCount: 100,
-            percent: Math.min(100, Math.floor((caughtCount / 100) * 100))
+            player: this.player,
+            activeMonster: this.activeMonster,
+            incubator: this.incubator,
+            monsterBox: this.monsterBox,
+            battleParty: this.battleParty,
+            inventory: this.inventory,
+            dex: this.dex,
+            gold: this.gold,
+            currentBiome: this.currentBiome
         };
     }
 
     saveState() {
-        const data = {
-            hasSeenIntro: this.hasSeenIntro,
-            player: this.player,
-            party: this.party,
-            pcBox: this.pcBox,
-            dex: this.dex
-        };
-        try {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
-        } catch (e) {
-            console.error('Failed to save game state', e);
-        }
+        StorageManager.saveGame(this.exportSaveState());
     }
 
-    loadState() {
-        try {
-            const raw = localStorage.getItem(this.STORAGE_KEY);
-            return raw ? JSON.parse(raw) : null;
-        } catch (e) {
-            console.error('Failed to load game state', e);
-            return null;
+    startTickLoop() {
+        if (this.tickTimer) clearInterval(this.tickTimer);
+        // Game tick every 5 seconds
+        this.tickTimer = setInterval(() => {
+            this.onGameTick();
+        }, 5000);
+
+        // Auto save every 20 seconds
+        this.autoSaveTimer = setInterval(() => {
+            this.saveState();
+        }, 20000);
+    }
+
+    onGameTick() {
+        // Tick Player Energy (recover +2 every 5 seconds up to maxEnergy)
+        if (!this.player) {
+            this.player = { gender: 'boy', name: '主人公', energy: 100, maxEnergy: 100 };
+        }
+        if (this.player.energy === undefined) this.player.energy = 100;
+        if (this.player.maxEnergy === undefined) this.player.maxEnergy = 100;
+
+        if (this.player.energy < this.player.maxEnergy) {
+            this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 2);
+        }
+
+        // Tick active monster vitals
+        if (this.activeMonster && !this.activeMonster.isSleeping) {
+            // Hunger drops very slowly (1 per 10 minutes = 1/120 chance every 5s tick)
+            if (Math.random() < (1 / 120)) {
+                this.activeMonster.hunger = Math.max(0, this.activeMonster.hunger - 1);
+            }
+            
+            // Cleanliness drops over time
+            if (Math.random() < 0.15) {
+                this.activeMonster.cleanliness = Math.max(0, this.activeMonster.cleanliness - 5);
+            }
+
+            if (this.activeMonster.hunger < 20 || this.activeMonster.cleanliness < 20) {
+                this.activeMonster.friendship = Math.max(0, this.activeMonster.friendship - 1);
+            }
+        } else if (this.activeMonster && this.activeMonster.isSleeping) {
+            // Sleep recovers player energy faster
+            this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 10);
+            if (this.player.energy >= this.player.maxEnergy) {
+                this.activeMonster.isSleeping = false;
+            }
+        }
+
+        // Trigger UI refresh
+        if (window.renderGameUI) {
+            window.renderGameUI();
         }
     }
 }
 
-const gameEngine = new PoketamaGameEngine();
-window.gameEngine = gameEngine;
+const gameEngine = new GameEngine();

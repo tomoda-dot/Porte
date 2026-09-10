@@ -1,221 +1,482 @@
 /**
- * PokéTama Story RPG - Battle & 100-Dex Catch Engine
+ * PokéTama Multi-Party Battle Engine Module (Classic FF Style 3v3) - v1.6.0
  */
 
-const GYM_LEADERS_DATABASE = [
-    { rank: 1, name: 'タケシ', town: 'ヒワダジム', badgeName: 'グレーバッジ', enemyId: 'grass_2', level: 12, prize: 1500 },
-    { rank: 2, name: 'カスミ', town: 'ハナダジム', badgeName: 'ブルーバッジ', enemyId: 'water_2', level: 18, prize: 3000 },
-    { rank: 3, name: 'マチス', town: 'クチバジム', badgeName: 'オレンジバッジ', enemyId: 'fire_2', level: 25, prize: 5000 },
-    { rank: 4, name: 'エリカ', town: 'タマムシジム', badgeName: 'レインボーバッジ', enemyId: 'grass_3', level: 32, prize: 8000 },
-    { rank: 5, name: 'キョウ', town: 'セキチクジム', badgeName: 'ピンクバッジ', enemyId: 'water_3', level: 40, prize: 12000 },
-    { rank: 6, name: 'ナツメ', town: 'ヤマブキジム', badgeName: 'ゴールドバッジ', enemyId: 'fire_3', level: 48, prize: 18000 },
-    { rank: 7, name: 'カツラ', town: 'グレンジム', badgeName: 'クリムゾンバッジ', enemyId: 'fire_3', level: 56, prize: 25000 },
-    { rank: 8, name: 'サカキ', town: 'トキワジム (最終話)', badgeName: 'アースバッジ', enemyId: 'fire_3', level: 65, prize: 50000 }
-];
+class BattleEngine {
+    constructor() {
+        this.inBattle = false;
+        this.playerParty = []; // Array of active player monsters
+        this.enemyGroup = [];  // Array of 1~3 enemy monsters
+        this.currentActorIndex = 0; // Which player party member is selecting command
+        this.queuedCommands = []; // Moves queued for current round
+        this.battleLog = [];
+        this.isBossBattle = false;
+        this.selectedTargetIndex = 0;
+        this.turnCount = 1;
+    }
 
-const BattleModule = {
-    activeBattle: null,
-
-    startWildEncounter() {
-        if (gameEngine.party.length === 0) return;
-
-        // Pick random species from ALL_100_POKETAMA_LIST
-        const randIndex = Math.floor(Math.random() * ALL_100_POKETAMA_LIST.length);
-        const spec = ALL_100_POKETAMA_LIST[randIndex] || MONSTERS_DATABASE.fire_1;
-        const wildLvl = Math.floor(Math.random() * 4) + 3; // Level 3~6
-
-        const enemyMon = gameEngine.createPoketamaInstance(spec.id, wildLvl);
-        const playerMon = gameEngine.party.find(p => p.hp > 0) || gameEngine.party[0];
-
-        this.activeBattle = {
-            isGym: false,
-            playerMon,
-            enemyMon,
-            log: [`あせっ！ 野生の「${enemyMon.name}」(図鑑#${enemyMon.dexNo}) が飛び出してきた！`]
-        };
-
-        if (window.UIController) {
-            window.UIController.openBattleOverlay();
-        }
-    },
-
-    startGymBattle() {
-        if (gameEngine.party.length === 0) return;
-
-        const badgeCount = gameEngine.player.badgeCount || 0;
-        const gym = GYM_LEADERS_DATABASE[badgeCount] || GYM_LEADERS_DATABASE[GYM_LEADERS_DATABASE.length - 1];
-
-        const enemyMon = gameEngine.createPoketamaInstance(gym.enemyId, gym.level);
-        enemyMon.name = `ジムリーダー [${gym.name}] の ${enemyMon.name}`;
-        const playerMon = gameEngine.party.find(p => p.hp > 0) || gameEngine.party[0];
-
-        this.activeBattle = {
-            isGym: true,
-            gym,
-            playerMon,
-            enemyMon,
-            log: [`🏆 ${gym.town}！ ジムリーダーの${gym.name}が勝負を仕掛けてきた！`]
-        };
-
-        if (window.UIController) {
-            window.UIController.openBattleOverlay();
-        }
-    },
-
-    executePlayerMove(moveId) {
-        if (!this.activeBattle) return;
-        const b = this.activeBattle;
-        const p = b.playerMon;
-        const e = b.enemyMon;
-
-        const moveObj = MOVES_DATABASE[moveId] || MOVES_DATABASE.tackle;
-
-        // Element Effectiveness
-        let mult = 1.0;
-        if (ELEMENT_TYPES[moveObj.type]) {
-            const mType = ELEMENT_TYPES[moveObj.type];
-            if (mType.strong === e.element) mult = 1.6;
-            if (mType.weak === e.element) mult = 0.6;
+    startPartyBattle(partyList, enemySpeciesList, isBoss = false) {
+        const validParty = (partyList || []).filter(m => m && m.hp > 0);
+        if (validParty.length === 0) {
+            return { success: false, message: '出撃できるパートナーのHPがありません！お世話をして回復させてください。' };
         }
 
-        const rawDmg = Math.max(8, Math.floor((p.atk * (moveObj.power / 40) - e.def * 0.25) * mult));
-        const dmg = Math.floor(rawDmg * (0.85 + Math.random() * 0.3));
-
-        e.hp = Math.max(0, e.hp - dmg);
-        b.log.unshift(`⚔️ ${p.name}の「${moveObj.name}」！ ${e.name}に ${dmg} ダメージ！${mult > 1 ? ' (効果は抜群だ！)' : ''}`);
-
-        // Check Enemy KO
-        if (e.hp <= 0) {
-            b.log.unshift(`🎉 野生の ${e.name} は倒れた！ 勝利！`);
-
-            // Register to Dex
-            gameEngine.dex[e.speciesId] = true;
+        this.playerParty = validParty.map((m, idx) => {
+            const baseSpec = MONSTERS_DATABASE[m.speciesId] || MONSTERS_DATABASE.fire_1;
+            let moveList = m.moves || baseSpec.moves;
             
-            // EXP Gain
-            const expGained = e.level * 32;
-            p.exp += expGained;
-            b.log.unshift(`🌟 ${p.name}は ${expGained} EXP を獲得！`);
-
-            // Level Up Check
-            while (p.exp >= p.maxExp) {
-                p.exp -= p.maxExp;
-                p.level += 1;
-                p.maxExp = p.level * p.level * 8;
-                p.maxHp += 10;
-                p.hp = p.maxHp;
-                p.atk += 6;
-                p.def += 5;
-                p.spd += 5;
-                b.log.unshift(`✨ おめでとう！ ${p.name}は Lv.${p.level} へレベルアップ！`);
-
-                // Evolution Check
-                const spec = MONSTERS_DATABASE[p.speciesId];
-                if (spec && spec.nextEvo && p.level >= spec.evoLevel) {
-                    const nextSpec = MONSTERS_DATABASE[spec.nextEvo];
-                    if (nextSpec) {
-                        p.speciesId = nextSpec.id;
-                        p.name = nextSpec.name;
-                        gameEngine.dex[nextSpec.id] = true;
-                        b.log.unshift(`✨ 進化！！ ${p.name}へ姿が大きく進化した！`);
-                    }
+            // Expand to 4 moves if needed
+            const defaultPools = {
+                fire: ['tackle', 'ember', 'flame_charge', 'fire_breath', 'fire_claw', 'lava_surge'],
+                water: ['tackle', 'water_drop', 'bubble_beam', 'aqua_tail', 'surf_wave', 'hydro_pump'],
+                grass: ['tackle', 'leaf_shot', 'vine_whip', 'leaf_blade', 'petal_storm', 'solar_beam'],
+                cyber: ['tackle', 'spark', 'thunder_bolt', 'laser_claw', 'discharge', 'giga_volt']
+            };
+            const pool = defaultPools[m.element || baseSpec.element] || defaultPools.fire;
+            const expandedIds = [...(moveList.map(moveItem => typeof moveItem === 'string' ? moveItem : moveItem.id))];
+            
+            pool.forEach(pId => {
+                if (expandedIds.length < 4 && !expandedIds.includes(pId)) {
+                    expandedIds.push(pId);
                 }
-            }
+            });
 
-            if (b.isGym && b.gym) {
-                gameEngine.player.badgeCount = Math.min(8, (gameEngine.player.badgeCount || 0) + 1);
-                gameEngine.player.money += b.gym.prize;
-                b.log.unshift(`🏆 【${b.gym.badgeName}】を獲得！ 賞金 ${b.gym.prize} G を手に入れた！`);
-            }
+            const movesObjList = expandedIds.slice(0, 4).map((mId, moveIdx) => {
+                const existing = Array.isArray(m.moves) && typeof m.moves[moveIdx] === 'object' ? m.moves[moveIdx] : null;
+                const mData = MOVES_DATABASE[mId] || MOVES_DATABASE.tackle;
+                const maxPp = mData.maxPp || 15;
+                const currentPp = existing && existing.pp !== undefined ? existing.pp : maxPp;
+                return {
+                    id: mData.id,
+                    name: mData.name,
+                    type: mData.type,
+                    power: mData.power,
+                    accuracy: mData.accuracy,
+                    maxPp: maxPp,
+                    pp: currentPp
+                };
+            });
 
-            gameEngine.saveState();
-            setTimeout(() => {
-                if (window.UIController) window.UIController.closeBattleOverlay();
-            }, 1800);
-            return;
+            m.moves = movesObjList;
+
+            return {
+                ...m,
+                _ref: m,
+                partyIndex: idx,
+                isFainted: false
+            };
+        });
+
+        this.enemyGroup = (enemySpeciesList || ['fire_1']).map((specId, idx) => {
+            const base = MONSTERS_DATABASE[specId] || MONSTERS_DATABASE.fire_1;
+            const avgLevel = Math.max(1, Math.floor(this.playerParty.reduce((acc, m) => acc + m.level, 0) / this.playerParty.length));
+            const levelScale = avgLevel + (isBoss ? 1 : 0);
+            
+            // Balanced Enemy Max HP so battles are fair and beatable!
+            const maxHp = Math.floor(base.maxHp * (isBoss ? (0.85 + levelScale * 0.12) : (0.55 + levelScale * 0.08)));
+
+            return {
+                groupIndex: idx,
+                id: base.id,
+                nickname: (isBoss && idx === 0 ? '【ボス】' : '') + base.name + (enemySpeciesList.length > 1 ? ` ${String.fromCharCode(65 + idx)}` : ''),
+                speciesId: base.id,
+                level: levelScale,
+                hp: maxHp,
+                maxHp: maxHp,
+                atk: Math.floor(base.atk * (0.65 + levelScale * 0.08)),
+                def: Math.floor(base.def * (0.65 + levelScale * 0.08)),
+                spd: Math.floor(base.spd * (0.65 + levelScale * 0.08)),
+                element: base.element,
+                stage: base.stage,
+                moves: [...base.moves],
+                isBoss,
+                isFainted: false
+            };
+        });
+
+        this.inBattle = true;
+        this.isBossBattle = isBoss;
+        this.currentActorIndex = 0;
+        this.queuedCommands = [];
+        this.selectedTargetIndex = 0;
+        this.turnCount = 1;
+
+        const enemyNames = this.enemyGroup.map(e => e.nickname).join('・');
+        this.battleLog = [`⚔️ 【戦闘開始】 野生のモンスター軍団 (${enemyNames}) が現れた！`];
+        this.battleLog.push(`コマンドを選択して仲間パーティに命令を出してください！`);
+
+        return {
+            success: true,
+            playerParty: this.playerParty,
+            enemyGroup: this.enemyGroup,
+            log: this.battleLog
+        };
+    }
+
+    getCurrentActor() {
+        if (!this.inBattle) return null;
+        while (this.currentActorIndex < this.playerParty.length) {
+            const member = this.playerParty[this.currentActorIndex];
+            if (member && member.hp > 0 && !member.isFainted) {
+                return member;
+            }
+            this.currentActorIndex++;
+        }
+        return null;
+    }
+
+    selectMemberMove(moveIndex, targetEnemyIndex = 0) {
+        if (!this.inBattle) return null;
+        const actor = this.getCurrentActor();
+        if (!actor) return null;
+
+        const moveObj = actor.moves[moveIndex];
+        if (moveObj && moveObj.pp !== undefined && moveObj.pp <= 0) {
+            return {
+                isError: true,
+                message: `⚠️ 【${moveObj.name}】の技回数(PP)が切れています！別の技を選択してください。`
+            };
         }
 
-        // Enemy Counter Attack
-        this.executeEnemyMove();
-    },
-
-    executeEnemyMove() {
-        const b = this.activeBattle;
-        const p = b.playerMon;
-        const e = b.enemyMon;
-
-        const enemyMoveId = e.moves[Math.floor(Math.random() * e.moves.length)];
-        const moveObj = MOVES_DATABASE[enemyMoveId] || MOVES_DATABASE.tackle;
-
-        const rawDmg = Math.max(6, Math.floor((e.atk * (moveObj.power / 40) - p.def * 0.25)));
-        const dmg = Math.floor(rawDmg * (0.85 + Math.random() * 0.3));
-
-        p.hp = Math.max(0, p.hp - dmg);
-        b.log.unshift(`💥 ${e.name}の「${moveObj.name}」！ ${p.name}は ${dmg} ダメージを受けた！`);
-
-        if (p.hp <= 0) {
-            b.log.unshift(`💀 ${p.name}は倒れてしまった... ポケタマセンターで回復しましょう。`);
-            gameEngine.saveState();
-            setTimeout(() => {
-                if (window.UIController) window.UIController.closeBattleOverlay();
-            }, 1800);
+        // Deduct Move PP
+        if (moveObj && moveObj.pp > 0) {
+            moveObj.pp--;
         }
-    },
 
-    useItem(itemType) {
-        if (!this.activeBattle) return;
-        const b = this.activeBattle;
-
-        if (itemType === 'potion') {
-            if (gameEngine.player.items.potion <= 0) {
-                alert('キズぐすりがありません！');
-                return;
-            }
-            gameEngine.player.items.potion--;
-            b.playerMon.hp = Math.min(b.playerMon.maxHp, b.playerMon.hp + 45);
-            b.log.unshift(`🧪 キズぐすりを使用！ ${b.playerMon.name}のHPが 45 回復した！`);
-            gameEngine.saveState();
-            this.executeEnemyMove();
-        } else if (itemType === 'pokeball') {
-            if (b.isGym) {
-                alert('ジムリーダーのポケタマは捕まえられません！');
-                return;
-            }
-            if (gameEngine.player.items.pokeball <= 0) {
-                alert('モンスターボールがありません！');
-                return;
-            }
-            gameEngine.player.items.pokeball--;
-            b.log.unshift(`⚾ モンスターボールを投げた！`);
-
-            // Catch Chance
-            const catchRate = (b.enemyMon.maxHp - b.enemyMon.hp) / b.enemyMon.maxHp + 0.4;
-            if (Math.random() < catchRate) {
-                b.log.unshift(`🎉 やったー！ 野生の「${b.enemyMon.name}」(図鑑#${b.enemyMon.dexNo}) を捕まえた！`);
-                gameEngine.addPoketamaToParty(b.enemyMon);
-                
-                const dexProgress = gameEngine.getDexProgress();
-                b.log.unshift(`📖 全100種図鑑に登録！ （現在: ${dexProgress.caughtCount} / 100 種類）`);
-
-                setTimeout(() => {
-                    if (window.UIController) window.UIController.closeBattleOverlay();
-                }, 1800);
-            } else {
-                b.log.unshift(`❌ あと少し！ ボールから逃げ出された！`);
-                this.executeEnemyMove();
-            }
+        let targetIdx = targetEnemyIndex;
+        if (!this.enemyGroup[targetIdx] || this.enemyGroup[targetIdx].isFainted) {
+            targetIdx = this.enemyGroup.findIndex(e => !e.isFainted);
+            if (targetIdx === -1) targetIdx = 0;
         }
-    },
 
-    runAway() {
-        if (!this.activeBattle) return;
-        if (this.activeBattle.isGym) {
-            alert('ジム戦からは逃げられない！');
-            return;
+        this.queuedCommands.push({
+            memberIndex: this.currentActorIndex,
+            moveIndex,
+            targetEnemyIndex: targetIdx
+        });
+
+        this.currentActorIndex++;
+
+        const nextActor = this.getCurrentActor();
+        if (!nextActor) {
+            return this.executeRound();
         }
-        if (window.UIController) {
-            window.UIController.closeBattleOverlay();
+
+        return {
+            status: 'queued',
+            nextActor: nextActor,
+            log: this.battleLog
+        };
+    }
+
+    getEnemyAction(enemy) {
+        const aliveParty = this.playerParty.filter(p => p.hp > 0 && !p.isFainted);
+        if (aliveParty.length === 0) return null;
+
+        let targetMember = null;
+
+        // Tactical AI Target Selection
+        if (enemy.isBoss) {
+            targetMember = aliveParty.reduce((prev, curr) => (curr.hp / curr.maxHp) < (prev.hp / prev.maxHp) ? curr : prev, aliveParty[0]);
+        } else if (enemy.element === 'fire') {
+            targetMember = aliveParty.reduce((prev, curr) => curr.hp < prev.hp ? curr : prev, aliveParty[0]);
+        } else if (enemy.element === 'water' || enemy.element === 'grass') {
+            targetMember = aliveParty.find(p => ELEMENT_TYPES[p.element]?.weakness === enemy.element) || aliveParty[Math.floor(Math.random() * aliveParty.length)];
+        } else {
+            targetMember = aliveParty[Math.floor(Math.random() * aliveParty.length)];
+        }
+
+        if (!targetMember) targetMember = aliveParty[0];
+
+        // Move Selection Strategy
+        let selectedMoveId = enemy.moves[0];
+        if (enemy.isBoss && enemy.hp < enemy.maxHp * 0.4) {
+            selectedMoveId = enemy.moves.reduce((best, mId) => {
+                const p1 = (MOVES_DATABASE[mId] || {}).power || 0;
+                const p2 = (MOVES_DATABASE[best] || {}).power || 0;
+                return p1 > p2 ? mId : best;
+            }, enemy.moves[0]);
+        } else {
+            selectedMoveId = enemy.moves[Math.floor(Math.random() * enemy.moves.length)];
+        }
+
+        const move = MOVES_DATABASE[selectedMoveId] || MOVES_DATABASE.tackle;
+        return { targetMember, move };
+    }
+
+    autoSelectAliveTarget() {
+        if (!this.enemyGroup || this.enemyGroup.length === 0) return;
+        if (!this.enemyGroup[this.selectedTargetIndex] || this.enemyGroup[this.selectedTargetIndex].isFainted) {
+            const nextAliveIdx = this.enemyGroup.findIndex(e => !e.isFainted);
+            if (nextAliveIdx !== -1) {
+                this.selectedTargetIndex = nextAliveIdx;
+            }
         }
     }
-};
 
-window.BattleModule = BattleModule;
+    executeRound() {
+        const steps = [];
+
+        // --- PHASE 1: Player Party Turn Steps ---
+        for (const cmd of this.queuedCommands) {
+            const attacker = this.playerParty[cmd.memberIndex];
+            if (!attacker || attacker.hp <= 0 || attacker.isFainted) continue;
+
+            let origTarget = this.enemyGroup[cmd.targetEnemyIndex];
+            const wasRedirected = origTarget && origTarget.isFainted;
+
+            let target = origTarget;
+            if (!target || target.isFainted) {
+                target = this.enemyGroup.find(e => !e.isFainted);
+            }
+            if (!target) break; // All enemies defeated!
+
+            const hpBefore = target.hp;
+
+            const rawMove = attacker.moves[cmd.moveIndex] || attacker.moves[0] || 'tackle';
+            const moveId = typeof rawMove === 'string' ? rawMove : (rawMove ? rawMove.id : 'tackle');
+            const move = MOVES_DATABASE[moveId] || MOVES_DATABASE.tackle;
+
+            const res = calculateBattleDamage(attacker, target, move, attacker.friendship);
+            target.hp = Math.max(0, target.hp - res.damage);
+
+            let logText = `${wasRedirected ? '🎯(ターゲット変更) ' : ''}⚔️ ${attacker.nickname} の 【${res.moveName}】！ `;
+            if (res.isCrit) logText += '急所に当たった！ ';
+            if (res.typeMult > 1.0) logText += 'ばつぐんだ！ ';
+            if (res.typeMult < 1.0) logText += 'いまひとつのようだ... ';
+            logText += `${target.nickname} に ${res.damage} ダメージ！`;
+
+            if (target.hp <= 0) {
+                target.isFainted = true;
+                logText += ` 💥 ${target.nickname} は倒れた！`;
+                this.autoSelectAliveTarget();
+            }
+
+            this.battleLog.push(logText);
+
+            steps.push({
+                attackerSide: 'player',
+                attackerIndex: cmd.memberIndex,
+                attackerName: attacker.nickname,
+                targetSide: 'enemy',
+                targetIndex: target.groupIndex,
+                targetName: target.nickname,
+                moveObj: move,
+                damage: res.damage,
+                isCrit: res.isCrit,
+                typeMult: res.typeMult,
+                targetHpBefore: hpBefore,
+                targetHpRemaining: target.hp,
+                targetMaxHp: target.maxHp,
+                targetFainted: target.isFainted,
+                logText
+            });
+        }
+
+        // Check Victory
+        const aliveEnemies = this.enemyGroup.filter(e => !e.isFainted);
+        if (aliveEnemies.length === 0) {
+            const vicData = this.handlePartyVictory();
+            return {
+                status: 'victory',
+                steps,
+                victoryData: vicData,
+                log: this.battleLog
+            };
+        }
+
+        // --- PHASE 2: Enemy Group Tactical Counterattack ---
+        for (const enemy of aliveEnemies) {
+            const aiAct = this.getEnemyAction(enemy);
+            if (!aiAct) break;
+
+            const targetPartyMember = aiAct.targetMember;
+            const move = aiAct.move;
+
+            const hpBefore = targetPartyMember.hp;
+
+            const res = calculateBattleDamage(enemy, targetPartyMember, move);
+            targetPartyMember.hp = Math.max(0, targetPartyMember.hp - res.damage);
+
+            let logText = `⚡ 敵の ${enemy.nickname} の 【${res.moveName}】！ `;
+            if (res.isCrit) logText += '急所に当たった！ ';
+            logText += `${targetPartyMember.nickname} に ${res.damage} ダメージ！`;
+
+            if (targetPartyMember.hp <= 0) {
+                targetPartyMember.isFainted = true;
+                logText += ` 💔 ${targetPartyMember.nickname} は倒れてしまった...`;
+            }
+
+            this.battleLog.push(logText);
+
+            steps.push({
+                attackerSide: 'enemy',
+                attackerIndex: enemy.groupIndex,
+                attackerName: enemy.nickname,
+                targetSide: 'player',
+                targetIndex: targetPartyMember.partyIndex,
+                targetName: targetPartyMember.nickname,
+                moveObj: move,
+                damage: res.damage,
+                isCrit: res.isCrit,
+                typeMult: res.typeMult,
+                targetHpBefore: hpBefore,
+                targetHpRemaining: targetPartyMember.hp,
+                targetMaxHp: targetPartyMember.maxHp,
+                targetFainted: targetPartyMember.isFainted,
+                logText
+            });
+        }
+
+        // Check Defeat
+        const alivePartyFinal = this.playerParty.filter(p => p.hp > 0 && !p.isFainted);
+        if (alivePartyFinal.length === 0) {
+            this.inBattle = false;
+            this.battleLog.push(`💀 パーティ全員が倒れてしまった... 保留されていたアイテムとゴールドは没収されました！`);
+            if (window.AdventureModule) {
+                AdventureModule.handleDungeonDefeat();
+            }
+            return {
+                status: 'defeat',
+                steps,
+                log: this.battleLog
+            };
+        }
+
+        this.syncPartyStateBack();
+
+        this.currentActorIndex = 0;
+        this.queuedCommands = [];
+        this.turnCount++;
+
+        return {
+            status: 'round_complete',
+            steps,
+            nextActor: this.getCurrentActor(),
+            log: this.battleLog
+        };
+    }
+
+    syncPartyStateBack() {
+        if (!this.playerParty) return;
+        this.playerParty.forEach(member => {
+            if (member._ref) {
+                member._ref.level = member.level;
+                member._ref.exp = member.exp;
+                member._ref.maxExp = member.maxExp;
+                member._ref.maxHp = member.maxHp;
+                member._ref.hp = member.hp;
+                member._ref.atk = member.atk;
+                member._ref.def = member.def;
+                member._ref.spd = member.spd;
+                member._ref.moves = member.moves;
+                member._ref.isFainted = (member.hp <= 0);
+            }
+        });
+        if (gameEngine && gameEngine.saveState) {
+            gameEngine.saveState();
+        }
+    }
+
+    useBattleItem(itemId, targetMemberIndex = 0) {
+        if (!this.inBattle) return null;
+
+        const item = ITEMS_DATABASE[itemId];
+        if (!item || item.type !== 'medicine') {
+            return { success: false, message: 'バトルで使用できないアイテムです。' };
+        }
+
+        if (gameEngine.inventory[itemId] <= 0) {
+            return { success: false, message: '所持数が足りません。' };
+        }
+
+        const targetMember = this.playerParty[targetMemberIndex] || this.getCurrentActor();
+        if (!targetMember) return null;
+
+        gameEngine.inventory[itemId]--;
+
+        if (item.hpRestore) {
+            targetMember.hp = Math.min(targetMember.maxHp, targetMember.hp + item.hpRestore);
+            targetMember.isFainted = false;
+            this.battleLog.push(`🧪 ${item.name} を使用！ ${targetMember.nickname} のHPが ${item.hpRestore} 回復した！`);
+        }
+
+        audioFX.playFeed();
+        this.syncPartyStateBack();
+
+        this.currentActorIndex++;
+        const nextActor = this.getCurrentActor();
+        if (!nextActor) {
+            return this.executeRound();
+        }
+
+        return {
+            status: 'queued',
+            nextActor: nextActor,
+            log: this.battleLog
+        };
+    }
+
+    flee() {
+        if (!this.inBattle) return null;
+        this.inBattle = false;
+        this.battleLog.push('🏃 うまく逃げ切れた！');
+        this.syncPartyStateBack();
+        return {
+            status: 'fled',
+            log: this.battleLog
+        };
+    }
+
+    handlePartyVictory() {
+        const totalEnemyLevel = this.enemyGroup.reduce((acc, e) => acc + e.level, 0);
+        const expGained = Math.floor(30 * totalEnemyLevel * (this.isBossBattle ? 2.5 : 1.0));
+        const goldGained = Math.floor(40 * totalEnemyLevel * (this.isBossBattle ? 2.0 : 1.0));
+
+        const isDungeonActive = !!(window.AdventureModule && AdventureModule.currentDungeon);
+
+        if (isDungeonActive) {
+            AdventureModule.addPendingBattleRewards(goldGained, expGained);
+            this.battleLog.push(`🌟 EXP +${expGained} & 💰 +${goldGained}G を保留箱に追加！`);
+        } else {
+            gameEngine.gold += goldGained;
+            this.playerParty.forEach(member => {
+                if (member.hp > 0 && !member.isFainted) {
+                    const targetObj = member._ref || member;
+                    TamagotchiModule.addExp(targetObj, expGained);
+                }
+            });
+            this.battleLog.push(`🎉 勝利！ ゴールド +${goldGained}G 獲得！`);
+        }
+
+        this.syncPartyStateBack();
+
+        let eggDropped = null;
+        if (Math.random() < (this.isBossBattle ? 0.9 : 0.4)) {
+            const firstElem = this.enemyGroup[0].element || 'fire';
+            const eggMapping = { fire: 'egg_fire', water: 'egg_water', grass: 'egg_grass', cyber: 'egg_cyber' };
+            const targetEggId = eggMapping[firstElem] || 'egg_fire';
+            if (isDungeonActive) {
+                AdventureModule.currentDungeon.pendingRewards.items.push(targetEggId);
+                eggDropped = EGGS_DATABASE[targetEggId];
+                this.battleLog.push(`🥚 「${eggDropped.name}」を発見！保留箱に追加されました！`);
+            } else {
+                const eggRes = IncubatorModule.addNewEggToIncubator(targetEggId);
+                if (eggRes.success) {
+                    eggDropped = EGGS_DATABASE[targetEggId];
+                    this.battleLog.push(`🥚 「${eggDropped.name}」を発見！孵化室に追加されました！`);
+                }
+            }
+        }
+
+        return {
+            status: 'victory',
+            goldGained,
+            expGained,
+            eggDropped,
+            log: this.battleLog
+        };
+    }
+}
+
+const battleEngine = new BattleEngine();
