@@ -12,9 +12,12 @@ const SHOP_CATALOG = {
     medicine: [
         { id: 'potion_small', buyPrice: 50, sellPrice: 25 },
         { id: 'potion_hyper', buyPrice: 150, sellPrice: 75 },
-        { id: 'energy_drink', buyPrice: 40, sellPrice: 20 },
-        { id: 'egg_blanket', buyPrice: 80, sellPrice: 40 },
-        { id: 'egg_lamp', buyPrice: 180, sellPrice: 90 }
+        { id: 'energy_drink', buyPrice: 40, sellPrice: 20 }
+    ],
+    incubators: [
+        { id: 'incubator_standard', buyPrice: 500, sellPrice: 250 },
+        { id: 'incubator_super', buyPrice: 750, sellPrice: 375 },
+        { id: 'incubator_hyper', buyPrice: 12000, sellPrice: 6000 }
     ],
     eggs: [
         { id: 'egg_fire', buyPrice: 200 },

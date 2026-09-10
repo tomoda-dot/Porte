@@ -13,7 +13,8 @@ class GameEngine {
             berry_golden: 1,
             meat_roast: 2,
             potion_small: 3,
-            egg_blanket: 2
+            incubator_standard: 2,
+            incubator_super: 1
         };
         this.player = {
             gender: 'boy',
@@ -23,7 +24,7 @@ class GameEngine {
         };
         this.battleParty = []; // Party members for battle (up to 3 monsters)
         this.dex = {};
-        this.gold = 300;
+        this.gold = 500;
         this.currentBiome = 'forest';
         this.tickTimer = null;
         this.autoSaveTimer = null;
@@ -41,11 +42,16 @@ class GameEngine {
     }
 
     setupInitialNewGame() {
-        // Start player with initial Fire Egg in incubator
+        // Start player with initial Fire Egg in incubator (30 seconds remaining to demonstrate hatching!)
+        const now = Date.now();
         this.incubator = [
             {
                 id: 'egg_fire',
-                warmth: 80, // Almost ready to hatch!
+                isIncubating: true,
+                incubatorType: 'incubator_standard',
+                incubatorName: '孵化器',
+                startTime: now - (1770 * 1000), // 30 seconds left!
+                totalTimeSeconds: 1800,
                 hatchesTo: 'fire_1'
             }
         ];
@@ -55,9 +61,40 @@ class GameEngine {
 
     loadFromState(saved) {
         this.player = saved.player || { gender: 'boy', name: '主人公', energy: 100, maxEnergy: 100 };
-        this.incubator = saved.incubator || [];
         this.monsterBox = saved.monsterBox || [];
         this.inventory = saved.inventory || this.inventory;
+
+        // Clean obsolete egg_blanket or egg_lamp if present
+        delete this.inventory.egg_blanket;
+        delete this.inventory.egg_lamp;
+
+        // Migrate legacy incubator eggs
+        this.incubator = (saved.incubator || []).map(egg => {
+            if (!egg) return null;
+            if (egg.isIncubating === undefined) {
+                if (egg.warmth !== undefined && egg.warmth >= 80) {
+                    return {
+                        id: egg.id,
+                        isIncubating: true,
+                        incubatorType: 'incubator_standard',
+                        incubatorName: '孵化器',
+                        startTime: Date.now() - (1800 * 1000),
+                        totalTimeSeconds: 1800,
+                        hatchesTo: egg.hatchesTo || 'fire_1'
+                    };
+                }
+                return {
+                    id: egg.id,
+                    isIncubating: false,
+                    incubatorType: null,
+                    incubatorName: null,
+                    startTime: null,
+                    totalTimeSeconds: null,
+                    hatchesTo: egg.hatchesTo || 'fire_1'
+                };
+            }
+            return egg;
+        }).filter(Boolean);
         this.dex = saved.dex || {};
         this.gold = saved.gold || 300;
         this.currentBiome = saved.currentBiome || 'forest';
@@ -245,17 +282,6 @@ class GameEngine {
             if (this.player.energy >= this.player.maxEnergy) {
                 this.activeMonster.isSleeping = false;
             }
-        }
-
-        // Tick incubator warmth for eggs
-        if (this.incubator && this.incubator.length > 0) {
-            this.incubator.forEach(egg => {
-                const eggData = EGGS_DATABASE[egg.id];
-                if (eggData && egg.warmth < eggData.warmthNeeded) {
-                    // Gradual warming over time
-                    egg.warmth = Math.min(eggData.warmthNeeded, egg.warmth + 1);
-                }
-            });
         }
 
         // Trigger UI refresh

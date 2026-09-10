@@ -41,22 +41,30 @@ const ITEMS_DATABASE = {
         description: 'スタミナ満点のご馳走肉。おなかを一気にいっぱいに。'
     },
 
-    // --- EGG WARMING & CARE TOOLS ---
-    egg_blanket: {
-        id: 'egg_blanket',
-        name: 'ぽかぽか毛布',
-        type: 'egg_tool',
-        warmthAdd: 25,
-        icon: '🧺',
-        description: '温かい毛布でタマゴを包む。温もり度 +25'
+    // --- INCUBATORS (孵化器) ---
+    incubator_standard: {
+        id: 'incubator_standard',
+        name: '孵化器',
+        type: 'incubator',
+        timeSeconds: 1800,
+        icon: '🥚',
+        description: 'タマゴを自動であたためて孵化させる標準的な装置。（孵化時間：30分）'
     },
-    egg_lamp: {
-        id: 'egg_lamp',
-        name: '温熱育成ランプ',
-        type: 'egg_tool',
-        warmthAdd: 50,
-        icon: '💡',
-        description: '特殊な育成光線でタマゴの孵化を促す。温もり度 +50'
+    incubator_super: {
+        id: 'incubator_super',
+        name: 'スーパー孵化器',
+        type: 'incubator',
+        timeSeconds: 600,
+        icon: '🪺',
+        description: '特殊な温熱波でタマゴを素早くあたためる進化した孵化器。（孵化時間：10分）'
+    },
+    incubator_hyper: {
+        id: 'incubator_hyper',
+        name: 'ハイパー孵化器',
+        type: 'incubator',
+        timeSeconds: 60,
+        icon: '⚡',
+        description: '超強力の量子温熱波により一瞬で孵化を促す最高峰の孵化器。（孵化時間：1分）'
     },
 
     // --- RECOVERY & MEDICINE ---

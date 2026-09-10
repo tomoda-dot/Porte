@@ -87,14 +87,6 @@ const TamagotchiModule = {
 
         monster.friendship = Math.min(100, monster.friendship + 10);
 
-        // Also warm egg in incubator if present!
-        if (gameEngine.incubator && gameEngine.incubator.length > 0) {
-            gameEngine.incubator[0].warmth = Math.min(
-                EGGS_DATABASE[gameEngine.incubator[0].id].warmthNeeded,
-                gameEngine.incubator[0].warmth + 5
-            );
-        }
-
         audioFX.playPet();
         return {
             success: true,

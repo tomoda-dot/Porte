@@ -332,7 +332,10 @@ class BattleEngine {
         const alivePartyFinal = this.playerParty.filter(p => p.hp > 0 && !p.isFainted);
         if (alivePartyFinal.length === 0) {
             this.inBattle = false;
-            this.battleLog.push(`💀 パーティ全員が倒れてしまった...`);
+            this.battleLog.push(`💀 パーティ全員が倒れてしまった... 保留されていたアイテムとゴールドは没収されました！`);
+            if (window.AdventureModule) {
+                AdventureModule.handleDungeonDefeat();
+            }
             return {
                 status: 'defeat',
                 steps,
@@ -430,38 +433,22 @@ class BattleEngine {
         const expGained = Math.floor(30 * totalEnemyLevel * (this.isBossBattle ? 2.5 : 1.0));
         const goldGained = Math.floor(40 * totalEnemyLevel * (this.isBossBattle ? 2.0 : 1.0));
 
-        gameEngine.gold += goldGained;
+        const isDungeonActive = !!(window.AdventureModule && AdventureModule.currentDungeon);
 
-        const evoCandidates = [];
-
-        this.playerParty.forEach(member => {
-            if (member.hp > 0 && !member.isFainted) {
-                const targetObj = member._ref || member;
-                const expRes = TamagotchiModule.addExp(targetObj, expGained);
-
-                // Reflect back on battle member copy
-                member.level = targetObj.level;
-                member.exp = targetObj.exp;
-                member.maxExp = targetObj.maxExp;
-                member.maxHp = targetObj.maxHp;
-                member.hp = targetObj.hp;
-                member.atk = targetObj.atk;
-                member.def = targetObj.def;
-                member.spd = targetObj.spd;
-
-                this.battleLog.push(`🌟 ${member.nickname}: EXP +${expGained}`);
-                if (expRes.leveledUp) {
-                    member.leveledUp = true;
-                    member.newLevel = member.level;
-                    this.battleLog.push(`✨ 🌟 LEVEL UP! ${member.nickname} は Lv.${member.level} にアップ！`);
+        if (isDungeonActive) {
+            AdventureModule.addPendingBattleRewards(goldGained, expGained);
+            this.battleLog.push(`🌟 EXP +${expGained} & 💰 +${goldGained}G を保留箱に追加！`);
+        } else {
+            gameEngine.gold += goldGained;
+            this.playerParty.forEach(member => {
+                if (member.hp > 0 && !member.isFainted) {
+                    const targetObj = member._ref || member;
+                    TamagotchiModule.addExp(targetObj, expGained);
                 }
-                if (expRes.canEvolve) {
-                    evoCandidates.push({ member: targetObj, nextEvoId: expRes.nextEvoId });
-                }
-            }
-        });
+            });
+            this.battleLog.push(`🎉 勝利！ ゴールド +${goldGained}G 獲得！`);
+        }
 
-        this.battleLog.push(`🎉 勝利！ ゴールド +${goldGained}G 獲得！`);
         this.syncPartyStateBack();
 
         let eggDropped = null;
@@ -469,10 +456,16 @@ class BattleEngine {
             const firstElem = this.enemyGroup[0].element || 'fire';
             const eggMapping = { fire: 'egg_fire', water: 'egg_water', grass: 'egg_grass', cyber: 'egg_cyber' };
             const targetEggId = eggMapping[firstElem] || 'egg_fire';
-            const eggRes = IncubatorModule.addNewEggToIncubator(targetEggId);
-            if (eggRes.success) {
+            if (isDungeonActive) {
+                AdventureModule.currentDungeon.pendingRewards.items.push(targetEggId);
                 eggDropped = EGGS_DATABASE[targetEggId];
-                this.battleLog.push(`🥚 探検報酬として「${eggDropped.name}」を発見した！孵化室に追加されました！`);
+                this.battleLog.push(`🥚 「${eggDropped.name}」を発見！保留箱に追加されました！`);
+            } else {
+                const eggRes = IncubatorModule.addNewEggToIncubator(targetEggId);
+                if (eggRes.success) {
+                    eggDropped = EGGS_DATABASE[targetEggId];
+                    this.battleLog.push(`🥚 「${eggDropped.name}」を発見！孵化室に追加されました！`);
+                }
             }
         }
 
@@ -480,7 +473,6 @@ class BattleEngine {
             status: 'victory',
             goldGained,
             expGained,
-            evoCandidates,
             eggDropped,
             log: this.battleLog
         };

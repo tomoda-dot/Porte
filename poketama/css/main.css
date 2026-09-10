@@ -201,9 +201,9 @@ body {
 }
 
 .lcd-pet-shell {
-    background: radial-gradient(circle at 50% 30%, #24462b 0%, #102214 100%);
-    border: 3px solid #7c6255;
-    outline: 2px solid var(--border-nature);
+    background: radial-gradient(circle at 50% 30%, #3e2415 0%, #1c0e07 100%);
+    border: 4px solid #8c5a36;
+    outline: 2px solid #5a3820;
     border-radius: 28px;
     padding: 18px;
     display: flex;
@@ -212,10 +212,10 @@ body {
     justify-content: center;
     position: relative;
     min-height: 410px;
-    box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.75), 0 10px 25px rgba(0, 0, 0, 0.5);
+    box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.85), 0 10px 30px rgba(0, 0, 0, 0.6);
 }
 
-/* Natural Grass & Sun Stage Background */
+/* Secret Base Wooden Room Stage Background */
 .pet-screen-stage {
     width: 100%;
     height: 270px;
@@ -223,8 +223,13 @@ body {
     align-items: center;
     justify-content: center;
     position: relative;
-    background: radial-gradient(ellipse at 50% 80%, rgba(162, 217, 106, 0.25) 0%, transparent 70%);
+    background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.35)), url('../images/secret_base_wood_bg.png');
+    background-size: cover;
+    background-position: center;
     border-radius: 20px;
+    border: 2px solid rgba(140, 90, 54, 0.4);
+    box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
 }
 
 .care-actions-panel {
@@ -1146,5 +1151,210 @@ body {
     margin-bottom: 12px;
     animation-delay: 0.24s;
     filter: brightness(0.9);
+}
+
+/* ==========================================================================
+   Vertical 3-Party Mobile Layout & Game Boy In-Stage Battle Panel
+   ========================================================================== */
+
+/* Left Side: Mobile Vertical 3-Monsters Column */
+.fullscreen-party-trio.vertical-trio {
+    position: absolute;
+    left: 16px;
+    top: 48%;
+    transform: translateY(-50%);
+    bottom: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 12;
+}
+
+.vertical-trio .party-trio-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    margin: 0 !important;
+}
+
+.vertical-trio .party-trio-unit:nth-child(1) { width: 72px; height: 72px; z-index: 3; }
+.vertical-trio .party-trio-unit:nth-child(2) { width: 72px; height: 72px; z-index: 2; }
+.vertical-trio .party-trio-unit:nth-child(3) { width: 72px; height: 72px; z-index: 1; }
+
+.unit-hp-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 9px;
+    color: #fff;
+    white-space: nowrap;
+    width: 76px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+
+.unit-hp-badge .mini-hp-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.unit-hp-badge .mini-hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4444, #76c84c);
+    transition: width 0.3s ease;
+}
+
+/* Right Side: Enemies Facing Center (1 to 6 Enemies Grid) */
+.walking-enemy-group-box {
+    position: absolute;
+    right: 16px;
+    top: 48%;
+    transform: translateY(-50%);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px 12px;
+    z-index: 12;
+    align-items: center;
+    justify-items: center;
+    max-width: 260px;
+}
+
+.walking-enemy-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 70px;
+    height: 70px;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.walking-enemy-unit.target-selected {
+    filter: drop-shadow(0 0 10px #ff4444);
+    transform: scale(1.1);
+}
+
+.walking-enemy-unit.fainted {
+    opacity: 0.35;
+    filter: grayscale(1);
+}
+
+/* Game Boy Style Footer Panel (Message & Controls) */
+.gb-battle-command-panel {
+    background: linear-gradient(180deg, #0f1c2e 0%, #060e18 100%);
+    border-top: 3px solid #2a52be;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.7);
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 30;
+    min-height: 140px;
+}
+
+.gb-message-box {
+    background: rgba(0, 0, 0, 0.55);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-height: 48px;
+    max-height: 60px;
+    overflow-y: auto;
+    display: flex;
+    align-items: center;
+}
+
+.gb-log-line {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--color-warning, #ffd15c);
+    line-height: 1.4;
+    margin: 0;
+}
+
+.gb-controls-box {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.gb-moves-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    flex: 1;
+}
+
+.btn-gb-move {
+    background: linear-gradient(135deg, rgba(30, 60, 90, 0.9), rgba(15, 30, 50, 0.9));
+    border: 1.5px solid #3a75c4;
+    border-radius: 12px;
+    padding: 8px 10px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    transition: all 0.2s ease;
+    min-height: 44px;
+}
+
+.btn-gb-move:hover {
+    border-color: #ffd15c;
+    background: rgba(58, 117, 196, 0.4);
+}
+
+.gb-aux-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 90px;
+}
+
+.btn-gb-aux {
+    width: 100%;
+    font-size: 11px;
+    padding: 8px;
+    border-radius: 10px;
+    font-weight: 800;
+}
+
+@media (max-width: 600px) {
+    .fullscreen-party-trio.vertical-trio {
+        left: 8px;
+    }
+    .vertical-trio .party-trio-unit:nth-child(1),
+    .vertical-trio .party-trio-unit:nth-child(2),
+    .vertical-trio .party-trio-unit:nth-child(3) {
+        width: 58px;
+        height: 58px;
+    }
+    .unit-hp-badge {
+        width: 62px;
+        font-size: 8px;
+    }
+    .walking-enemy-group-box {
+        right: 8px;
+        max-width: 200px;
+    }
+    .walking-enemy-unit {
+        width: 58px;
+        height: 58px;
+    }
+    .gb-battle-command-panel {
+        padding: 8px 10px;
+    }
 }
 

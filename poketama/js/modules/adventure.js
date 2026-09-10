@@ -1,5 +1,5 @@
 /**
- * PokéTama Biome Exploration Module - v1.8.0
+ * PokéTama Biome Exploration Module - v2.0.0
  */
 
 const BIOMES_DATABASE = {
@@ -77,7 +77,13 @@ const AdventureModule = {
             biomeId,
             currentStage: 1,
             totalStages: totalStages,
-            isCompleted: false
+            isCompleted: false,
+            // Temporary Pending Rewards (only claimed upon defeating final Boss!)
+            pendingRewards: {
+                gold: 0,
+                exp: 0,
+                items: []
+            }
         };
 
         return this.processNextDungeonStage();
@@ -91,8 +97,8 @@ const AdventureModule = {
         const aliveParty = party.filter(m => m && m.hp > 0);
 
         if (aliveParty.length === 0) {
-            this.currentDungeon = null;
-            return { success: false, message: '出撃できるパートナーのHPがありません！ダンジョン探索を中断します。' };
+            this.handleDungeonDefeat();
+            return { success: false, isDefeat: true, message: '出撃できるパートナーのHPがありません！ダンジョン探索失敗（報酬没収）' };
         }
 
         const stage = this.currentDungeon.currentStage;
@@ -100,11 +106,14 @@ const AdventureModule = {
         const isFinalStage = (stage === total);
 
         if (isFinalStage) {
-            // Final Stage: Always BOSS Battle!
+            // Final Stage: Always BOSS Battle! (Boss + up to 5 minions, total up to 6 enemies)
             const bossSpecies = biome.boss || biome.enemies[0];
             const enemyGroup = [bossSpecies];
-            if (biome.enemies && biome.enemies.length > 0) {
-                enemyGroup.push(biome.enemies[0]);
+            
+            // Add 1 to 5 minion enemies (total max 6)
+            const minionCount = Math.floor(1 + Math.random() * 5);
+            for (let i = 0; i < minionCount; i++) {
+                enemyGroup.push(biome.enemies[Math.floor(Math.random() * biome.enemies.length)]);
             }
 
             const bRes = battleEngine.startPartyBattle(aliveParty, enemyGroup, true);
@@ -113,28 +122,38 @@ const AdventureModule = {
                 stageNumber: stage,
                 totalStages: total,
                 battleData: bRes,
-                message: `🚩 【ステージ ${stage}/${total} - 最奥部】 ⚠️ エリアボス 「${bRes.enemyGroup[0].nickname}」 軍団が現れた！`
+                message: `🚩 【ステージ ${stage}/${total} - 最奥部】 ⚠️ エリアボス 「${bRes.enemyGroup[0].nickname}」 軍団（全${bRes.enemyGroup.length}体）が現れた！`
             };
         } else {
             // Stages 1 to (N-1): Randomized Chest (30%) or Wild Battle (70%)
             const roll = Math.random();
 
             if (roll < 0.30) {
-                // Treasure Chest
+                // Treasure Chest -> Add to pendingRewards!
                 const goldFound = Math.floor(80 + Math.random() * 120);
-                gameEngine.gold += goldFound;
+                const expFound = 20;
 
-                const possibleItems = ['berry_red', 'berry_blue', 'berry_golden', 'potion_small', 'egg_blanket'];
-                const itemFoundId = possibleItems[Math.floor(Math.random() * possibleItems.length)];
+                // Weighted item pool: Common berries & potions, rare incubators
+                const itemRoll = Math.random();
+                let itemFoundId = 'berry_red';
+                if (itemRoll < 0.35) {
+                    itemFoundId = Math.random() < 0.5 ? 'berry_red' : 'berry_blue';
+                } else if (itemRoll < 0.65) {
+                    itemFoundId = 'potion_small';
+                } else if (itemRoll < 0.85) {
+                    itemFoundId = Math.random() < 0.7 ? 'incubator_standard' : 'berry_golden';
+                } else if (itemRoll < 0.96) {
+                    itemFoundId = 'incubator_super';
+                } else {
+                    itemFoundId = 'incubator_hyper'; // Rare (4% chance)
+                }
+
                 const itemObj = ITEMS_DATABASE[itemFoundId];
 
-                gameEngine.inventory[itemFoundId] = (gameEngine.inventory[itemFoundId] || 0) + 1;
-
-                // Award EXP +20 to all alive party members
-                const expFound = 20;
-                aliveParty.forEach(m => {
-                    TamagotchiModule.addExp(m, expFound);
-                });
+                // Accumulate in pendingRewards
+                this.currentDungeon.pendingRewards.gold += goldFound;
+                this.currentDungeon.pendingRewards.exp += expFound;
+                this.currentDungeon.pendingRewards.items.push(itemFoundId);
 
                 audioFX.playFeed();
 
@@ -145,11 +164,12 @@ const AdventureModule = {
                     goldFound,
                     expFound,
                     itemFound: itemObj,
-                    message: `🚩 【ステージ ${stage}/${total}】 🎁 宝箱を発見！ ${goldFound}G 、「${itemObj.name}」、EXP+${expFound} を入手した！`
+                    pendingRewards: this.currentDungeon.pendingRewards,
+                    message: `🚩 【ステージ ${stage}/${total}】 🎁 宝箱を発見！ ${goldFound}G 、「${itemObj.name}」、EXP+${expFound} を保留箱に追加！`
                 };
             } else {
-                // Wild Monster Battle (1 to 3 enemies)
-                const enemyCount = Math.min(3, Math.max(1, Math.floor(Math.random() * aliveParty.length) + (Math.random() < 0.5 ? 1 : 0)));
+                // Wild Monster Battle (1 to 6 enemies!)
+                const enemyCount = Math.floor(1 + Math.random() * 6); // 1, 2, 3, 4, 5, or 6
                 const enemySpeciesList = [];
                 for (let i = 0; i < enemyCount; i++) {
                     enemySpeciesList.push(biome.enemies[Math.floor(Math.random() * biome.enemies.length)]);
@@ -161,19 +181,69 @@ const AdventureModule = {
                     stageNumber: stage,
                     totalStages: total,
                     battleData: bRes,
-                    message: `🚩 【ステージ ${stage}/${total}】 ⚔️ 野生モンスター軍団に遭遇した！`
+                    message: `🚩 【ステージ ${stage}/${total}】 ⚔️ 野生モンスター軍団（全${enemyCount}体）に遭遇した！`
                 };
             }
         }
+    },
+
+    /**
+     * Called when battle ends in victory or next stage progresses
+     */
+    addPendingBattleRewards(goldAmount, expAmount) {
+        if (this.currentDungeon && this.currentDungeon.pendingRewards) {
+            this.currentDungeon.pendingRewards.gold += goldAmount;
+            this.currentDungeon.pendingRewards.exp += expAmount;
+        }
+    },
+
+    /**
+     * Called upon Boss Victory to claim all pending rewards!
+     */
+    claimAllPendingRewards() {
+        if (!this.currentDungeon || !this.currentDungeon.pendingRewards) {
+            return { gold: 0, exp: 0, items: [] };
+        }
+
+        const rewards = this.currentDungeon.pendingRewards;
+
+        // 1. Award Gold
+        gameEngine.gold += rewards.gold;
+
+        // 2. Award Inventory Items
+        rewards.items.forEach(itemId => {
+            gameEngine.inventory[itemId] = (gameEngine.inventory[itemId] || 0) + 1;
+        });
+
+        // 3. Award EXP to alive party members
+        const party = gameEngine.getBattleParty();
+        const aliveParty = party.filter(m => m && m.hp > 0);
+        aliveParty.forEach(mon => {
+            TamagotchiModule.addExp(mon, rewards.exp);
+        });
+
+        gameEngine.saveState();
+        return rewards;
+    },
+
+    /**
+     * Called upon Wiping Out in Battle (Forfeits all pending rewards!)
+     */
+    handleDungeonDefeat() {
+        const lostRewards = this.currentDungeon ? this.currentDungeon.pendingRewards : null;
+        this.currentDungeon = null;
+        return lostRewards;
     },
 
     advanceToNextStage() {
         if (!this.currentDungeon) return null;
         this.currentDungeon.currentStage++;
         if (this.currentDungeon.currentStage > this.currentDungeon.totalStages) {
+            // Dungeon Cleared! Claim rewards!
+            const claimed = this.claimAllPendingRewards();
             this.currentDungeon.isCompleted = true;
             this.currentDungeon = null;
-            return { completed: true };
+            return { completed: true, claimedRewards: claimed };
         }
         return this.processNextDungeonStage();
     }

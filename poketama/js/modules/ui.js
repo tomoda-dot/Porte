@@ -14,6 +14,13 @@ const UIController = {
         this.bindShopButtons();
         this.bindModals();
 
+        // Start 1-second UI countdown timer for incubator tab
+        setInterval(() => {
+            if (this.activeTab === 'incubator') {
+                this.renderIncubatorPage();
+            }
+        }, 1000);
+
         // Initial DOM Render
         this.renderAll();
 
@@ -207,8 +214,8 @@ const UIController = {
         const titleEl = document.getElementById('fullscreen-biome-title');
         const statusEl = document.getElementById('fullscreen-explore-status');
         const bgStage = document.getElementById('fullscreen-walking-bg');
-        const trioBox = document.getElementById('fullscreen-party-trio-box');
-        const approachEl = document.getElementById('fullscreen-approaching-target');
+        const logBox = document.getElementById('walking-battle-log-box');
+        const controlsBox = document.getElementById('walking-battle-controls');
         const eventOverlay = document.getElementById('fullscreen-event-overlay');
         const btnExplore = document.getElementById('btn-explore-search');
 
@@ -224,84 +231,293 @@ const UIController = {
             bgStage.className = `fullscreen-walking-viewport biome-bg-${gameEngine.currentBiome || 'forest'}`;
         }
 
-        // 2. Render All Party Monsters (up to 3) in Trio Walking Formation!
-        if (trioBox) {
-            let html = '';
-            party.forEach((mon, index) => {
-                html += `
-                <div class="party-trio-unit">
-                    <span class="unit-name-tag" style="font-size:10px; background:rgba(0,0,0,0.6); padding:1px 6px; border-radius:8px; color:#fff; white-space:nowrap; margin-bottom:2px;">
-                        ${mon.nickname} ${index === 0 ? '★' : ''}
-                    </span>
-                    ${renderMonsterSVG(mon.speciesId, { emotion: 'happy' })}
-                </div>`;
-            });
-            trioBox.innerHTML = html;
-        }
+        // 2. Render Vertical 3-Party Monsters (Mobile Optimized Column)
+        this.renderVerticalPartyTrio();
+
+        // 3. Render Enemies (1 to 6) or Treasure Chest facing center
+        this.renderWalkingEnemyGroup(res.eventType, res);
 
         audioFX.playClick();
 
-        // 3. Trigger Right-to-Left Approaching Animation Sprite!
-        if (approachEl) {
-            if (res.eventType === 'chest') {
-                approachEl.innerHTML = `<div style="font-size: 64px; filter: drop-shadow(0 0 16px #ffd15c);" class="walking-party-member">🎁</div>`;
-            } else if (res.eventType === 'battle' || res.eventType === 'boss') {
-                const enemySpec = res.battleData.enemyGroup[0].speciesId;
-                approachEl.innerHTML = `
-                    <div style="width: 90px; height: 90px;" class="walking-party-member">
-                        ${renderMonsterSVG(enemySpec, { emotion: 'angry' })}
-                    </div>`;
+        // 4. Update Game Boy Message & Battle Controls
+        if (res.eventType === 'chest') {
+            if (controlsBox) controlsBox.style.display = 'none';
+            if (logBox) {
+                logBox.innerHTML = `
+                <div style="display:flex; justify-space-between; align-items:center; width:100%;">
+                    <p class="gb-log-line">🎁 宝箱を発見！ ${res.goldFound}G 、「${res.itemFound.name}」 を保留箱に追加！</p>
+                    <button class="btn btn-sm" style="background: linear-gradient(90deg, #76c84c, #ffd15c); color: #0b1a0e; font-weight:bold; white-space:nowrap;" onclick="UIController.closeWalkingEventOverlay()">次へ ➔</button>
+                </div>`;
             }
-            approachEl.style.display = 'block';
-            approachEl.className = 'walking-approaching-target approaching-slide-active';
+        } else if (res.eventType === 'battle' || res.eventType === 'boss') {
+            if (logBox) {
+                logBox.innerHTML = `<p class="gb-log-line">⚠️ 【${res.eventType === 'boss' ? 'エリアボス' : '野生モンスター'}】遭遇！（全${res.battleData.enemyGroup.length}体） コマンドを選択してください！</p>`;
+            }
+            this.renderInStageBattleUI();
+        }
+    },
+
+    renderVerticalPartyTrio() {
+        const trioBox = document.getElementById('fullscreen-party-trio-box');
+        if (!trioBox) return;
+        const party = gameEngine.getBattleParty();
+
+        let html = '';
+        party.forEach((mon, index) => {
+            const hpPct = Math.floor((mon.hp / (mon.maxHp || 50)) * 100);
+            html += `
+            <div class="party-trio-unit" id="walking-player-unit-${index}">
+                <div class="unit-hp-badge">
+                    <div style="font-size: 8px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 68px;">
+                        ${mon.nickname} <span style="color:#ffd15c;">Lv.${mon.level}</span>
+                    </div>
+                    <div class="mini-hp-bar">
+                        <div class="mini-hp-fill" id="walking-player-hp-${index}" style="width: ${hpPct}%;"></div>
+                    </div>
+                </div>
+                <div style="width: 100%; height: 100%;">
+                    ${renderMonsterSVG(mon.speciesId, { emotion: mon.hp <= 0 ? 'sleep' : 'happy' })}
+                </div>
+            </div>`;
+        });
+        trioBox.innerHTML = html;
+    },
+
+    renderWalkingEnemyGroup(eventType, data) {
+        const enemyBox = document.getElementById('fullscreen-enemy-group-box');
+        if (!enemyBox) return;
+
+        if (eventType === 'chest') {
+            enemyBox.innerHTML = `
+                <div class="walking-enemy-unit chest-unit" style="grid-column: span 3;">
+                    <div style="font-size: 52px; filter: drop-shadow(0 0 16px #ffd15c);">🎁</div>
+                    <div class="unit-hp-badge" style="background: rgba(255,209,92,0.25); border-color: #ffd15c;">
+                        <span style="color: #ffd15c; font-weight: bold;">宝箱</span>
+                    </div>
+                </div>`;
+            return;
         }
 
-        // 4. Fast 1.2s animated approaching before encounter triggers!
-        setTimeout(() => {
-            if (approachEl) {
-                approachEl.style.display = 'none';
-                approachEl.className = 'walking-approaching-target';
+        if (eventType === 'battle' || eventType === 'boss') {
+            const enemies = battleEngine.enemyGroup;
+            let html = '';
+            enemies.forEach((enemy, idx) => {
+                const hpPct = Math.floor((enemy.hp / enemy.maxHp) * 100);
+                const isSelected = (!enemy.isFainted) && ((battleEngine.selectedTargetIndex || 0) === idx);
+                html += `
+                <div class="walking-enemy-unit ${enemy.isFainted ? 'fainted' : ''} ${isSelected ? 'target-selected' : ''}" id="walking-enemy-unit-${idx}" onclick="UIController.setWalkingBattleTarget(${idx})">
+                    <div class="unit-hp-badge">
+                        <div style="font-size: 8px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 68px;">
+                            ${enemy.nickname}
+                        </div>
+                        <div class="mini-hp-bar">
+                            <div class="mini-hp-fill" id="walking-enemy-hp-${idx}" style="width: ${hpPct}%;"></div>
+                        </div>
+                    </div>
+                    <div style="width: 100%; height: 100%;">
+                        ${renderMonsterSVG(enemy.speciesId, { emotion: enemy.isFainted ? 'sleep' : 'angry' })}
+                    </div>
+                </div>`;
+            });
+            enemyBox.innerHTML = html;
+        }
+    },
+
+    setWalkingBattleTarget(targetIdx) {
+        if (battleEngine.enemyGroup && battleEngine.enemyGroup[targetIdx] && !battleEngine.enemyGroup[targetIdx].isFainted) {
+            battleEngine.selectedTargetIndex = targetIdx;
+            this.renderInStageBattleUI();
+        }
+    },
+
+    renderInStageBattleUI() {
+        if (!battleEngine.inBattle) return;
+
+        if (battleEngine.autoSelectAliveTarget) {
+            battleEngine.autoSelectAliveTarget();
+        }
+
+        const actor = battleEngine.getCurrentActor();
+        const controlsBox = document.getElementById('walking-battle-controls');
+        const logBox = document.getElementById('walking-battle-log-box');
+
+        if (controlsBox) controlsBox.style.display = 'flex';
+
+        if (actor && actor.moves) {
+            if (logBox && !this.isExecutingBattleRound) {
+                const targetName = battleEngine.enemyGroup[battleEngine.selectedTargetIndex || 0]?.nickname || '敵';
+                logBox.innerHTML = `<p class="gb-log-line">⚔️ 【${actor.nickname}】の技を選択 (標的: ${targetName})</p>`;
             }
-            if (btnExplore) btnExplore.disabled = false;
 
-            if (res.eventType === 'chest') {
-                if (eventOverlay) {
-                    eventOverlay.innerHTML = `
-                        <div class="encounter-event-box chest-popup">
-                            <span style="font-size: 56px;">🎁</span>
-                            <h3 style="color: var(--color-accent); font-size: 20px;">【宝箱を発見！】</h3>
-                            <p style="font-size: 14px; color: #fff; margin: 8px 0;">${res.goldFound} G と 「${res.itemFound.name}」 を手に入れた！</p>
-                            <button class="btn btn-sm" style="font-size: 15px; padding: 10px 24px; font-weight: 800; background: linear-gradient(90deg, #76c84c, #ffd15c); border: 1px solid #fff; color: #0b1a0e;" onclick="UIController.closeWalkingEventOverlay()">✨ 宝箱を回収して次へ</button>
-                        </div>`;
-                    eventOverlay.style.display = 'flex';
+            for (let i = 0; i < 4; i++) {
+                const btnMove = document.getElementById(`btn-gb-move-${i}`);
+                if (btnMove) {
+                    const moveItem = actor.moves[i];
+                    if (moveItem) {
+                        const moveId = typeof moveItem === 'string' ? moveItem : moveItem.id;
+                        const baseMoveObj = MOVES_DATABASE[moveId] || MOVES_DATABASE.tackle;
+                        const moveName = (typeof moveItem === 'object' && moveItem.name) ? moveItem.name : baseMoveObj.name;
+                        const moveType = (typeof moveItem === 'object' && moveItem.type) ? moveItem.type : baseMoveObj.type;
+                        const ppVal = (typeof moveItem === 'object' && moveItem.pp !== undefined) ? moveItem.pp : (baseMoveObj.maxPp || 20);
+                        const maxPpVal = (typeof moveItem === 'object' && moveItem.maxPp !== undefined) ? moveItem.maxPp : (baseMoveObj.maxPp || 20);
+
+                        const elem = ELEMENT_TYPES[moveType] || { icon: '⚔️', color: '#fff' };
+                        const isZeroPp = ppVal <= 0;
+
+                        btnMove.innerHTML = `<span style="color:#fff;">${elem.icon} ${moveName}</span><small style="${isZeroPp ? 'color:#ff6666;' : 'color:#ffd15c; font-weight:bold;'}">PP: ${ppVal}/${maxPpVal}</small>`;
+                        btnMove.disabled = isZeroPp;
+                        btnMove.style.opacity = isZeroPp ? '0.4' : '1.0';
+                        btnMove.style.display = 'flex';
+                    } else {
+                        btnMove.style.display = 'none';
+                    }
                 }
-            } else if (res.eventType === 'battle' || res.eventType === 'boss') {
-                if (bgStage) bgStage.classList.add('encounter-flash-active');
-                if (eventOverlay) {
-                    eventOverlay.innerHTML = `
-                        <div class="encounter-event-box" style="border-color: #ff4444; box-shadow: 0 0 35px rgba(255, 68, 68, 0.7);">
-                            <span style="font-size: 56px;">⚔️</span>
-                            <h3 style="color: #ff4466; font-size: 20px;">【${res.eventType === 'boss' ? '⚠️ エリアボス軍団と遭遇！' : '野生モンスター遭遇！'}】</h3>
-                            <p style="font-size: 14px; color: #fff;">${res.message}</p>
-                        </div>`;
-                    eventOverlay.style.display = 'flex';
-                }
-
-                audioFX.playHit();
-
-                setTimeout(() => {
-                    if (bgStage) bgStage.classList.remove('encounter-flash-active');
-                    if (eventOverlay) eventOverlay.style.display = 'none';
-
-                    const modalExplore = document.getElementById('modal-fullscreen-explore');
-                    if (modalExplore) modalExplore.style.display = 'none';
-
-                    document.getElementById('adventure-explore-view').style.display = 'none';
-                    document.getElementById('battle-arena-view').style.display = 'block';
-                    this.renderBattleArena();
-                }, 900);
             }
-        }, 1200);
+        }
+
+        // Re-render enemy selection outlines
+        this.renderWalkingEnemyGroup('battle');
+    },
+
+    async playInStageBattleRoundSequence(res) {
+        if (!res || !res.steps) return;
+        this.isExecutingBattleRound = true;
+
+        for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById(`btn-gb-move-${i}`);
+            if (btn) btn.disabled = true;
+        }
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        const fxLayer = document.getElementById('walking-battle-fx-layer');
+        const logBox = document.getElementById('walking-battle-log-box');
+
+        for (const step of res.steps) {
+            if (logBox) {
+                logBox.innerHTML = `<p class="gb-log-line">${step.logText}</p>`;
+            }
+
+            const targetCardId = step.targetSide === 'enemy' ? `walking-enemy-unit-${step.targetIndex}` : `walking-player-unit-${step.targetIndex}`;
+            const attackerCardId = step.attackerSide === 'player' ? `walking-player-unit-${step.attackerIndex}` : `walking-enemy-unit-${step.attackerIndex}`;
+
+            const attackerEl = document.getElementById(attackerCardId);
+            const targetEl = document.getElementById(targetCardId);
+
+            if (step.isCrit) audioFX.playCrit();
+            else audioFX.playHit();
+
+            if (targetEl) {
+                targetEl.classList.add('hit');
+                const hpFillId = step.targetSide === 'enemy' ? `walking-enemy-hp-${step.targetIndex}` : `walking-player-hp-${step.targetIndex}`;
+                const hpFillEl = document.getElementById(hpFillId);
+                const hpPct = Math.floor((step.targetHpRemaining / step.targetMaxHp) * 100);
+                if (hpFillEl) hpFillEl.style.width = `${hpPct}%`;
+
+                if (step.targetFainted) {
+                    targetEl.classList.add('fainted');
+                }
+
+                const pop = document.createElement('div');
+                pop.className = `floating-damage-popup ${step.isCrit ? 'crit' : ''}`;
+                pop.innerText = `${step.isCrit ? '💥' : ''}-${step.damage}`;
+                pop.style.position = 'absolute';
+                pop.style.top = '-15px';
+                pop.style.left = '50%';
+                pop.style.transform = 'translateX(-50%)';
+                targetEl.appendChild(pop);
+                setTimeout(() => pop.remove(), 850);
+            }
+
+            await sleep(750);
+            if (targetEl) targetEl.classList.remove('hit');
+        }
+
+        this.isExecutingBattleRound = false;
+
+        if (res.status === 'victory') {
+            if (logBox) logBox.innerHTML = `<p class="gb-log-line">🎉 戦闘勝利！ 報償が保留箱に追加されました。</p>`;
+            const controlsBox = document.getElementById('walking-battle-controls');
+            if (controlsBox) controlsBox.style.display = 'none';
+
+            await sleep(1000);
+            this.closeWalkingEventOverlay();
+        } else if (res.status === 'defeat') {
+            if (logBox) logBox.innerHTML = `<p class="gb-log-line" style="color:#ff6666;">💀 パーティ全滅... 保留されていた全報酬が没収されました。</p>`;
+            const controlsBox = document.getElementById('walking-battle-controls');
+            if (controlsBox) controlsBox.style.display = 'none';
+
+            await sleep(2200);
+            this.closeFullscreenExploreModal();
+            this.showToast('💀 パーティが全滅したため探索失敗（保留報酬没収）', 'warning');
+        } else {
+            this.renderInStageBattleUI();
+        }
+    },
+
+    openDungeonResultModal(claimedRewards) {
+        const modal = document.getElementById('modal-dungeon-result');
+        const goldVal = document.getElementById('result-gold-val');
+        const expVal = document.getElementById('result-exp-val');
+        const itemsList = document.getElementById('result-items-list');
+        const timerBar = document.getElementById('result-timer-bar');
+        const timerText = document.getElementById('result-timer-text');
+
+        if (!modal) return;
+
+        if (goldVal) goldVal.innerText = `+${claimedRewards.gold || 0} G`;
+        if (expVal) expVal.innerText = `+${claimedRewards.exp || 0} EXP`;
+
+        if (itemsList) {
+            if (claimedRewards.items && claimedRewards.items.length > 0) {
+                let html = '';
+                const counts = {};
+                claimedRewards.items.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+                Object.keys(counts).forEach(id => {
+                    const item = ITEMS_DATABASE[id] || EGGS_DATABASE[id];
+                    const name = item ? item.name : id;
+                    const icon = item ? (item.icon || '🥚') : '📦';
+                    html += `<span style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 12px;">${icon} ${name} x${counts[id]}</span>`;
+                });
+                itemsList.innerHTML = html;
+            } else {
+                itemsList.innerHTML = '<span style="color: #94a3b8;">獲得アイテムなし</span>';
+            }
+        }
+
+        modal.style.display = 'flex';
+        audioFX.playLevelUp();
+
+        // 7-second countdown progress bar animation
+        if (timerBar) timerBar.style.width = '100%';
+        if (timerText) timerText.innerText = `⏱️ 7秒後に自動で閉じます...`;
+
+        if (this.dungeonResultTimer) clearInterval(this.dungeonResultTimer);
+
+        const startTime = Date.now();
+        const durationMs = 7000;
+
+        this.dungeonResultTimer = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const remaining = Math.max(0, durationMs - elapsed);
+            const pct = Math.floor((remaining / durationMs) * 100);
+            const remSec = Math.ceil(remaining / 1000);
+
+            if (timerBar) timerBar.style.width = `${pct}%`;
+            if (timerText) timerText.innerText = `⏱️ ${remSec}秒後に自動で閉じます...`;
+
+            if (remaining <= 0) {
+                clearInterval(this.dungeonResultTimer);
+                this.closeDungeonResultModal();
+            }
+        }, 100);
+    },
+
+    closeDungeonResultModal() {
+        if (this.dungeonResultTimer) clearInterval(this.dungeonResultTimer);
+        const modal = document.getElementById('modal-dungeon-result');
+        if (modal) modal.style.display = 'none';
+        this.closeFullscreenExploreModal();
+        this.renderAll();
     },
 
     closeFullscreenExploreModal() {
@@ -318,8 +534,7 @@ const UIController = {
         
         const nextStageRes = AdventureModule.advanceToNextStage();
         if (nextStageRes && nextStageRes.completed) {
-            this.showToast('🎉 ダンジョン完全踏破クリア！', 'success');
-            this.closeFullscreenExploreModal();
+            this.openDungeonResultModal(nextStageRes.claimedRewards || {});
         } else if (nextStageRes && nextStageRes.eventType) {
             this.startWalkingExplorationSequence(nextStageRes);
         } else {
@@ -328,8 +543,26 @@ const UIController = {
     },
 
     bindBattleButtons() {
-        // Moves 1-4
+        // Game Boy 4 Move Buttons for in-stage walking battle
         for (let i = 0; i < 4; i++) {
+            const btnGbMove = document.getElementById(`btn-gb-move-${i}`);
+            if (btnGbMove) {
+                btnGbMove.addEventListener('click', () => {
+                    if (!battleEngine.inBattle) return;
+
+                    const res = battleEngine.selectMemberMove(i, battleEngine.selectedTargetIndex || 0);
+                    if (res && res.isError) {
+                        this.showToast(res.message, 'warning');
+                        return;
+                    }
+                    if (res && res.steps) {
+                        this.playInStageBattleRoundSequence(res);
+                    } else {
+                        this.renderInStageBattleUI();
+                    }
+                });
+            }
+
             const btnMove = document.getElementById(`btn-move-${i}`);
             if (btnMove) {
                 btnMove.addEventListener('click', () => {
@@ -341,28 +574,35 @@ const UIController = {
                         return;
                     }
                     if (res && res.steps) {
-                        this.playBattleRoundSequence(res);
+                        this.playInStageBattleRoundSequence(res);
                     } else {
-                        this.renderBattleArena();
+                        this.renderInStageBattleUI();
                     }
                 });
             }
         }
 
-        const btnFlee = document.getElementById('btn-battle-flee');
-        if (btnFlee) {
-            btnFlee.addEventListener('click', () => {
+        const btnGbFlee = document.getElementById('btn-gb-battle-flee');
+        if (btnGbFlee) {
+            btnGbFlee.addEventListener('click', () => {
                 if (!battleEngine.inBattle) return;
                 battleEngine.flee();
-                this.exitBattleArena();
+                this.closeFullscreenExploreModal();
             });
         }
 
-        const btnBattleItem = document.getElementById('btn-battle-item');
-        if (btnBattleItem) {
-            btnBattleItem.addEventListener('click', () => {
+        const btnGbItem = document.getElementById('btn-gb-battle-item');
+        if (btnGbItem) {
+            btnGbItem.addEventListener('click', () => {
                 if (!battleEngine.inBattle) return;
                 this.openBattleItemModal();
+            });
+        }
+
+        const btnCloseResult = document.getElementById('btn-close-dungeon-result');
+        if (btnCloseResult) {
+            btnCloseResult.addEventListener('click', () => {
+                this.closeDungeonResultModal();
             });
         }
     },
@@ -623,29 +863,43 @@ const UIController = {
 
         let html = '';
         gameEngine.incubator.forEach((egg, index) => {
-            const eggData = EGGS_DATABASE[egg.id];
-            const pct = Math.floor((egg.warmth / eggData.warmthNeeded) * 100);
-            const isReady = egg.warmth >= eggData.warmthNeeded;
+            const state = IncubatorModule.getEggIncubationState(egg);
+            const eggData = state.eggData;
+
+            let actionHtml = '';
+            if (state.isReady) {
+                actionHtml = `<button class="btn btn-hatch" onclick="UIController.triggerHatchModal(${index})">🥚 孵化させる！</button>`;
+            } else if (state.isIncubating) {
+                actionHtml = `<div style="font-size: 13px; color: var(--color-warning); font-weight: bold; padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,209,92,0.3); text-align: center;">⏳ ${state.incubatorName} であたため中</div>`;
+            } else {
+                actionHtml = `<button class="btn btn-warm" style="background: linear-gradient(90deg, #33aaff, #0088ff); width: 100%; font-weight: bold;" onclick="UIController.openIncubatorSelectModal(${index})">🧪 孵化器をセットする</button>`;
+            }
 
             html += `
-            <div class="egg-card ${isReady ? 'ready-hatch' : ''}">
+            <div class="egg-card ${state.isReady ? 'ready-hatch' : ''}">
                 <div class="egg-preview">
-                    ${renderMonsterSVG(egg.id, { crackProgress: egg.warmth / eggData.warmthNeeded })}
+                    ${renderMonsterSVG(egg.id, { crackProgress: state.isIncubating ? (state.progressPercent / 100) : 0 })}
                 </div>
                 <div class="egg-info">
                     <h4>${eggData.name}</h4>
                     <p class="egg-desc">${eggData.description}</p>
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar-fill warmth-fill" style="width: ${pct}%"></div>
-                    </div>
-                    <p class="warmth-text">温もり度: ${pct}% ${isReady ? '✨ 孵化可能！' : ''}</p>
-                </div>
-                <div class="egg-actions">
-                    ${isReady ? `
-                        <button class="btn btn-hatch" onclick="UIController.triggerHatchModal(${index})">🥚 孵化させる！</button>
+                    ${state.isIncubating ? `
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill warmth-fill" style="width: ${state.progressPercent}%"></div>
+                        </div>
+                        <p class="warmth-text" style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                            <span style="font-size: 12px; color: #b3d9b9;">${state.incubatorName}</span>
+                            <span style="font-weight: bold; font-size: 13px; color: ${state.isReady ? '#76c84c' : '#ffd15c'};">⏱️ ${state.formattedRemaining}</span>
+                        </p>
                     ` : `
-                        <button class="btn btn-warm" onclick="UIController.warmEggAction(${index})">🔥 手で温める</button>
+                        <div class="progress-bar-bg" style="opacity: 0.3;">
+                            <div class="progress-bar-fill" style="width: 0%;"></div>
+                        </div>
+                        <p class="warmth-text" style="color: #94a3b8; margin-top: 6px;">孵化器未セット（孵化器が必要です）</p>
                     `}
+                </div>
+                <div class="egg-actions" style="margin-top: 12px;">
+                    ${actionHtml}
                 </div>
             </div>`;
         });
@@ -653,10 +907,60 @@ const UIController = {
         grid.innerHTML = html;
     },
 
-    warmEggAction(index) {
-        const res = IncubatorModule.warmEgg(index);
-        this.showToast(res.message, res.readyToHatch ? 'success' : 'info');
-        this.renderIncubatorPage();
+    openIncubatorSelectModal(eggIndex) {
+        this.selectedEggIndexForIncubator = eggIndex;
+        const modal = document.getElementById('modal-select-incubator');
+        const listEl = document.getElementById('incubator-select-list');
+        if (!modal || !listEl) return;
+
+        const incubatorTypes = ['incubator_standard', 'incubator_super', 'incubator_hyper'];
+        let html = '';
+        let availableCount = 0;
+
+        incubatorTypes.forEach(id => {
+            const item = ITEMS_DATABASE[id];
+            const count = gameEngine.inventory[id] || 0;
+            if (count > 0) availableCount++;
+
+            html += `
+            <div style="background: rgba(255,255,255,0.07); border: 1.5px solid ${count > 0 ? 'var(--color-primary)' : 'rgba(255,255,255,0.1)'}; border-radius: 12px; padding: 12px; display: flex; align-items: center; justify-content: space-between; opacity: ${count > 0 ? 1 : 0.55};">
+                <div style="text-align: left; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 28px;">${item.icon}</span>
+                    <div>
+                        <h4 style="margin: 0; color: #fff; font-size: 14px; font-weight: bold;">${item.name}</h4>
+                        <small style="color: #b3d9b9; font-size: 11px;">時間: ${Math.floor(item.timeSeconds / 60)}分 | 所持: ${count}個</small>
+                    </div>
+                </div>
+                <div>
+                    ${count > 0 ? `
+                        <button class="btn btn-sm" onclick="UIController.confirmSetIncubator('${id}')" style="background: linear-gradient(90deg, #76c84c, #ffd15c); color: #0b1a0e; font-weight: 800; padding: 6px 16px;">セット</button>
+                    ` : `
+                        <span style="font-size: 11px; color: #ff6666; font-weight: bold;">所持なし</span>
+                    `}
+                </div>
+            </div>`;
+        });
+
+        if (availableCount === 0) {
+            html += `
+            <div style="padding: 16px; color: #ff8888; font-size: 13px; background: rgba(255,0,0,0.1); border-radius: 10px; border: 1px solid rgba(255,0,0,0.2);">
+                孵化器を所持していません！<br>「ショップ」タブで孵化器（500G〜）を購入してください。
+            </div>`;
+        }
+
+        listEl.innerHTML = html;
+        modal.style.display = 'flex';
+    },
+
+    confirmSetIncubator(incubatorItemId) {
+        const modal = document.getElementById('modal-select-incubator');
+        if (modal) modal.style.display = 'none';
+
+        if (this.selectedEggIndexForIncubator === undefined || this.selectedEggIndexForIncubator === null) return;
+
+        const res = IncubatorModule.startIncubation(this.selectedEggIndexForIncubator, incubatorItemId);
+        this.showToast(res.message, res.success ? 'success' : 'warning');
+        this.renderAll();
     },
 
     triggerHatchModal(index) {
@@ -783,7 +1087,33 @@ const UIController = {
             </div>`;
         });
 
-        // 3. Eggs
+        // 3. Incubators
+        if (SHOP_CATALOG.incubators) {
+            SHOP_CATALOG.incubators.forEach(shopItem => {
+                const item = ITEMS_DATABASE[shopItem.id];
+                const ownCount = gameEngine.inventory[shopItem.id] || 0;
+                html += `
+                <div class="shop-card" style="border-color: rgba(118, 200, 76, 0.4);">
+                    <div class="shop-card-header">
+                        <span class="shop-card-icon">${item.icon}</span>
+                        <div class="shop-card-title">
+                            <h4>${item.name}</h4>
+                            <small style="color: var(--color-primary-light);">所持数: ${ownCount} 個</small>
+                        </div>
+                    </div>
+                    <p class="shop-card-desc">${item.description}</p>
+                    <div class="shop-card-action">
+                        <span class="shop-price-tag">💰 ${shopItem.buyPrice} G</span>
+                        <div style="display: flex; gap: 4px;">
+                            <button class="btn btn-sm" onclick="UIController.buyShopItem('${shopItem.id}')">購入</button>
+                            ${ownCount > 0 ? `<button class="btn btn-sm" style="background: #442233; color: #ff88aa;" onclick="UIController.sellShopItem('${shopItem.id}')">売却(${shopItem.sellPrice}G)</button>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        // 4. Eggs
         SHOP_CATALOG.eggs.forEach(shopEgg => {
             const egg = EGGS_DATABASE[shopEgg.id];
             html += `
@@ -793,6 +1123,8 @@ const UIController = {
                     <div class="shop-card-title">
                         <h4>${egg.name}</h4>
                         <small style="color: var(--color-accent);">属性タマゴ</small>
+                    </div>
+                </div>
                 <p class="shop-card-desc">${egg.description}</p>
                 <div class="shop-card-action">
                     <span class="shop-price-tag">💰 ${shopEgg.buyPrice} G</span>
