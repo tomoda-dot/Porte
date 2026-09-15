@@ -668,7 +668,7 @@ class FireworksGame {
   }
 
   generateRandomMino() {
-    if (Math.random() < 0.12) {
+    if (Math.random() < 0.16) {
       const rand = Math.random();
       let specialType = SPECIAL_TYPES.BOMB;
       if (rand > 0.66) specialType = SPECIAL_TYPES.STARMINE;
@@ -902,10 +902,12 @@ class FireworksGame {
 
   descendCeiling() {
     if (this.ceilingRow < DEAD_LINE_ROW - 2) {
-      this.ceilingRow++;
-      this.createParticles(this.width / 2, this.gridOffsetY + this.ceilingRow * this.cellSize, '#00f0ff', 25);
+      // At level 3+, descend faster! (Level 3+ drops 2 rows if space permits, or 1 row)
+      const dropAmount = (this.level >= 3 && this.ceilingRow < DEAD_LINE_ROW - 3) ? 2 : 1;
+      this.ceilingRow += dropAmount;
       const y = this.gridOffsetY + (this.ceilingRow + 1) * this.cellSize;
-      this.showFloatingText('⚠️ 天井下降！', this.width / 2, y + 15, '#ff2a75');
+      this.createParticles(this.width / 2, y, '#ff2a75', 30);
+      this.showFloatingText(`⚠️ 天井急降下! (+${dropAmount})`, this.width / 2, y + 15, '#ff2a75');
     }
   }
 
@@ -1146,10 +1148,20 @@ class FireworksGame {
         const baseScore = [0, 100, 300, 700, 1500][Math.min(fullRows.length, 4)] || 1500;
         this.score += baseScore * chainCount;
         this.linesClearedTotal += fullRows.length;
-        this.level = Math.floor(this.linesClearedTotal / 8) + 1;
+        
+        const oldLevel = this.level;
+        this.level = Math.floor(this.linesClearedTotal / 6) + 1; // Level up every 6 lines!
+        this.descendIntervalMoves = Math.max(1, 5 - this.level); // Accelerate descent interval!
 
         // Push back ceiling when lines are cleared!
         this.pushCeilingUp(fullRows.length);
+
+        if (this.level > oldLevel) {
+          // LEVEL UP! Descend ceiling immediately by 1 row to increase pressure!
+          this.descendCeiling();
+          audio.playExplode(true);
+          this.showFloatingText(`⚡ LEVEL ${this.level} UP! 天井速度上昇！`, this.width / 2, this.height / 3, '#ffd15c');
+        }
       }
 
     } while (clearedInStep);
@@ -1432,28 +1444,49 @@ class FireworksGame {
     ctx.save();
 
     if (specialType) {
-      let color = '#ffd15c';
+      let mainColor = '#ffd15c';
+      let glowColor = 'rgba(255, 209, 92, 0.9)';
       let symbol = '💣';
-      if (specialType === SPECIAL_TYPES.ROCKET) { color = '#00f0ff'; symbol = '🚀'; }
-      if (specialType === SPECIAL_TYPES.STARMINE) { color = '#ff2a75'; symbol = '⭐'; }
+      if (specialType === SPECIAL_TYPES.ROCKET) { 
+        mainColor = '#00f0ff'; 
+        glowColor = 'rgba(0, 240, 255, 0.9)'; 
+        symbol = '🚀'; 
+      }
+      if (specialType === SPECIAL_TYPES.STARMINE) { 
+        mainColor = '#ff2a75'; 
+        glowColor = 'rgba(255, 42, 117, 0.9)'; 
+        symbol = '⭐'; 
+      }
 
-      const gradient = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, radius * 0.1, x, y, radius);
+      // Outer glowing aura
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = Math.max(12, radius * 0.9);
+
+      // Bright gradient sphere
+      const gradient = ctx.createRadialGradient(x - radius * 0.25, y - radius * 0.25, radius * 0.1, x, y, radius);
       gradient.addColorStop(0, '#ffffff');
-      gradient.addColorStop(0.5, color);
-      gradient.addColorStop(1, '#000000');
+      gradient.addColorStop(0.65, mainColor);
+      gradient.addColorStop(1, '#0d1117');
 
       ctx.fillStyle = gradient;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 12;
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `${radius * 1.1}px sans-serif`;
+      // White Glowing Outline Ring
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1.8, radius * 0.14);
+      ctx.stroke();
+
+      // Bold Emoji Icon Prominently Centered with Shadow
+      const fontSize = Math.max(15, Math.floor(radius * 1.5));
+      ctx.font = `bold ${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(symbol, x, y);
+      ctx.shadowColor = '#000000';
+      ctx.shadowBlur = 4;
+      ctx.fillText(symbol, x, y + 1);
+
       ctx.restore();
       return;
     }
