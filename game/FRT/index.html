@@ -292,72 +292,23 @@
     letter-spacing: 1px;
   }
 
-  .mode-selector-wrapper {
-    width: 100%;
-    margin-bottom: 14px;
-  }
-  .mode-label {
-    font-size: 11px;
-    font-weight: 800;
-    color: #94a3b8;
-    margin-bottom: 6px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .mode-buttons {
-    display: flex;
-    gap: 10px;
-    width: 100%;
-  }
-  .mode-btn {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    padding: 8px 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: #ffffff;
-    text-align: center;
-  }
-  .mode-btn:active { transform: scale(0.97); }
-  .mode-btn.active[data-mode="normal"] {
-    background: rgba(0, 255, 102, 0.15);
-    border-color: #00ff66;
-    box-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
-  }
-  .mode-btn.active[data-mode="hard"] {
-    background: rgba(0, 240, 255, 0.15);
-    border-color: #00f0ff;
-    box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
-  }
-  .mode-title {
-    font-size: 13px;
-    font-weight: 800;
-    margin-bottom: 2px;
-  }
-  .mode-desc {
-    font-size: 9.5px;
-    color: #94a3b8;
-  }
-
   .instructions-box {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 16px;
-    padding: 12px 14px;
-    margin-bottom: 16px;
+    padding: 16px;
+    margin-bottom: 24px;
     width: 100%;
     text-align: left;
-    font-size: 11px;
-    line-height: 1.5;
+    font-size: 12px;
+    line-height: 1.6;
     color: #cbd5e1;
   }
 
   .instructions-box h3 {
     color: var(--accent-gold);
-    font-size: 12px;
-    margin-bottom: 6px;
+    font-size: 13px;
+    margin-bottom: 8px;
   }
 
   .btn-start {
@@ -449,27 +400,13 @@
     <div class="game-title">🎆 ハナビ・バブル</div>
     <div class="game-subtitle">FIREWORKS REVERSE TETRIS</div>
 
-    <div class="mode-selector-wrapper">
-      <div class="mode-label">🎮 モード選択</div>
-      <div class="mode-buttons">
-        <button class="mode-btn active" id="btn-mode-normal" data-mode="normal">
-          <div class="mode-title">🌱 ノーマル</div>
-          <div class="mode-desc">天井なし・マイペース</div>
-        </button>
-        <button class="mode-btn" id="btn-mode-hard" data-mode="hard">
-          <div class="mode-title">⚡ ハード</div>
-          <div class="mode-desc">青い天井下降・スリリング</div>
-        </button>
-      </div>
-    </div>
-
     <div class="instructions-box">
       <h3>🚀 操作・ルール</h3>
       ・左右の「<b>◀ ▶</b>」や<b>ドラッグ</b>で位置移動！<br>
       ・中央エリアの<b>上スワイプ ⬆️</b>（またはタップ）で発射！<br>
       ・「<b>↻ 回転</b>」ボタンでミノを90度回転。<br>
-      ・横一列が揃うと<b>花火爆破ラインクリア</b>！<br>
-      ・<b>ハードモード</b>は青い天井が下降する挑戦モード！<br>
+      ・ミノ着地後、一定手数で<b>青い天井が下降</b>！<br>
+      ・ラインクリアや<b>スペシャル玉爆発</b>で<b>天井を押し返そう ⬆️</b>！<br>
       ・💣<b>ボム玉</b>、🚀<b>ロケット玉</b>、⭐<b>スターマイン玉</b>を活用！
     </div>
 
@@ -567,6 +504,20 @@ class SoundSynth {
       osc.start(); osc.stop(this.ctx.currentTime + 0.08);
     } catch(e){}
   }
+  playPushBack() {
+    if (this.muted || !this.ctx) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+      osc.connect(gain); gain.connect(this.ctx.destination);
+      osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+    } catch(e){}
+  }
   playGameOver() {
     if (this.muted || !this.ctx) return;
     try {
@@ -638,13 +589,12 @@ class FireworksGame {
     this.currentCtx = this.currentCanvas.getContext('2d');
 
     this.grid = [];
-    this.ceilingRow = 0;
-    this.gameMode = 'normal'; // 'normal' (no ceiling, no descending) | 'hard' (ceiling descends every 6 moves)
+    this.ceilingRow = -1;
     this.score = 0;
     this.level = 1;
     this.linesClearedTotal = 0;
     this.movesCount = 0;
-    this.descendIntervalMoves = 6; // Descend ceiling every 6 moves
+    this.descendIntervalMoves = 5; // Descend ceiling every 5 moves AFTER landing
 
     this.currentMino = null;
     this.currentCol = 4; // Tetris horizontal column position (0 to COLS - mCols)
@@ -652,6 +602,7 @@ class FireworksGame {
     this.launchedMino = null; // Currently flying mino
 
     this.particles = [];
+    this.floatingTexts = [];
     this.isDragging = false;
     this.dragStartPos = { x: 0, y: 0 };
     this.dragStartCol = 4;
@@ -693,12 +644,13 @@ class FireworksGame {
   startNewGame() {
     audio.init();
     this.initGrid();
-    this.ceilingRow = (this.gameMode === 'hard') ? 0 : -1;
+    this.ceilingRow = -1;
     this.score = 0;
     this.level = 1;
     this.linesClearedTotal = 0;
     this.movesCount = 0;
     this.particles = [];
+    this.floatingTexts = [];
     this.launchedMino = null;
     this.gameRunning = true;
 
@@ -944,20 +896,26 @@ class FireworksGame {
       vy: -16 // Straight UP!
     };
 
-    this.movesCount++;
-    if (this.movesCount % this.descendIntervalMoves === 0) {
-      this.descendCeiling();
-    }
-
+    // NOTE: movesCount and descendCeiling are now called in snapMinoToGrid AFTER landing!
     this.spawnNextMino();
   }
 
   descendCeiling() {
-    if (this.gameMode !== 'hard') return;
     if (this.ceilingRow < DEAD_LINE_ROW - 2) {
       this.ceilingRow++;
       this.createParticles(this.width / 2, this.gridOffsetY + this.ceilingRow * this.cellSize, '#00f0ff', 25);
+      const y = this.gridOffsetY + (this.ceilingRow + 1) * this.cellSize;
+      this.showFloatingText('⚠️ 天井下降！', this.width / 2, y + 15, '#ff2a75');
     }
+  }
+
+  pushCeilingUp(amount) {
+    if (this.ceilingRow <= -1) return;
+    this.ceilingRow = Math.max(-1, this.ceilingRow - amount);
+    audio.playPushBack();
+    const y = this.gridOffsetY + (this.ceilingRow + 1) * this.cellSize;
+    this.createParticles(this.width / 2, Math.max(this.gridOffsetY + 10, y), '#00f0ff', 30);
+    this.showFloatingText(`⬆️ 天井押し返し! (-${amount})`, this.width / 2, Math.max(this.gridOffsetY + 30, y + 15), '#00f0ff');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -983,11 +941,8 @@ class FireworksGame {
         const sphereX = mino.x + (c - mCols / 2 + 0.5) * this.cellSize;
         const sphereY = mino.y + (r - mRows / 2 + 0.5) * this.cellSize;
 
-        // Ceiling collision (only active in Hard mode; in Normal mode top of playfield is gridOffsetY)
-        const ceilingPixelY = (this.gameMode === 'hard')
-          ? this.gridOffsetY + (this.ceilingRow + 1) * this.cellSize
-          : this.gridOffsetY;
-
+        // Ceiling collision
+        const ceilingPixelY = this.gridOffsetY + (this.ceilingRow + 1) * this.cellSize;
         if (sphereY <= ceilingPixelY) {
           collided = true;
           break;
@@ -1027,8 +982,7 @@ class FireworksGame {
     let centerCol = Math.round((mino.x - this.gridOffsetX) / this.cellSize - mCols / 2);
     centerCol = Math.max(0, Math.min(COLS - mCols, centerCol));
 
-    const activeCeiling = (this.gameMode === 'hard') ? this.ceilingRow : -1;
-    let startRow = Math.max(activeCeiling + 1, Math.round((mino.y - this.gridOffsetY) / this.cellSize - mRows / 2));
+    let startRow = Math.max(this.ceilingRow + 1, Math.round((mino.y - this.gridOffsetY) / this.cellSize - mRows / 2));
     let centerRow = startRow;
 
     // Find the topmost non-overlapping row for mino matrix
@@ -1051,24 +1005,28 @@ class FireworksGame {
     if (mino.isSpecial) {
       this.executeSpecialOrb(mino.specialType, centerRow, centerCol);
       this.processBuoyancyAndClears();
-      return;
-    }
-
-    for (let r = 0; r < mRows; r++) {
-      for (let c = 0; c < mCols; c++) {
-        if (matrix[r][c]) {
-          const targetR = centerRow + r;
-          const targetC = centerCol + c;
-          if (targetR >= 0 && targetR < ROWS && targetC >= 0 && targetC < COLS) {
-            this.grid[targetR][targetC] = {
-              colorIdx: matrix[r][c]
-            };
+    } else {
+      for (let r = 0; r < mRows; r++) {
+        for (let c = 0; c < mCols; c++) {
+          if (matrix[r][c]) {
+            const targetR = centerRow + r;
+            const targetC = centerCol + c;
+            if (targetR >= 0 && targetR < ROWS && targetC >= 0 && targetC < COLS) {
+              this.grid[targetR][targetC] = {
+                colorIdx: matrix[r][c]
+              };
+            }
           }
         }
       }
+      this.processBuoyancyAndClears();
     }
 
-    this.processBuoyancyAndClears();
+    // Mino has landed & buoyancy/clears completed! NOW increment moves count & descend ceiling if needed!
+    this.movesCount++;
+    if (this.movesCount % this.descendIntervalMoves === 0) {
+      this.descendCeiling();
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1093,6 +1051,7 @@ class FireworksGame {
       const bombPx = this.gridOffsetX + (targetC + 0.5) * this.cellSize;
       const bombPy = this.gridOffsetY + (targetR + 0.5) * this.cellSize;
       this.createParticles(bombPx, bombPy, '#ff2a75', 40);
+      this.pushCeilingUp(1);
     } 
     else if (type === SPECIAL_TYPES.ROCKET) {
       for (let r = 0; r < ROWS; r++) {
@@ -1107,6 +1066,7 @@ class FireworksGame {
       }
       const rocketPx = this.gridOffsetX + (targetC + 0.5) * this.cellSize;
       this.createParticles(rocketPx, this.height / 2, '#00f0ff', 50);
+      this.pushCeilingUp(2);
     } 
     else if (type === SPECIAL_TYPES.STARMINE) {
       let hitColorIdx = 1;
@@ -1128,6 +1088,7 @@ class FireworksGame {
           }
         }
       }
+      this.pushCeilingUp(2);
     }
   }
 
@@ -1138,16 +1099,14 @@ class FireworksGame {
     let chainCount = 0;
     let clearedInStep = false;
 
-    const activeCeiling = (this.gameMode === 'hard') ? this.ceilingRow : -1;
-
     do {
       clearedInStep = false;
 
       for (let c = 0; c < COLS; c++) {
-        for (let r = Math.max(0, activeCeiling + 1); r < ROWS; r++) {
-          if (this.grid[r][c] && (r - 1 > activeCeiling) && !this.grid[r - 1][c]) {
+        for (let r = Math.max(0, this.ceilingRow + 1); r < ROWS; r++) {
+          if (this.grid[r][c] && (r - 1 > this.ceilingRow) && !this.grid[r - 1][c]) {
             let targetR = r;
-            while (targetR - 1 > activeCeiling && !this.grid[targetR - 1][c]) {
+            while (targetR - 1 > this.ceilingRow && !this.grid[targetR - 1][c]) {
               targetR--;
             }
             if (targetR !== r) {
@@ -1159,7 +1118,7 @@ class FireworksGame {
       }
 
       const fullRows = [];
-      for (let r = Math.max(0, activeCeiling + 1); r < ROWS; r++) {
+      for (let r = Math.max(0, this.ceilingRow + 1); r < ROWS; r++) {
         let isFull = true;
         for (let c = 0; c < COLS; c++) {
           if (!this.grid[r][c]) { isFull = false; break; }
@@ -1188,6 +1147,9 @@ class FireworksGame {
         this.score += baseScore * chainCount;
         this.linesClearedTotal += fullRows.length;
         this.level = Math.floor(this.linesClearedTotal / 8) + 1;
+
+        // Push back ceiling when lines are cleared!
+        this.pushCeilingUp(fullRows.length);
       }
 
     } while (clearedInStep);
@@ -1240,6 +1202,41 @@ class FireworksGame {
     }
   }
 
+  showFloatingText(text, x, y, color = '#00f0ff') {
+    this.floatingTexts.push({
+      text: text,
+      x: x,
+      y: y,
+      vy: -1.2,
+      color: color,
+      alpha: 1.0,
+      decay: 0.02
+    });
+  }
+
+  updateAndDrawFloatingTexts() {
+    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatingTexts[i];
+      ft.y += ft.vy;
+      ft.alpha -= ft.decay;
+
+      if (ft.alpha <= 0) {
+        this.floatingTexts.splice(i, 1);
+        continue;
+      }
+
+      this.ctx.save();
+      this.ctx.globalAlpha = ft.alpha;
+      this.ctx.fillStyle = ft.color;
+      this.ctx.shadowColor = ft.color;
+      this.ctx.shadowBlur = 10;
+      this.ctx.font = '900 13px sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText(ft.text, ft.x, ft.y);
+      this.ctx.restore();
+    }
+  }
+
   updateAndDrawParticles() {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
@@ -1281,6 +1278,7 @@ class FireworksGame {
 
     this.updateLaunchedMino();
     this.updateAndDrawParticles();
+    this.updateAndDrawFloatingTexts();
 
     requestAnimationFrame((ts) => this.gameLoop(ts));
   }
@@ -1309,7 +1307,7 @@ class FireworksGame {
   }
 
   drawCeiling() {
-    if (this.gameMode !== 'hard') return;
+    if (this.ceilingRow < 0) return;
     const y = this.gridOffsetY + (this.ceilingRow + 1) * this.cellSize;
     this.ctx.save();
     this.ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
@@ -1364,9 +1362,7 @@ class FireworksGame {
     const mCols = this.currentMino.matrix[0].length;
     const startX = this.gridOffsetX + (this.currentCol + mCols / 2) * this.cellSize;
     const bottomY = this.gridOffsetY + (ROWS - 0.5) * this.cellSize;
-    const topY = (this.gameMode === 'hard')
-      ? this.gridOffsetY + (this.ceilingRow + 1) * this.cellSize
-      : this.gridOffsetY;
+    const topY = this.gridOffsetY + (this.ceilingRow + 1) * this.cellSize;
 
     this.ctx.save();
     // Highlight launch columns
@@ -1496,21 +1492,6 @@ class FireworksGame {
       audio.muted = !audio.muted;
       btnSound.innerText = audio.muted ? '🔇' : '🔊';
     });
-
-    const btnNormal = document.getElementById('btn-mode-normal');
-    const btnHard = document.getElementById('btn-mode-hard');
-    if (btnNormal && btnHard) {
-      btnNormal.addEventListener('click', () => {
-        this.gameMode = 'normal';
-        btnNormal.classList.add('active');
-        btnHard.classList.remove('active');
-      });
-      btnHard.addEventListener('click', () => {
-        this.gameMode = 'hard';
-        btnHard.classList.add('active');
-        btnNormal.classList.remove('active');
-      });
-    }
   }
 }
 
