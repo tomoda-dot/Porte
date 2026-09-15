@@ -794,10 +794,13 @@ class FireworksGame {
     btnRight.addEventListener('click', () => this.moveRight());
     rotateBtn.addEventListener('click', () => this.rotateCurrentMino());
 
+    let hasMovedHorizontally = false;
+
     // Drag / Swipe handlers (Horizontal Move & Vertical Launch)
     const startDrag = (e) => {
       if (!this.gameRunning || this.launchedMino) return;
       this.isDragging = true;
+      hasMovedHorizontally = false;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       this.dragStartPos = { x: clientX, y: clientY };
@@ -818,6 +821,10 @@ class FireworksGame {
 
       if (newCol !== this.currentCol) {
         this.currentCol = newCol;
+        hasMovedHorizontally = true;
+      }
+      if (Math.abs(dx) > 12) {
+        hasMovedHorizontally = true;
       }
     };
 
@@ -825,11 +832,18 @@ class FireworksGame {
       if (!this.isDragging) return;
       this.isDragging = false;
 
+      const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
       const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+      const dx = clientX - this.dragStartPos.x;
       const dy = clientY - this.dragStartPos.y;
 
-      // Upwards swipe (or tap) triggers straight vertical launch!
-      if (dy < -15 || Math.abs(dy) < 10) {
+      // If horizontal drag occurred, DO NOT launch!
+      if (hasMovedHorizontally || Math.abs(dx) > 12 || this.dragStartCol !== this.currentCol) {
+        return;
+      }
+
+      // Only launch if it was an upward swipe (dy < -15) OR a stationary tap (dx & dy < 10)
+      if (dy < -15 || (Math.abs(dx) < 10 && Math.abs(dy) < 10)) {
         this.launchMinoStraightUp();
       }
     };
