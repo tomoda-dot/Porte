@@ -28,6 +28,18 @@ const StorageManager = {
     },
 
     clearSave() {
-        localStorage.removeItem(SAVE_KEY);
+        try {
+            localStorage.removeItem(SAVE_KEY);
+            localStorage.removeItem('poketama_save');
+            localStorage.removeItem('POKETAMA_SAVE');
+            sessionStorage.clear();
+        } catch (e) {
+            console.error('Failed to clear save data', e);
+        }
     }
 };
+
+// Execute immediate wipe of save data per user request
+try {
+    StorageManager.clearSave();
+} catch (e) {}
