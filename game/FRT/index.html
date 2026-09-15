@@ -944,10 +944,27 @@ class FireworksGame {
     const mCols = matrix[0].length;
 
     let centerCol = Math.round((mino.x - this.gridOffsetX) / this.cellSize - mCols / 2);
-    let centerRow = Math.round((mino.y - this.gridOffsetY) / this.cellSize - mRows / 2);
-
     centerCol = Math.max(0, Math.min(COLS - mCols, centerCol));
-    centerRow = Math.max(this.ceilingRow + 1, Math.min(ROWS - mRows, centerRow));
+
+    let startRow = Math.max(this.ceilingRow + 1, Math.round((mino.y - this.gridOffsetY) / this.cellSize - mRows / 2));
+    let centerRow = startRow;
+
+    // Find the topmost non-overlapping row for mino matrix
+    while (centerRow <= ROWS - mRows) {
+      let overlap = false;
+      for (let r = 0; r < mRows; r++) {
+        for (let c = 0; c < mCols; c++) {
+          if (matrix[r][c] && this.grid[centerRow + r] && this.grid[centerRow + r][centerCol + c]) {
+            overlap = true;
+            break;
+          }
+        }
+        if (overlap) break;
+      }
+      if (!overlap) break;
+      centerRow++;
+    }
+    centerRow = Math.min(ROWS - mRows, centerRow);
 
     if (mino.isSpecial) {
       this.executeSpecialOrb(mino.specialType, centerRow, centerCol);
@@ -1043,14 +1060,16 @@ class FireworksGame {
       clearedInStep = false;
 
       for (let c = 0; c < COLS; c++) {
-        for (let r = this.ceilingRow + 1; r < ROWS; r++) {
-          if (this.grid[r][c] && !this.grid[r - 1][c]) {
+        for (let r = Math.max(0, this.ceilingRow + 1); r < ROWS; r++) {
+          if (this.grid[r][c] && (r - 1 > this.ceilingRow) && !this.grid[r - 1][c]) {
             let targetR = r;
-            while (targetR > this.ceilingRow + 1 && !this.grid[targetR - 1][c]) {
+            while (targetR - 1 > this.ceilingRow && !this.grid[targetR - 1][c]) {
               targetR--;
             }
-            this.grid[targetR][c] = this.grid[r][c];
-            this.grid[r][c] = null;
+            if (targetR !== r) {
+              this.grid[targetR][c] = this.grid[r][c];
+              this.grid[r][c] = null;
+            }
           }
         }
       }
