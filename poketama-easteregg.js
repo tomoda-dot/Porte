@@ -63,7 +63,7 @@
                 osc.stop(ctx.currentTime + 0.5);
             } catch(e) {}
 
-            alert('🎮 隠し要素解放！\nスマホ用「裏ゲームセンター（ポケたま ＆ ハナビ・バブル）」を起動します！');
+            alert('🎮 隠し要素解放！\n裏ゲームセンターを起動します！');
             window.openPoketamaGame();
         } else {
             tapTimer = setTimeout(function() {
