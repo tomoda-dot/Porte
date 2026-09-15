@@ -145,14 +145,14 @@
 
   /* Control Panel */
   .control-panel {
-    height: 130px;
+    height: 125px;
     background: rgba(15, 23, 42, 0.95);
     border-top: 1.5px solid rgba(255, 255, 255, 0.12);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px;
-    gap: 12px;
+    padding: 8px 12px;
+    gap: 6px;
     position: relative;
     z-index: 10;
   }
@@ -165,9 +165,10 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 14px;
-    width: 76px;
-    height: 90px;
-    padding: 4px;
+    width: 64px;
+    height: 85px;
+    padding: 2px;
+    flex-shrink: 0;
   }
 
   .preview-title {
@@ -178,43 +179,70 @@
   }
 
   .preview-canvas {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
   }
 
+  /* Left / Right Move Buttons */
+  .dir-btn {
+    width: 44px;
+    height: 85px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .dir-btn:active { background: rgba(0, 240, 255, 0.3); transform: scale(0.95); }
+
+  /* Center Launch Pad & Current Mino Display */
   .launch-pad {
     flex: 1;
-    height: 90px;
-    background: radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, rgba(255, 255, 255, 0.03) 70%);
+    height: 85px;
+    background: radial-gradient(circle, rgba(0, 240, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 80%);
     border: 1.5px dashed rgba(0, 240, 255, 0.4);
-    border-radius: 16px;
+    border-radius: 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    padding: 4px;
     cursor: pointer;
     position: relative;
     transition: border-color 0.2s;
   }
   .launch-pad:active { border-color: var(--accent-pink); }
 
-  .launch-hint {
-    font-size: 11px;
+  .current-canvas {
+    width: 55px;
+    height: 55px;
+  }
+
+  .launch-subhint {
+    font-size: 10px;
     font-weight: 800;
     color: var(--accent-cyan);
-    text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+    text-shadow: 0 0 6px rgba(0, 240, 255, 0.6);
     pointer-events: none;
+    margin-bottom: 2px;
   }
 
   .rotate-btn {
-    width: 76px;
-    height: 90px;
+    width: 64px;
+    height: 85px;
     background: linear-gradient(135deg, #ff2a75, #ff7300);
     border: none;
-    border-radius: 16px;
+    border-radius: 14px;
     color: #ffffff;
     font-weight: 900;
-    font-size: 15px;
+    font-size: 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -222,10 +250,11 @@
     gap: 2px;
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(255, 42, 117, 0.4);
+    flex-shrink: 0;
     transition: transform 0.1s, box-shadow 0.2s;
   }
   .rotate-btn:active { transform: scale(0.94); box-shadow: 0 2px 8px rgba(255, 42, 117, 0.6); }
-  .rotate-btn span { font-size: 24px; line-height: 1; }
+  .rotate-btn span { font-size: 22px; line-height: 1; }
 
   /* Overlay Screens (Start & Game Over) */
   .overlay {
@@ -347,10 +376,17 @@
       <canvas class="preview-canvas" id="preview-canvas"></canvas>
     </div>
 
-    <!-- Swipe Aim Launch Area -->
+    <!-- Left Move Button -->
+    <button class="dir-btn" id="btn-left" title="Move Left">◀</button>
+
+    <!-- Center Current Mino & Launch Pad -->
     <div class="launch-pad" id="launch-pad">
-      <span class="launch-hint" id="launch-hint">🚀 スワイプで発射！</span>
+      <canvas class="current-canvas" id="current-canvas"></canvas>
+      <span class="launch-subhint" id="launch-hint">⬆️ 上スワイプで発射</span>
     </div>
+
+    <!-- Right Move Button -->
+    <button class="dir-btn" id="btn-right" title="Move Right">▶</button>
 
     <!-- Rotate Button -->
     <button class="rotate-btn" id="btn-rotate">
@@ -366,12 +402,13 @@
 
     <div class="instructions-box">
       <h3>🚀 操作・ルール</h3>
-      ・発射エリアを<b>引っ張ってスワイプ</b>！角度を狙って上へミノを打ち上げ！<br>
-      ・「<b>↻ 回転</b>」ボタンでミノを回転可能。<br>
+      ・左右の「<b>◀ ▶</b>」ボタンや<b>ドラッグ</b>でミノの位置を移動！<br>
+      ・中央エリアの<b>上スワイプ ⬆️</b>（またはタップ）で真上へ発射！<br>
+      ・「<b>↻ 回転</b>」ボタンでミノを90度回転。<br>
       ・横一列が揃うと<b>花火爆破ラインクリア</b>！<br>
       ・下にある玉は<b>上方向の浮力</b>でフワッと自動吸着（連鎖発生！）<br>
       ・一定手数ごとに<b>天井が下降</b>。デッドライン（赤線）到達でゲームオーバー！<br>
-      ・💣<b>ボム玉</b>、🚀<b>ロケット玉</b>、⭐<b>スターマイン玉</b>を狙おう！
+      ・💣<b>ボム玉</b>、🚀<b>ロケット玉</b>、⭐<b>スターマイン玉</b>を活用しよう！
     </div>
 
     <button class="btn-start" id="btn-game-start">ゲームスタート！</button>
@@ -437,7 +474,6 @@ class SoundSynth {
   playExplode(isSpecial = false) {
     if (this.muted || !this.ctx) return;
     try {
-      // Noise burst for explosion
       const bufferSize = this.ctx.sampleRate * 0.4;
       const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -536,6 +572,8 @@ class FireworksGame {
     this.ctx = this.canvas.getContext('2d');
     this.previewCanvas = document.getElementById('preview-canvas');
     this.previewCtx = this.previewCanvas.getContext('2d');
+    this.currentCanvas = document.getElementById('current-canvas');
+    this.currentCtx = this.currentCanvas.getContext('2d');
 
     this.grid = [];
     this.ceilingRow = 0;
@@ -546,15 +584,14 @@ class FireworksGame {
     this.descendIntervalMoves = 6; // Descend ceiling every 6 moves
 
     this.currentMino = null;
+    this.currentCol = 4; // Tetris horizontal column position (0 to COLS - mCols)
     this.nextMino = null;
     this.launchedMino = null; // Currently flying mino
 
     this.particles = [];
     this.isDragging = false;
     this.dragStartPos = { x: 0, y: 0 };
-    this.dragCurPos = { x: 0, y: 0 };
-    this.launchAngle = -Math.PI / 2;
-    this.launchPower = 0;
+    this.dragStartCol = 4;
 
     this.gameRunning = false;
     this.highScore = parseInt(localStorage.getItem('FRT_HIGH_SCORE') || '0', 10);
@@ -577,8 +614,10 @@ class FireworksGame {
     this.gridOffsetX = Math.floor((this.width - (this.cellSize * COLS)) / 2);
     this.gridOffsetY = 15;
 
-    this.previewCanvas.width = 60;
-    this.previewCanvas.height = 60;
+    this.previewCanvas.width = 50;
+    this.previewCanvas.height = 50;
+    this.currentCanvas.width = 55;
+    this.currentCanvas.height = 55;
   }
 
   initGrid() {
@@ -614,7 +653,6 @@ class FireworksGame {
   }
 
   generateRandomMino() {
-    // 12% chance for Special Orb
     if (Math.random() < 0.12) {
       const rand = Math.random();
       let specialType = SPECIAL_TYPES.BOMB;
@@ -631,8 +669,6 @@ class FireworksGame {
 
     const shape = TETROMINOES[Math.floor(Math.random() * TETROMINOES.length)];
     const colorIdx = Math.floor(Math.random() * (COLORS.length - 1)) + 1;
-    
-    // Create colored matrix
     const matrix = shape.map(row => row.map(cell => cell ? colorIdx : 0));
 
     return {
@@ -645,22 +681,26 @@ class FireworksGame {
   spawnNextMino() {
     this.currentMino = this.nextMino;
     this.nextMino = this.generateRandomMino();
+
+    const mCols = this.currentMino.matrix[0].length;
+    this.currentCol = Math.floor((COLS - mCols) / 2);
+
     this.renderPreview();
+    this.renderCurrentPad();
   }
 
   renderPreview() {
     const ctx = this.previewCtx;
-    ctx.clearRect(0, 0, 60, 60);
-
+    ctx.clearRect(0, 0, 50, 50);
     if (!this.nextMino) return;
 
     const matrix = this.nextMino.matrix;
     const rows = matrix.length;
     const cols = matrix[0].length;
-    const size = Math.min(48 / Math.max(rows, cols), 16);
+    const size = Math.min(38 / Math.max(rows, cols), 14);
 
-    const startX = (60 - (cols * size)) / 2;
-    const startY = (60 - (rows * size)) / 2;
+    const startX = (50 - (cols * size)) / 2;
+    const startY = (50 - (rows * size)) / 2;
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -673,15 +713,55 @@ class FireworksGame {
     }
   }
 
+  renderCurrentPad() {
+    const ctx = this.currentCtx;
+    ctx.clearRect(0, 0, 55, 55);
+    if (!this.currentMino || this.launchedMino) return;
+
+    const matrix = this.currentMino.matrix;
+    const rows = matrix.length;
+    const cols = matrix[0].length;
+    const size = Math.min(42 / Math.max(rows, cols), 16);
+
+    const startX = (55 - (cols * size)) / 2;
+    const startY = (55 - (rows * size)) / 2;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (matrix[r][c]) {
+          const x = startX + c * size + size / 2;
+          const y = startY + r * size + size / 2;
+          this.drawSphere(ctx, x, y, size * 0.45, this.currentMino.isSpecial ? null : this.currentMino.colorIdx, this.currentMino.specialType);
+        }
+      }
+    }
+  }
+
+  moveLeft() {
+    if (!this.currentMino || this.launchedMino || !this.gameRunning) return;
+    if (this.currentCol > 0) {
+      this.currentCol--;
+      audio.playRotate();
+    }
+  }
+
+  moveRight() {
+    if (!this.currentMino || this.launchedMino || !this.gameRunning) return;
+    const mCols = this.currentMino.matrix[0].length;
+    if (this.currentCol < COLS - mCols) {
+      this.currentCol++;
+      audio.playRotate();
+    }
+  }
+
   rotateCurrentMino() {
     if (!this.currentMino || this.launchedMino || !this.gameRunning) return;
-    if (this.currentMino.isSpecial) return; // Special orbs don't rotate
+    if (this.currentMino.isSpecial) return;
 
     const matrix = this.currentMino.matrix;
     const rows = matrix.length;
     const cols = matrix[0].length;
 
-    // Transpose and reverse rows (90 degree clockwise rotation)
     const newMatrix = [];
     for (let c = 0; c < cols; c++) {
       newMatrix[c] = [];
@@ -690,59 +770,67 @@ class FireworksGame {
       }
     }
     this.currentMino.matrix = newMatrix;
+
+    // Clamp column bounds
+    const newMCols = newMatrix[0].length;
+    if (this.currentCol + newMCols > COLS) {
+      this.currentCol = Math.max(0, COLS - newMCols);
+    }
+
+    this.renderCurrentPad();
     audio.playRotate();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Drag & Launch Controls
+  // Tetris Controls: Left/Right Move & Up-Swipe Launch
   // ═══════════════════════════════════════════════════════════════════════════
   setupControls() {
     const launchPad = document.getElementById('launch-pad');
+    const btnLeft = document.getElementById('btn-left');
+    const btnRight = document.getElementById('btn-right');
     const rotateBtn = document.getElementById('btn-rotate');
 
+    btnLeft.addEventListener('click', () => this.moveLeft());
+    btnRight.addEventListener('click', () => this.moveRight());
     rotateBtn.addEventListener('click', () => this.rotateCurrentMino());
 
-    // Mouse / Touch Drag Shot handlers
+    // Drag / Swipe handlers (Horizontal Move & Vertical Launch)
     const startDrag = (e) => {
       if (!this.gameRunning || this.launchedMino) return;
       this.isDragging = true;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       this.dragStartPos = { x: clientX, y: clientY };
-      this.dragCurPos = { x: clientX, y: clientY };
-      document.getElementById('launch-hint').innerText = '🎯 角度をあわせて離す！';
+      this.dragStartCol = this.currentCol;
     };
 
     const moveDrag = (e) => {
-      if (!this.isDragging) return;
+      if (!this.isDragging || !this.currentMino) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      this.dragCurPos = { x: clientX, y: clientY };
 
-      const dx = this.dragStartPos.x - clientX;
-      const dy = this.dragStartPos.y - clientY;
+      const dx = clientX - this.dragStartPos.x;
+      const colShift = Math.round(dx / (this.cellSize * 0.9));
+      const mCols = this.currentMino.matrix[0].length;
 
-      // Calculate angle (restrict upwards: -165deg to -15deg)
-      if (dy > 10) {
-        let angle = Math.atan2(-dy, -dx);
-        // Clamp angle to upper hemisphere
-        if (angle > -Math.PI * 0.08) angle = -Math.PI * 0.08;
-        if (angle < -Math.PI * 0.92) angle = -Math.PI * 0.92;
-        this.launchAngle = angle;
-        this.launchPower = Math.min(Math.hypot(dx, dy) / 100, 1.0);
+      let newCol = this.dragStartCol + colShift;
+      newCol = Math.max(0, Math.min(COLS - mCols, newCol));
+
+      if (newCol !== this.currentCol) {
+        this.currentCol = newCol;
       }
     };
 
-    const endDrag = () => {
+    const endDrag = (e) => {
       if (!this.isDragging) return;
       this.isDragging = false;
-      document.getElementById('launch-hint').innerText = '🚀 スワイプで発射！';
 
-      const dx = this.dragStartPos.x - this.dragCurPos.x;
-      const dy = this.dragStartPos.y - this.dragCurPos.y;
+      const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+      const dy = clientY - this.dragStartPos.y;
 
-      if (dy > 20) {
-        this.launchMino();
+      // Upwards swipe (or tap) triggers straight vertical launch!
+      if (dy < -15 || Math.abs(dy) < 10) {
+        this.launchMinoStraightUp();
       }
     };
 
@@ -753,19 +841,19 @@ class FireworksGame {
     launchPad.addEventListener('touchstart', startDrag, { passive: true });
     window.addEventListener('touchmove', moveDrag, { passive: true });
     window.addEventListener('touchend', endDrag);
+
+    // Also support dragging on main game canvas
+    this.canvas.addEventListener('mousedown', startDrag);
+    this.canvas.addEventListener('touchstart', startDrag, { passive: true });
   }
 
-  launchMino() {
+  launchMinoStraightUp() {
     if (this.launchedMino || !this.currentMino) return;
 
     audio.playLaunch();
 
-    const speed = 14;
-    const vx = Math.cos(this.launchAngle) * speed;
-    const vy = Math.sin(this.launchAngle) * speed;
-
-    // Start position (bottom center of grid)
-    const startPixelX = this.gridOffsetX + (COLS / 2) * this.cellSize;
+    const mCols = this.currentMino.matrix[0].length;
+    const startPixelX = this.gridOffsetX + (this.currentCol + mCols / 2) * this.cellSize;
     const startPixelY = this.gridOffsetY + (ROWS - 1) * this.cellSize;
 
     this.launchedMino = {
@@ -775,8 +863,8 @@ class FireworksGame {
       colorIdx: this.currentMino.colorIdx,
       x: startPixelX,
       y: startPixelY,
-      vx: vx,
-      vy: vy
+      vx: 0,
+      vy: -16 // Straight UP!
     };
 
     this.movesCount++;
@@ -790,7 +878,6 @@ class FireworksGame {
   descendCeiling() {
     if (this.ceilingRow < DEAD_LINE_ROW - 2) {
       this.ceilingRow++;
-      // Push existing spheres down if needed
       this.createParticles(this.width / 2, this.gridOffsetY + this.ceilingRow * this.cellSize, '#00f0ff', 25);
     }
   }
@@ -805,15 +892,6 @@ class FireworksGame {
     mino.x += mino.vx;
     mino.y += mino.vy;
 
-    const radius = (this.cellSize / 2) * 0.85;
-
-    // Bounce off left/right walls
-    const minX = this.gridOffsetX + radius;
-    const maxX = this.gridOffsetX + (COLS * this.cellSize) - radius;
-    if (mino.x <= minX) { mino.x = minX; mino.vx *= -1; }
-    if (mino.x >= maxX) { mino.x = maxX; mino.vx *= -1; }
-
-    // Check collision with ceiling or grid spheres
     const matrix = mino.matrix;
     const mRows = matrix.length;
     const mCols = matrix[0].length;
@@ -824,21 +902,17 @@ class FireworksGame {
       for (let c = 0; c < mCols; c++) {
         if (!matrix[r][c]) continue;
 
-        // Calculate world position of this sub-sphere in mino
         const sphereX = mino.x + (c - mCols / 2 + 0.5) * this.cellSize;
         const sphereY = mino.y + (r - mRows / 2 + 0.5) * this.cellSize;
 
-        // Check top ceiling collision
+        // Ceiling collision
         const ceilingPixelY = this.gridOffsetY + (this.ceilingRow + 1) * this.cellSize;
         if (sphereY <= ceilingPixelY) {
           collided = true;
           break;
         }
 
-        // Check collision against existing spheres in grid
-        const gridC = Math.floor((sphereX - this.gridOffsetX) / this.cellSize);
-        const gridR = Math.floor((sphereY - this.gridOffsetY) / this.cellSize);
-
+        // Existing grid spheres collision
         for (let gr = 0; gr < ROWS; gr++) {
           for (let gc = 0; gc < COLS; gc++) {
             if (this.grid[gr][gc]) {
@@ -869,21 +943,18 @@ class FireworksGame {
     const mRows = matrix.length;
     const mCols = matrix[0].length;
 
-    // Determine target center grid cell
-    let centerCol = Math.round((mino.x - this.gridOffsetX) / this.cellSize - 0.5);
-    let centerRow = Math.round((mino.y - this.gridOffsetY) / this.cellSize - 0.5);
+    let centerCol = Math.round((mino.x - this.gridOffsetX) / this.cellSize - mCols / 2);
+    let centerRow = Math.round((mino.y - this.gridOffsetY) / this.cellSize - mRows / 2);
 
     centerCol = Math.max(0, Math.min(COLS - mCols, centerCol));
-    centerRow = Math.max(this.ceilingRow, Math.min(ROWS - mRows, centerRow));
+    centerRow = Math.max(this.ceilingRow + 1, Math.min(ROWS - mRows, centerRow));
 
-    // Handle Special Items on Snap
     if (mino.isSpecial) {
       this.executeSpecialOrb(mino.specialType, centerRow, centerCol);
       this.processBuoyancyAndClears();
       return;
     }
 
-    // Place normal spheres into grid
     for (let r = 0; r < mRows; r++) {
       for (let c = 0; c < mCols; c++) {
         if (matrix[r][c]) {
@@ -908,7 +979,6 @@ class FireworksGame {
     audio.playExplode(true);
 
     if (type === SPECIAL_TYPES.BOMB) {
-      // 3x3 Explosion
       for (let r = targetR - 1; r <= targetR + 1; r++) {
         for (let c = targetC - 1; c <= targetC + 1; c++) {
           if (r >= 0 && r < ROWS && c >= 0 && c < COLS && this.grid[r][c]) {
@@ -926,7 +996,6 @@ class FireworksGame {
       this.createParticles(bombPx, bombPy, '#ff2a75', 40);
     } 
     else if (type === SPECIAL_TYPES.ROCKET) {
-      // Clear entire vertical column
       for (let r = 0; r < ROWS; r++) {
         if (this.grid[r][targetC]) {
           const color = COLORS[this.grid[r][targetC].colorIdx]?.main || '#00f0ff';
@@ -941,7 +1010,6 @@ class FireworksGame {
       this.createParticles(rocketPx, this.height / 2, '#00f0ff', 50);
     } 
     else if (type === SPECIAL_TYPES.STARMINE) {
-      // Target existing sphere color at impact or random color
       let hitColorIdx = 1;
       if (this.grid[targetR] && this.grid[targetR][targetC]) {
         hitColorIdx = this.grid[targetR][targetC].colorIdx;
@@ -974,13 +1042,11 @@ class FireworksGame {
     do {
       clearedInStep = false;
 
-      // 1. Upward Buoyancy: Float spheres upwards into empty grid spaces above
       for (let c = 0; c < COLS; c++) {
         for (let r = this.ceilingRow + 1; r < ROWS; r++) {
           if (this.grid[r][c] && !this.grid[r - 1][c]) {
-            // Float sphere UP to highest empty cell in column
             let targetR = r;
-            while (targetR > this.ceilingRow && !this.grid[targetR - 1][c]) {
+            while (targetR > this.ceilingRow + 1 && !this.grid[targetR - 1][c]) {
               targetR--;
             }
             this.grid[targetR][c] = this.grid[r][c];
@@ -989,9 +1055,8 @@ class FireworksGame {
         }
       }
 
-      // 2. Check Line Clears
       const fullRows = [];
-      for (let r = this.ceilingRow; r < ROWS; r++) {
+      for (let r = this.ceilingRow + 1; r < ROWS; r++) {
         let isFull = true;
         for (let c = 0; c < COLS; c++) {
           if (!this.grid[r][c]) { isFull = false; break; }
@@ -1016,7 +1081,6 @@ class FireworksGame {
           }
         });
 
-        // Scoring with chain multiplier
         const baseScore = [0, 100, 300, 700, 1500][Math.min(fullRows.length, 4)] || 1500;
         this.score += baseScore * chainCount;
         this.linesClearedTotal += fullRows.length;
@@ -1030,7 +1094,6 @@ class FireworksGame {
   }
 
   checkGameOverCondition() {
-    // Check if any sphere has reached or crossed the Dead Line (Bottom Hazard Line)
     for (let c = 0; c < COLS; c++) {
       if (this.grid[DEAD_LINE_ROW][c]) {
         this.triggerGameOver();
@@ -1054,7 +1117,7 @@ class FireworksGame {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Particles & Fireworks Visual Effects
+  // Particles & Visuals
   // ═══════════════════════════════════════════════════════════════════════════
   createParticles(x, y, color, count = 15) {
     for (let i = 0; i < count; i++) {
@@ -1110,6 +1173,7 @@ class FireworksGame {
     this.drawDeadLine();
     this.drawGridSpheres();
     this.drawTrajectoryGuide();
+    this.drawCurrentWaitingMino();
     this.drawLaunchedMino();
 
     this.updateLaunchedMino();
@@ -1191,21 +1255,55 @@ class FireworksGame {
   }
 
   drawTrajectoryGuide() {
-    if (!this.isDragging || this.launchedMino) return;
+    if (this.launchedMino || !this.currentMino) return;
 
-    const startX = this.gridOffsetX + (COLS / 2) * this.cellSize;
-    const startY = this.gridOffsetY + (ROWS - 1) * this.cellSize;
+    const mCols = this.currentMino.matrix[0].length;
+    const startX = this.gridOffsetX + (this.currentCol + mCols / 2) * this.cellSize;
+    const bottomY = this.gridOffsetY + (ROWS - 0.5) * this.cellSize;
+    const topY = this.gridOffsetY + (this.ceilingRow + 1) * this.cellSize;
 
     this.ctx.save();
+    // Highlight launch columns
+    const colLeft = this.gridOffsetX + this.currentCol * this.cellSize;
+    const colWidth = mCols * this.cellSize;
+    this.ctx.fillStyle = 'rgba(0, 240, 255, 0.06)';
+    this.ctx.fillRect(colLeft, topY, colWidth, bottomY - topY);
+
+    // Vertical dashed laser guide
     this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
     this.ctx.lineWidth = 2;
-    this.ctx.setLineDash([4, 6]);
+    this.ctx.setLineDash([6, 6]);
 
     this.ctx.beginPath();
-    this.ctx.moveTo(startX, startY);
-    this.ctx.lineTo(startX + Math.cos(this.launchAngle) * 220, startY + Math.sin(this.launchAngle) * 220);
+    this.ctx.moveTo(startX, bottomY);
+    this.ctx.lineTo(startX, topY);
     this.ctx.stroke();
+
     this.ctx.restore();
+  }
+
+  drawCurrentWaitingMino() {
+    if (!this.currentMino || this.launchedMino) return;
+
+    const matrix = this.currentMino.matrix;
+    const mRows = matrix.length;
+    const mCols = matrix[0].length;
+    const radius = (this.cellSize / 2) * 0.88;
+
+    // Draw at bottom of grid (row ROWS - 1.5)
+    const baseRow = ROWS - mRows;
+
+    for (let r = 0; r < mRows; r++) {
+      for (let c = 0; c < mCols; c++) {
+        if (matrix[r][c]) {
+          const gridC = this.currentCol + c;
+          const gridR = baseRow + r;
+          const x = this.gridOffsetX + (gridC + 0.5) * this.cellSize;
+          const y = this.gridOffsetY + (gridR + 0.5) * this.cellSize;
+          this.drawSphere(this.ctx, x, y, radius, this.currentMino.isSpecial ? null : this.currentMino.colorIdx, this.currentMino.specialType);
+        }
+      }
+    }
   }
 
   drawLaunchedMino() {
@@ -1232,7 +1330,6 @@ class FireworksGame {
     ctx.save();
 
     if (specialType) {
-      // Special Orbs (Bomb, Rocket, Star Mine)
       let color = '#ffd15c';
       let symbol = '💣';
       if (specialType === SPECIAL_TYPES.ROCKET) { color = '#00f0ff'; symbol = '🚀'; }
@@ -1259,7 +1356,6 @@ class FireworksGame {
       return;
     }
 
-    // Standard Glowing Sphere
     const colInfo = COLORS[colorIdx] || COLORS[1];
     const gradient = ctx.createRadialGradient(x - radius * 0.35, y - radius * 0.35, radius * 0.1, x, y, radius);
     gradient.addColorStop(0, '#ffffff');
