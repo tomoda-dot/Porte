@@ -25,10 +25,10 @@
             `;
             modal.innerHTML = `
                 <div style="position: absolute; top: 12px; right: 16px; z-index: 1000000; display: flex; gap: 10px;">
-                    <a href="game/poketama/index.html" target="_blank" style="background: rgba(0,240,255,0.2); border: 1px solid #00f0ff; color: #fff; padding: 8px 16px; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: 700;">↗ 別タブで開く</a>
+                    <a href="game/index.html" target="_blank" style="background: rgba(0,240,255,0.2); border: 1px solid #00f0ff; color: #fff; padding: 8px 16px; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: 700;">↗ 別タブで開く</a>
                     <button id="btn-close-poketama-modal" style="background: rgba(255,0,85,0.8); border: none; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer;">✕ 閉じる</button>
                 </div>
-                <iframe id="poketama-iframe" src="game/poketama/index.html" style="width: 100%; height: 100%; border: none; background: transparent;" allow="autoplay"></iframe>
+                <iframe id="poketama-iframe" src="game/index.html" style="width: 100%; height: 100%; border: none; background: transparent;" allow="autoplay"></iframe>
             `;
             document.body.appendChild(modal);
 
@@ -63,7 +63,7 @@
                 osc.stop(ctx.currentTime + 0.5);
             } catch(e) {}
 
-            alert('🥚 隠し要素解放！\n育成＆バトルゲーム「ポケタマ (PokéTama)」を起動します！');
+            alert('🎮 隠し要素解放！\nスマホ用「裏ゲームセンター（ポケたま ＆ ハナビ・バブル）」を起動します！');
             window.openPoketamaGame();
         } else {
             tapTimer = setTimeout(function() {
