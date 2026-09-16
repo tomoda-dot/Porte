@@ -388,16 +388,22 @@ function saveDailyOrders() {
   saveDailyOrdersToSupabase();
 }
 
-async function saveDailyOrdersToSupabase() {
+async function saveSettingToSupabase(keyName, jsonValueStr) {
   const { url, key } = getSupabaseCredentials();
   if (!url || !key || typeof supabase === 'undefined') return;
   try {
     const SB = supabase.createClient(url, key);
-    await SB.from('設定').upsert({
-      key: 'bento_daily_orders',
-      value: JSON.stringify(dailyOrders)
+    await SB.from('設定').delete().eq('key', keyName);
+    await SB.from('設定').insert({
+      key: keyName,
+      value: jsonValueStr
     });
   } catch(e) {}
+}
+
+async function saveDailyOrdersToSupabase() {
+  localStorage.setItem('bento_daily_orders', JSON.stringify(dailyOrders));
+  await saveSettingToSupabase('bento_daily_orders', JSON.stringify(dailyOrders));
 }
 
 // Supabase データベース同期機能 (複数端末間リアルタイム共有)
@@ -411,42 +417,53 @@ async function syncFromSupabase() {
     // 設定テーブルから商品マスター＆入荷ロットデータを一括読み込み（全端末共有）
     const settingsRes = await SB.from('設定').select('*').in('key', ['bento_master', 'bento_todays_menu', 'bento_order_history', 'bento_daily_orders']);
     if (settingsRes.data && settingsRes.data.length > 0) {
+      const latestByKey = {};
       settingsRes.data.forEach(item => {
-        if (item.key === 'bento_master' && item.value) {
-          try {
-            const parsed = JSON.parse(item.value);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              bentoMaster = parsed;
-              bentoMaster.forEach(b => ensureBentoLots(b));
-              localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
-            }
-          } catch(e) {}
-        } else if (item.key === 'bento_todays_menu' && item.value) {
-          try {
-            const parsed = JSON.parse(item.value);
-            if (Array.isArray(parsed) && parsed.length >= 5) {
-              todaysMenuIds = parsed;
-              localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
-            }
-          } catch(e) {}
-        } else if (item.key === 'bento_order_history' && item.value) {
-          try {
-            const parsed = JSON.parse(item.value);
-            if (Array.isArray(parsed)) {
-              orderHistory = parsed;
-              localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
-            }
-          } catch(e) {}
-        } else if (item.key === 'bento_daily_orders' && item.value) {
-          try {
-            const parsed = JSON.parse(item.value);
-            if (parsed && typeof parsed === 'object') {
-              dailyOrders = Object.assign({}, parsed, dailyOrders);
-              localStorage.setItem('bento_daily_orders', JSON.stringify(dailyOrders));
-            }
-          } catch(e) {}
+        if (item.key && item.value) {
+          latestByKey[item.key] = item.value;
         }
       });
+
+      if (latestByKey['bento_master']) {
+        try {
+          const parsed = JSON.parse(latestByKey['bento_master']);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            bentoMaster = parsed;
+            bentoMaster.forEach(b => ensureBentoLots(b));
+            localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
+          }
+        } catch(e) {}
+      }
+
+      if (latestByKey['bento_todays_menu']) {
+        try {
+          const parsed = JSON.parse(latestByKey['bento_todays_menu']);
+          if (Array.isArray(parsed) && parsed.length >= 5) {
+            todaysMenuIds = parsed;
+            localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
+          }
+        } catch(e) {}
+      }
+
+      if (latestByKey['bento_order_history']) {
+        try {
+          const parsed = JSON.parse(latestByKey['bento_order_history']);
+          if (Array.isArray(parsed)) {
+            orderHistory = parsed;
+            localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
+          }
+        } catch(e) {}
+      }
+
+      if (latestByKey['bento_daily_orders']) {
+        try {
+          const parsed = JSON.parse(latestByKey['bento_daily_orders']);
+          if (parsed && typeof parsed === 'object') {
+            dailyOrders = Object.assign({}, parsed, dailyOrders);
+            localStorage.setItem('bento_daily_orders', JSON.stringify(dailyOrders));
+          }
+        } catch(e) {}
+      }
     } else {
       // フォールバック: カスタムテーブルから読み込み
       const masterRes = await SB.from('bento_master').select('*');
@@ -518,16 +535,12 @@ function syncOrderHistoryWithDailyOrders() {
 
 async function saveMasterToSupabase() {
   localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
+  await saveSettingToSupabase('bento_master', JSON.stringify(bentoMaster));
+
   const { url, key } = getSupabaseCredentials();
   if (!url || !key || typeof supabase === 'undefined') return;
   try {
     const SB = supabase.createClient(url, key);
-    // 確実に他端末と共有できるよう「設定」テーブルへ保存
-    await SB.from('設定').upsert({
-      key: 'bento_master',
-      value: JSON.stringify(bentoMaster)
-    });
-
     const rows = bentoMaster.map(b => ({
       id: b.id,
       name: b.name,
@@ -544,15 +557,12 @@ async function saveMasterToSupabase() {
 async function saveTodaysMenuToSupabase() {
   sortTodaysMenuIdsByExpiration();
   localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
+  await saveSettingToSupabase('bento_todays_menu', JSON.stringify(todaysMenuIds));
+
   const { url, key } = getSupabaseCredentials();
   if (!url || !key || typeof supabase === 'undefined') return;
   try {
     const SB = supabase.createClient(url, key);
-    await SB.from('設定').upsert({
-      key: 'bento_todays_menu',
-      value: JSON.stringify(todaysMenuIds)
-    });
-
     await SB.from('bento_todays_menu').upsert({
       id: 'today',
       todays_ids: todaysMenuIds,
@@ -563,15 +573,12 @@ async function saveTodaysMenuToSupabase() {
 
 async function saveOrderHistoryToSupabase() {
   localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
+  await saveSettingToSupabase('bento_order_history', JSON.stringify(orderHistory));
+
   const { url, key } = getSupabaseCredentials();
   if (!url || !key || typeof supabase === 'undefined') return;
   try {
     const SB = supabase.createClient(url, key);
-    await SB.from('設定').upsert({
-      key: 'bento_order_history',
-      value: JSON.stringify(orderHistory)
-    });
-
     if (orderHistory.length > 0) {
       const top = orderHistory[0];
       await SB.from('bento_orders').upsert({
