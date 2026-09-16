@@ -560,6 +560,64 @@
       document.getElementById('dateBadge').textContent = formatted;
     }
 
+    function getOffsetDateStr(days) {
+      const d = new Date();
+      if (days) d.setDate(d.getDate() + days);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const date = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${date}`;
+    }
+
+    function ensureBentoLots(bento) {
+      if (!bento.lots) bento.lots = [];
+      recalculateBentoTotalStock(bento);
+    }
+
+    function recalculateBentoTotalStock(bento) {
+      if (!bento.lots) bento.lots = [];
+      bento.stock = bento.lots.reduce((sum, l) => sum + (parseInt(l.qty, 10) || 0), 0);
+    }
+
+    function deductBentoStockFIFO(bento, count = 1) {
+      ensureBentoLots(bento);
+      if (bento.stock <= 0) return;
+      bento.lots.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
+      let remainingToDeduct = count;
+      for (let i = 0; i < bento.lots.length; i++) {
+        const lot = bento.lots[i];
+        if (lot.qty >= remainingToDeduct) {
+          lot.qty -= remainingToDeduct;
+          remainingToDeduct = 0;
+          break;
+        } else {
+          remainingToDeduct -= lot.qty;
+          lot.qty = 0;
+        }
+      }
+      bento.lots = bento.lots.filter(l => l.qty > 0);
+      recalculateBentoTotalStock(bento);
+    }
+
+    function addBentoStockLot(bento, qty, expDate, type = 'ARRIVED') {
+      ensureBentoLots(bento);
+      const addQty = parseInt(qty, 10) || 0;
+      if (addQty <= 0) return;
+      const existingLot = (bento.lots || []).find(l => l.type === type && l.expDate === expDate);
+      if (existingLot) {
+        existingLot.qty += addQty;
+      } else {
+        bento.lots.push({
+          id: 'lot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          type: type,
+          qty: addQty,
+          expDate: expDate
+        });
+      }
+      bento.lots.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
+      recalculateBentoTotalStock(bento);
+    }
+
     function loadClientData() {
       const savedMaster = localStorage.getItem('bento_master');
       if (savedMaster) {
@@ -567,6 +625,7 @@
       } else {
         bentoMaster = JSON.parse(JSON.stringify(DEFAULT_30_BENTO));
       }
+      bentoMaster.forEach(b => ensureBentoLots(b));
 
       const savedTodays = localStorage.getItem('bento_todays_menu');
       if (savedTodays) {
@@ -667,6 +726,13 @@
         u.selectedBentoIds.push('');
       }
       if (u.selectedBentoIds.length > u.bentoCount) {
+        const droppedIds = u.selectedBentoIds.slice(u.bentoCount);
+        droppedIds.forEach(bId => {
+          if (bId) {
+            const b = bentoMaster.find(item => item.id === bId);
+            if (b) addBentoStockLot(b, 1, getOffsetDateStr(7), 'STOCK');
+          }
+        });
         u.selectedBentoIds = u.selectedBentoIds.slice(0, u.bentoCount);
       }
 
@@ -864,13 +930,30 @@
       const user = porteUsers[userIndex];
       normalizeUserData(user);
 
+      const bento = bentoMaster.find(b => b.id === currentBentoId);
+
+      const hasChosenThis = (user.selectedBentoIds || []).includes(currentBentoId);
+      if (hasChosenThis) {
+        const slotIdx = user.selectedBentoIds.indexOf(currentBentoId);
+        if (slotIdx >= 0) {
+          assignUserBentoSlot(userIndex, slotIdx, '');
+          closeUserModal();
+          renderClientView();
+          const toast = document.getElementById('successToast');
+          document.getElementById('successMsg').textContent = `${user.name} 様\n『${bento ? bento.name : ''}』の選択を\nキャンセル（解除）しました！`;
+          toast.classList.add('show');
+          setTimeout(() => { toast.classList.remove('show'); }, 2500);
+          return;
+        }
+      }
+
       if (user.wantsBento === false || user.bentoCount < 1) {
         user.wantsBento = true;
         user.bentoCount = 1;
         normalizeUserData(user);
       }
 
-      const bento = bentoMaster.find(b => b.id === currentBentoId);
+      if (!bento || bento.stock <= 0) return;
 
       let targetSlot = user.selectedBentoIds.findIndex(id => !id);
       if (targetSlot < 0) targetSlot = 0;
@@ -907,14 +990,14 @@
 
       if (oldBentoId) {
         const oldBento = bentoMaster.find(b => b.id === oldBentoId);
-        if (oldBento) oldBento.stock += 1;
+        if (oldBento) addBentoStockLot(oldBento, 1, getOffsetDateStr(7), 'STOCK');
       }
 
       if (newBentoId) {
         const newBento = bentoMaster.find(b => b.id === newBentoId);
         if (newBento) {
           if (newBento.stock <= 0) return;
-          newBento.stock -= 1;
+          deductBentoStockFIFO(newBento, 1);
           user.wantsBento = true;
         }
       }

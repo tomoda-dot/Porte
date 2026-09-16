@@ -137,6 +137,13 @@ function normalizeUserData(u) {
     u.selectedBentoIds.push('');
   }
   if (u.selectedBentoIds.length > u.bentoCount) {
+    const droppedIds = u.selectedBentoIds.slice(u.bentoCount);
+    droppedIds.forEach(bId => {
+      if (bId) {
+        const b = bentoMaster.find(item => item.id === bId);
+        if (b) addBentoStockLot(b, 1, getOffsetDateStr(7), 'STOCK');
+      }
+    });
     u.selectedBentoIds = u.selectedBentoIds.slice(0, u.bentoCount);
   }
 
@@ -1139,6 +1146,15 @@ window.selectStaffOrder = function(staffIdOrName) {
   const bento = bentoMaster.find(b => b.id === currentStaffSelectingBentoId);
   if (!bento) return;
 
+  const hasChosenThis = (user.selectedBentoIds || []).includes(currentStaffSelectingBentoId) || user.selectedBentoId === currentStaffSelectingBentoId;
+  if (hasChosenThis) {
+    const slotIdx = Math.max(0, (user.selectedBentoIds || []).indexOf(currentStaffSelectingBentoId));
+    assignUserBentoSlot(userIndex, slotIdx, '');
+    closeStaffSelectForBentoModal();
+    showToast(`🔄 ${user.name} スタッフの『${bento.name}』の選択をキャンセル（解除）しました！`, 'info');
+    return;
+  }
+
   if (bento.stock <= 0) {
     showToast(`⚠️ 『${bento.name}』は完売（在庫なし）のため選択できません`, 'info');
     closeStaffSelectForBentoModal();
@@ -1420,15 +1436,27 @@ window.confirmAssignUserForBento = function(userId) {
   if (!currentSelectingBentoId) return;
 
   const bentoItem = bentoMaster.find(b => b.id === currentSelectingBentoId);
+
+  const user = porteUsers[userIndex];
+  normalizeUserData(user);
+
+  const hasChosenThis = (user.selectedBentoIds || []).includes(currentSelectingBentoId);
+  if (hasChosenThis) {
+    const slotIdx = user.selectedBentoIds.indexOf(currentSelectingBentoId);
+    if (slotIdx >= 0) {
+      assignUserBentoSlot(userIndex, slotIdx, '');
+      closeUserSelectForBentoModal();
+      showToast(`🔄 ${user.name} 様の『${bentoItem ? bentoItem.name : ''}』の選択をキャンセル（解除）しました！`, 'info');
+      return;
+    }
+  }
+
   if (!bentoItem || bentoItem.stock <= 0) {
     showToast(`⚠️ 『${bentoItem ? bentoItem.name : 'お弁当'}』は完売（在庫なし）のため選択できません`, 'info');
     closeUserSelectForBentoModal();
     renderAll();
     return;
   }
-
-  const user = porteUsers[userIndex];
-  normalizeUserData(user);
 
   if (user.wantsBento === false || user.bentoCount < 1) {
     user.wantsBento = true;
@@ -1888,6 +1916,17 @@ window.cancelOrderHistory = function(index) {
     const item = bentoMaster.find(b => b.id === removed.bentoId);
     if (item) {
       addBentoStockLot(item, 1, getOffsetDateStr(7), 'STOCK');
+    }
+    if (removed.userId) {
+      const user = porteUsers.find(u => u.id === removed.userId || u.name === removed.userName);
+      if (user && Array.isArray(user.selectedBentoIds)) {
+        const slotIdx = removed.slotIndex !== undefined ? removed.slotIndex : user.selectedBentoIds.indexOf(removed.bentoId);
+        if (slotIdx >= 0 && slotIdx < user.selectedBentoIds.length) {
+          user.selectedBentoIds[slotIdx] = '';
+          user.selectedBentoId = user.selectedBentoIds[0] || '';
+          savePorteUsers();
+        }
+      }
     }
   }
   saveMaster();
