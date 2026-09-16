@@ -682,6 +682,22 @@
               }
             } catch(e) {}
           }
+          if (latestByKey['bento_order_history']) {
+            try {
+              const parsed = JSON.parse(latestByKey['bento_order_history']);
+              if (Array.isArray(parsed)) {
+                localStorage.setItem('bento_order_history', JSON.stringify(parsed));
+              }
+            } catch(e) {}
+          }
+          if (latestByKey['bento_daily_orders']) {
+            try {
+              const parsed = JSON.parse(latestByKey['bento_daily_orders']);
+              if (parsed && typeof parsed === 'object') {
+                localStorage.setItem('bento_daily_orders', JSON.stringify(parsed));
+              }
+            } catch(e) {}
+          }
           if (latestByKey['bento_porte_users']) {
             try {
               const parsed = JSON.parse(latestByKey['bento_porte_users']);

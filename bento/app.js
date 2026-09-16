@@ -411,6 +411,63 @@ async function saveDailyOrdersToSupabase() {
   await saveSettingToSupabase('bento_daily_orders', JSON.stringify(dailyOrders));
 }
 
+function mergeDailyOrders(remoteOrders, localOrders) {
+  const merged = Object.assign({}, remoteOrders || {});
+  if (!localOrders || typeof localOrders !== 'object') return merged;
+
+  Object.keys(localOrders).forEach(dateKey => {
+    const localRecord = localOrders[dateKey];
+    const remoteRecord = merged[dateKey];
+
+    if (!remoteRecord) {
+      merged[dateKey] = localRecord;
+    } else {
+      if (remoteRecord.status === 'CONFIRMED' && localRecord.status !== 'CONFIRMED') {
+        // Prefer remote confirmed record
+      } else if (localRecord.status === 'CONFIRMED' && remoteRecord.status !== 'CONFIRMED') {
+        merged[dateKey] = localRecord;
+      } else {
+        const remoteList = Array.isArray(remoteRecord.orders) ? remoteRecord.orders : [];
+        const localList = Array.isArray(localRecord.orders) ? localRecord.orders : [];
+        const orderMap = {};
+
+        remoteList.forEach(o => {
+          if (!o) return;
+          const k = `${o.userId || o.userName}_${o.bentoId || o.bentoName}_${o.slotIndex || 0}`;
+          orderMap[k] = o;
+        });
+        localList.forEach(o => {
+          if (!o) return;
+          const k = `${o.userId || o.userName}_${o.bentoId || o.bentoName}_${o.slotIndex || 0}`;
+          if (!orderMap[k]) orderMap[k] = o;
+        });
+
+        merged[dateKey] = {
+          status: (remoteRecord.status === 'CONFIRMED' || localRecord.status === 'CONFIRMED') ? 'CONFIRMED' : 'DRAFT',
+          confirmedAt: remoteRecord.confirmedAt || localRecord.confirmedAt,
+          orders: Object.values(orderMap)
+        };
+      }
+    }
+  });
+  return merged;
+}
+
+function mergeOrderHistory(remoteHist, localHist) {
+  const mergedList = [...(remoteHist || [])];
+  const existingKeys = new Set(mergedList.map(o => o.id || `${o.dateKey}_${o.userId}_${o.bentoId}_${o.slotIndex || 0}`));
+  if (Array.isArray(localHist)) {
+    localHist.forEach(o => {
+      const key = o.id || `${o.dateKey}_${o.userId}_${o.bentoId}_${o.slotIndex || 0}`;
+      if (!existingKeys.has(key)) {
+        existingKeys.add(key);
+        mergedList.push(o);
+      }
+    });
+  }
+  return mergedList;
+}
+
 // Supabase データベース同期機能 (複数端末間リアルタイム共有)
 async function syncFromSupabase() {
   const { url, key } = getSupabaseCredentials();
@@ -466,7 +523,7 @@ async function syncFromSupabase() {
         try {
           const parsed = JSON.parse(latestByKey['bento_order_history']);
           if (Array.isArray(parsed)) {
-            orderHistory = parsed;
+            orderHistory = mergeOrderHistory(parsed, orderHistory);
             localStorage.setItem('bento_order_history', JSON.stringify(orderHistory));
           }
         } catch(e) {}
@@ -476,7 +533,7 @@ async function syncFromSupabase() {
         try {
           const parsed = JSON.parse(latestByKey['bento_daily_orders']);
           if (parsed && typeof parsed === 'object') {
-            dailyOrders = Object.assign({}, parsed, dailyOrders);
+            dailyOrders = mergeDailyOrders(parsed, dailyOrders);
             localStorage.setItem('bento_daily_orders', JSON.stringify(dailyOrders));
           }
         } catch(e) {}
@@ -890,8 +947,13 @@ function renderMonthlyMatrix() {
       
       let cellContent = `<span class="matrix-cell-empty">-</span>`;
 
-      if (dayRecord && dayRecord.status === 'CONFIRMED' && dayRecord.orders) {
-        const userOrders = dayRecord.orders.filter(o => o.userId === u.id);
+      if (dayRecord && dayRecord.orders && dayRecord.orders.length > 0) {
+        const userOrders = dayRecord.orders.filter(o => {
+          if (!o) return false;
+          const idMatch = o.userId && u.id && String(o.userId).trim() === String(u.id).trim();
+          const nameMatch = o.userName && u.name && String(o.userName).replace('👔','').trim() === String(u.name).replace('👔','').trim();
+          return idMatch || nameMatch;
+        });
         if (userOrders.length > 0) {
           monthTotalCount += userOrders.length;
           const namesJoin = userOrders.map(o => `${o.slotName || ''}: ${o.bentoName}`).join(', ');
