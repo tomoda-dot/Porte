@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ひとつぎお弁当メニュー ＆ 在庫管理システム</title>
   <!-- Google Fonts: Zen Maru Gothic & M PLUS Rounded 1c -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -486,6 +486,11 @@
   <!-- トースト通知 -->
   <div id="toastContainer" class="toast-container"></div>
 
+  <script>
+    document.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+    }, { passive: false });
+  </script>
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>

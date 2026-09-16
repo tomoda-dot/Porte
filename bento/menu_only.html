@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>本日のお昼ごはんメニュー | ひとつぎお弁当</title>
   <!-- Google Fonts: Zen Maru Gothic & M PLUS Rounded 1c -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,6 +29,7 @@
       font-family: 'Meiryo', 'メイリオ', 'Hiragino Kaku Gothic ProN', 'MS PGothic', sans-serif;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     body {
@@ -39,6 +40,7 @@
       flex-direction: column;
       padding: 20px;
       overflow-x: hidden;
+      touch-action: manipulation;
     }
 
     /* ヘッダー */
@@ -1018,6 +1020,10 @@
       document.getElementById('userModal').classList.remove('active');
       currentBentoId = null;
     }
+
+    document.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+    }, { passive: false });
 
     function toggleFullscreen() {
       if (!document.fullscreenElement) {

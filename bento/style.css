@@ -27,6 +27,7 @@
   margin: 0;
   padding: 0;
   font-family: 'Meiryo', 'メイリオ', 'Hiragino Kaku Gothic ProN', 'MS PGothic', sans-serif;
+  touch-action: manipulation;
 }
 
 body {
@@ -35,6 +36,7 @@ body {
   min-height: 100vh;
   padding-bottom: 60px;
   line-height: 1.5;
+  touch-action: manipulation;
 }
 
 /* ヘッダー */
