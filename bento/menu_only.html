@@ -105,20 +105,25 @@
       background: #fff;
       border: 2px solid #ffd8a8;
       color: #d9480f;
-      padding: 8px 16px;
-      border-radius: 18px;
-      font-weight: 800;
-      font-size: 0.95rem;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      font-size: 1.6rem;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(255, 146, 43, 0.15);
+      padding: 0;
+      line-height: 1;
     }
 
     .btn-fullscreen:hover {
       background: #fff4e6;
-      transform: scale(1.05);
+      border-color: #ff922b;
+      transform: scale(1.12);
+      box-shadow: 0 6px 16px rgba(255, 146, 43, 0.25);
     }
 
     /* メインカードコンテナ */
@@ -459,12 +464,8 @@
     </div>
     <div class="header-controls">
       <div class="date-badge" id="dateBadge">2026年8月5日(水)</div>
-      <button class="btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreen()">
-        🖥️ 全画面表示
-      </button>
-      <a href="index.html" class="btn-fullscreen" style="text-decoration:none;">
-        ⚙️ 管理画面
-      </a>
+      <button class="btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreen()" title="全画面表示">🖥️</button>
+      <a href="index.html" class="btn-fullscreen" style="text-decoration:none;" title="管理画面">⚙️</a>
     </div>
   </header>
 
