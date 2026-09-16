@@ -377,6 +377,11 @@ function saveTodaysMenu() {
 
 function savePorteUsers() {
   localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+  savePorteUsersToSupabase();
+}
+
+async function savePorteUsersToSupabase() {
+  await saveSettingToSupabase('bento_porte_users', JSON.stringify(porteUsers));
 }
 
 function saveOrderHistory() {
@@ -414,13 +419,25 @@ async function syncFromSupabase() {
   try {
     const SB = supabase.createClient(url, key);
 
-    // 設定テーブルから商品マスター＆入荷ロットデータを一括読み込み（全端末共有）
-    const settingsRes = await SB.from('設定').select('*').in('key', ['bento_master', 'bento_todays_menu', 'bento_order_history', 'bento_daily_orders']);
+    // 設定テーブルから商品マスター＆入荷ロットデータ＆利用者注文データを一括読み込み（全端末共有）
+    const keysToFetch = ['bento_master', 'bento_todays_menu', 'bento_order_history', 'bento_daily_orders', 'bento_porte_users'];
+    const settingsRes = await SB.from('設定').select('*').in('key', keysToFetch).order('id', { ascending: false });
     if (settingsRes.data && settingsRes.data.length > 0) {
       const latestByKey = {};
+      const countsByKey = {};
       settingsRes.data.forEach(item => {
         if (item.key && item.value) {
-          latestByKey[item.key] = item.value;
+          countsByKey[item.key] = (countsByKey[item.key] || 0) + 1;
+          if (!latestByKey[item.key]) {
+            latestByKey[item.key] = item.value;
+          }
+        }
+      });
+
+      // 重複行の自動クリーンアップ
+      keysToFetch.forEach(k => {
+        if (countsByKey[k] > 1) {
+          saveSettingToSupabase(k, latestByKey[k]);
         }
       });
 
@@ -461,6 +478,16 @@ async function syncFromSupabase() {
           if (parsed && typeof parsed === 'object') {
             dailyOrders = Object.assign({}, parsed, dailyOrders);
             localStorage.setItem('bento_daily_orders', JSON.stringify(dailyOrders));
+          }
+        } catch(e) {}
+      }
+
+      if (latestByKey['bento_porte_users']) {
+        try {
+          const parsed = JSON.parse(latestByKey['bento_porte_users']);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            porteUsers = parsed;
+            localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
           }
         } catch(e) {}
       }

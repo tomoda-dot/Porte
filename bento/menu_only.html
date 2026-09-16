@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
   <style>
     :root {
       --bg-gradient: linear-gradient(135deg, #fff5eb 0%, #fff0f5 50%, #f0f7ff 100%);
@@ -621,6 +623,80 @@
       recalculateBentoTotalStock(bento);
     }
 
+    function getSupabaseCredentials() {
+      const url = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) ? SUPABASE_URL : localStorage.getItem('porte_sb_url');
+      const key = (typeof SUPABASE_KEY !== 'undefined' && SUPABASE_KEY) ? SUPABASE_KEY : localStorage.getItem('porte_sb_key');
+      return { url, key };
+    }
+
+    async function saveSettingToSupabase(keyName, jsonValueStr) {
+      const { url, key } = getSupabaseCredentials();
+      if (!url || !key || typeof supabase === 'undefined') return;
+      try {
+        const SB = supabase.createClient(url, key);
+        await SB.from('設定').delete().eq('key', keyName);
+        await SB.from('設定').insert({ key: keyName, value: jsonValueStr });
+      } catch(e) {}
+    }
+
+    async function saveMasterToSupabase() {
+      localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
+      await saveSettingToSupabase('bento_master', JSON.stringify(bentoMaster));
+    }
+
+    async function savePorteUsersToSupabase() {
+      localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+      await saveSettingToSupabase('bento_porte_users', JSON.stringify(porteUsers));
+    }
+
+    async function syncFromSupabase() {
+      const { url, key } = getSupabaseCredentials();
+      if (!url || !key || typeof supabase === 'undefined') return;
+      try {
+        const SB = supabase.createClient(url, key);
+        const keysToFetch = ['bento_master', 'bento_todays_menu', 'bento_order_history', 'bento_daily_orders', 'bento_porte_users'];
+        const settingsRes = await SB.from('設定').select('*').in('key', keysToFetch).order('id', { ascending: false });
+        if (settingsRes.data && settingsRes.data.length > 0) {
+          const latestByKey = {};
+          settingsRes.data.forEach(item => {
+            if (item.key && item.value && !latestByKey[item.key]) {
+              latestByKey[item.key] = item.value;
+            }
+          });
+          if (latestByKey['bento_master']) {
+            try {
+              const parsed = JSON.parse(latestByKey['bento_master']);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                bentoMaster = parsed;
+                bentoMaster.forEach(b => ensureBentoLots(b));
+                localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
+              }
+            } catch(e) {}
+          }
+          if (latestByKey['bento_todays_menu']) {
+            try {
+              const parsed = JSON.parse(latestByKey['bento_todays_menu']);
+              if (Array.isArray(parsed) && parsed.length >= 5) {
+                todaysMenuIds = parsed;
+                localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
+              }
+            } catch(e) {}
+          }
+          if (latestByKey['bento_porte_users']) {
+            try {
+              const parsed = JSON.parse(latestByKey['bento_porte_users']);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                porteUsers = parsed;
+                localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+              }
+            } catch(e) {}
+          }
+          autoReplaceSoldOutMenu();
+          renderClientMenu();
+        }
+      } catch(e) {}
+    }
+
     function loadClientData() {
       const savedMaster = localStorage.getItem('bento_master');
       if (savedMaster) {
@@ -645,6 +721,7 @@
       }
 
       autoReplaceSoldOutMenu();
+      syncFromSupabase();
     }
 
     function getFallbackUsers() {
@@ -1010,6 +1087,8 @@
 
       localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
       localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+      saveMasterToSupabase();
+      savePorteUsersToSupabase();
     }
 
     function assignUserBento(userIndex, newBentoId) {
