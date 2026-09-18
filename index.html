@@ -96,6 +96,7 @@ tr:hover td{background:var(--hov)}
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
 .login-box{background:#fff;border-radius:16px;box-shadow:0 4px 32px rgba(0,0,0,.12);padding:40px 36px;width:360px;max-width:90vw}
 .login-error{background:#ffebee;color:#c62828;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid #ccc;background:#fff;transition:all .15s ease}
 @media(max-width:768px){.side{width:52px}.side-hd{font-size:9px;padding:12px 4px}.side nav button span.lbl{display:none}.side nav button{justify-content:center;padding:10px 0}.main{padding:14px 12px}.grid2,.grid3{grid-template-columns:1fr}.modal{width:98vw}.cal td{height:100px;padding:4px}.cal .day-info{font-size:10px}.cal .day-badge{font-size:9px;padding:1px 5px}}
 </style>
 <script>
@@ -267,22 +268,176 @@ function isAdminUser(sess){
   return n.indexOf('友田') >= 0 || r === '管理者' || s.isAdmin === true;
 }
 
+var _selectedStaffForLogin = null;
+var _currentPinInput = '';
+
 function showLogin(){
+  document.getElementById('app').className='';
+  showStaffCardView();
+}
+
+async function showStaffCardView(){
+  _selectedStaffForLogin = null;
+  _currentPinInput = '';
+  var app = document.getElementById('app');
+  app.innerHTML =
+    '<div class="login-wrap" style="padding:20px 10px">'+
+    '<a href="https://tomoda-dot.github.io/DagashiShop/" style="position:fixed;bottom:20px;right:20px;z-index:9999;background:#f49576;color:white;border:none;padding:14px 24px;border-radius:50px;font-weight:bold;font-size:14px;text-decoration:none;box-shadow:0 5px 15px rgba(0,0,0,0.3);opacity:0.85;transition:0.3s;display:inline-flex;align-items:center;justify-content:center;">TOPへ戻る</a>'+
+    '<div class="login-box" style="width:480px;max-width:94vw;padding:32px 24px">'+
+    '<div style="text-align:center;margin-bottom:20px">'+
+    '<img src="kuma.png" onerror="this.style.display=\'none\'" style="width:64px;border-radius:12px;margin-bottom:8px;display:block;margin-left:auto;margin-right:auto">'+
+    '<div style="font-size:22px;font-weight:800;color:var(--pri);letter-spacing:1px">Porte</div>'+
+    '<div style="font-size:12px;color:var(--sub);margin-top:2px">スタッフを選択してください</div>'+
+    '</div>'+
+    '<div id="staff-card-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;max-height:48vh;overflow-y:auto;padding:4px">読み込み中...</div>'+
+    '<div style="margin-top:20px;text-align:center">'+
+    '<a href="javascript:void(0)" onclick="showTraditionalLogin()" style="font-size:12px;color:var(--pri);text-decoration:underline;font-weight:600">🔑 従来のID・パスワードで入力</a>'+
+    '</div>'+
+    '</div></div>';
+
+  try {
+    var staff = (S.staff && S.staff.length > 0) ? S.staff : await gas('getStaff');
+    S.staff = staff;
+    var gridEl = document.getElementById('staff-card-grid');
+    if (!gridEl) return;
+    if (!staff || staff.length === 0) {
+      gridEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--sub);padding:20px">スタッフが登録されていません</div>';
+      return;
+    }
+    gridEl.innerHTML = staff.map(function(s){
+      var initial = esc(s.name ? s.name.charAt(0) : '?');
+      var role = esc(s.role || 'スタッフ');
+      return '<div class="staff-login-card" onclick="selectStaffForLogin(\'' + s.id + '\')" style="background:#f8f6f2;border:1.5px solid var(--bdr);border-radius:12px;padding:16px 10px;text-align:center;cursor:pointer;transition:0.2s" onmouseover="this.style.borderColor=\'var(--pri)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--bdr)\';this.style.transform=\'none\'">' +
+        '<div style="width:46px;height:46px;border-radius:50%;background:var(--pri);color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 8px">' + initial + '</div>' +
+        '<div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(s.name) + '</div>' +
+        '<div style="font-size:10px;color:var(--sub);background:#fff;padding:2px 6px;border-radius:10px;display:inline-block">' + role + '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    var gridEl = document.getElementById('staff-card-grid');
+    if (gridEl) gridEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#c62828">読み込みエラー: ' + esc(e) + '</div>';
+  }
+}
+
+function selectStaffForLogin(staffId){
+  var staff = (S.staff || []).find(function(s){ return String(s.id) === String(staffId); });
+  if (!staff) return;
+  _selectedStaffForLogin = staff;
+  _currentPinInput = '';
+  showPinKeypadView();
+}
+
+function showPinKeypadView(){
+  if (!_selectedStaffForLogin) { showStaffCardView(); return; }
+  var s = _selectedStaffForLogin;
+  var initial = esc(s.name ? s.name.charAt(0) : '?');
+  var role = esc(s.role || 'スタッフ');
+  
+  var app = document.getElementById('app');
+  app.innerHTML = 
+    '<div class="login-wrap" style="padding:20px 10px">' +
+    '<a href="https://tomoda-dot.github.io/DagashiShop/" style="position:fixed;bottom:20px;right:20px;z-index:9999;background:#f49576;color:white;border:none;padding:14px 24px;border-radius:50px;font-weight:bold;font-size:14px;text-decoration:none;box-shadow:0 5px 15px rgba(0,0,0,0.3);opacity:0.85;transition:0.3s;display:inline-flex;align-items:center;justify-content:center;">TOPへ戻る</a>' +
+    '<div class="login-box" style="width:360px;max-width:92vw;padding:24px 20px">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+    '<button onclick="showStaffCardView()" style="background:none;border:1px solid var(--bdr);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--pri)">← 戻る</button>' +
+    '<div style="font-size:11px;color:var(--sub)">暗証番号認証</div>' +
+    '</div>' +
+    '<div style="text-align:center;margin-bottom:12px">' +
+    '<div style="width:48px;height:48px;border-radius:50%;background:var(--pri);color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 4px">' + initial + '</div>' +
+    '<div style="font-size:16px;font-weight:800;color:var(--txt)">' + esc(s.name) + '</div>' +
+    '<div style="font-size:11px;color:var(--sub);margin-top:1px">' + role + '</div>' +
+    '</div>' +
+    '<div id="pin-err" class="login-error" style="text-align:center;margin-bottom:10px"></div>' +
+    '<div style="font-size:11px;color:var(--sub);text-align:center;margin-bottom:6px">4桁の暗証番号（PIN）を入力</div>' +
+    '<div id="pin-dots" style="display:flex;justify-content:center;gap:14px;margin-bottom:16px">' +
+    '<span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">' +
+    ['1','2','3','4','5','6','7','8','9','C','0','⌫'].map(function(k){
+      var isAction = (k === 'C' || k === '⌫');
+      var actionFn = k === 'C' ? 'clearPinKey()' : k === '⌫' ? 'backspacePinKey()' : 'pressPinKey(\'' + k + '\')';
+      return '<button onclick="' + actionFn + '" style="padding:12px 0;font-size:' + (isAction ? '14px' : '20px') + ';font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:' + (isAction ? '#f5f0ea' : '#fff') + ';color:' + (isAction ? 'var(--pri)' : 'var(--txt)') + ';cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.04)" onmousedown="this.style.transform=\'scale(0.95)\'" onmouseup="this.style.transform=\'none\'">' + k + '</button>';
+    }).join('') +
+    '</div>' +
+    '</div></div>';
+  updatePinDots();
+}
+
+function updatePinDots(){
+  var dots = document.querySelectorAll('#pin-dots .pin-dot');
+  var len = _currentPinInput.length;
+  dots.forEach(function(dot, idx){
+    if (idx < len) {
+      dot.style.background = 'var(--pri)';
+      dot.style.borderColor = 'var(--pri)';
+    } else {
+      dot.style.background = '#fff';
+      dot.style.borderColor = '#ccc';
+    }
+  });
+}
+
+function pressPinKey(num){
+  var errEl = document.getElementById('pin-err');
+  if (errEl) errEl.style.display = 'none';
+  if (_currentPinInput.length >= 4) return;
+  _currentPinInput += num;
+  updatePinDots();
+  if (_currentPinInput.length === 4) {
+    setTimeout(verifyPinInput, 150);
+  }
+}
+
+function backspacePinKey(){
+  if (_currentPinInput.length > 0) {
+    _currentPinInput = _currentPinInput.slice(0, -1);
+    updatePinDots();
+  }
+}
+
+function clearPinKey(){
+  _currentPinInput = '';
+  updatePinDots();
+}
+
+async function verifyPinInput(){
+  if (!_selectedStaffForLogin || _currentPinInput.length !== 4) return;
+  var s = _selectedStaffForLogin;
+  var enteredPin = _currentPinInput;
+  var errEl = document.getElementById('pin-err');
+  var targetPw = String(s.password || '').trim();
+  var targetId = String(s.loginId || '').trim();
+  
+  if (targetPw === enteredPin || targetId === enteredPin) {
+    setSession({id: s.id, name: s.name, role: s.role || ''});
+    loadAll();
+  } else {
+    if (errEl) {
+      errEl.style.display = 'block';
+      errEl.textContent = '暗証番号（PIN）が違います';
+    }
+    _currentPinInput = '';
+    updatePinDots();
+  }
+}
+
+function showTraditionalLogin(){
   document.getElementById('app').className='';
   document.getElementById('app').innerHTML=
     '<div class="login-wrap">'+
     '<a href="https://tomoda-dot.github.io/DagashiShop/" style="position:fixed;bottom:20px;right:20px;z-index:9999;background:#f49576;color:white;border:none;padding:14px 24px;border-radius:50px;font-weight:bold;font-size:14px;text-decoration:none;box-shadow:0 5px 15px rgba(0,0,0,0.3);opacity:0.85;transition:0.3s;display:inline-flex;align-items:center;justify-content:center;">TOPへ戻る</a>'+
     '<div class="login-box">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+    '<button onclick="showStaffCardView()" style="background:none;border:1px solid var(--bdr);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--pri)">← スタッフ選択へ</button>'+
+    '</div>'+
     '<div style="text-align:center;margin-bottom:20px">'+
-    '<img src="kuma.png" onerror="this.style.display=\'none\'" style="width:72px;border-radius:12px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto">'+
-    '<div style="font-size:22px;font-weight:800;color:var(--pri);letter-spacing:1px">Porte</div>'+
-    '<div style="font-size:12px;color:var(--sub);margin-top:2px">ひとつぎ豊中小曽根</div>'+
+    '<img src="kuma.png" onerror="this.style.display=\'none\'" style="width:64px;border-radius:12px;margin-bottom:8px;display:block;margin-left:auto;margin-right:auto">'+
+    '<div style="font-size:20px;font-weight:800;color:var(--pri)">Porte ログイン</div>'+
     '</div>'+
     '<div id="login-err" class="login-error"></div>'+
     '<div class="field"><label>ログインID</label><input id="li-id" type="text" autocomplete="username" style="width:100%" placeholder="ログインIDを入力" onkeydown="if(event.key===\'Enter\')document.getElementById(\'li-pw\').focus()"></div>'+
     '<div class="field"><label>パスワード</label><input id="li-pw" type="password" autocomplete="current-password" style="width:100%" placeholder="パスワードを入力" onkeydown="if(event.key===\'Enter\')doLogin()"></div>'+
     '<button class="bp" onclick="doLogin()" style="width:100%;padding:12px;font-size:15px;font-weight:700;margin-top:8px;border-radius:9px">ログイン</button>'+
-    '<div style="margin-top:16px;font-size:11px;color:var(--sub);text-align:center">IDとパスワードはスタッフ管理画面で設定します</div>'+
     '</div></div>';
   setTimeout(function(){var el=document.getElementById('li-id');if(el)el.focus();},100);
 }
