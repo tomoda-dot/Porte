@@ -633,6 +633,8 @@ async function boot(){
     // 勤務パターン
     var r1=await SB.from('設定').select('value').eq('key','shiftPatterns').limit(1);
     try{PATS=JSON.parse((r1.data&&r1.data[0]&&r1.data[0].value)||'[]');}catch(e){PATS=[];}
+    // GPS設定
+    await loadGpsSettingsInMyPage();
     // 有給取得記録
     PL_USAGES=await safeQuery(SB.from('有給取得記録').select('*').eq('staffId',ME.id));
     // 付与履歴
@@ -712,8 +714,73 @@ function renderTC(){
   }
 }
 
+// GPS位置情報設定と判定ロジック
+var GPS_SETTINGS = null;
+
+async function loadGpsSettingsInMyPage(){
+  try {
+    var r = await SB.from('設定').select('value').eq('key','gpsSettings').limit(1);
+    if (r.data && r.data.length > 0) {
+      GPS_SETTINGS = JSON.parse(r.data[0].value || '{}');
+    }
+  } catch(e) {
+    GPS_SETTINGS = null;
+  }
+}
+
+function calcGpsDistanceMeter(lat1, lon1, lat2, lon2) {
+  var R = 6371000;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLon = (lon2 - lon1) * Math.PI / 180;
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return Math.round(R * c);
+}
+
+async function verifyGpsLocationForClockIn(){
+  if (!GPS_SETTINGS || !GPS_SETTINGS.enabled) {
+    return true; // GPS制限無効時は許可
+  }
+
+  var targetLat = parseFloat(GPS_SETTINGS.lat);
+  var targetLng = parseFloat(GPS_SETTINGS.lng);
+  var allowedRadius = parseInt(GPS_SETTINGS.radius) || 200;
+
+  if (isNaN(targetLat) || isNaN(targetLng)) {
+    return true; // 設定未登録時は許可
+  }
+
+  if (!navigator.geolocation) {
+    alert('⚠️ お使いのブラウザは位置情報（GPS）機能に対応していないため、打刻できません。');
+    return false;
+  }
+
+  return new Promise(function(resolve){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var curLat = pos.coords.latitude;
+      var curLng = pos.coords.longitude;
+      var dist = calcGpsDistanceMeter(curLat, curLng, targetLat, targetLng);
+
+      if (dist <= allowedRadius) {
+        resolve(true);
+      } else {
+        alert('🚫 事業所のエリア外のため打刻できません。\n\n【現在地】事業所から約 ' + dist + 'm 離れています。\n【許可範囲】事業所から ' + allowedRadius + 'm 以内');
+        resolve(false);
+      }
+    }, function(err){
+      alert('⚠️ 位置情報（GPS）を取得できませんでした。\n\nスマホの位置情報サービスがONになっており、ブラウザで位置情報が許可されているかご確認ください。\n(エラー: ' + err.message + ')');
+      resolve(false);
+    }, { enableHighAccuracy: true, timeout: 10000 });
+  });
+}
+
 async function clockIn(){
   var btn=el('btn-in'); if(btn)btn.disabled=true;
+  var isGpsOk = await verifyGpsLocationForClockIn();
+  if(!isGpsOk){ if(btn)btn.disabled=false; return; }
+
   var t=nowTime(), td=today();
   try{
     if(TC_REC){
@@ -730,6 +797,9 @@ async function clockIn(){
 
 async function clockOut(){
   var btn=el('btn-out'); if(btn)btn.disabled=true;
+  var isGpsOk = await verifyGpsLocationForClockIn();
+  if(!isGpsOk){ if(btn)btn.disabled=false; return; }
+
   var t=nowTime();
   try{
     await SB.from('スタッフ出欠').update({endTime:t}).eq('id',TC_REC.id);

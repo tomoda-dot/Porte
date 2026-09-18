@@ -8704,6 +8704,57 @@ function dlPaidLeaveCSV(){
 
 
 // ═══ 設定 ═══
+// ═══ GPS設定 ═══
+function getGpsSettings(){
+  try{return JSON.parse(S.settings.gpsSettings||'{}');}catch(e){return{};}
+}
+
+async function saveGpsSettings(){
+  if (!isAdminUser()){
+    await cAlert('GPS制限設定の変更は管理者権限が必要です。');
+    return;
+  }
+  var enabled = document.getElementById('sg-enabled').checked;
+  var lat = parseFloat(document.getElementById('sg-lat').value);
+  var lng = parseFloat(document.getElementById('sg-lng').value);
+  var radius = parseInt(document.getElementById('sg-radius').value) || 200;
+
+  if (enabled && (isNaN(lat) || isNaN(lng))) {
+    await cAlert('GPS制限を有効にする場合は、事業所の緯度と経度を入力してください。');
+    return;
+  }
+
+  var obj = { enabled: enabled, lat: lat || 0, lng: lng || 0, radius: radius };
+  if (!lockUI()) return;
+  try {
+    await gas('saveSetting', 'gpsSettings', JSON.stringify(obj));
+    S.settings.gpsSettings = JSON.stringify(obj);
+    toast('✅ GPS設定を保存しました');
+    renderSettings(document.getElementById('content'));
+  } catch(e) {
+    await cAlert('保存失敗: ' + e);
+  } finally {
+    unlockUI();
+  }
+}
+
+function getCurrentLocationForGpsSetting(){
+  if (!navigator.geolocation) {
+    cAlert('お使いのブラウザは位置情報（GPS）に対応していません。');
+    return;
+  }
+  toast('📍 位置情報を取得中...');
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var latEl = document.getElementById('sg-lat');
+    var lngEl = document.getElementById('sg-lng');
+    if (latEl) latEl.value = pos.coords.latitude.toFixed(6);
+    if (lngEl) lngEl.value = pos.coords.longitude.toFixed(6);
+    toast('✅ 現在地の座標を設定しました！');
+  }, function(err){
+    cAlert('位置情報の取得に失敗しました: ' + err.message + '\n位置情報サービスが許可されているかご確認ください。');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
 // ═══ 手当設定 ═══
 function getAllowances(){
   try{return JSON.parse(S.settings.allowances||'[]');}catch(e){return[];}
@@ -9395,7 +9446,27 @@ function renderSettings(c){
       '<div id="'+id+'" onclick="event.stopPropagation()" style="margin-top:12px;display:'+(isOpen?'block':'none')+'">'+content+'</div></div>';
   }
 
+  var gpsConf = getGpsSettings();
+  var gpsHtml =
+    '<p style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.5">'+
+      '個人マイページでの出退勤打刻時に、事業所の指定エリア外からの打刻を制限・ブロックします。<br>'+
+      '<span style="color:#c62828;font-weight:700">※この設定の保存・変更は管理者のみ可能です。</span>'+
+    '</p>'+
+    '<div class="field"><label style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">'+
+      '<input type="checkbox" id="sg-enabled"'+(gpsConf.enabled?' checked':'')+'> 📍 GPS打刻エリア制限を有効にする'+
+    '</label></div>'+
+    '<div class="grid2">'+
+      '<div class="field"><label>事業所の緯度 (Latitude)</label><input type="number" step="0.000001" id="sg-lat" value="'+(gpsConf.lat||'')+'" placeholder="例: 34.789123" style="width:100%"></div>'+
+      '<div class="field"><label>事業所の経度 (Longitude)</label><input type="number" step="0.000001" id="sg-lng" value="'+(gpsConf.lng||'')+'" placeholder="例: 135.489123" style="width:100%"></div>'+
+    '</div>'+
+    '<div style="margin-bottom:12px">'+
+      '<button class="bg" onclick="getCurrentLocationForGpsSetting()" style="font-size:11px;padding:4px 10px">📍 現在地の緯度・経度を自動取得</button>'+
+    '</div>'+
+    '<div class="field" style="max-width:300px"><label>許容エリア半径（メートル）</label><input type="number" id="sg-radius" value="'+(gpsConf.radius||200)+'" placeholder="200" style="width:100%"></div>'+
+    (isAdminUser()?'<button class="bp" onclick="saveGpsSettings()">GPS打刻制限設定を保存</button>':'<div style="font-size:11px;color:var(--sub)">※管理者のみ設定保存が可能です</div>');
+
   c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:18px">⚙️ 設定</h2>'+
+    settingsSection('s-gps','📍','GPS打刻エリア制限設定（個人マイページ用）',gpsHtml,false)+
     settingsSection('s-fac','🏢','事業所情報',
       '<div class="grid2"><div class="field"><label>事業所種別</label><select id="sf-t" style="width:100%"><option value="就労継続支援B型"'+(S.settings.facilityType==='就労継続支援B型'||!S.settings.facilityType?' selected':'')+'>就労継続支援B型</option><option value="就労継続支援A型"'+(S.settings.facilityType==='就労継続支援A型'?' selected':'')+'>就労継続支援A型</option><option value="就労移行支援"'+(S.settings.facilityType==='就労移行支援'?' selected':'')+'>就労移行支援</option><option value="生活介護"'+(S.settings.facilityType==='生活介護'?' selected':'')+'>生活介護</option></select></div><div class="field"><label>事業所名</label><input id="sf-n" value="'+esc(S.settings.facilityName||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>定員</label><input type="number" id="sf-c" value="'+(S.settings.capacity||30)+'" style="width:100%"></div><div class="field"><label>指定事業所番号 (10桁)</label><input id="sf-num" value="'+esc(S.settings.facilityNumber||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>会社名</label><input id="sf-comp" value="'+esc(S.settings.companyName||'')+'" style="width:100%"></div><div class="field"><label>市町村番号 (6桁)</label><input id="sf-city" value="'+esc(S.settings.cityNumber||'')+'" placeholder="未指定時: 000000" style="width:100%"></div></div><div class="grid2"><div class="field"><label>弁当代（円/食）</label><input type="number" id="sf-bento" value="'+(S.settings.bentoPrice||100)+'" style="width:100%"></div><div></div></div><button class="bp" onclick="saveFac()">保存</button>',true)+
     settingsSection('s-kokuho-kasan','📋','国保連 サービス体制加算・地域区分設定（指定体制届出）',
