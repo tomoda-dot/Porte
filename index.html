@@ -8744,15 +8744,20 @@ function getCurrentLocationForGpsSetting(){
     return;
   }
   toast('📍 位置情報を取得中...');
-  navigator.geolocation.getCurrentPosition(function(pos){
+
+  function applyPos(pos){
     var latEl = document.getElementById('sg-lat');
     var lngEl = document.getElementById('sg-lng');
     if (latEl) latEl.value = pos.coords.latitude.toFixed(6);
     if (lngEl) lngEl.value = pos.coords.longitude.toFixed(6);
     toast('✅ 現在地の座標を設定しました！');
-  }, function(err){
-    cAlert('位置情報の取得に失敗しました: ' + err.message + '\n位置情報サービスが許可されているかご確認ください。');
-  }, { enableHighAccuracy: true, timeout: 10000 });
+  }
+
+  navigator.geolocation.getCurrentPosition(applyPos, function(err1){
+    navigator.geolocation.getCurrentPosition(applyPos, function(err2){
+      cAlert('位置情報の取得に失敗しました: ' + (err2.message || String(err2)) + '\n\n【解決手順】\n1. ブラウザのアドレスバー（URL左側）のアイコンから位置情報を許可してください。\n2. OS（Windows/Mac/スマホ）の位置情報サービスがONかご確認ください。\n3. Googleマップ等で確認した事業所の緯度・経度（例: 34.789123 / 135.489123）を直接入力して保存することも可能です。');
+    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+  }, { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 });
 }
 
 // ═══ 手当設定 ═══

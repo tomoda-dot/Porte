@@ -758,7 +758,7 @@ async function verifyGpsLocationForClockIn(){
   }
 
   return new Promise(function(resolve){
-    navigator.geolocation.getCurrentPosition(function(pos){
+    function checkDist(pos){
       var curLat = pos.coords.latitude;
       var curLng = pos.coords.longitude;
       var dist = calcGpsDistanceMeter(curLat, curLng, targetLat, targetLng);
@@ -769,10 +769,14 @@ async function verifyGpsLocationForClockIn(){
         alert('🚫 事業所のエリア外のため打刻できません。\n\n【現在地】事業所から約 ' + dist + 'm 離れています。\n【許可範囲】事業所から ' + allowedRadius + 'm 以内');
         resolve(false);
       }
-    }, function(err){
-      alert('⚠️ 位置情報（GPS）を取得できませんでした。\n\nスマホの位置情報サービスがONになっており、ブラウザで位置情報が許可されているかご確認ください。\n(エラー: ' + err.message + ')');
-      resolve(false);
-    }, { enableHighAccuracy: true, timeout: 10000 });
+    }
+
+    navigator.geolocation.getCurrentPosition(checkDist, function(err1){
+      navigator.geolocation.getCurrentPosition(checkDist, function(err2){
+        alert('⚠️ 位置情報（GPS）を取得できませんでした。\n\nスマホの位置情報サービスがONになっており、ブラウザで位置情報が許可されているかご確認ください。\n(エラー: ' + (err2.message || String(err2)) + ')');
+        resolve(false);
+      }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+    }, { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 });
   });
 }
 
