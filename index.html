@@ -9533,6 +9533,7 @@ function renderSettings(c){
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openShiftPatternModal()" style="font-size:12px">＋ 追加</button></div>'+
       '<p style="font-size:11px;color:var(--sub);margin-bottom:8px">シフト作成で使用する勤務パターンを登録します。</p>'+
       '<table><thead><tr><th>パターン名</th><th>始業</th><th>終業</th><th>休憩</th><th>色</th><th>操作</th></tr></thead><tbody id="sp-tb"></tbody></table>',false)+'<div id="sp-modal"></div>'+
+    settingsSection('s-gps','📍','GPS打刻エリア制限設定（個人マイページ用）',gpsHtml,false)+
     settingsSection('s-ai-key','🤖','AI機能・Gemini APIキー設定',
       '<p style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.5">'+
         '体験利用報告書などのAI自動文章生成で使用するGoogle Gemini APIキーを設定します。<br>'+
@@ -9545,8 +9546,7 @@ function renderSettings(c){
       '<div style="display:flex;gap:8px;align-items:center">'+
         '<button class="bp" onclick="saveGeminiApiKeyInSettings()">APIキーを保存</button>'+
         '<button class="bg" onclick="clearGeminiApiKeyInSettings()">消去</button>'+
-      '</div>',false)+
-    settingsSection('s-gps','📍','GPS打刻エリア制限設定（個人マイページ用）',gpsHtml,false);
+      '</div>',false);
   // 作業種別テーブル
   document.getElementById('wt-tb').innerHTML=S.workTypes.map(function(w){return'<tr><td>'+esc(w.name)+'</td><td>¥'+Number(w.rate).toLocaleString()+'/h</td><td><button class="bg" onclick=\'openWT('+JSON.stringify(w).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delWT(\''+w.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';}).join('');
   // 車両テーブル
