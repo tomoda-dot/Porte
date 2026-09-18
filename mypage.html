@@ -1036,6 +1036,15 @@ function openAttCR(row){
 
 // 退職チェック
 function isStaffActive(s, ym){
+  if(!s) return false;
+  var lid = String(s.loginId || '').toLowerCase();
+  var name = String(s.name || '').toLowerCase();
+  if (lid === 'administrator' || name === 'administrator') return false;
+
+  var st = String(s.status || s.userStatus || '').trim();
+  if (['退職', '退職済', '離職', '無効', '非表示', '利用終了', '退所'].indexOf(st) >= 0) return false;
+  if (s.isRetired === true || s.isArchived === true || s.active === false) return false;
+
   var td = today();
   var checkYM = ym || td.substring(0,7);
   if(s.startDate){
@@ -1044,7 +1053,7 @@ function isStaffActive(s, ym){
   }
   if(!s.endDate) return true;
   var endYM = s.endDate.substring(0,7);
-  if(s.endDate < td || checkYM > endYM) return false;
+  if(s.endDate <= td || checkYM > endYM) return false;
   return true;
 }
 
