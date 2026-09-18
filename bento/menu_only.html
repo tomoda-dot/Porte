@@ -649,6 +649,93 @@
       await saveSettingToSupabase('bento_porte_users', JSON.stringify(porteUsers));
     }
 
+    function getTodayKey() {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const date = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${date}`;
+    }
+
+    async function saveDailyOrdersToSupabase(dailyOrdersObj) {
+      localStorage.setItem('bento_daily_orders', JSON.stringify(dailyOrdersObj));
+      await saveSettingToSupabase('bento_daily_orders', JSON.stringify(dailyOrdersObj));
+    }
+
+    async function saveOrderHistoryToSupabase(historyArr) {
+      localStorage.setItem('bento_order_history', JSON.stringify(historyArr));
+      await saveSettingToSupabase('bento_order_history', JSON.stringify(historyArr));
+    }
+
+    async function updateAndSaveDailyOrdersAndHistory() {
+      const todayKey = getTodayKey();
+      let dailyOrders = {};
+      try { dailyOrders = JSON.parse(localStorage.getItem('bento_daily_orders')) || {}; } catch(e){}
+      let orderHistory = [];
+      try { orderHistory = JSON.parse(localStorage.getItem('bento_order_history')) || []; } catch(e){}
+
+      const currentOrders = [];
+      porteUsers.forEach(u => {
+        normalizeUserData(u);
+        if (u.wantsBento !== false && Array.isArray(u.selectedBentoIds)) {
+          u.selectedBentoIds.forEach((bId, idx) => {
+            if (bId) {
+              const b = bentoMaster.find(item => item.id === bId);
+              currentOrders.push({
+                userId: u.id,
+                userName: u.name,
+                slotIndex: idx,
+                slotName: u.bentoCount > 1 ? `${idx + 1}食目` : '1食目',
+                bentoId: bId,
+                bentoName: b ? b.name : '不明なお弁当',
+                category: b ? b.category : ''
+              });
+            }
+          });
+        }
+      });
+
+      const existingStatus = (dailyOrders[todayKey] && dailyOrders[todayKey].status) ? dailyOrders[todayKey].status : 'DRAFT';
+      const existingConfirmedAt = (dailyOrders[todayKey] && dailyOrders[todayKey].confirmedAt) ? dailyOrders[todayKey].confirmedAt : null;
+
+      dailyOrders[todayKey] = {
+        status: existingStatus,
+        confirmedAt: existingConfirmedAt,
+        orders: currentOrders
+      };
+
+      await saveDailyOrdersToSupabase(dailyOrders);
+
+      const parts = todayKey.split('-');
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      const dateLabel = (parts.length === 3) ? `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)} ${timeStr}` : todayKey;
+
+      currentOrders.forEach(o => {
+        const existingIndex = orderHistory.findIndex(h => h.dateKey === todayKey && String(h.userId) === String(o.userId) && h.slotIndex === o.slotIndex);
+        if (existingIndex >= 0) {
+          orderHistory[existingIndex].bentoId = o.bentoId;
+          orderHistory[existingIndex].bentoName = o.bentoName;
+          orderHistory[existingIndex].category = o.category;
+        } else {
+          orderHistory.unshift({
+            id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            date: dateLabel,
+            dateKey: todayKey,
+            userId: o.userId,
+            userName: o.userName,
+            slotIndex: o.slotIndex,
+            slotName: o.slotName,
+            bentoId: o.bentoId,
+            bentoName: o.bentoName,
+            category: o.category
+          });
+        }
+      });
+
+      await saveOrderHistoryToSupabase(orderHistory);
+    }
+
     async function syncFromSupabase() {
       const { url, key } = getSupabaseCredentials();
       if (!url || !key || typeof supabase === 'undefined') return;
@@ -1110,6 +1197,7 @@
       localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
       saveMasterToSupabase();
       savePorteUsersToSupabase();
+      updateAndSaveDailyOrdersAndHistory();
     }
 
     function assignUserBento(userIndex, newBentoId) {
@@ -1134,6 +1222,19 @@
         document.exitFullscreen();
       }
     }
+
+    // ─── 全端末リアルタイム自動同期（5秒間隔ポーリング＆フォーカス切替検知） ───
+    setInterval(function() {
+      syncFromSupabase();
+    }, 5000);
+
+    window.addEventListener('focus', function() {
+      syncFromSupabase();
+    });
+
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) syncFromSupabase();
+    });
   </script>
 </body>
 </html>

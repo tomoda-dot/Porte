@@ -378,10 +378,75 @@ function saveTodaysMenu() {
 function savePorteUsers() {
   localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
   savePorteUsersToSupabase();
+  updateAndSaveDailyOrdersAndHistory();
 }
 
 async function savePorteUsersToSupabase() {
   await saveSettingToSupabase('bento_porte_users', JSON.stringify(porteUsers));
+}
+
+function updateAndSaveDailyOrdersAndHistory() {
+  const todayKey = getTodayKey();
+  const currentOrders = [];
+  porteUsers.forEach(u => {
+    normalizeUserData(u);
+    if (u.wantsBento !== false && Array.isArray(u.selectedBentoIds)) {
+      u.selectedBentoIds.forEach((bId, idx) => {
+        if (bId) {
+          const b = bentoMaster.find(item => item.id === bId);
+          currentOrders.push({
+            userId: u.id,
+            userName: u.name,
+            slotIndex: idx,
+            slotName: u.bentoCount > 1 ? `${idx + 1}食目` : '1食目',
+            bentoId: bId,
+            bentoName: b ? b.name : '不明なお弁当',
+            category: b ? b.category : ''
+          });
+        }
+      });
+    }
+  });
+
+  const existingStatus = (dailyOrders[todayKey] && dailyOrders[todayKey].status) ? dailyOrders[todayKey].status : 'DRAFT';
+  const existingConfirmedAt = (dailyOrders[todayKey] && dailyOrders[todayKey].confirmedAt) ? dailyOrders[todayKey].confirmedAt : null;
+
+  dailyOrders[todayKey] = {
+    status: existingStatus,
+    confirmedAt: existingConfirmedAt,
+    orders: currentOrders
+  };
+
+  saveDailyOrders();
+
+  const parts = todayKey.split('-');
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const dateLabel = (parts.length === 3) ? `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)} ${timeStr}` : todayKey;
+
+  currentOrders.forEach(o => {
+    const existingIndex = orderHistory.findIndex(h => h.dateKey === todayKey && String(h.userId) === String(o.userId) && h.slotIndex === o.slotIndex);
+    if (existingIndex >= 0) {
+      orderHistory[existingIndex].bentoId = o.bentoId;
+      orderHistory[existingIndex].bentoName = o.bentoName;
+      orderHistory[existingIndex].category = o.category;
+    } else {
+      orderHistory.unshift({
+        id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        date: dateLabel,
+        dateKey: todayKey,
+        userId: o.userId,
+        userName: o.userName,
+        slotIndex: o.slotIndex,
+        slotName: o.slotName,
+        bentoId: o.bentoId,
+        bentoName: o.bentoName,
+        category: o.category
+      });
+    }
+  });
+
+  saveOrderHistory();
 }
 
 function saveOrderHistory() {
@@ -433,12 +498,12 @@ function mergeDailyOrders(remoteOrders, localOrders) {
 
         remoteList.forEach(o => {
           if (!o) return;
-          const k = `${o.userId || o.userName}_${o.bentoId || o.bentoName}_${o.slotIndex || 0}`;
+          const k = `${o.userId || o.userName}_${o.slotIndex || 0}`;
           orderMap[k] = o;
         });
         localList.forEach(o => {
           if (!o) return;
-          const k = `${o.userId || o.userName}_${o.bentoId || o.bentoName}_${o.slotIndex || 0}`;
+          const k = `${o.userId || o.userName}_${o.slotIndex || 0}`;
           if (!orderMap[k]) orderMap[k] = o;
         });
 
@@ -450,6 +515,31 @@ function mergeDailyOrders(remoteOrders, localOrders) {
       }
     }
   });
+  return merged;
+}
+
+function mergePorteUsers(remoteUsers, localUsers) {
+  if (!Array.isArray(remoteUsers) || remoteUsers.length === 0) return localUsers || [];
+  if (!Array.isArray(localUsers) || localUsers.length === 0) return remoteUsers;
+
+  const localMap = {};
+  localUsers.forEach(u => {
+    if (u && u.id) localMap[String(u.id).trim()] = u;
+  });
+
+  const merged = remoteUsers.map(ru => {
+    if (!ru || !ru.id) return ru;
+    const lu = localMap[String(ru.id).trim()];
+    if (!lu) return ru;
+    return Object.assign({}, lu, ru);
+  });
+
+  localUsers.forEach(lu => {
+    if (lu && lu.id && !merged.some(ru => String(ru.id).trim() === String(lu.id).trim())) {
+      merged.push(lu);
+    }
+  });
+
   return merged;
 }
 
@@ -543,7 +633,7 @@ async function syncFromSupabase() {
         try {
           const parsed = JSON.parse(latestByKey['bento_porte_users']);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            porteUsers = parsed;
+            porteUsers = mergePorteUsers(parsed, porteUsers);
             localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
           }
         } catch(e) {}
@@ -3485,3 +3575,16 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 300);
   }, 2600);
 }
+
+// ─── 全端末リアルタイム同期（5秒間隔ポーリング＆フォーカス切替検知） ───
+setInterval(function() {
+  syncFromSupabase();
+}, 5000);
+
+window.addEventListener('focus', function() {
+  syncFromSupabase();
+});
+
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) syncFromSupabase();
+});
