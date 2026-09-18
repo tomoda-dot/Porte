@@ -684,7 +684,7 @@ async function _calcAttendanceList(ym){
       var bCount = _getBentoCount(rec);
       if(bCount > 0){
         bc += bCount;
-        var pm=(user&&user.bentoPaymentMethod)?user.bentoPaymentMethod:(rec.bentoPaymentMethod||'工賃払い');
+        var pm=rec.bentoPaymentMethod || (user&&user.bentoPaymentMethod) || '工賃払い';
         if(pm==='当日')bcDaily += bCount;
         else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext += bCount;
         else bcDeduct += bCount;
@@ -751,7 +751,7 @@ async function _calcWageDetailPerUser(ym){
       var bCount = _getBentoCount(rec);
       if(bCount > 0){
         bc += bCount;
-        var pm=(user&&user.bentoPaymentMethod)?user.bentoPaymentMethod:(rec.bentoPaymentMethod||'工賃払い');
+        var pm=rec.bentoPaymentMethod || (user&&user.bentoPaymentMethod) || '工賃払い';
         if(pm==='当日')bcDaily += bCount;
         else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext += bCount;
         else bcDeduct += bCount;
