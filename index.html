@@ -266,7 +266,7 @@ function isAdminUser(sess){
   var n = String(s.name || '');
   var r = String(s.role || '');
   var lid = String(s.loginId || '');
-  return n.indexOf('友田') >= 0 || r === '管理者' || s.isAdmin === true || lid.toLowerCase() === 'administrator' || n.toLowerCase() === 'administrator';
+  return n.indexOf('友田') >= 0 || r === '管理者' || r === 'サービス管理責任者' || s.isAdmin === true || lid.toLowerCase() === 'administrator' || n.toLowerCase() === 'administrator';
 }
 
 var _selectedStaffForLogin = null;
