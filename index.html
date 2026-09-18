@@ -9463,6 +9463,7 @@ function renderSettings(c){
       '<div id="'+id+'" onclick="event.stopPropagation()" style="margin-top:12px;display:'+(isOpen?'block':'none')+'">'+content+'</div></div>';
   }
 
+  var admin = isAdminUser();
   var gpsConf = getGpsSettings();
   var gpsHtml =
     '<p style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.5">'+
@@ -9480,12 +9481,12 @@ function renderSettings(c){
       '<button class="bg" onclick="getCurrentLocationForGpsSetting()" style="font-size:11px;padding:4px 10px">📍 現在地の緯度・経度を自動取得</button>'+
     '</div>'+
     '<div class="field" style="max-width:300px"><label>許容エリア半径（メートル）</label><input type="number" id="sg-radius" value="'+(gpsConf.radius||200)+'" placeholder="200" style="width:100%"></div>'+
-    (isAdminUser()?'<button class="bp" onclick="saveGpsSettings()">GPS打刻制限設定を保存</button>':'<div style="font-size:11px;color:var(--sub)">※管理者のみ設定保存が可能です</div>');
+    (admin?'<button class="bp" onclick="saveGpsSettings()">GPS打刻制限設定を保存</button>':'<div style="font-size:11px;color:var(--sub)">※管理者のみ設定保存が可能です</div>');
 
   c.innerHTML='<h2 style="font-size:19px;font-weight:700;margin-bottom:18px">⚙️ 設定</h2>'+
-    settingsSection('s-fac','🏢','事業所情報',
-      '<div class="grid2"><div class="field"><label>事業所種別</label><select id="sf-t" style="width:100%"><option value="就労継続支援B型"'+(S.settings.facilityType==='就労継続支援B型'||!S.settings.facilityType?' selected':'')+'>就労継続支援B型</option><option value="就労継続支援A型"'+(S.settings.facilityType==='就労継続支援A型'?' selected':'')+'>就労継続支援A型</option><option value="就労移行支援"'+(S.settings.facilityType==='就労移行支援'?' selected':'')+'>就労移行支援</option><option value="生活介護"'+(S.settings.facilityType==='生活介護'?' selected':'')+'>生活介護</option></select></div><div class="field"><label>事業所名</label><input id="sf-n" value="'+esc(S.settings.facilityName||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>定員</label><input type="number" id="sf-c" value="'+(S.settings.capacity||30)+'" style="width:100%"></div><div class="field"><label>指定事業所番号 (10桁)</label><input id="sf-num" value="'+esc(S.settings.facilityNumber||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>会社名</label><input id="sf-comp" value="'+esc(S.settings.companyName||'')+'" style="width:100%"></div><div class="field"><label>市町村番号 (6桁)</label><input id="sf-city" value="'+esc(S.settings.cityNumber||'')+'" placeholder="未指定時: 000000" style="width:100%"></div></div><div class="grid2"><div class="field"><label>弁当代（円/食）</label><input type="number" id="sf-bento" value="'+(S.settings.bentoPrice||100)+'" style="width:100%"></div><div></div></div><button class="bp" onclick="saveFac()">保存</button>',true)+
-    settingsSection('s-kokuho-kasan','📋','国保連 サービス体制加算・地域区分設定（指定体制届出）',
+    (admin ? settingsSection('s-fac','🏢','事業所情報',
+      '<div class="grid2"><div class="field"><label>事業所種別</label><select id="sf-t" style="width:100%"><option value="就労継続支援B型"'+(S.settings.facilityType==='就労継続支援B型'||!S.settings.facilityType?' selected':'')+'>就労継続支援B型</option><option value="就労継続支援A型"'+(S.settings.facilityType==='就労継続支援A型'?' selected':'')+'>就労継続支援A型</option><option value="就労移行支援"'+(S.settings.facilityType==='就労移行支援'?' selected':'')+'>就労移行支援</option><option value="生活介護"'+(S.settings.facilityType==='生活介護'?' selected':'')+'>生活介護</option></select></div><div class="field"><label>事業所名</label><input id="sf-n" value="'+esc(S.settings.facilityName||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>定員</label><input type="number" id="sf-c" value="'+(S.settings.capacity||30)+'" style="width:100%"></div><div class="field"><label>指定事業所番号 (10桁)</label><input id="sf-num" value="'+esc(S.settings.facilityNumber||'')+'" style="width:100%"></div></div><div class="grid2"><div class="field"><label>会社名</label><input id="sf-comp" value="'+esc(S.settings.companyName||'')+'" style="width:100%"></div><div class="field"><label>市町村番号 (6桁)</label><input id="sf-city" value="'+esc(S.settings.cityNumber||'')+'" placeholder="未指定時: 000000" style="width:100%"></div></div><div class="grid2"><div class="field"><label>弁当代（円/食）</label><input type="number" id="sf-bento" value="'+(S.settings.bentoPrice||100)+'" style="width:100%"></div><div></div></div><button class="bp" onclick="saveFac()">保存</button>',true) : '')+
+    (admin ? settingsSection('s-kokuho-kasan','📋','国保連 サービス体制加算・地域区分設定（指定体制届出）',
       '<p style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.5">自治体届出の体制加算・人員配置区分・地域区分を設定します。国保連レセプトCSV生成時に全自動反映されます。</p>'+
       '<div class="grid2">'+
         '<div class="field"><label>定員区分</label><select id="sk-cap" style="width:100%"><option value="20人以下"'+(S.settings.capCategory==='20人以下'?' selected':'')+'>20人以下</option><option value="21人〜40人"'+(S.settings.capCategory==='21人〜40人'||!S.settings.capCategory?' selected':'')+'>21人〜40人</option><option value="41人〜60人"'+(S.settings.capCategory==='41人〜60人'?' selected':'')+'>41人〜60人</option></select></div>'+
@@ -9511,8 +9512,8 @@ function renderSettings(c){
           '<div class="field"><label>虐待防止未実施減算</label><select id="sk-abuse" style="width:100%"><option value="なし"'+(S.settings.abuseNotPrevented==='なし'||!S.settings.abuseNotPrevented?' selected':'')+'>なし</option><option value="あり"'+(S.settings.abuseNotPrevented==='あり'?' selected':'')+'>減算あり (-1%)</option></select></div>'+
         '</div>'+
       '</div>'+
-      '<button class="bp" onclick="saveKokuhoSettings()">体制加算・減算設定を保存</button>',false)+
-    settingsSection('s-email','📧','メール自動送信設定（Web直接送信）',
+      '<button class="bp" onclick="saveKokuhoSettings()">体制加算・減算設定を保存</button>',false) : '')+
+    (admin ? settingsSection('s-email','📧','メール自動送信設定（Web直接送信）',
       '<p style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.5">個別支援計画書などをWeb画面からワンクリックで直接送信するためのメールAPI設定です。<br>無料サービス「EmailJS」または「Resend」のAPIキーを入力すると、Web画面上で送信が完結します。</p>'+
       '<div class="grid2">'+
         '<div class="field"><label>送信APIサービス</label><select id="se-provider" style="width:100%"><option value="emailjs"'+(S.settings.emailProvider==='emailjs'||!S.settings.emailProvider?' selected':'')+'>EmailJS (推奨・月200通無料)</option><option value="resend"'+(S.settings.emailProvider==='resend'?' selected':'')+'>Resend API (月3,000通無料)</option></select></div>'+
@@ -9522,31 +9523,31 @@ function renderSettings(c){
         '<div class="field"><label>サービスID / Domain</label><input id="se-serviceid" value="'+esc(S.settings.emailServiceId||'')+'" placeholder="例: service_porte" style="width:100%"></div>'+
         '<div class="field"><label>テンプレートID (EmailJSのみ)</label><input id="se-templateid" value="'+esc(S.settings.emailTemplateId||'')+'" placeholder="例: template_porte" style="width:100%"></div>'+
       '</div>'+
-      '<button class="bp" onclick="saveEmailSettings()">メール自動送信設定を保存</button>',false)+
-    settingsSection('s-cal','📅','開所日カレンダー',
+      '<button class="bp" onclick="saveEmailSettings()">メール自動送信設定を保存</button>',false) : '')+
+    (admin ? settingsSection('s-cal','📅','開所日カレンダー',
       '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">'+
         '<button class="bg" onclick="changeCalMonth(-1)" style="font-size:12px">‹ 前の月</button>'+
         '<input type="month" id="cal-ym" value="'+today().slice(0,7)+'" onchange="loadClosedCal(this.value)" style="font-size:12px">'+
         '<button class="bg" onclick="changeCalMonth(1)" style="font-size:12px">次の月 ›</button>'+
         '<span id="cal-info" style="margin-left:16px;font-size:15px;font-weight:700"></span>'+
-      '</div><div id="closed-cal"></div>',false)+
-    settingsSection('s-wt','💰','作業種別・時給',
-      '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openWT()" style="font-size:12px">＋ 追加</button></div><table><thead><tr><th>作業種別</th><th>時給</th><th>操作</th></tr></thead><tbody id="wt-tb"></tbody></table>',false)+'<div id="wt-modal"></div>'+
-    settingsSection('s-allowance','🎁','手当設定',buildAllowanceUI(),false)+'<div id="al-modal"></div>'+
+      '</div><div id="closed-cal"></div>',false) : '')+
+    (admin ? settingsSection('s-wt','💰','作業種別・時給',
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openWT()" style="font-size:12px">＋ 追加</button></div><table><thead><tr><th>作業種別</th><th>時給</th><th>操作</th></tr></thead><tbody id="wt-tb"></tbody></table>',false)+'<div id="wt-modal"></div>' : '')+
+    (admin ? settingsSection('s-allowance','🎁','手当設定',buildAllowanceUI(),false)+'<div id="al-modal"></div>' : '')+
     settingsSection('s-tpl','📋','日報テンプレート',
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openTplModal()" style="font-size:12px">＋ 追加</button></div>'+
       '<p style="font-size:11px;color:var(--sub);margin-bottom:10px">出欠・日報の記録画面で「作業内容」にテンプレートを挿入できます。</p>'+
-      '<div id="tpl-list"></div>',false)+'<div id="tpl-modal"></div>'+
+      '<div id="tpl-list"></div>',!admin)+'<div id="tpl-modal"></div>'+
     settingsSection('s-vh','🚗','車両管理',
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openVhModal()" style="font-size:12px">＋ 追加</button></div>'+
       '<p style="font-size:11px;color:var(--sub);margin-bottom:8px">送迎で使用する車両を登録します。</p>'+
       '<table><thead><tr><th>車両名</th><th>種類</th><th>定員</th><th>備考</th><th>操作</th></tr></thead><tbody id="vh-tb"></tbody></table>',false)+'<div id="vh-modal"></div>'+
-    settingsSection('s-shift-pat','📆','勤務パターン管理',
+    (admin ? settingsSection('s-shift-pat','📆','勤務パターン管理',
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openShiftPatternModal()" style="font-size:12px">＋ 追加</button></div>'+
       '<p style="font-size:11px;color:var(--sub);margin-bottom:8px">シフト作成で使用する勤務パターンを登録します。</p>'+
-      '<table><thead><tr><th>パターン名</th><th>始業</th><th>終業</th><th>休憩</th><th>色</th><th>操作</th></tr></thead><tbody id="sp-tb"></tbody></table>',false)+'<div id="sp-modal"></div>'+
-    (isAdminUser()?settingsSection('s-gps','📍','GPS打刻エリア制限設定（個人マイページ用）',gpsHtml,false):'')+
-    settingsSection('s-ai-key','🤖','AI機能・Gemini APIキー設定',
+      '<table><thead><tr><th>パターン名</th><th>始業</th><th>終業</th><th>休憩</th><th>色</th><th>操作</th></tr></thead><tbody id="sp-tb"></tbody></table>',false)+'<div id="sp-modal"></div>' : '')+
+    (admin ? settingsSection('s-gps','📍','GPS打刻エリア制限設定（個人マイページ用）',gpsHtml,false) : '')+
+    (admin ? settingsSection('s-ai-key','🤖','AI機能・Gemini APIキー設定',
       '<p style="font-size:11px;color:var(--sub);margin-bottom:12px;line-height:1.5">'+
         '体験利用報告書などのAI自動文章生成で使用するGoogle Gemini APIキーを設定します。<br>'+
         '※APIキーが未設定の場合でも、組み込みのスマートAIエンジンが自動使用されます。'+
@@ -9558,14 +9559,17 @@ function renderSettings(c){
       '<div style="display:flex;gap:8px;align-items:center">'+
         '<button class="bp" onclick="saveGeminiApiKeyInSettings()">APIキーを保存</button>'+
         '<button class="bg" onclick="clearGeminiApiKeyInSettings()">消去</button>'+
-      '</div>',false);
+      '</div>',false) : '');
+
   // 作業種別テーブル
-  document.getElementById('wt-tb').innerHTML=S.workTypes.map(function(w){return'<tr><td>'+esc(w.name)+'</td><td>¥'+Number(w.rate).toLocaleString()+'/h</td><td><button class="bg" onclick=\'openWT('+JSON.stringify(w).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delWT(\''+w.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';}).join('');
+  if(document.getElementById('wt-tb')){
+    document.getElementById('wt-tb').innerHTML=S.workTypes.map(function(w){return'<tr><td>'+esc(w.name)+'</td><td>¥'+Number(w.rate).toLocaleString()+'/h</td><td><button class="bg" onclick=\'openWT('+JSON.stringify(w).replace(/\'/g,"&#39;")+')\' style="font-size:11px;padding:3px 9px;margin-right:4px">編集</button><button class="br" onclick="delWT(\''+w.id+'\')" style="font-size:11px;padding:3px 9px">削除</button></td></tr>';}).join('');
+  }
   // 車両テーブル
-  renderVhTable();
-  renderTplList();
-  renderShiftPatternTable();
-  loadClosedCal(today().slice(0,7));
+  if(document.getElementById('vh-tb')) renderVhTable();
+  if(document.getElementById('tpl-list')) renderTplList();
+  if(document.getElementById('sp-tb')) renderShiftPatternTable();
+  if(document.getElementById('closed-cal')) loadClosedCal(today().slice(0,7));
 }
 
 function saveGeminiApiKeyInSettings(){
