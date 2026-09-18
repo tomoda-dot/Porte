@@ -955,6 +955,11 @@
             selectedBentoId: null
           }));
         }
+        users = users.filter(u => {
+          const un = String(u.name || '').toLowerCase();
+          const uid = String(u.id || '').toLowerCase();
+          return !un.includes('administrator') && uid !== 'administrator';
+        });
       } else if (modalFilterMode === 'showAll') {
         users = porteUsers.filter(u => u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
       } else {

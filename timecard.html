@@ -154,6 +154,10 @@ async function getStaffTimecard(){
   var r2=await sb.from('スタッフ出欠').select('*').eq('date',today2);var att=r2.data||[];
   var result=[];
   staff.forEach(function(s){
+    if(!s)return;
+    var lid=String(s.loginId||'').toLowerCase();
+    var sname=String(s.name||'').toLowerCase();
+    if(lid==='administrator'||sname==='administrator')return;
     if(s.startDate&&s.startDate>today2)return;
     if(s.endDate&&s.endDate<today2)return;
     var rec=null;att.forEach(function(a){if(String(a.staffId)===String(s.id))rec=a;});

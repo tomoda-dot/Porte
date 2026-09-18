@@ -1173,6 +1173,11 @@ function renderStaffPickerList(searchQuery) {
       selectedBentoId: null
     }));
   }
+  staffList = staffList.filter(s => {
+    const sn = String(s.name || '').toLowerCase();
+    const sid = String(s.id || '').toLowerCase();
+    return !sn.includes('administrator') && sid !== 'administrator';
+  });
 
   const filtered = staffList.filter(s => {
     const matchQuery = s.name.toLowerCase().includes(q) || (s.id && String(s.id).toLowerCase().includes(q));
@@ -1440,6 +1445,11 @@ function renderUserPickerList(searchQuery) {
         selectedBentoId: null
       }));
     }
+    targetList = targetList.filter(s => {
+      const sn = String(s.name || '').toLowerCase();
+      const sid = String(s.id || '').toLowerCase();
+      return !sn.includes('administrator') && sid !== 'administrator';
+    });
   } else if (adminModalFilterMode === 'showAll') {
     targetList = porteUsers.filter(u => u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
   } else {
@@ -2750,6 +2760,10 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
     // スタッフの統合（退職済スタッフを除外し在職者のみ追加）
     if (staffRes && staffRes.data && staffRes.data.length > 0) {
       staffRes.data.forEach((s, idx) => {
+        const sLid = String(s.loginId || '').toLowerCase();
+        const sNameLower = String(s.name || s.氏名 || '').toLowerCase();
+        if (sLid === 'administrator' || sNameLower === 'administrator') return;
+
         // 退職・離職・非表示スタッフは除外
         const isStaffResigned = (
           s.userStatus === '退職' || s.userStatus === '退職済' || s.userStatus === '利用終了' || s.userStatus === '退所' ||
