@@ -265,7 +265,8 @@ function isAdminUser(sess){
   var s = sess || getSession() || {};
   var n = String(s.name || '');
   var r = String(s.role || '');
-  return n.indexOf('友田') >= 0 || r === '管理者' || s.isAdmin === true;
+  var lid = String(s.loginId || '');
+  return n.indexOf('友田') >= 0 || r === '管理者' || s.isAdmin === true || lid.toLowerCase() === 'administrator' || n.toLowerCase() === 'administrator';
 }
 
 var _selectedStaffForLogin = null;
@@ -300,6 +301,9 @@ async function showStaffCardView(){
     S.staff = rawStaff;
     var staff = (rawStaff || []).filter(function(s){
       if (!s) return false;
+      var lid = String(s.loginId || '').toLowerCase();
+      var name = String(s.name || '').toLowerCase();
+      if (lid === 'administrator' || name === 'administrator') return false;
       if (s.status === '退職' || s.status === '離職' || s.isRetired === true || s.isArchived === true) return false;
       if (typeof _isStaffActive === 'function') return _isStaffActive(s);
       return true;
@@ -7864,7 +7868,8 @@ function renderStaff(c){
   else renderShiftManagement();
 }
 function renderStaffList(){
-  document.getElementById('staff-content').innerHTML='<div style="text-align:right;margin-bottom:8px"><button class="bp" onclick="openSM()">＋ 新規登録</button></div>'+
+  var addBtn = isAdminUser() ? '<button class="bp" onclick="openSM()">＋ 新規登録</button>' : '<span style="font-size:12px;color:var(--sub)">※スタッフ個人情報の追加・変更は管理者のみ可能です</span>';
+  document.getElementById('staff-content').innerHTML='<div style="text-align:right;margin-bottom:8px">'+addBtn+'</div>'+
     '<div class="card"><table><thead><tr><th>氏名</th><th>役職</th><th>雇用形態</th><th>入職日</th><th>退職日</th><th>資格・免許</th><th>担当数</th></tr></thead><tbody id="st-tb"></tbody></table></div>';
   renderSTbl();
 }
@@ -8284,6 +8289,10 @@ async function deleteStaffAtt(staffId,date){
   catch(e){await cAlert('削除失敗: '+e);}
 }
 function openSM(s){
+  if (!isAdminUser()) {
+    cAlert('管理者以外はスタッフ個人情報の閲覧・編集を行うことができません。');
+    return;
+  }
   s=s||{name:'',role:'',employment:'',loginId:'',password:'',startDate:'',endDate:'',qualifications:''};
   var isE=!!s.id;
   var roles=['サービス管理責任者','生活支援員','職業指導員','管理者','その他'];
@@ -8367,7 +8376,9 @@ function collectQuals(){
   }
   return result;
 }
-async function saveS(id){if(!lockUI())return;
+async function saveS(id){
+  if (!isAdminUser()){ await cAlert('管理者以外はスタッフ情報を保存・更新できません'); return; }
+  if(!lockUI())return;
   var d={
     name:document.getElementById('sm-n').value,
     role:document.getElementById('sm-r').value,
@@ -8386,7 +8397,11 @@ async function saveS(id){if(!lockUI())return;
     toast('✅ 保存しました');closeModal('st-modal');renderStaff(document.getElementById('content'));
   }catch(e){await cAlert('失敗: '+e);}finally{unlockUI();}
 }
-async function delS(id){if(!await cConfirm('削除しますか？'))return;try{await gas('deleteStaff',id);S.staff=await gas('getStaff');renderStaff(document.getElementById('content'));}catch(e){await cAlert('失敗');}}
+async function delS(id){
+  if (!isAdminUser()){ await cAlert('管理者以外はスタッフ情報を削除できません'); return; }
+  if(!await cConfirm('削除しますか？'))return;
+  try{await gas('deleteStaff',id);S.staff=await gas('getStaff');renderStaff(document.getElementById('content'));}catch(e){await cAlert('失敗');}
+}
 
 // ═══ 有給管理（第17条準拠） ═══
 
