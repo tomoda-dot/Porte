@@ -1205,7 +1205,17 @@ function renderDD(ds){
     var isTmp = calExtraIds.indexOf(uid) >= 0 || (!isSch && (r || (S.calTemp||[]).some(function(t){ return t.userId === uid && String(t.date) === ds; })));
     var tmpRec=(S.calTemp||[]).find(function(t){return t.userId===uid&&String(t.date)===ds;});
     var hasAttRecord=!!r;
-    var stLabel=r?'<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>'+(isTmp?'<span style="color:var(--acc);font-size:10px;font-weight:700;margin-left:3px">★臨時</span>':''):(isTmp?'<span style="color:var(--acc);font-size:11px;font-weight:700">臨時</span>':'<span style="color:var(--sub)">-</span>');
+    var stLabel = '<span style="color:var(--sub)">-</span>';
+    if(r && r.status !== '調整休'){
+      var bHtml = '<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>';
+      if(isTmp){
+        stLabel = '<span style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;vertical-align:middle">' + bHtml + '<span style="color:var(--acc);font-weight:700;font-size:10px;margin-top:2px">臨時</span></span>';
+      }else{
+        stLabel = bHtml;
+      }
+    }else if(isTmp){
+      stLabel = '<span style="color:var(--acc);font-size:11px;font-weight:700">臨時</span>';
+    }
     var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
     var sTime=(r&&r.startTime)?r.startTime:(isTmp?'':u.scheduleStart||'');
     var eTime=(r&&r.endTime)?r.endTime:(isTmp?'':u.scheduleEnd||'');
@@ -4941,9 +4951,17 @@ async function renderAttTbl(){
       var rep=dailyData.find(function(d){return d.userId===u.id;});
       var h=r?calcH(r.startTime,r.endTime):0;
       var status=r?r.status:'未記録';
-      var isTemp=tempUids.indexOf(u.id)>=0&&!(u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0);
-      var stLabel=(r && r.status !== '調整休')?'<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>':'<span style="color:var(--sub);font-size:11px">-</span>';
-      var nameLabel=esc(u.name)+(isTemp?' <span style="font-size:9px;color:var(--acc)">★臨時</span>':'');
+      var isTemp=tempUids.indexOf(u.id)>=0||(r && !(u.scheduleDays && u.scheduleDays.indexOf(dwj)>=0));
+      var stLabel = '<span style="color:var(--sub);font-size:11px">-</span>';
+      if(r && r.status !== '調整休'){
+        var bHtml = '<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>';
+        if(isTemp){
+          stLabel = '<span style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;vertical-align:middle">' + bHtml + '<span style="color:var(--acc);font-weight:700;font-size:10px;margin-top:2px">臨時</span></span>';
+        }else{
+          stLabel = bHtml;
+        }
+      }
+      var nameLabel=esc(u.name)+(isTemp?' <span style="font-size:9px;color:var(--acc)">臨時</span>':'');
       var amId=(rep&&rep.workTypeId)?rep.workTypeId:(r?r.workTypeId:'');
       var pmId=getPmId(rep,r);
       var wtDispAm=(r||rep)?esc(wtName(amId)):'-';
@@ -5143,8 +5161,15 @@ function renderAttMonthlyTbl(){
     }
     var isTempUser = userTemps.some(function(t){return String(t.date)===ds;});
     var isTempDay = ((r && !isScheduled) || (!r && isTempUser)) && status !== '調整休';
-    var tempTag = isTempDay ? ' <span style="color:var(--acc);font-weight:700;font-size:10.5px">★臨時</span>' : '';
-    var stLabel=(status!=='-'&&status!=='調整休')?'<span class="badge" style="background:'+(statusColor[status]||'#888')+'">'+esc(status)+'</span>'+tempTag:'<span style="color:var(--sub)">-</span>';
+    var stLabel = '<span style="color:var(--sub)">-</span>';
+    if(status!=='-'&&status!=='調整休'){
+      var bHtml = '<span class="badge" style="background:'+(statusColor[status]||'#888')+'">'+esc(status)+'</span>';
+      if(isTempDay){
+        stLabel = '<span style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;vertical-align:middle">' + bHtml + '<span style="color:var(--acc);font-weight:700;font-size:10px;margin-top:2px">臨時</span></span>';
+      }else{
+        stLabel = bHtml;
+      }
+    }
     var notesDisp = isAbLine && notes ? '<span style="color:var(--red);font-weight:700">' + esc(notes) + '</span>' : esc(notes);
     rowsHtml+='<tr style="'+rowBg+'cursor:pointer" onclick="openAttDailyM(\''+user.id+'\',\''+ds+'\')" onmouseover="this.style.background=\'#f5f0ea\'" onmouseout="this.style.background=\''+( ds===todayStr?'#e8f5e9':'')+'\'">'+
       '<td style="'+dateStyle+'">'+mo+'/'+d+'</td>'+
