@@ -568,7 +568,7 @@ async function syncFromSupabase() {
 
     // 設定テーブルから商品マスター＆入荷ロットデータ＆利用者注文データを一括読み込み（全端末共有）
     const keysToFetch = ['bento_master', 'bento_todays_menu', 'bento_order_history', 'bento_daily_orders', 'bento_porte_users'];
-    const settingsRes = await SB.from('設定').select('*').in('key', keysToFetch).order('id', { ascending: false });
+    const settingsRes = await SB.from('設定').select('*').in('key', keysToFetch);
     if (settingsRes.data && settingsRes.data.length > 0) {
       const latestByKey = {};
       const countsByKey = {};
