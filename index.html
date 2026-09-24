@@ -5134,7 +5134,9 @@ function renderAttMonthlyTbl(){
     if(status==='調整休'){
       bIcon='−'; pIcon='−'; timeDisp='-';
     }
-    var stLabel=(status!=='-'&&status!=='調整休')?'<span class="badge" style="background:'+(statusColor[status]||'#888')+'">'+esc(status)+'</span>':'<span style="color:var(--sub)">-</span>';
+    var isTempDay = r && !isScheduled && status !== '調整休';
+    var tempTag = isTempDay ? ' <span style="color:var(--acc);font-weight:700;font-size:10.5px">★臨時</span>' : '';
+    var stLabel=(status!=='-'&&status!=='調整休')?'<span class="badge" style="background:'+(statusColor[status]||'#888')+'">'+esc(status)+'</span>'+tempTag:'<span style="color:var(--sub)">-</span>';
     var notesDisp = isAbLine && notes ? '<span style="color:var(--red);font-weight:700">' + esc(notes) + '</span>' : esc(notes);
     rowsHtml+='<tr style="'+rowBg+'cursor:pointer" onclick="openAttDailyM(\''+user.id+'\',\''+ds+'\')" onmouseover="this.style.background=\'#f5f0ea\'" onmouseout="this.style.background=\''+( ds===todayStr?'#e8f5e9':'')+'\'">'+
       '<td style="'+dateStyle+'">'+mo+'/'+d+'</td>'+
