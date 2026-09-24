@@ -1223,10 +1223,34 @@
       }
     }
 
-    // ─── 全端末リアルタイム自動同期（5秒間隔ポーリング＆フォーカス切替検知） ───
+    // ─── 全端末リアルタイム自動同期（Supabase Realtime WebSocket ＋ スマートポーリング） ───
+    let bentoRealtimeChannelMenu = null;
+
+    function initSupabaseRealtimeMenu() {
+      const { url, key } = getSupabaseCredentials();
+      if (!url || !key || typeof supabase === 'undefined') return;
+
+      try {
+        const SB = supabase.createClient(url, key);
+        if (bentoRealtimeChannelMenu) {
+          SB.removeChannel(bentoRealtimeChannelMenu);
+        }
+        bentoRealtimeChannelMenu = SB.channel('bento_sync_channel_menu')
+          .on('postgres_changes', { event: '*', schema: 'public', table: '設定' }, () => {
+            syncFromSupabase();
+          })
+          .subscribe();
+      } catch(e) {}
+    }
+
+    initSupabaseRealtimeMenu();
+
+    // バックアップ用スマートポーリング（アクティブタブ時のみ30秒間隔でアクセス制限を回避）
     setInterval(function() {
-      syncFromSupabase();
-    }, 5000);
+      if (!document.hidden) {
+        syncFromSupabase();
+      }
+    }, 30000);
 
     window.addEventListener('focus', function() {
       syncFromSupabase();

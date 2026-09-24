@@ -3576,10 +3576,34 @@ function showToast(message, type = 'info') {
   }, 2600);
 }
 
-// ─── 全端末リアルタイム同期（5秒間隔ポーリング＆フォーカス切替検知） ───
+// ─── 全端末リアルタイム同期（Supabase Realtime WebSocket ＋ スマートポーリング） ───
+let bentoRealtimeChannel = null;
+
+function initSupabaseRealtime() {
+  const { url, key } = getSupabaseCredentials();
+  if (!url || !key || typeof supabase === 'undefined') return;
+
+  try {
+    const SB = supabase.createClient(url, key);
+    if (bentoRealtimeChannel) {
+      SB.removeChannel(bentoRealtimeChannel);
+    }
+    bentoRealtimeChannel = SB.channel('bento_sync_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: '設定' }, () => {
+        syncFromSupabase();
+      })
+      .subscribe();
+  } catch(e) {}
+}
+
+initSupabaseRealtime();
+
+// バックアップ用スマートポーリング（アクティブタブ時のみ30秒間隔でアクセス制限を回避）
 setInterval(function() {
-  syncFromSupabase();
-}, 5000);
+  if (!document.hidden) {
+    syncFromSupabase();
+  }
+}, 30000);
 
 window.addEventListener('focus', function() {
   syncFromSupabase();
