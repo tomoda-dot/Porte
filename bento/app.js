@@ -3576,7 +3576,7 @@ function showToast(message, type = 'info') {
   }, 2600);
 }
 
-// ─── 全端末リアルタイム同期（Supabase Realtime WebSocket ＋ スマートポーリング） ───
+// ─── 端末間同期（ページ開いた時・フォーカス切替時・Supabase Realtime変更検知時） ───
 let bentoRealtimeChannel = null;
 
 function initSupabaseRealtime() {
@@ -3598,13 +3598,7 @@ function initSupabaseRealtime() {
 
 initSupabaseRealtime();
 
-// バックアップ用スマートポーリング（アクティブタブ時のみ30秒間隔でアクセス制限を回避）
-setInterval(function() {
-  if (!document.hidden) {
-    syncFromSupabase();
-  }
-}, 30000);
-
+// 画面再表示・フォーカス時に最新情報を取得
 window.addEventListener('focus', function() {
   syncFromSupabase();
 });
