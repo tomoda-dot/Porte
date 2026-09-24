@@ -998,8 +998,10 @@ async function renderCalendar(c){
     html+='<td class="'+cls+'" onclick="showDD(\''+ds+'\')"><div class="day-num">'+d+'</div><div class="day-info">';
     if(allDayIds.length>0 || da.length>0){
       var totalSch = allDayIds.length;
-      var tmpCount = dayTemp.filter(function(t){return allDayIds.indexOf(t.userId)<0?false:!sch.find(function(u){return u.id===t.userId;})&&!da.find(function(a){return a.userId===t.userId;});}).length;
-      if(totalSch>0)html+='<div class="user-count" style="margin-bottom:2px">予定:'+totalSch+'名'+(dayTemp.length>0?'<span style="color:var(--acc);font-size:9px">（臨時'+dayTemp.length+'）</span>':'')+'</div>';
+      var nonSchAtt = da.filter(function(a){ return a.status !== '調整休' && !sch.find(function(u){ return u.id === a.userId; }); });
+      var tempCountSet = new Set(dayTemp.map(function(t){ return t.userId; }).concat(nonSchAtt.map(function(a){ return a.userId; })));
+      var totalTempCount = tempCountSet.size;
+      if(totalSch>0)html+='<div class="user-count" style="margin-bottom:2px">予定:'+totalSch+'名'+(totalTempCount>0?'<span style="color:var(--acc);font-size:9px">（臨時'+totalTempCount+'）</span>':'')+'</div>';
       if(bc>0)html+='<span class="day-badge" style="background:var(--acc)">🍱'+bc+'</span> ';
       if(pc>0)html+='<span class="day-badge" style="background:#1565c0">🚐'+pc+'</span> ';
       if(ab>0)html+='<span class="day-badge" style="background:var(--red)">休:'+ab+'</span> ';
@@ -1199,10 +1201,11 @@ function renderDD(ds){
   var rows=allIds.map(function(uid){
     var u=S.users.find(function(u){return u.id===uid;});if(!u)return'';
     var r=da.find(function(a){return a.userId===u.id;});
-    var isTmp=calExtraIds.indexOf(uid)>=0;
+    var isSch = u.scheduleDays && u.scheduleDays.indexOf(dwj) >= 0;
+    var isTmp = calExtraIds.indexOf(uid) >= 0 || (!isSch && (r || (S.calTemp||[]).some(function(t){ return t.userId === uid && String(t.date) === ds; })));
     var tmpRec=(S.calTemp||[]).find(function(t){return t.userId===uid&&String(t.date)===ds;});
     var hasAttRecord=!!r;
-    var stLabel=r?'<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>':(isTmp?'<span style="color:var(--acc);font-size:11px;font-weight:700">臨時</span>':'<span style="color:var(--sub)">-</span>');
+    var stLabel=r?'<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>'+(isTmp?'<span style="color:var(--acc);font-size:10px;font-weight:700;margin-left:3px">★臨時</span>':''):(isTmp?'<span style="color:var(--acc);font-size:11px;font-weight:700">臨時</span>':'<span style="color:var(--sub)">-</span>');
     var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
     var sTime=(r&&r.startTime)?r.startTime:(isTmp?'':u.scheduleStart||'');
     var eTime=(r&&r.endTime)?r.endTime:(isTmp?'':u.scheduleEnd||'');
@@ -4989,6 +4992,7 @@ async function renderAttTbl(){
 var attMonthlyData=[];
 var dailyMonthlyData=[];
 var attMonthlyClosedDays=[];
+var attMonthlyTempData=[];
 async function loadAttMonthly(){
   var tbl=document.getElementById('att-monthly-tbl');
   if(!tbl)return;
@@ -4998,13 +5002,14 @@ async function loadAttMonthly(){
   if(_cache[cKey1]&&_cache[cKey2]&&(Date.now()-_cache[cKey1].t<300000)){
     attMonthlyData=_cache[cKey1].d;dailyMonthlyData=_cache[cKey2].d;
     var cKey3='getClosedDays|'+JSON.stringify([S.attMonth]);attMonthlyClosedDays=(_cache[cKey3]&&(Date.now()-_cache[cKey3].t<300000))?_cache[cKey3].d:[];
+    var cKey4='getTempByMonth|'+JSON.stringify([S.attMonth]);attMonthlyTempData=(_cache[cKey4]&&(Date.now()-_cache[cKey4].t<300000))?_cache[cKey4].d:[];
     renderAttMonthlyTbl();
     return;
   }
   showLoading(tbl,'月次データを読み込み中...');
   try{
-    var results=await Promise.all([cachedGas('getAttendance',S.attMonth),cachedGas('getDaily',S.attMonth),cachedGas('getClosedDays',S.attMonth)]);
-    attMonthlyData=results[0];dailyMonthlyData=results[1];attMonthlyClosedDays=results[2]||[];
+    var results=await Promise.all([cachedGas('getAttendance',S.attMonth),cachedGas('getDaily',S.attMonth),cachedGas('getClosedDays',S.attMonth),cachedGas('getTempByMonth',S.attMonth)]);
+    attMonthlyData=results[0];dailyMonthlyData=results[1];attMonthlyClosedDays=results[2]||[];attMonthlyTempData=results[3]||[];
     renderAttMonthlyTbl();
   }catch(e){
     tbl.innerHTML='読み込み失敗: '+e;
@@ -5024,6 +5029,7 @@ function renderAttMonthlyTbl(){
   var daysInMonth=new Date(yr,mo,0).getDate();
   var userAtts=attMonthlyData.filter(function(a){return String(a.userId)===String(S.attUserId);});
   var userDailies=dailyMonthlyData.filter(function(d){return String(d.userId)===String(S.attUserId);});
+  var userTemps=(attMonthlyTempData||[]).filter(function(t){return String(t.userId)===String(S.attUserId);});
   var rowsHtml='';
   var statCounts={'出席':0,'欠席':0,'遅刻':0,'早退':0,'体調不良':0,'通院':0,'予定':0};
   var bentoCount=0,pickupCount=0;
@@ -5082,7 +5088,8 @@ function renderAttMonthlyTbl(){
       notes=r.notes||'';
       if(statCounts[status]!==undefined)statCounts[status]++;
     }else{
-      if(isActive&&isScheduled){
+      var isTempUser = userTemps.some(function(t){return String(t.date)===ds;});
+      if((isActive&&isScheduled) || isTempUser){
         status='予定';
         timeDisp=(user.scheduleStart||'10:00')+'〜'+(user.scheduleEnd||'16:00');
         var uBCount=getBentoCountValue(user.bento);
@@ -5134,7 +5141,8 @@ function renderAttMonthlyTbl(){
     if(status==='調整休'){
       bIcon='−'; pIcon='−'; timeDisp='-';
     }
-    var isTempDay = r && !isScheduled && status !== '調整休';
+    var isTempUser = userTemps.some(function(t){return String(t.date)===ds;});
+    var isTempDay = ((r && !isScheduled) || (!r && isTempUser)) && status !== '調整休';
     var tempTag = isTempDay ? ' <span style="color:var(--acc);font-weight:700;font-size:10.5px">★臨時</span>' : '';
     var stLabel=(status!=='-'&&status!=='調整休')?'<span class="badge" style="background:'+(statusColor[status]||'#888')+'">'+esc(status)+'</span>'+tempTag:'<span style="color:var(--sub)">-</span>';
     var notesDisp = isAbLine && notes ? '<span style="color:var(--red);font-weight:700">' + esc(notes) + '</span>' : esc(notes);
