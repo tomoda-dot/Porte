@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="google" content="notranslate">
 <title>日報入力 | ひとつぎ</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -10,6 +10,8 @@
 <script src="supabase-adapter.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
+html, body, input, select, textarea, button { touch-action: manipulation; }
+input, select, textarea { font-size: 16px !important; }
 :root{--pri:#3d5a3e;--bg:#f7f4f0;--card:#fff;--bdr:#e0d6cf;--sub:#8a7a6a;--grn:#2e7d32;--acc:#c07830;}
 body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#333;min-height:100vh;font-size:15px;}
 
@@ -911,6 +913,15 @@ el('btn-next').onclick=function(){
   CURRENT_STATUS='出席';
   showMobileUserList();
 };
+document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
+let _lastTouchEndTablet = 0;
+document.addEventListener('touchend', function(e) {
+  let now = (new Date()).getTime();
+  if (now - _lastTouchEndTablet <= 300) {
+    e.preventDefault();
+  }
+  _lastTouchEndTablet = now;
+}, false);
 </script>
 </body>
 </html>

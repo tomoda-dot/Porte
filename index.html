@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8"><meta name="google" content="notranslate">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"><meta name="google" content="notranslate">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
 :root{--bg:#f5f0eb;--card:#fff;--pri:#3d5a3e;--pri-l:#5a7d5c;--acc:#c07830;--txt:#2c2c2c;--sub:#6b6b6b;--bdr:#e0d8d0;--hov:#f0ebe5;--red:#b33a3a;--grn:#3d7a3d;--shd:0 2px 12px rgba(0,0,0,.06)}
 *,*::before,*::after{box-sizing:border-box}
+html,body,input,select,textarea,button{touch-action:manipulation;}
 html,body{margin:0;padding:0;height:100%;overflow:hidden}
 body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--txt);font-size:13px}
-input,select,textarea,button{font-family:inherit;font-size:13px;box-sizing:border-box}
+input,select,textarea,button{font-family:inherit;font-size:16px!important;box-sizing:border-box}
 input,select,textarea{border:1.5px solid var(--bdr);border-radius:7px;padding:7px 10px;background:#fff;outline:none;max-width:100%}
 input:focus,select:focus,textarea:focus{border-color:var(--pri)}
 button{cursor:pointer;border:none;border-radius:7px;padding:7px 15px;font-weight:500;transition:all .15s}
@@ -596,8 +597,8 @@ async function renderDashboard(c){
   var todayTempIds=todayTemp.map(function(t){return t.userId;});
   var rawAllIds=Array.from(new Set(sch.map(function(u){return u.id;}).concat(att.map(function(a){return a.userId;})).concat(todayTempIds)));
   var allIds=rawAllIds.filter(function(uid){return offIds.indexOf(uid)<0;});
-  allIds.forEach(function(uid){
-    if(abIds.indexOf(uid)>=0)return;
+  var plannedIds=allIds.filter(function(uid){return abIds.indexOf(uid)<0;});
+  plannedIds.forEach(function(uid){
     var u=S.users.find(function(x){return x.id===uid;});if(!u)return;
     var r=att.find(function(a){return a.userId===uid;});
     var curB=(r&&r.bento)?r.bento:u.bento;
@@ -802,7 +803,7 @@ async function renderDashboard(c){
     '</button>'+
     '</div></div>'+
     '<div class="stats"><div class="stat"><div class="stat-l">登録者数</div><div class="stat-v">'+activeUsers.length+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div><div class="stat-s">定員'+(S.settings.capacity||30)+'名</div></div>'+
-    '<div class="stat" style="border-color:var(--grn)"><div class="stat-l">本日の予定</div><div class="stat-v">'+allIds.length+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div>'+
+    '<div class="stat" style="border-color:var(--grn)"><div class="stat-l">本日の予定</div><div class="stat-v">'+plannedIds.length+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div>'+
     '<div class="stat" style="border-color:var(--acc)"><div class="stat-l">🍱本日のお弁当</div><div class="stat-v">'+bc+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div>'+
     '<div class="stat" style="border-color:#1565c0"><div class="stat-l">🚐本日の送迎</div><div class="stat-v">'+pc+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div></div>'+
     '<div class="card"><div class="card-hd"><span class="card-t">本日の予定者</span></div><div id="ds-s">読み込み中...</div></div>'+
@@ -902,8 +903,8 @@ async function renderDashboard(c){
         return'<tr><td style="font-weight:600">'+esc(p.staffName)+'</td><td>'+fmtDate(p.grantDate)+'</td><td>'+p.days+'日</td><td style="font-weight:700;color:#0288d1">'+p.diff+'日後</td></tr>';
       }).join('')+'</tbody></table></div></div>':'');
 
-  document.getElementById('ds-s').innerHTML=allIds.length===0?'<p style="color:var(--sub)">予定なし</p>':
-    '<table><thead><tr><th>氏名</th><th>予定時間</th><th>弁当</th><th>送迎</th><th>状態</th><th>実績（出勤〜退勤）</th></tr></thead><tbody>'+allIds.map(function(uid){
+  document.getElementById('ds-s').innerHTML=plannedIds.length===0?'<p style="color:var(--sub)">予定なし</p>':
+    '<table><thead><tr><th>氏名</th><th>予定時間</th><th>弁当</th><th>送迎</th><th>状態</th><th>実績（出勤〜退勤）</th></tr></thead><tbody>'+plannedIds.map(function(uid){
       var u=S.users.find(function(x){return x.id===uid;}); if(!u)return'';
       var r=att.find(function(a){return a.userId===uid;});
       var isTmp=todayTempIds.indexOf(uid)>=0;
@@ -1140,6 +1141,16 @@ async function removeTempUser(tmpId, ds){
   }catch(e){await cAlert('取り消し失敗: '+e);}
 }
 function renderDD(ds){
+  var ym=ds.slice(0,7);
+  var closedDays=_closedDaysCache[ym]||[];
+  var isClosedDay=closedDays.indexOf(ds)>=0;
+  if(isClosedDay){
+    var hd='<div class="card-hd"><span class="card-t">'+fmtDate(ds)+'（'+weekday(ds)+'） <span style="color:var(--red);font-weight:700">休所日</span></span>'+
+      '<button class="modal-close" onclick="document.getElementById(\'cal-d\').innerHTML=\'\'">✕</button></div>';
+    document.getElementById('cal-d').innerHTML='<div class="card" style="margin-top:14px;background:#f8f8f8;border-left:4px solid #999">'+hd+
+      '<div style="padding:24px;text-align:center;color:#666;font-weight:700;font-size:14px">☕ 休所日のため、本日の利用予定はありません</div></div>';
+    return;
+  }
   var dsp=ds.split('-'),dw=new Date(Number(dsp[0]),Number(dsp[1])-1,Number(dsp[2])).getDay(),dwj=['日','月','火','水','木','金','土'][dw];
   var activeUsers=S.users.filter(function(u){return isUserActive(u,ds);});
   var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;});
@@ -10628,6 +10639,15 @@ function renderTimecard(c){
 }
 
 loadAll();
+document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
+let _lastTouchEndIndex = 0;
+document.addEventListener('touchend', function(e) {
+  let now = (new Date()).getTime();
+  if (now - _lastTouchEndIndex <= 300) {
+    e.preventDefault();
+  }
+  _lastTouchEndIndex = now;
+}, false);
 </script>
 <script src="poketama-easteregg.js"></script>
 </body>

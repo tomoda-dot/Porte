@@ -2,10 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8"><meta name="google" content="notranslate">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
+html, body, input, select, textarea, button { touch-action: manipulation; }
+input, select, textarea { font-size: 16px !important; }
 body{font-family:'Noto Sans JP',sans-serif;background:#f5f0ea;color:#333;min-height:100vh;overflow-x:hidden;user-select:none;-webkit-user-select:none}
 .header{background:linear-gradient(135deg,#5d4037,#8d6e63);color:#fff;padding:16px 24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
 .header-left{display:flex;align-items:center;justify-content:flex-start}
@@ -434,6 +436,15 @@ function closeSuccess(){document.getElementById('success-area').innerHTML='';}
 
 loadData();
 setInterval(function(){loadData();},300000);
+document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
+let _lastTouchEndTimecard = 0;
+document.addEventListener('touchend', function(e) {
+  let now = (new Date()).getTime();
+  if (now - _lastTouchEndTimecard <= 300) {
+    e.preventDefault();
+  }
+  _lastTouchEndTimecard = now;
+}, false);
 </script>
 <img src="kuma.png" style="position:fixed;bottom:10px;right:10px;width:180px;opacity:0.7;pointer-events:none;z-index:1">
 </body>
