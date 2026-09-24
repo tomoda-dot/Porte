@@ -640,7 +640,7 @@ async function renderUserList(){
     scheduled.forEach(function(u){html+=makeItem(u);});
   }
   if(others.length>0){
-    html+='<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:var(--sub);background:var(--bg);border-bottom:1px solid var(--bdr)">その他の利用者</div>';
+    html+='<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:#c62828;background:#ffebee;border-bottom:1px solid #ffcdd2">欠席利用者</div>';
     others.forEach(function(u){html+=makeItem(u);});
   }
   el('user-list').innerHTML=html||'<p style="padding:16px;color:var(--sub);font-size:12px">該当者なし</p>';
