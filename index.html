@@ -219,15 +219,30 @@ var renderBentoOptions=function(val){
          '<option value="2食"'+(is2?' selected':'')+'>2食</option>'+
          '<option value="3食"'+(is3?' selected':'')+'>3食</option>';
 };
-var fmtBentoBadge=function(curB, isAb, masterBento){
+var fmtBentoBadge=function(curB, isAb, masterBento, payMethod){
   if(isAb){
     var hasB = curB && curB !== 'なし' && curB !== '0' && curB !== 'false';
     return hasB ? '<span style="color:var(--red)">❌</span>' : '−';
   }
   var s = String(curB||'').trim();
-  if(s==='3食'||s==='3'||s==='3個') return '<span class="badge" style="background:#e65100;color:#fff;font-weight:700">🍱×3</span>';
-  if(s==='2食'||s==='2'||s==='2個') return '<span class="badge" style="background:#e65100;color:#fff;font-weight:700">🍱×2</span>';
-  if(s==='1食'||s==='1'||s==='1個'||s==='あり'||s==='true'||s==='要') return '🍱';
+  var isHas = (s==='1食'||s==='1'||s==='1個'||s==='あり'||s==='true'||s==='要'||s==='2食'||s==='2'||s==='2個'||s==='3食'||s==='3'||s==='3個');
+  if(isHas){
+    var pm = String(payMethod||'').trim();
+    var subText = '工賃';
+    var subColor = '#2e7d32'; // 緑色: 工賃払い
+    if(pm === '月末締め翌月払い' || pm === '翌月払い' || pm === '翌月') {
+      subText = '翌月';
+      subColor = '#1565c0'; // 青色: 翌月払い
+    } else if(pm === '当日' || pm === '当日払い') {
+      subText = '当日';
+      subColor = '#e65100'; // オレンジ色: 当日払い
+    }
+    var countStr = '';
+    if(s==='3食'||s==='3'||s==='3個') countStr = '×3';
+    else if(s==='2食'||s==='2'||s==='2個') countStr = '×2';
+
+    return '<span title="お弁当 ('+(pm||'工賃払い')+')" style="color:'+subColor+';font-weight:700;display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;font-size:11px;vertical-align:middle"><span>🍱'+countStr+'</span><span style="font-size:9.5px">'+subText+'</span></span>';
+  }
   var mHas = masterBento && masterBento !== 'なし' && masterBento !== '0' && masterBento !== 'false';
   if(mHas && (s==='なし'||s==='0'||s==='false')) return '<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
   return '−';
@@ -910,18 +925,19 @@ async function renderDashboard(c){
       var isTmp=todayTempIds.indexOf(uid)>=0;
       var s=u.scheduleStart||'', e=u.scheduleEnd||'';
       var b=(r&&r.bento)?r.bento:u.bento, p=(r&&r.pickup)?r.pickup:u.pickup;
+      var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:u.bentoPaymentMethod;
       var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
       var isAdj=r&&r.status==='調整休';
       var bIcon='−',pIcon='−';
       var pStr=String(p||'').trim();
       var hasP = pStr && pStr !== 'なし' && pStr !== '0' && pStr !== 'false';
       if(isAb){
-        bIcon=fmtBentoBadge(b, true, null);
+        bIcon=fmtBentoBadge(b, true, null, curPM);
         pIcon=hasP?'<span style="color:var(--red)">❌</span>':'−';
       }
       else if(isAdj){bIcon='−';pIcon='−';}
       else{
-        bIcon=fmtBentoBadge(b, false, null);
+        bIcon=fmtBentoBadge(b, false, null, curPM);
         if(!hasP) pIcon='−';
         else pIcon=fmtPickupIcon(pStr);
       }
@@ -1195,7 +1211,8 @@ function renderDD(ds){
     var timeDiff=sDiff||eDiff;
     var timeDisp='<span style="'+(timeDiff?'color:var(--red);font-weight:700':'')+'">'+sTime+'～'+eTime+'</span>';
     var curB=(r&&r.bento)?r.bento:u.bento,curP=(r&&r.pickup)?r.pickup:u.pickup;
-    var bIcon=fmtBentoBadge(curB, isAb, u.bento),pIcon='−';
+    var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:u.bentoPaymentMethod;
+    var bIcon=fmtBentoBadge(curB, isAb, u.bento, curPM),pIcon='−';
     var pStr=String(curP||'').trim();
     var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
     var uHasP=u.pickup&&u.pickup!=='なし'&&u.pickup!=='0'&&u.pickup!=='false';
@@ -4931,6 +4948,7 @@ async function renderAttTbl(){
       var bIcon='-',pIcon='-';
       var curB=r?(r.bento||u.bento):u.bento;
       var curP=r?(r.pickup||u.pickup):u.pickup;
+      var curPM=r?(r.bentoPaymentMethod||u.bentoPaymentMethod):u.bentoPaymentMethod;
       var isAb=r?['欠席','体調不良','通院'].indexOf(r.status)>=0:false;
       var isAdj=r?r.status==='調整休':false;
       var isNoWork=isAb||isAdj;
@@ -4938,7 +4956,7 @@ async function renderAttTbl(){
         bIcon='−';
         pIcon='−';
       }else{
-        bIcon=fmtBentoBadge(curB, isAb, u.bento);
+        bIcon=fmtBentoBadge(curB, isAb, u.bento, curPM);
         var pStr=String(curP||'').trim();
         var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
         var uHasP=u.pickup&&u.pickup!=='なし'&&u.pickup!=='0'&&u.pickup!=='false';
@@ -5047,8 +5065,9 @@ function renderAttMonthlyTbl(){
       var isAb=['欠席','体調不良','通院','調整休'].indexOf(status)>=0;
       var curB=r.bento||user.bento;
       var curP=r.pickup||user.pickup;
+      var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:user.bentoPaymentMethod;
       var bCount=getBentoCountValue(curB);
-      bIcon=fmtBentoBadge(curB, isAb, user.bento);
+      bIcon=fmtBentoBadge(curB, isAb, user.bento, curPM);
       if(bCount>0 && !isAb) bentoCount+=bCount;
       var pStr=String(curP||'').trim();
       var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
@@ -5067,7 +5086,7 @@ function renderAttMonthlyTbl(){
         status='予定';
         timeDisp=(user.scheduleStart||'10:00')+'〜'+(user.scheduleEnd||'16:00');
         var uBCount=getBentoCountValue(user.bento);
-        if(uBCount>0){bIcon=fmtBentoBadge(user.bento, false, user.bento);bentoCount+=uBCount;}
+        if(uBCount>0){bIcon=fmtBentoBadge(user.bento, false, user.bento, user.bentoPaymentMethod);bentoCount+=uBCount;}
         var uPStr=String(user.pickup||'').trim();
         var uHasP=uPStr&&uPStr!=='なし'&&uPStr!=='0'&&uPStr!=='false';
         if(uHasP){
