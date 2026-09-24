@@ -4948,12 +4948,12 @@ async function renderAttTbl(){
       }
       var repContent='-';
       var moodDisp='-';
-      if(rep){
-        repContent=rep.content||'';
+      if(rep && rep.content){
+        repContent=isAb ? '<span style="color:var(--red);font-weight:700">'+esc(rep.content)+'</span>' : esc(rep.content);
         moodDisp=rep.mood||'';
       }else{
         if(r){
-          if(isAb)repContent='<span style="color:var(--sub);font-style:italic">お休み ('+esc(r.notes||'')+')</span>';
+          if(isAb)repContent='<span style="color:var(--red);font-weight:700">お休み'+(r.notes?' ('+esc(r.notes)+')':'')+'</span>';
           else if(isAdj)repContent='<span style="color:var(--sub)">-</span>';
           else repContent='<span style="color:var(--sub)">未記入</span>';
         }
@@ -5086,11 +5086,16 @@ function renderAttMonthlyTbl(){
       var pmId=getPmId(rep,r);
       wtDispAm=wtName(amId);
       wtDispPm=wtName(pmId);
-      repContent=rep?rep.content||'':'-';
+      if(isAbLine){
+        var txt = (rep && rep.content) ? rep.content : ('お休み' + (notes ? ' (' + notes + ')' : ''));
+        repContent = '<span style="color:var(--red);font-weight:700">' + esc(txt) + '</span>';
+      }else{
+        repContent = rep ? esc(rep.content||'') : '-';
+      }
       moodDisp=rep?rep.mood||'':'-';
     }else{
       if(status!=='-'){
-        if(isAbLine)repContent='<span style="color:var(--sub);font-style:italic">お休み ('+esc(notes)+')</span>';
+        if(isAbLine)repContent='<span style="color:var(--red);font-weight:700">お休み'+(notes?' ('+esc(notes)+')':'')+'</span>';
         else if(status==='予定'||status==='調整休')repContent='<span style="color:var(--sub)">-</span>';
         else repContent='<span style="color:var(--sub)">未記入</span>';
       }
@@ -5109,6 +5114,7 @@ function renderAttMonthlyTbl(){
       bIcon='−'; pIcon='−'; timeDisp='-';
     }
     var stLabel=(status!=='-'&&status!=='調整休')?'<span class="badge" style="background:'+(statusColor[status]||'#888')+'">'+esc(status)+'</span>':'<span style="color:var(--sub)">-</span>';
+    var notesDisp = isAbLine && notes ? '<span style="color:var(--red);font-weight:700">' + esc(notes) + '</span>' : esc(notes);
     rowsHtml+='<tr style="'+rowBg+'cursor:pointer" onclick="openAttDailyM(\''+user.id+'\',\''+ds+'\')" onmouseover="this.style.background=\'#f5f0ea\'" onmouseout="this.style.background=\''+( ds===todayStr?'#e8f5e9':'')+'\'">'+
       '<td style="'+dateStyle+'">'+mo+'/'+d+'</td>'+
       '<td style="'+dateStyle+'">'+dwj+'</td>'+
@@ -5120,7 +5126,7 @@ function renderAttMonthlyTbl(){
       '<td style="font-size:11px">'+wtDispPm+'</td>'+
       '<td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(repContent)+'">'+repContent+'</td>'+
       '<td>'+moodLabel+'</td>'+
-      '<td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(notes)+'">'+esc(notes)+'</td>'+
+      '<td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(notes)+'">'+notesDisp+'</td>'+
       '</tr>';
   }
   var attendTotal=statCounts['出席']+statCounts['遅刻']+statCounts['早退'];
