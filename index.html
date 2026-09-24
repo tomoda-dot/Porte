@@ -943,6 +943,9 @@ async function renderCalendar(c){
   try{var results=await Promise.all([gas('getAttendance',ym),gas('getTempByMonth',ym),cachedGas('getClosedDays',ym)]);att=results[0];tempRecs=results[1];closedDays=results[2]||[];}catch(e){}
   S.calAtt = att;
   S.calTemp = tempRecs;
+  S.calClosed = closedDays;
+  S.calClosedYM = ym;
+  _closedDaysCache[ym] = closedDays;
   var fd=new Date(calY,calM-1,1).getDay(),dim=new Date(calY,calM,0).getDate(),ts=today();
   var html='<table class="cal"><thead><tr>';['日','月','火','水','木','金','土'].forEach(function(d,i){html+='<th'+(i===0?' style="color:var(--red)"':(i===6?' style="color:#1565c0"':''))+'>'+d+'</th>';});html+='</tr></thead><tbody><tr>';
   for(var i=0;i<fd;i++)html+='<td class="other"></td>';
@@ -1142,7 +1145,7 @@ async function removeTempUser(tmpId, ds){
 }
 function renderDD(ds){
   var ym=ds.slice(0,7);
-  var closedDays=_closedDaysCache[ym]||[];
+  var closedDays=(S.calClosed&&S.calClosedYM===ym)?S.calClosed:(_closedDaysCache[ym]||[]);
   var isClosedDay=closedDays.indexOf(ds)>=0;
   if(isClosedDay){
     var hd='<div class="card-hd"><span class="card-t">'+fmtDate(ds)+'（'+weekday(ds)+'） <span style="color:var(--red);font-weight:700">休所日</span></span>'+
