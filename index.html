@@ -7,16 +7,19 @@
 <title>就労継続支援B型 管理ソフト「Porte」</title>
 <script>
 (function() {
-  var APP_VER = '20260925_v10';
-  if (typeof localStorage !== 'undefined') {
-    var stored = localStorage.getItem('porte_ver');
-    if (stored !== APP_VER) {
+  var APP_VER = '20260925_v11';
+  try {
+    if (typeof localStorage !== 'undefined') {
       localStorage.setItem('porte_ver', APP_VER);
-      if (stored && typeof location !== 'undefined' && location.search.indexOf('v=') < 0) {
-        location.search = '?v=' + APP_VER;
-      }
     }
-  }
+    if (typeof location !== 'undefined' && location.search.indexOf('v=' + APP_VER) < 0) {
+      var newSearch = location.search ? (location.search + '&v=' + APP_VER) : ('?v=' + APP_VER);
+      if (location.search.indexOf('v=') >= 0) {
+        newSearch = location.search.replace(/v=[^&]+/, 'v=' + APP_VER);
+      }
+      location.replace(location.pathname + newSearch + location.hash);
+    }
+  } catch(e) {}
 })();
 </script>
 <style>
@@ -143,10 +146,10 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-<script src="supabase-lib.js?v=20260925_v10"></script>
-<script src="supabase-config.js?v=20260925_v10"></script>
-<script src="kokuho-receipt-generator.js?v=20260925_v10"></script>
-<script src="supabase-adapter.js?v=20260925_v10"></script>
+<script src="supabase-lib.js?v=20260925_v11"></script>
+<script src="supabase-config.js?v=20260925_v11"></script>
+<script src="kokuho-receipt-generator.js?v=20260925_v11"></script>
+<script src="supabase-adapter.js?v=20260925_v11"></script>
 </head>
 <body>
 <div id="app" class="loading"><div style="font-size:36px">🏢</div><div class="spin" style="margin:12px auto"></div><div>システムを起動中...</div></div>
@@ -10768,9 +10771,9 @@ setTimeout(function() {
 }, 3500);
 
 document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
-let _lastTouchEndIndex = 0;
+var _lastTouchEndIndex = 0;
 document.addEventListener('touchend', function(e) {
-  let now = (new Date()).getTime();
+  var now = (new Date()).getTime();
   if (now - _lastTouchEndIndex <= 300) {
     e.preventDefault();
   }
