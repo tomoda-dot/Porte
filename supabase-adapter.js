@@ -4,7 +4,17 @@
 // Supabase操作に自動変換する
 // ═══════════════════════════════════════════════════
 
-var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var supabase = (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+function _getSupabase(){
+  if(!supabase && typeof window !== 'undefined' && window.supabase && window.supabase.createClient){
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  if(!supabase){
+    throw new Error('Supabaseライブラリの読み込みに失敗しました。ネットワーク接続をご確認いただくか、ページを再読み込みしてください。');
+  }
+  return supabase;
+}
 
 // ID生成（GASと同じ形式）
 function _genId(prefix){return prefix+new Date().getTime()+Math.random().toString(36).substr(2,5);}
@@ -157,6 +167,7 @@ async function _updateSetting(key,value){
 
 // ═══ gas() 互換関数 ═══
 async function gas(fn){
+  _getSupabase();
   var args=Array.prototype.slice.call(arguments,1);
   var a1=args[0],a2=args[1],a3=args[2];
 

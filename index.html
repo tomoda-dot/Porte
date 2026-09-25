@@ -101,21 +101,37 @@ tr:hover td{background:var(--hov)}
 @media(max-width:768px){.side{width:52px}.side-hd{font-size:9px;padding:12px 4px}.side nav button span.lbl{display:none}.side nav button{justify-content:center;padding:10px 0}.main{padding:14px 12px}.grid2,.grid3{grid-template-columns:1fr}.modal{width:98vw}.cal td{height:100px;padding:4px}.cal .day-info{font-size:10px}.cal .day-badge{font-size:9px;padding:1px 5px}}
 </style>
 <script>
-window.onerror = function(msg, url, line, col, error) {
+var _earlyError = null;
+function _renderErrorUI(errText) {
   var app = document.getElementById('app');
   if (app && (!app.className || app.className.indexOf('app') < 0)) {
-    var errText = String(msg || '');
+    var txt = String(errText || 'システムエラーが発生しました');
+    app.className = '';
     app.innerHTML = '<div class="loading"><div style="font-size:36px">⚠️</div>' +
       '<div style="font-size:16px;font-weight:700;margin-top:10px">システム読み込みエラー</div>' +
-      '<div style="font-size:12px;color:var(--sub);margin:8px 0 16px;max-width:340px;text-align:center">スクリプトエラーを検知しました<br>(' + (errText.replace(/</g,'&lt;')) + ')</div>' +
+      '<div style="font-size:12px;color:var(--sub);margin:8px 0 16px;max-width:340px;text-align:center">スクリプトエラーを検知しました<br>(' + (txt.replace(/</g,'&lt;')) + ')</div>' +
       '<div style="display:flex;gap:10px">' +
         '<button class="bg" onclick="localStorage.clear();sessionStorage.clear();location.reload()" style="font-size:12px;padding:8px 16px">キャッシュをクリアして再起動</button>' +
         '<button class="bp" onclick="location.reload()" style="font-size:12px;padding:8px 16px">再読み込み</button>' +
       '</div></div>';
   }
+}
+window.onerror = function(msg, url, line, col, error) {
+  _earlyError = msg || 'スクリプトエラー';
+  _renderErrorUI(_earlyError);
 };
+document.addEventListener('DOMContentLoaded', function() {
+  if (_earlyError) {
+    _renderErrorUI(_earlyError);
+  }
+});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+if (typeof window.supabase === 'undefined') {
+  document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>');
+}
+</script>
 <script src="supabase-config.js?v=20260817_v8"></script>
 <script src="kokuho-receipt-generator.js?v=20260817_v8"></script>
 <script src="supabase-adapter.js?v=20260817_v8"></script>
@@ -10703,7 +10719,23 @@ function renderTimecard(c){
     '</div>';
 }
 
-loadAll();
+if (typeof _earlyError !== 'undefined' && _earlyError) {
+  _renderErrorUI(_earlyError);
+} else {
+  loadAll();
+}
+
+setTimeout(function() {
+  var app = document.getElementById('app');
+  if (app && app.className === 'loading' && (!S || !S.ready)) {
+    if (typeof getSession === 'function' && !getSession()) {
+      showLogin();
+    } else {
+      _renderErrorUI('通信またはデータの応答が遅延しています。ネットワーク接続をご確認ください。');
+    }
+  }
+}, 6000);
+
 document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
 let _lastTouchEndIndex = 0;
 document.addEventListener('touchend', function(e) {
