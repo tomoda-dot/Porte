@@ -126,15 +126,10 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script>
-if (typeof window.supabase === 'undefined') {
-  document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>');
-}
-</script>
-<script src="supabase-config.js?v=20260817_v8"></script>
-<script src="kokuho-receipt-generator.js?v=20260817_v8"></script>
-<script src="supabase-adapter.js?v=20260817_v8"></script>
+<script src="supabase.min.js?v=20260925_v9"></script>
+<script src="supabase-config.js?v=20260925_v9"></script>
+<script src="kokuho-receipt-generator.js?v=20260925_v9"></script>
+<script src="supabase-adapter.js?v=20260925_v9"></script>
 </head>
 <title>就労継続支援B型 管理ソフト「Porte」</title>
 <body>
@@ -10719,22 +10714,42 @@ function renderTimecard(c){
     '</div>';
 }
 
-if (typeof _earlyError !== 'undefined' && _earlyError) {
-  _renderErrorUI(_earlyError);
-} else {
-  loadAll();
+function _startAppRescue() {
+  var app = document.getElementById('app');
+  if (!app) return;
+  if (typeof _earlyError !== 'undefined' && _earlyError) {
+    _renderErrorUI(_earlyError);
+    return;
+  }
+  if (!getSession()) {
+    showLogin();
+  } else {
+    loadAll();
+  }
 }
+
+_startAppRescue();
+document.addEventListener('DOMContentLoaded', _startAppRescue);
+window.addEventListener('load', _startAppRescue);
 
 setTimeout(function() {
   var app = document.getElementById('app');
-  if (app && app.className === 'loading' && (!S || !S.ready)) {
-    if (typeof getSession === 'function' && !getSession()) {
+  if (app && app.className === 'loading') {
+    _startAppRescue();
+  }
+}, 1500);
+
+setTimeout(function() {
+  var app = document.getElementById('app');
+  if (app && app.className === 'loading') {
+    app.className = '';
+    if (!getSession()) {
       showLogin();
     } else {
       _renderErrorUI('通信またはデータの応答が遅延しています。ネットワーク接続をご確認ください。');
     }
   }
-}, 6000);
+}, 3500);
 
 document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
 let _lastTouchEndIndex = 0;
