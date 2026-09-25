@@ -1,7 +1,24 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"><meta name="google" content="notranslate">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>就労継続支援B型 管理ソフト「Porte」</title>
+<script>
+(function() {
+  var APP_VER = '20260925_v10';
+  if (typeof localStorage !== 'undefined') {
+    var stored = localStorage.getItem('porte_ver');
+    if (stored !== APP_VER) {
+      localStorage.setItem('porte_ver', APP_VER);
+      if (stored && typeof location !== 'undefined' && location.search.indexOf('v=') < 0) {
+        location.search = '?v=' + APP_VER;
+      }
+    }
+  }
+})();
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
 :root{--bg:#f5f0eb;--card:#fff;--pri:#3d5a3e;--pri-l:#5a7d5c;--acc:#c07830;--txt:#2c2c2c;--sub:#6b6b6b;--bdr:#e0d8d0;--hov:#f0ebe5;--red:#b33a3a;--grn:#3d7a3d;--shd:0 2px 12px rgba(0,0,0,.06)}
@@ -131,7 +148,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="kokuho-receipt-generator.js?v=20260925_v10"></script>
 <script src="supabase-adapter.js?v=20260925_v10"></script>
 </head>
-<title>就労継続支援B型 管理ソフト「Porte」</title>
 <body>
 <div id="app" class="loading"><div style="font-size:36px">🏢</div><div class="spin" style="margin:12px auto"></div><div>システムを起動中...</div></div>
 <script>
