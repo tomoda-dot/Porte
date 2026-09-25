@@ -86,8 +86,8 @@ canvas{border:2px solid #ddd;border-radius:10px;width:100%;height:200px;touch-ac
 <div id="modal-area"></div>
 <div id="success-area"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="supabase-config.js"></script>
+<script src="supabase-lib.js?v=20260925_v12"></script>
+<script src="supabase-config.js?v=20260925_v12"></script>
 <script>
 var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 var TCData=null,STData=null,currentMode='user';
@@ -113,11 +113,15 @@ async function getTimecardUsers(){
   var p=await Promise.all([
     sb.from('利用者').select('*'),
     sb.from('出欠').select('*').eq('date',today2),
-    sb.from('設定').select('value').eq('key','closedDays_'+ym).limit(1)
+    sb.from('設定').select('value').eq('key','closedDays_'+ym).limit(1),
+    sb.from('臨時利用').select('*').eq('date',today2)
   ]);
   var users=p[0].data||[];
   var att=p[1].data||[];
   var closedRow=(p[2].data&&p[2].data.length>0)?p[2].data[0]:null;
+  var tempUsers=p[3].data||[];
+  var tempUids=tempUsers.map(function(t){return String(t.userId);});
+
   var closedDays=[];
   if(closedRow&&closedRow.value){
     try{closedDays=JSON.parse(closedRow.value);}catch(e){}
@@ -133,12 +137,14 @@ async function getTimecardUsers(){
 
     var isOffStatus=rec&&['欠席','体調不良','通院','調整休','お休み','公休','無断欠席'].indexOf(rec.status)>=0;
     var dayMatch=u.scheduleDays&&u.scheduleDays.indexOf(dow2)>=0;
-    var isScheduled=!isTodayClosed&&!isOffStatus&&dayMatch;
+    var isTemp=tempUids.indexOf(String(u.id))>=0;
+    var isScheduled=!isTodayClosed&&!isOffStatus&&(dayMatch||isTemp);
 
     result.push({id:u.id,name:u.name,furigana:u.furigana||'',
       scheduleStart:u.scheduleStart||'10:00',scheduleEnd:u.scheduleEnd||'16:00',
       bento:u.bento||'なし',pickup:u.pickup||'なし',
       isScheduled:isScheduled,
+      isTemp:isTemp,
       isOffStatus:isOffStatus,
       status:rec?rec.status:'',
       clockedIn:rec&&rec.startTime?true:false,
@@ -354,6 +360,7 @@ function renderUserGrid(){
     var cls='user-card',statusHtml='';
     if(u.clockedIn&&u.clockedOut){cls+=' done-both';statusHtml='<div class="status out">✅ 退勤済</div><div class="time-info">'+u.startTime+' 〜 '+u.endTime+'</div>';}
     else if(u.clockedIn){cls+=' done-in';statusHtml='<div class="status in">🟢 出勤中</div><div class="time-info">'+u.startTime+' 〜</div>';}
+    else if(u.isTemp){statusHtml='<div class="status scheduled" style="background:#fff3e0;color:#c07830;font-weight:700">★臨時</div><div class="time-info">'+u.scheduleStart+' 〜 '+u.scheduleEnd+'</div>';}
     else{statusHtml='<div class="status scheduled">予定</div><div class="time-info">'+u.scheduleStart+' 〜 '+u.scheduleEnd+'</div>';}
     html+='<div class="'+cls+'" onclick="openClock(\''+u.id+'\')"><div class="name">'+u.name+'</div><div class="furigana">'+u.furigana+'</div>'+statusHtml+'</div>';
   });
@@ -437,9 +444,9 @@ function closeSuccess(){document.getElementById('success-area').innerHTML='';}
 loadData();
 setInterval(function(){loadData();},300000);
 document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
-let _lastTouchEndTimecard = 0;
+var _lastTouchEndTimecard = 0;
 document.addEventListener('touchend', function(e) {
-  let now = (new Date()).getTime();
+  var now = (new Date()).getTime();
   if (now - _lastTouchEndTimecard <= 300) {
     e.preventDefault();
   }
