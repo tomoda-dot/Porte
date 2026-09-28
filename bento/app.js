@@ -87,10 +87,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   initSupabaseRealtimeApp();
 
-  setInterval(() => {
-    syncFromSupabase();
-  }, 10000);
-
   window.addEventListener('focus', () => {
     syncFromSupabase();
   });

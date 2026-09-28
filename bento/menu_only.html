@@ -551,10 +551,6 @@
       loadClientData();
       renderClientView();
 
-      setInterval(() => {
-        syncFromSupabase();
-      }, 10000);
-
       // LocalStorage変更のリアルタイム検知
       window.addEventListener('storage', () => {
         loadClientData();
