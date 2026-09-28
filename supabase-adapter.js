@@ -872,10 +872,11 @@ async function _calcServiceRecordData(srYm){
       var dd={day:d,dow:dow,status:'',startTime:'',endTime:'',pickup:false,dropoff:false,meal:false,notes:'',signUrl:''};
       if(rec&&_isAttend(rec)){
         totalDays++;dd.status='1';dd.startTime=rec.startTime||'';dd.endTime=rec.endTime||'';
-        var pu=String(rec.pickup||'');
+        var pu=(rec.pickup!==undefined&&rec.pickup!==null&&String(rec.pickup).trim()!=='')?String(rec.pickup):String(user.pickup||'');
         if(pu.indexOf('往')>=0||pu.indexOf('迎')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.pickup=true;pickupCount++;}
         if(pu.indexOf('復')>=0||pu.indexOf('送')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.dropoff=true;dropoffCount++;}
-        if(_isBento(rec)){dd.meal=true;mealCount++;}
+        var curBento=(rec.bento!==undefined&&rec.bento!==null&&String(rec.bento).trim()!=='')?rec.bento:user.bento;
+        if(_isBento({bento:curBento})){dd.meal=true;mealCount++;}
         dd.notes=rec.notes||'';dd.signUrl=rec.signature||'';
       }
       days.push(dd);
@@ -1068,7 +1069,7 @@ async function _generateKokuhoReceiptCSV(ym, dataType, kokuhoOpts) {
         endTime: String(rec.endTime || '16:00').replace(/[^0-9]/g, ''),
         actualHours: netH,
         pickupFlag: (rec.pickup && rec.pickup !== 'なし' && rec.pickup !== 'false') || (user.pickup && user.pickup !== 'なし' && rec.pickup !== 'なし'),
-        mealFlag: _getBentoCount(rec) > 0,
+        mealFlag: _getBentoCount(rec) > 0 || (user.bento && user.bento !== 'なし' && rec.bento !== 'なし' && _getBentoCount({bento: user.bento}) > 0),
         remarks: rec.notes || ''
       };
       dataRows.push(generator.formatShuukouBServiceRecordRow(rowObj));
