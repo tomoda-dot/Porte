@@ -59,6 +59,23 @@ let tableShowAll = false;
 // モーダル内 一時編集ロット
 let tempModalLots = [];
 
+let bentoRealtimeChannelApp = null;
+function initSupabaseRealtimeApp() {
+  const { url, key } = getSupabaseCredentials();
+  if (!url || !key || typeof supabase === 'undefined') return;
+  try {
+    const SB = supabase.createClient(url, key);
+    if (bentoRealtimeChannelApp) {
+      SB.removeChannel(bentoRealtimeChannelApp);
+    }
+    bentoRealtimeChannelApp = SB.channel('bento_sync_channel_app')
+      .on('postgres_changes', { event: '*', schema: 'public', table: '設定' }, () => {
+        syncFromSupabase();
+      })
+      .subscribe();
+  } catch(e) {}
+}
+
 // DOM ready
 document.addEventListener('DOMContentLoaded', async () => {
   initDate();
@@ -68,6 +85,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMonthlyMatrixMonthSelect();
   renderAll();
   
+  initSupabaseRealtimeApp();
+
+  setInterval(() => {
+    syncFromSupabase();
+  }, 10000);
+
+  window.addEventListener('focus', () => {
+    syncFromSupabase();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) syncFromSupabase();
+  });
+
   // ページを開いた瞬間に自動的にPorte DBから最新利用者＆出欠データを非同期取得して画面更新
   try {
     const { url, key } = getSupabaseCredentials();
@@ -137,13 +167,6 @@ function normalizeUserData(u) {
     u.selectedBentoIds.push('');
   }
   if (u.selectedBentoIds.length > u.bentoCount) {
-    const droppedIds = u.selectedBentoIds.slice(u.bentoCount);
-    droppedIds.forEach(bId => {
-      if (bId) {
-        const b = bentoMaster.find(item => item.id === bId);
-        if (b) addBentoStockLot(b, 1, getOffsetDateStr(7), 'STOCK');
-      }
-    });
     u.selectedBentoIds = u.selectedBentoIds.slice(0, u.bentoCount);
   }
 
@@ -2832,6 +2855,8 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         // 既存の選択中のお弁当IDを保護・マージ
         const existingUser = porteUsers.find(item => String(item.id).trim() === uId || String(item.name).trim() === String(u.name || u.氏名).trim());
         const savedBentoId = existingUser ? (existingUser.selectedBentoId || '') : '';
+        const savedBentoIds = existingUser && Array.isArray(existingUser.selectedBentoIds) ? [...existingUser.selectedBentoIds] : (savedBentoId ? [savedBentoId] : []);
+        const savedBentoCount = existingUser && existingUser.bentoCount !== undefined ? existingUser.bentoCount : undefined;
 
         loadedUsers.push({
           id: u.id || `P${idx+1}`,
@@ -2842,7 +2867,9 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           status: r ? (r.status || '出席') : (isAbsent ? '利用曜日外' : '出席'),
           wantsBento: wantsBento,
           bentoVal: curB,
-          selectedBentoId: savedBentoId
+          bentoCount: savedBentoCount,
+          selectedBentoId: savedBentoId,
+          selectedBentoIds: savedBentoIds
         });
       });
     }
@@ -2875,6 +2902,8 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
 
         const existingUser = porteUsers.find(item => String(item.id).trim() === sId || String(item.name).trim() === (`👔 ${sName}`));
         const savedBentoId = existingUser ? (existingUser.selectedBentoId || '') : '';
+        const savedBentoIds = existingUser && Array.isArray(existingUser.selectedBentoIds) ? [...existingUser.selectedBentoIds] : (savedBentoId ? [savedBentoId] : []);
+        const savedBentoCount = existingUser && existingUser.bentoCount !== undefined ? existingUser.bentoCount : undefined;
 
         loadedUsers.push({
           id: sId || `ST${idx+1}`,
@@ -2884,7 +2913,9 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           note: wantsBento ? '【スタッフ用お弁当】' : '【お弁当不要】',
           status: r ? '出勤' : '未出勤',
           wantsBento: wantsBento,
-          selectedBentoId: savedBentoId
+          bentoCount: savedBentoCount,
+          selectedBentoId: savedBentoId,
+          selectedBentoIds: savedBentoIds
         });
       });
     }

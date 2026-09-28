@@ -551,6 +551,10 @@
       loadClientData();
       renderClientView();
 
+      setInterval(() => {
+        syncFromSupabase();
+      }, 10000);
+
       // LocalStorage変更のリアルタイム検知
       window.addEventListener('storage', () => {
         loadClientData();
@@ -909,13 +913,6 @@
         u.selectedBentoIds.push('');
       }
       if (u.selectedBentoIds.length > u.bentoCount) {
-        const droppedIds = u.selectedBentoIds.slice(u.bentoCount);
-        droppedIds.forEach(bId => {
-          if (bId) {
-            const b = bentoMaster.find(item => item.id === bId);
-            if (b) addBentoStockLot(b, 1, getOffsetDateStr(7), 'STOCK');
-          }
-        });
         u.selectedBentoIds = u.selectedBentoIds.slice(0, u.bentoCount);
       }
 
