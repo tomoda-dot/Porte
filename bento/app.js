@@ -1001,11 +1001,116 @@ function initMonthlyMatrixMonthSelect() {
   }
 }
 
+let isSyncingMonthlyAttendance = false;
+
+async function syncMonthlyAttendanceToDailyOrders(targetMonth) {
+  if (isSyncingMonthlyAttendance) return;
+  const { url, key } = getSupabaseCredentials();
+  if (!url || !key || typeof supabase === 'undefined') return;
+
+  isSyncingMonthlyAttendance = true;
+  try {
+    const SB = supabase.createClient(url, key);
+    const { data: attList, error } = await SB.from('出欠').select('*').like('date', `${targetMonth}%`);
+    if (error || !attList || attList.length === 0) {
+      isSyncingMonthlyAttendance = false;
+      return;
+    }
+
+    let modified = false;
+    const isBentoPositive = (val, mealVal) => {
+      if (mealVal === true || mealVal === 'あり' || mealVal === '必要' || mealVal === '1食' || mealVal === '2食' || mealVal === '3食') return true;
+      const s = String(val || '').trim();
+      return (
+        s === 'あり' || s === '必要' || s === 'true' || s === '1' ||
+        s === '1食' || s === '2食' || s === '3食' ||
+        s === '2' || s === '3' || s === '1個' || s === '2個' || s === '3個'
+      );
+    };
+
+    attList.forEach(att => {
+      if (!att || !att.date) return;
+      const dateKey = att.date;
+      const uId = String(att.userId || att.user_id || '').trim();
+      const uName = String(att.name || att.userName || '').trim();
+
+      const isAbsent = (
+        att.status === '欠席' || 
+        att.status === '公休' || 
+        att.status === '調整休' || 
+        att.status === '欠勤' || 
+        att.status === 'お休み' || 
+        att.status === 'キャンセル'
+      );
+
+      if (isAbsent) return;
+
+      const userMaster = porteUsers.find(u => (uId && String(u.id).trim() === uId) || (uName && String(u.name).trim() === uName));
+      const bentoVal = (att.bento !== undefined && att.bento !== null && att.bento !== '') 
+        ? String(att.bento).trim() 
+        : (userMaster && userMaster.bento ? String(userMaster.bento).trim() : '');
+      const mealVal = att.meal;
+
+      if (!isBentoPositive(bentoVal, mealVal)) return;
+
+      if (!dailyOrders[dateKey]) {
+        dailyOrders[dateKey] = {
+          status: 'CONFIRMED',
+          confirmedAt: `${dateKey} 12:00 (出欠連携)`,
+          orders: []
+        };
+      }
+
+      if (!dailyOrders[dateKey].orders) dailyOrders[dateKey].orders = [];
+
+      const targetUserId = uId || (userMaster ? userMaster.id : uName);
+      const targetUserName = uName || (userMaster ? userMaster.name : uId);
+
+      const existingOrder = dailyOrders[dateKey].orders.find(o => 
+        (o && o.userId && targetUserId && String(o.userId).trim() === String(targetUserId).trim()) ||
+        (o && o.userName && targetUserName && String(o.userName).replace('👔','').trim() === String(targetUserName).replace('👔','').trim())
+      );
+
+      if (!existingOrder) {
+        const defaultBento = bentoMaster[0] || { id: 'default', name: '日替わり弁当', category: 'お弁当', price: 500, icon: '🍱' };
+        dailyOrders[dateKey].orders.push({
+          orderId: 'ord_att_' + dateKey + '_' + (targetUserId || Math.random().toString(36).substr(2, 5)),
+          dateKey: dateKey,
+          userId: targetUserId,
+          userName: targetUserName,
+          userKana: userMaster ? userMaster.kana : '',
+          userType: userMaster ? userMaster.type : '通所',
+          slotIndex: 0,
+          slotName: '1食目',
+          bentoId: defaultBento.id,
+          bentoName: defaultBento.name,
+          category: defaultBento.category || 'お弁当',
+          bentoIcon: defaultBento.icon || '🍱',
+          price: defaultBento.price || 500
+        });
+        modified = true;
+      }
+    });
+
+    if (modified) {
+      saveDailyOrders();
+      syncOrderHistoryWithDailyOrders();
+      renderMonthlyMatrix();
+    }
+  } catch (e) {
+    console.warn('syncMonthlyAttendanceToDailyOrders error:', e);
+  } finally {
+    isSyncingMonthlyAttendance = false;
+  }
+}
+
 function renderMonthlyMatrix() {
   const container = document.getElementById('monthlyMatrixContainer');
   if (!container) return;
 
   const targetMonth = currentSelectedMonth || getTodayKey().slice(0, 7);
+  syncMonthlyAttendanceToDailyOrders(targetMonth);
+
   const [yearStr, monthStr] = targetMonth.split('-');
   const year = parseInt(yearStr, 10);
   const month = parseInt(monthStr, 10);
