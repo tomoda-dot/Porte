@@ -877,6 +877,15 @@ function confirmDailyOrder() {
     return;
   }
 
+  // 注文確定時に各商品の在庫を減算 (FIFO)
+  snapshot.forEach(s => {
+    const b = bentoMaster.find(item => item.id === s.bentoId);
+    if (b && b.stock > 0) {
+      deductBentoStockFIFO(b, 1);
+    }
+  });
+  saveMaster();
+
   dailyOrders[todayKey] = {
     status: 'CONFIRMED',
     confirmedAt: new Date().toLocaleString('ja-JP'),
@@ -907,12 +916,23 @@ function confirmDailyOrder() {
   saveOrderHistory();
 
   renderAll();
-  showToast(`🔒 本日(${todayKey})の注文【計${snapshot.length}食】を確定し、履歴・マトリクスに反映しました！`, 'success');
+  showToast(`🔒 本日(${todayKey})の注文【計${snapshot.length}食】を確定し、在庫を減算して履歴・マトリクスに反映しました！`, 'success');
 }
 
 function unlockDailyOrder() {
   const todayKey = getTodayKey();
   if (confirm('本日の注文確定を解除しますか？（未確定状態に戻し編集可能にします）')) {
+    // 確定解除時に、減算されていた確定分の在庫を戻す
+    if (dailyOrders[todayKey] && dailyOrders[todayKey].status === 'CONFIRMED' && Array.isArray(dailyOrders[todayKey].orders)) {
+      dailyOrders[todayKey].orders.forEach(o => {
+        const b = bentoMaster.find(item => item.id === o.bentoId);
+        if (b) {
+          addBentoStockLot(b, 1, getOffsetDateStr(7), 'RESTORED');
+        }
+      });
+      saveMaster();
+    }
+
     if (dailyOrders[todayKey]) {
       dailyOrders[todayKey].status = 'DRAFT';
       saveDailyOrders();
@@ -923,7 +943,7 @@ function unlockDailyOrder() {
     saveOrderHistory();
 
     renderAll();
-    showToast('🔓 本日注文の確定を解除し、履歴・マトリクスをクリアしました（編集可能状態）', 'info');
+    showToast('🔓 本日注文の確定を解除し、在庫を元に戻しました（編集可能状態）', 'info');
   }
 }
 
@@ -1963,13 +1983,6 @@ window.changeUserBentoCount = function(userIndex, countVal) {
   const newCount = Math.max(0, parseInt(countVal, 10) || 0);
 
   if (newCount <= 0) {
-    // 注文なしに設定：既存スロットの在庫をFIFO戻し
-    (user.selectedBentoIds || []).forEach(bId => {
-      if (bId) {
-        const b = bentoMaster.find(item => item.id === bId);
-        if (b) addBentoStockLot(b, 1, getOffsetDateStr(7), 'STOCK');
-      }
-    });
     user.wantsBento = false;
     user.bentoCount = 0;
     user.selectedBentoIds = [];
@@ -1977,14 +1990,6 @@ window.changeUserBentoCount = function(userIndex, countVal) {
   } else {
     user.wantsBento = true;
     if (newCount < user.bentoCount) {
-      // 減食：削減されるスロットの在庫を戻す
-      for (let i = newCount; i < user.selectedBentoIds.length; i++) {
-        const bId = user.selectedBentoIds[i];
-        if (bId) {
-          const b = bentoMaster.find(item => item.id === bId);
-          if (b) addBentoStockLot(b, 1, getOffsetDateStr(7), 'STOCK');
-        }
-      }
       user.selectedBentoIds = user.selectedBentoIds.slice(0, newCount);
     } else {
       while (user.selectedBentoIds.length < newCount) {
@@ -1995,7 +2000,6 @@ window.changeUserBentoCount = function(userIndex, countVal) {
     user.selectedBentoId = user.selectedBentoIds[0] || '';
   }
 
-  saveMaster();
   savePorteUsers();
   renderAll();
   showToast(`${user.name} 様の希望食数を「${newCount > 0 ? newCount + '食' : '注文なし'}」に変更しました`, 'info');
@@ -2016,7 +2020,6 @@ window.assignUserBentoSlot = function(userIndex, slotIndex, newBentoId) {
   const oldBentoId = user.selectedBentoIds[slotIndex];
   if (oldBentoId === newBentoId) return;
 
-  // Validate new bento stock FIRST before modifying old bento stock
   if (newBentoId) {
     const newBento = bentoMaster.find(b => b.id === newBentoId);
     if (newBento) {
@@ -2025,21 +2028,7 @@ window.assignUserBentoSlot = function(userIndex, slotIndex, newBentoId) {
         renderAll();
         return;
       }
-    }
-  }
-
-  if (oldBentoId) {
-    const oldBento = bentoMaster.find(b => b.id === oldBentoId);
-    if (oldBento) {
-      addBentoStockLot(oldBento, 1, getOffsetDateStr(7), 'STOCK');
-    }
-  }
-
-  if (newBentoId) {
-    const newBento = bentoMaster.find(b => b.id === newBentoId);
-    if (newBento) {
       user.wantsBento = true;
-      deductBentoStockFIFO(newBento, 1);
 
       if (!todaysMenuIds.includes(newBento.id)) {
         const replaceableIndex = todaysMenuIds.findIndex(id => {
@@ -2058,9 +2047,7 @@ window.assignUserBentoSlot = function(userIndex, slotIndex, newBentoId) {
   user.selectedBentoIds[slotIndex] = newBentoId;
   user.selectedBentoId = user.selectedBentoIds[0] || '';
 
-  saveMaster();
   savePorteUsers();
-  saveOrderHistory();
   renderAll();
 };
 

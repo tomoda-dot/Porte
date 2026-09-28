@@ -1169,16 +1169,10 @@
       const oldBentoId = user.selectedBentoIds[slotIndex];
       if (oldBentoId === newBentoId) return;
 
-      if (oldBentoId) {
-        const oldBento = bentoMaster.find(b => b.id === oldBentoId);
-        if (oldBento) addBentoStockLot(oldBento, 1, getOffsetDateStr(7), 'STOCK');
-      }
-
       if (newBentoId) {
         const newBento = bentoMaster.find(b => b.id === newBentoId);
         if (newBento) {
           if (newBento.stock <= 0) return;
-          deductBentoStockFIFO(newBento, 1);
           user.wantsBento = true;
         }
       }
@@ -1186,9 +1180,7 @@
       user.selectedBentoIds[slotIndex] = newBentoId;
       user.selectedBentoId = user.selectedBentoIds[0] || '';
 
-      localStorage.setItem('bento_master', JSON.stringify(bentoMaster));
       localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
-      saveMasterToSupabase();
       savePorteUsersToSupabase();
       updateAndSaveDailyOrdersAndHistory();
     }
