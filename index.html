@@ -585,7 +585,7 @@ async function loadAll(){
   }
 }
 
-var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['bmi','⚖️','BMI測定管理'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['export','📄','帳票出力'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
+var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['bmi','⚖️','BMI測定管理'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['wageSettings','⚙️','工賃・手当変更'],['wageAdjustments','🎛️','手当・時間調整'],['export','📄','帳票出力'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
 
 var _shellRendered=false;
 function render(){
@@ -2197,14 +2197,15 @@ function openUserModal(u, isTabSwitch){
     '</select></div></div>'+
     '<div class="grid2"><div class="field"><label>契約時間（開始） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cstart" value="'+(d.contractStart||'09:10')+'" style="width:100%"></div>'+
     '<div class="field"><label>契約時間（終了） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cend" value="'+(d.contractEnd||'16:30')+'" style="width:100%"></div></div>'+
-    '<div class="grid3"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%">'+renderBentoOptions(d.bento)+'</select></div>'+
+    '<div class="grid3" style="margin-top:8px"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%">'+renderBentoOptions(d.bento)+'</select></div>'+
     '<div class="field"><label>お弁当支払方法</label><select id="uf-bento-pay" style="width:100%"><option value="工賃払い"'+(d.bentoPaymentMethod==='工賃払い'||!d.bentoPaymentMethod?' selected':'')+'>工賃払い</option><option value="当日"'+(d.bentoPaymentMethod==='当日'?' selected':'')+'>当日払い</option><option value="月末締め翌月払い"'+(d.bentoPaymentMethod==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option></select></div>'+
     '<div class="field"><label>送迎</label><select id="uf-pickup" style="width:100%">'+
       '<option value="なし"'+(d.pickup==='なし'||!d.pickup?' selected':'')+'>なし</option>'+
       '<option value="往復"'+(d.pickup==='往復'||d.pickup==='あり'||d.pickup==='必要'?' selected':'')+'>往復</option>'+
       '<option value="往路"'+(d.pickup==='往路'||d.pickup==='行き'?' selected':'')+'>往路（行きのみ）</option>'+
       '<option value="復路"'+(d.pickup==='復路'||d.pickup==='帰り'?' selected':'')+'>復路（帰りのみ）</option>'+
-    '</select></div></div></div>';
+    '</select></div></div>'+
+    '<div class="grid2" style="margin-top:8px"><div class="field"><label>交通費支給額（1日あたり/円） <span style="font-size:10px;color:var(--sub);font-weight:400">※現金支給</span></label><input type="number" id="uf-trans-allowance" value="'+(d.transportationAllowance!=null?d.transportationAllowance:0)+'" placeholder="例: 200" style="width:100%"></div><div></div></div></div>';
 
   // 利用後の進路（基本情報内）
   html+='<div class="card" style="margin-bottom:12px"><div class="section-title" style="margin-top:0">利用後の進路</div>'+
@@ -3885,6 +3886,7 @@ async function saveUser(id){
     breakMin:gv('uf-brk',existing.breakMin!==undefined&&existing.breakMin!==null?existing.breakMin:'60'),
     contractStart:gv('uf-cstart',existing.contractStart||'09:10'),contractEnd:gv('uf-cend',existing.contractEnd||'16:30'),
     bento:gv('uf-bento',existing.bento||'なし'),bentoPaymentMethod:gv('uf-bento-pay',existing.bentoPaymentMethod||'工賃払い'),pickup:gv('uf-pickup',existing.pickup||'なし'),
+    transportationAllowance:Number(gv('uf-trans-allowance',existing.transportationAllowance||0))||0,
     notes:gv('uf-notes',existing.notes||''),
     afterCarePlan:gv('uf-aftercare',existing.afterCarePlan||''),afterCareOrg:gv('uf-afterorg',existing.afterCareOrg||''),
     relatedOrgs:document.getElementById('rel-org-body')?JSON.stringify(collectRelOrgs()):(existing.relatedOrgs||''),
@@ -6299,6 +6301,10 @@ function calcWage(r,user){
 async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var attRes=await Promise.all([cachedGas('getAttendance',wM),cachedGas('getClosedDays',wM)]);var att=attRes[0],closedDays=attRes[1]||[];var bentoPrice=Number(S.settings.bentoPrice)||100;var data=S.users.map(function(u){
   var recs=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
   var tH=0,tW=0,bt={},bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
+  var tTrans=recs.reduce(function(sum,r){
+    var tra=(r.transportationAllowance!==undefined&&r.transportationAllowance!==null&&r.transportationAllowance!=='')?Number(r.transportationAllowance):Number(u.transportationAllowance||0);
+    return sum+tra;
+  },0);
   recs.forEach(function(r){
     var w=calcWage(r,u);
     tH+=w.h; tW+=w.wage;
@@ -6321,20 +6327,21 @@ async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var attR
   var bd=bcDeduct*bentoPrice;
   var bdNext=bcNext*bentoPrice;
   var bdDaily=bcDaily*bentoPrice;
-  return{u:u,d:recs.length,tH:tH,tW:tW,bt:bt,kk:kk,bonus:bonus,alDetails:alResult.details,bc:bc,bcDeduct:bcDeduct,bcDaily:bcDaily,bcNext:bcNext,bd:bd,bdNext:bdNext,bdDaily:bdDaily,total:tW+bonus-bd};
+  return{u:u,d:recs.length,tH:tH,tW:tW,bt:bt,kk:kk,bonus:bonus,alDetails:alResult.details,tTrans:tTrans,bc:bc,bcDeduct:bcDeduct,bcDaily:bcDaily,bcNext:bcNext,bd:bd,bdNext:bdNext,bdDaily:bdDaily,total:tW+bonus-bd+tTrans};
 }).filter(function(d){return d.d>0;});
 var g=data.reduce(function(s,d){return s+d.total;},0);
 var th=data.reduce(function(s,d){return s+d.tH;},0);
 var kaikinCount=data.filter(function(d){return d.kk.kaikin;}).length;
 var seikinCount=data.filter(function(d){return !d.kk.kaikin&&d.kk.ng<=2&&d.kk.ok>0;}).length;
 var totalBonus=data.reduce(function(s,d){return s+d.bonus;},0);
+var totalTrans=data.reduce(function(s,d){return s+d.tTrans;},0);
 var totalBento=data.reduce(function(s,d){return s+d.bd;},0);
 var totalBentoAll=data.reduce(function(s,d){return s+d.bc;},0);
 
   var totalWage=data.reduce(function(s,d){return s+d.tW;},0);
-  document.getElementById('w-st').innerHTML='<div class="stat"><div class="stat-l">対象者</div><div class="stat-v">'+data.length+'</div></div><div class="stat" style="border-color:#1565c0"><div class="stat-l">総時間</div><div class="stat-v" style="color:#1565c0">'+th.toFixed(1)+'h</div></div><div class="stat" style="border-color:var(--acc)"><div class="stat-l">工賃額</div><div class="stat-v" style="color:var(--acc)">¥'+Math.round(totalWage).toLocaleString()+'</div></div><div class="stat" style="border-color:var(--grn)"><div class="stat-l">🎁 手当合計</div><div class="stat-v" style="color:var(--grn)">¥'+totalBonus.toLocaleString()+'</div><div class="stat-s">皆勤 '+kaikinCount+'名 / 精勤 '+seikinCount+'名</div></div><div class="stat" style="border-color:#c62828"><div class="stat-l">🍱弁当控除</div><div class="stat-v" style="color:#c62828">-¥'+totalBento.toLocaleString()+'</div><div class="stat-s">全'+totalBentoAll+'食 (控除対象)</div></div><div class="stat" style="border-color:var(--pri)"><div class="stat-l">支給合計</div><div class="stat-v" style="color:var(--pri)">¥'+Math.round(g).toLocaleString()+'</div></div>';
+  document.getElementById('w-st').innerHTML='<div class="stat"><div class="stat-l">対象者</div><div class="stat-v">'+data.length+'</div></div><div class="stat" style="border-color:#1565c0"><div class="stat-l">総時間</div><div class="stat-v" style="color:#1565c0">'+th.toFixed(1)+'h</div></div><div class="stat" style="border-color:var(--acc)"><div class="stat-l">工賃額</div><div class="stat-v" style="color:var(--acc)">¥'+Math.round(totalWage).toLocaleString()+'</div></div><div class="stat" style="border-color:var(--grn)"><div class="stat-l">🎁 手当合計</div><div class="stat-v" style="color:var(--grn)">¥'+totalBonus.toLocaleString()+'</div><div class="stat-s">皆勤 '+kaikinCount+'名 / 精勤 '+seikinCount+'名</div></div><div class="stat" style="border-color:#2e7d32"><div class="stat-l">💵 交通費(現金)</div><div class="stat-v" style="color:#2e7d32">¥'+totalTrans.toLocaleString()+'</div></div><div class="stat" style="border-color:#c62828"><div class="stat-l">🍱弁当控除</div><div class="stat-v" style="color:#c62828">-¥'+totalBento.toLocaleString()+'</div><div class="stat-s">全'+totalBentoAll+'食 (控除対象)</div></div><div class="stat" style="border-color:var(--pri)"><div class="stat-l">支給合計</div><div class="stat-v" style="color:var(--pri)">¥'+Math.round(g).toLocaleString()+'</div></div>';
   document.getElementById('w-tbl').innerHTML=data.length===0?'<p style="color:var(--sub);padding:20px;text-align:center">記録なし</p>':
-    '<table style="font-size:12px;width:100%"><thead><tr style="background:#f5f0ea"><th style="padding:10px 8px;text-align:left">氏名</th><th style="padding:10px 4px;text-align:center;width:70px">日数</th><th style="padding:10px 4px;text-align:center;width:50px">時間</th><th style="padding:10px 8px;text-align:right;width:80px">工賃</th><th style="padding:10px 8px;text-align:right;width:80px">手当</th><th style="padding:10px 8px;text-align:right;width:70px">弁当代</th><th style="padding:10px 8px;text-align:right;width:90px">合計</th></tr></thead><tbody>'+
+    '<table style="font-size:12px;width:100%"><thead><tr style="background:#f5f0ea"><th style="padding:10px 8px;text-align:left">氏名</th><th style="padding:10px 4px;text-align:center;width:60px">日数</th><th style="padding:10px 4px;text-align:center;width:50px">時間</th><th style="padding:10px 8px;text-align:right;width:70px">工賃</th><th style="padding:10px 8px;text-align:right;width:70px">手当</th><th style="padding:10px 8px;text-align:right;width:65px">弁当代</th><th style="padding:10px 8px;text-align:right;width:80px">交通費(現金)</th><th style="padding:10px 8px;text-align:right;width:85px">合計</th></tr></thead><tbody>'+
     data.map(function(d,idx){
       var rowBg=idx%2===0?'#fff':'#fafafa';
       var rid='wr-'+idx;
@@ -6352,20 +6359,22 @@ var totalBentoAll=data.reduce(function(s,d){return s+d.bc;},0);
       row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee">¥'+Math.round(d.tW).toLocaleString()+'</td>';
       row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee">'+(d.bonus>0?'<span style="color:var(--grn);font-weight:700">¥'+d.bonus.toLocaleString()+'</span>':'<span style="color:#ccc">−</span>')+'</td>';
       row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee">'+(d.bd>0?'<span style="color:#c62828">-¥'+d.bd.toLocaleString()+'</span>':'<span style="color:#ccc">−</span>')+'</td>';
+      row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee">'+(d.tTrans>0?'<span style="color:#2e7d32;font-weight:700">¥'+d.tTrans.toLocaleString()+'</span>':'<span style="color:#ccc">−</span>')+'</td>';
       row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee;font-weight:700;color:var(--pri);font-size:15px">¥'+Math.round(d.total).toLocaleString()+'</td></tr>';
 
       // 展開行（詳細）
-      var detail='<tr id="'+rid+'" style="display:none;background:#f9f7f4"><td colspan="7" style="padding:16px 20px;border-bottom:2px solid #e0d6cc">';
+      var detail='<tr id="'+rid+'" style="display:none;background:#f9f7f4"><td colspan="8" style="padding:16px 20px;border-bottom:2px solid #e0d6cc">';
       detail+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">';
 
       // 左：出席情報
       detail+='<div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #eee">';
-      detail+='<div style="font-size:11px;font-weight:700;color:var(--pri);margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">📊 出席情報</div>';
+      detail+='<div style="font-size:11px;font-weight:700;color:var(--pri);margin-bottom:8px;border-bottom:1px solid #eee;padding-bottom:4px">📊 出席・交通費情報</div>';
       detail+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center">';
       detail+='<div><div style="font-size:9px;color:#888">予定</div><div style="font-size:16px;font-weight:700">'+d.kk.expected+'</div></div>';
       detail+='<div><div style="font-size:9px;color:#888">出席</div><div style="font-size:16px;font-weight:700;color:var(--grn)">'+d.kk.ok+'</div></div>';
       detail+='<div><div style="font-size:9px;color:#888">休み</div><div style="font-size:16px;font-weight:700;color:'+(d.kk.ng>0?'#c62828':'#ccc')+'">'+d.kk.ng+'</div></div>';
       detail+='</div>';
+      detail+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid #eee"><div style="font-size:11px;font-weight:700;color:#2e7d32;margin-bottom:2px">💵 交通費支給（現金）</div><div style="font-size:14px;font-weight:700;color:#2e7d32">¥'+d.tTrans.toLocaleString()+' <span style="font-size:10px;color:#666;font-weight:400">('+d.d+'日分)</span></div></div>';
       if(d.kk.pending>0){detail+='<div style="font-size:10px;color:#1565c0;margin-top:6px;text-align:center">⏳ 未記録 '+d.kk.pending+'日</div>';}
       if(d.bc>0){
         var bDetails=[];
@@ -6420,6 +6429,7 @@ var totalBentoAll=data.reduce(function(s,d){return s+d.bc;},0);
     '<td style="padding:12px 8px;text-align:right;font-size:13px">¥'+Math.round(data.reduce(function(s,d){return s+d.tW;},0)).toLocaleString()+'</td>'+
     '<td style="padding:12px 8px;text-align:right;font-size:11px">皆勤'+kaikinCount+' / 精勤'+seikinCount+'<br><span style="color:var(--grn);font-size:13px">¥'+totalBonus.toLocaleString()+'</span></td>'+
     '<td style="padding:12px 8px;text-align:right;color:#c62828">-¥'+totalBento.toLocaleString()+'</td>'+
+    '<td style="padding:12px 8px;text-align:right;color:#2e7d32">¥'+totalTrans.toLocaleString()+'</td>'+
     '<td style="padding:12px 8px;text-align:right;color:var(--pri);font-size:16px">¥'+Math.round(g).toLocaleString()+'</td></tr></tfoot></table>';
 }catch(e){document.getElementById('w-tbl').innerHTML='失敗';}
   // 展開状態を復元
@@ -6428,6 +6438,362 @@ var totalBentoAll=data.reduce(function(s,d){return s+d.bc;},0);
       if(window._expandedWageRows[id]){var el=document.getElementById(id);if(el)el.style.display='table-row';}
     });
   }
+}
+
+// ═══ 工賃・手当変更 ═══
+var _wsSubTab = 'wt';
+async function renderWageSettings(c){
+  c.innerHTML = '<div class="hd-row"><h2>⚙️ 工賃・手当設定・変更</h2></div>' +
+    '<div style="display:flex;gap:10px;margin-bottom:16px" class="no-print">' +
+    '<button id="ws-tab-wt" class="'+(_wsSubTab==='wt'?'bp':'bg')+'" onclick="_wsSubTab=\'wt\';renderWageSettings(document.getElementById(\'content\'))" style="padding:8px 16px;font-weight:700">作業種別・工賃単価</button>' +
+    '<button id="ws-tab-user" class="'+(_wsSubTab==='user'?'bp':'bg')+'" onclick="_wsSubTab=\'user\';renderWageSettings(document.getElementById(\'content\'))" style="padding:8px 16px;font-weight:700">利用者別工賃・交通費設定</button>' +
+    '<button id="ws-tab-al" class="'+(_wsSubTab==='al'?'bp':'bg')+'" onclick="_wsSubTab=\'al\';renderWageSettings(document.getElementById(\'content\'))" style="padding:8px 16px;font-weight:700">手当ルール管理</button>' +
+    '</div>' +
+    '<div class="card" id="ws-body">読み込み中...</div>';
+
+  var body = document.getElementById('ws-body');
+  if(_wsSubTab === 'wt'){
+    renderWsWorkTypes(body);
+  } else if(_wsSubTab === 'user'){
+    renderWsUserRates(body);
+  } else if(_wsSubTab === 'al'){
+    body.innerHTML = buildAllowanceUI();
+  }
+}
+
+function renderWsWorkTypes(body){
+  var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+    '<div style="font-weight:700;font-size:14px;color:var(--pri)">📋 作業種別・時給単価一覧</div>' +
+    '<button class="bp" onclick="openWorkTypeModal()" style="font-size:12px">＋ 新しい作業種別を追加</button>' +
+    '</div>' +
+    '<table style="width:100%"><thead><tr><th>作業種別名</th><th style="width:180px;text-align:right">工賃単価（時給/円）</th><th style="width:140px;text-align:center">操作</th></tr></thead><tbody>';
+  
+  if(S.workTypes.length === 0){
+    h += '<tr><td colspan="3" style="text-align:center;color:var(--sub);padding:16px">作業種別が登録されていません</td></tr>';
+  } else {
+    S.workTypes.forEach(function(wt, idx){
+      h += '<tr>' +
+        '<td style="font-weight:700">' + esc(wt.name) + '</td>' +
+        '<td style="text-align:right"><input type="number" id="wt-rate-' + wt.id + '" value="' + (wt.rate || 0) + '" style="width:100px;text-align:right;padding:4px 8px;border-radius:4px;border:1px solid #ccc"> 円</td>' +
+        '<td style="text-align:center">' +
+          '<button class="bp" onclick="saveWorkTypeRate(\'' + wt.id + '\')" style="font-size:11px;padding:3px 10px;margin-right:4px">保存</button>' +
+          '<button onclick="deleteWorkTypeConfirm(\'' + wt.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:13px">✕</button>' +
+        '</td>' +
+      '</tr>';
+    });
+  }
+  h += '</tbody></table>';
+  body.innerHTML = h;
+}
+
+async function saveWorkTypeRate(wtId){
+  var inp = document.getElementById('wt-rate-' + wtId);
+  if(!inp) return;
+  var newRate = Number(inp.value);
+  var wt = S.workTypes.find(function(w){ return String(w.id) === String(wtId); });
+  if(!wt) return;
+  wt.rate = newRate;
+  if(!lockUI()) return;
+  try {
+    await gas('updateWorkType', wt);
+    toast('✅ 工賃単価を更新しました！');
+  } catch(e) {
+    await cAlert('保存失敗: ' + e);
+  } finally { unlockUI(); }
+}
+
+function openWorkTypeModal(){
+  var h = '<div class="modal-bg" onclick="if(event.target===this)closeModal(\'common-modal\')"><div class="modal-box"><div class="modal-hd">新しい作業種別を追加<button onclick="closeModal(\'common-modal\')" class="modal-x">&times;</button></div>' +
+    '<div class="field"><label>作業種別名 *</label><input id="wt-new-name" placeholder="例: 施設外作業, 電子解体等" style="width:100%"></div>' +
+    '<div class="field"><label>工賃単価（時給/円）*</label><input type="number" id="wt-new-rate" value="200" style="width:100%"></div>' +
+    '<div class="btns"><button class="bg" onclick="closeModal(\'common-modal\')">キャンセル</button><button class="bp" onclick="saveNewWorkType()">追加保存</button></div></div></div>';
+  document.getElementById('common-modal').innerHTML = h;
+}
+
+async function saveNewWorkType(){
+  var name = document.getElementById('wt-new-name').value;
+  var rate = Number(document.getElementById('wt-new-rate').value);
+  if(!name){ await cAlert('作業種別名は必須です'); return; }
+  if(!lockUI()) return;
+  try {
+    var res = await gas('addWorkType', { name: name, rate: rate });
+    if(res) S.workTypes.push(res);
+    closeModal('common-modal');
+    renderWageSettings(document.getElementById('content'));
+    toast('✅ 新しい作業種別を追加しました');
+  } catch(e) { await cAlert('追加失敗: ' + e); } finally { unlockUI(); }
+}
+
+async function deleteWorkTypeConfirm(wtId){
+  if(!await cConfirm('この作業種別を削除してもよろしいですか？')) return;
+  if(!lockUI()) return;
+  try {
+    await gas('deleteWorkType', wtId);
+    S.workTypes = S.workTypes.filter(function(w){ return String(w.id) !== String(wtId); });
+    renderWageSettings(document.getElementById('content'));
+    toast('🗑️ 作業種別を削除しました');
+  } catch(e) { await cAlert('削除失敗: ' + e); } finally { unlockUI(); }
+}
+
+function renderWsUserRates(body){
+  var activeUsers = S.users.filter(function(u){ return u.userStatus !== '利用終了'; });
+  var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+    '<div style="font-weight:700;font-size:14px;color:var(--pri)">👥 利用者別 工賃・交通費・時間一括設定</div>' +
+    '<button class="bp" onclick="saveBatchUserRates()" style="font-size:13px;padding:6px 16px">💾 一括保存</button>' +
+    '</div>' +
+    '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr>' +
+    '<th>氏名</th><th>利用時間（開始 ~ 終了）</th><th>お弁当支払方法</th><th style="width:180px;text-align:right">交通費日額（現金/円）</th>' +
+    '</tr></thead><tbody>';
+
+  if(activeUsers.length === 0){
+    h += '<tr><td colspan="4" style="text-align:center;color:var(--sub);padding:16px">利用者が登録されていません</td></tr>';
+  } else {
+    activeUsers.forEach(function(u){
+      h += '<tr>' +
+        '<td style="font-weight:700;white-space:nowrap">' + esc(u.name) + '</td>' +
+        '<td style="white-space:nowrap">' +
+          '<input type="time" id="ws-us-' + u.id + '" value="' + (u.scheduleStart || '10:00') + '" style="padding:2px 4px;font-size:11px"> ~ ' +
+          '<input type="time" id="ws-ue-' + u.id + '" value="' + (u.scheduleEnd || '16:00') + '" style="padding:2px 4px;font-size:11px">' +
+        '</td>' +
+        '<td>' +
+          '<select id="ws-ubp-' + u.id + '" style="padding:2px 4px;font-size:11px">' +
+            '<option value="工賃払い"' + (u.bentoPaymentMethod === '工賃払い' || !u.bentoPaymentMethod ? ' selected' : '') + '>工賃払い</option>' +
+            '<option value="当日"' + (u.bentoPaymentMethod === '当日' ? ' selected' : '') + '>当日払い</option>' +
+            '<option value="月末締め翌月払い"' + (u.bentoPaymentMethod === '月末締め翌月払い' ? ' selected' : '') + '>月末締め翌月払い</option>' +
+          '</select>' +
+        '</td>' +
+        '<td style="text-align:right">' +
+          '<input type="number" id="ws-utrans-' + u.id + '" value="' + (u.transportationAllowance != null ? u.transportationAllowance : 0) + '" placeholder="0" style="width:90px;text-align:right;padding:3px 6px;border:1px solid #ccc;border-radius:4px"> 円' +
+        '</td>' +
+      '</tr>';
+    });
+  }
+  h += '</tbody></table></div>';
+  body.innerHTML = h;
+}
+
+async function saveBatchUserRates(){
+  var activeUsers = S.users.filter(function(u){ return u.userStatus !== '利用終了'; });
+  if(activeUsers.length === 0) return;
+  if(!lockUI()) return;
+  try {
+    for(var i=0; i<activeUsers.length; i++){
+      var u = activeUsers[i];
+      var sStart = document.getElementById('ws-us-' + u.id) ? document.getElementById('ws-us-' + u.id).value : u.scheduleStart;
+      var sEnd = document.getElementById('ws-ue-' + u.id) ? document.getElementById('ws-ue-' + u.id).value : u.scheduleEnd;
+      var bPay = document.getElementById('ws-ubp-' + u.id) ? document.getElementById('ws-ubp-' + u.id).value : u.bentoPaymentMethod;
+      var trans = document.getElementById('ws-utrans-' + u.id) ? Number(document.getElementById('ws-utrans-' + u.id).value) : u.transportationAllowance;
+
+      u.scheduleStart = sStart;
+      u.scheduleEnd = sEnd;
+      u.bentoPaymentMethod = bPay;
+      u.transportationAllowance = trans;
+
+      await gas('updateUser', u);
+    }
+    toast('✅ 利用者設定を一括保存しました！');
+  } catch(e) { await cAlert('保存失敗: ' + e); } finally { unlockUI(); }
+}
+
+// ═══ 手当・時間調整 ═══
+var adjM = today().slice(0, 7);
+var adjUserId = '';
+
+async function renderWageAdjustments(c){
+  var uOpts = '<option value="">-- 全利用者一覧 --</option>' + S.users.filter(function(u){ return u.userStatus !== '利用終了'; }).map(function(u){
+    return '<option value="' + u.id + '"' + (String(u.id) === String(adjUserId) ? ' selected' : '') + '>' + esc(u.name) + '</option>';
+  }).join('');
+
+  c.innerHTML = '<div class="hd-row">' +
+    '<h2>🎛️ 手当・工賃時間調整</h2>' +
+    '<div style="display:flex;gap:10px;align-items:center">' +
+      '<input type="month" value="' + adjM + '" onchange="adjM=this.value;loadWageAdjustments()">' +
+      '<select id="adj-u-select" onchange="adjUserId=this.value;loadWageAdjustments()" style="padding:6px 12px;border-radius:6px;border:1px solid #ccc;font-weight:600">' +
+        uOpts +
+      '</select>' +
+    '</div>' +
+    '</div>' +
+    '<div id="adj-area">読み込み中...</div>';
+  loadWageAdjustments();
+}
+
+async function loadWageAdjustments(){
+  var area = document.getElementById('adj-area');
+  if(!area) return;
+  showLoading(area, '勤怠・調整データを取得中...');
+  try {
+    var attRes = await Promise.all([cachedGas('getAttendance', adjM), cachedGas('getClosedDays', adjM)]);
+    var allAtt = attRes[0] || [];
+    var closedDays = attRes[1] || [];
+    var bentoPrice = Number(S.settings.bentoPrice) || 100;
+
+    if(adjUserId){
+      renderUserWageAdjustmentDetail(area, adjUserId, allAtt, closedDays, bentoPrice);
+    } else {
+      renderAllUsersWageAdjustmentSummary(area, allAtt, closedDays, bentoPrice);
+    }
+  } catch(e) {
+    area.innerHTML = '<div class="card" style="color:#c62828">読み込みエラー: ' + esc(e) + '</div>';
+  }
+}
+
+function renderAllUsersWageAdjustmentSummary(container, allAtt, closedDays, bentoPrice){
+  var activeUsers = S.users.filter(function(u){ return u.userStatus !== '利用終了'; });
+  var data = activeUsers.map(function(u){
+    var recs = allAtt.filter(function(a){ return String(a.userId) === String(u.id) && ['出席','遅刻','早退'].indexOf(a.status) >= 0; });
+    var tH = 0, tW = 0;
+    var tTrans = recs.reduce(function(s, r){
+      var tra = (r.transportationAllowance !== undefined && r.transportationAllowance !== null && r.transportationAllowance !== '') ? Number(r.transportationAllowance) : Number(u.transportationAllowance || 0);
+      return s + tra;
+    }, 0);
+    var tDailyBonus = recs.reduce(function(s, r){ return s + (Number(r.dailyBonus) || 0); }, 0);
+    var bcDeduct = 0;
+    recs.forEach(function(r){
+      var w = calcWage(r, u);
+      tH += w.h; tW += w.wage;
+      if(r.bento && String(r.bento) !== 'なし' && String(r.bento) !== '0' && String(r.bento) !== 'false'){
+        var pm = r.bentoPaymentMethod || u.bentoPaymentMethod || '工賃払い';
+        if(pm === '工賃払い') bcDeduct += getBentoCountValue(r.bento);
+      }
+    });
+    var kk = checkKaikin(u, allAtt, adjM, closedDays);
+    var _useNew = getAllowances().filter(function(a){ return a.enabled !== false; }).length > 0;
+    var alResult = _useNew ? calcAllowances(u, allAtt, adjM, kk) : { total: kk.kaikin ? KAIKIN_BONUS : 0, details: [] };
+    var totalBonus = alResult.total + tDailyBonus;
+    var bd = bcDeduct * bentoPrice;
+    var total = tW + totalBonus - bd + tTrans;
+    return { u: u, days: recs.length, tH: tH, tW: tW, bonus: totalBonus, tTrans: tTrans, bd: bd, total: total };
+  }).filter(function(d){ return d.days > 0 || d.u.scheduleDays; });
+
+  var h = '<div class="card">' +
+    '<div class="card-hd"><span class="card-t">' + fmtMonth(adjM) + ' 全利用者 工賃・手当調整一覧</span></div>' +
+    '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr style="background:#f5f0ea">' +
+    '<th>氏名</th><th style="text-align:center">出勤日数</th><th style="text-align:center">算定時間</th><th style="text-align:right">工賃小計</th><th style="text-align:right">手当合計</th><th style="text-align:right">交通費(現金)</th><th style="text-align:right">弁当控除</th><th style="text-align:right">最終支給額</th><th style="text-align:center;width:100px">操作</th>' +
+    '</tr></thead><tbody>';
+
+  data.forEach(function(d){
+    h += '<tr>' +
+      '<td style="font-weight:700">' + esc(d.u.name) + '</td>' +
+      '<td style="text-align:center">' + d.days + '日</td>' +
+      '<td style="text-align:center">' + d.tH.toFixed(1) + 'h</td>' +
+      '<td style="text-align:right">¥' + Math.round(d.tW).toLocaleString() + '</td>' +
+      '<td style="text-align:right;color:var(--grn);font-weight:600">¥' + d.bonus.toLocaleString() + '</td>' +
+      '<td style="text-align:right;color:#2e7d32;font-weight:600">¥' + d.tTrans.toLocaleString() + '</td>' +
+      '<td style="text-align:right;color:#c62828">-¥' + d.bd.toLocaleString() + '</td>' +
+      '<td style="text-align:right;font-weight:700;color:var(--pri);font-size:14px">¥' + Math.round(d.total).toLocaleString() + '</td>' +
+      '<td style="text-align:center">' +
+        '<button class="bp" onclick="adjUserId=\'' + d.u.id + '\';var sel=document.getElementById(\'adj-u-select\');if(sel)sel.value=\'' + d.u.id + '\';loadWageAdjustments()" style="font-size:11px;padding:3px 8px">🎛️ 調整する</button>' +
+      '</td>' +
+    '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+  container.innerHTML = h;
+}
+
+function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, bentoPrice){
+  var u = S.users.find(function(x){ return String(x.id) === String(userId); });
+  if(!u){ container.innerHTML = '<p>利用者が見つかりません</p>'; return; }
+
+  var year = Number(adjM.split('-')[0]), month = Number(adjM.split('-')[1]);
+  var dim = new Date(year, month, 0).getDate();
+
+  var daysList = [];
+  for(var d=1; d<=dim; d++){
+    var ds = adjM + '-' + String(d).padStart(2, '0');
+    var dw = new Date(year, month-1, d).getDay();
+    var dwj = ['日','月','火','水','木','金','土'][dw];
+    var isSch = (u.scheduleDays || '').indexOf(dwj) >= 0;
+    var isClosed = closedDays.indexOf(ds) >= 0;
+
+    var rec = allAtt.find(function(a){ return String(a.userId) === String(u.id) && String(a.date) === ds; });
+    daysList.push({ date: ds, day: d, dwj: dwj, isSch: isSch, isClosed: isClosed, rec: rec });
+  }
+
+  var h = '<div class="card" style="margin-bottom:16px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+      '<div>' +
+        '<span style="font-size:16px;font-weight:700;color:var(--pri)">' + esc(u.name) + ' 様</span> ' +
+        '<span style="font-size:12px;color:var(--sub)">（' + fmtMonth(adjM) + ' 時間・手当・交通費調整）</span>' +
+      '</div>' +
+      '<button class="bp" onclick="saveUserWageAdjustments(\'' + u.id + '\')" style="font-size:14px;padding:8px 20px;font-weight:700">💾 調整内容を一括保存</button>' +
+    '</div>' +
+    '<p style="font-size:11px;color:var(--sub);margin-bottom:12px">※工賃算定時間（actualHours）、特別手当（dailyBonus）、交通費現金支給額（transportationAllowance）を日別に調整できます。</p>' +
+    '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr style="background:#f5f0ea">' +
+    '<th>日付</th><th>出欠</th><th>基本サービス時間</th><th style="width:140px">工賃算定時間（調整）</th><th style="width:120px">特別手当 (円)</th><th style="width:120px">交通費 (現金/円)</th><th>備考</th>' +
+    '</tr></thead><tbody>';
+
+  daysList.forEach(function(dayInfo){
+    var ds = dayInfo.date;
+    var r = dayInfo.rec || {};
+    var st = r.status || (dayInfo.isClosed ? '休館日' : (dayInfo.isSch ? '予定' : '-'));
+    var isAtt = ['出席','遅刻','早退'].indexOf(st) >= 0;
+    var stdH = 0;
+    if(isAtt){
+      var w = calcWage(r, u);
+      stdH = w.h;
+    }
+    var curAH = (r.actualHours != null && r.actualHours !== '') ? r.actualHours : '';
+    var curBonus = r.dailyBonus || 0;
+    var curTrans = (r.transportationAllowance != null && r.transportationAllowance !== '') ? r.transportationAllowance : (u.transportationAllowance || 0);
+
+    var rowBg = dayInfo.dwj === '日' ? '#fff0f0' : (dayInfo.dwj === '土' ? '#f0f8ff' : '#fff');
+
+    h += '<tr style="background:' + rowBg + '">' +
+      '<td style="font-weight:700">' + dayInfo.day + '日 (' + dayInfo.dwj + ')</td>' +
+      '<td><span style="font-weight:700;color:' + (statusColor[st] || '#555') + '">' + st + '</span></td>' +
+      '<td>' + (isAtt ? stdH.toFixed(1) + 'h' : '−') + '</td>' +
+      '<td>' +
+        '<input type="number" step="0.5" id="adj-ah-' + ds + '" value="' + curAH + '" placeholder="' + (isAtt ? stdH.toFixed(1) : '−') + '" style="width:65px;text-align:right;padding:2px 4px;border:1px solid #ccc;border-radius:4px" ' + (!isAtt ? 'disabled' : '') + '> h' +
+      '</td>' +
+      '<td>' +
+        '¥ <input type="number" id="adj-b-' + ds + '" value="' + (curBonus || '') + '" placeholder="0" style="width:75px;text-align:right;padding:2px 4px;border:1px solid #ccc;border-radius:4px" ' + (!isAtt ? 'disabled' : '') + '>' +
+      '</td>' +
+      '<td>' +
+        '¥ <input type="number" id="adj-t-' + ds + '" value="' + (isAtt ? curTrans : 0) + '" placeholder="0" style="width:75px;text-align:right;padding:2px 4px;border:1px solid #ccc;border-radius:4px" ' + (!isAtt ? 'disabled' : '') + '>' +
+      '</td>' +
+      '<td><input id="adj-n-' + ds + '" value="' + esc(r.notes || '') + '" placeholder="メモ" style="width:100%;font-size:11px;padding:2px 4px" ' + (!isAtt ? 'disabled' : '') + '></td>' +
+    '</tr>';
+  });
+
+  h += '</tbody></table></div></div>';
+  container.innerHTML = h;
+}
+
+async function saveUserWageAdjustments(userId){
+  var u = S.users.find(function(x){ return String(x.id) === String(userId); });
+  if(!u) return;
+  if(!lockUI()) return;
+
+  try {
+    var year = Number(adjM.split('-')[0]), month = Number(adjM.split('-')[1]);
+    var dim = new Date(year, month, 0).getDate();
+
+    var attList = await cachedGas('getAttendance', adjM);
+
+    for(var d=1; d<=dim; d++){
+      var ds = adjM + '-' + String(d).padStart(2, '0');
+      var ahInp = document.getElementById('adj-ah-' + ds);
+      if(!ahInp || ahInp.disabled) continue;
+
+      var ahVal = ahInp.value !== '' ? Number(ahInp.value) : null;
+      var bonusVal = Number(document.getElementById('adj-b-' + ds).value) || 0;
+      var transVal = Number(document.getElementById('adj-t-' + ds).value) || 0;
+      var notesVal = document.getElementById('adj-n-' + ds).value;
+
+      var existingRec = attList.find(function(a){ return String(a.userId) === String(u.id) && String(a.date) === ds; });
+
+      if(existingRec){
+        existingRec.actualHours = ahVal;
+        existingRec.dailyBonus = bonusVal;
+        existingRec.transportationAllowance = transVal;
+        existingRec.notes = notesVal;
+        await gas('upsertAttendance', existingRec);
+      }
+    }
+    clearCache('getAttendance');
+    toast('✅ 調整内容を保存しました！');
+    loadWageAdjustments();
+  } catch(e) { await cAlert('保存失敗: ' + e); } finally { unlockUI(); }
 }
 
 // ═══ 帳票 ═══
@@ -7080,16 +7446,17 @@ function renderOneInvoice(u,recs,bc,bd,bentoPrice,yStr,mStr,compName,fName,fNum,
   h+='<div style="margin-top:30px;text-align:right;font-size:12px;line-height:1.8"><div style="font-weight:700">'+esc(compName||fName)+'</div><div>'+esc(fType)+' '+esc(fName)+'</div>'+(fNum?'<div>事業所番号: '+esc(fNum)+'</div>':'')+'</div></div>';
   return h;
 }
-function renderOneReceipt(u,recs,tW,tH,bc,bd,bonus,total,alResult,yStr,mStr,compName,fName,fNum,fType){
+function renderOneReceipt(u,recs,tW,tH,bc,bd,bonus,tTrans,total,alResult,yStr,mStr,compName,fName,fNum,fType){
   var h='<div class="irp-page" style="page-break-after:always;max-width:700px;margin:0 auto 24px;font-size:13px">';
   h+='<h2 style="text-align:center;font-size:22px;letter-spacing:8px;margin-bottom:24px;border-bottom:3px double #333;padding-bottom:12px">領　収　書</h2>';
   h+='<div style="display:flex;justify-content:space-between;margin-bottom:20px"><div><span style="font-size:18px;font-weight:700;border-bottom:1px solid #333;padding-bottom:2px">'+esc(u.name)+'</span> 様</div>';
   h+='<div style="text-align:right;font-size:12px">'+yStr+'年'+mStr+'月分<br>発行日: '+today().replace(/-/g,'/')+'</div></div>';
-  h+='<div style="text-align:center;margin-bottom:20px;padding:16px;border:2px solid #333;border-radius:8px"><span style="font-size:12px">領収金額</span><br><span style="font-size:28px;font-weight:700">¥'+Math.max(0,total).toLocaleString()+'</span></div>';
-  h+='<p style="margin-bottom:12px">上記の金額を'+yStr+'年'+mStr+'月分の工賃としてお支払いしたことを証します。</p>';
+  h+='<div style="text-align:center;margin-bottom:20px;padding:16px;border:2px solid #333;border-radius:8px"><span style="font-size:12px">領収金額（工賃・交通費）</span><br><span style="font-size:28px;font-weight:700">¥'+Math.max(0,total).toLocaleString()+'</span></div>';
+  h+='<p style="margin-bottom:12px">上記の金額を'+yStr+'年'+mStr+'月分の工賃及び交通費（現金支給）として受領いたしました。</p>';
   h+='<table style="width:100%;border-collapse:collapse;margin-bottom:20px"><thead><tr style="background:#f5f5f5"><th style="border:1px solid #999;padding:8px;text-align:left">項目</th><th style="border:1px solid #999;padding:8px;text-align:right;width:120px">金額</th></tr></thead><tbody>';
   h+='<tr><td style="border:1px solid #999;padding:8px">工賃（'+recs.length+'日 / サービス提供時間 '+tH.toFixed(1)+'時間）</td><td style="border:1px solid #999;padding:8px;text-align:right">¥'+Math.round(tW).toLocaleString()+'</td></tr>';
   if(bonus>0)alResult.details.forEach(function(a){h+='<tr><td style="border:1px solid #999;padding:8px">'+esc(a.name)+'</td><td style="border:1px solid #999;padding:8px;text-align:right">¥'+a.amount.toLocaleString()+'</td></tr>';});
+  if(tTrans>0)h+='<tr><td style="border:1px solid #999;padding:8px;color:#2e7d32;font-weight:700">交通費支給（現金）</td><td style="border:1px solid #999;padding:8px;text-align:right;color:#2e7d32;font-weight:700">¥'+tTrans.toLocaleString()+'</td></tr>';
   if(bd>0)h+='<tr><td style="border:1px solid #999;padding:8px">食事提供費控除（'+bc+'食）</td><td style="border:1px solid #999;padding:8px;text-align:right;color:#c62828">-¥'+bd.toLocaleString()+'</td></tr>';
   h+='</tbody><tfoot><tr style="font-weight:700;background:#f9f9f9"><td style="border:1px solid #999;padding:8px;text-align:right">支給合計</td><td style="border:1px solid #999;padding:8px;text-align:right;font-size:16px">¥'+Math.max(0,total).toLocaleString()+'</td></tr></tfoot></table>';
   h+='<div style="margin-top:30px;display:flex;justify-content:space-between;align-items:flex-end"><div style="text-align:right;font-size:12px;line-height:1.8"><div style="font-weight:700">'+esc(compName||fName)+'</div><div>'+esc(fType)+' '+esc(fName)+'</div>'+(fNum?'<div>事業所番号: '+esc(fNum)+'</div>':'')+'</div><div style="text-align:center;font-size:11px;color:#999;border:1px dashed #ccc;padding:20px 30px;border-radius:8px">印</div></div></div>';
@@ -7125,6 +7492,10 @@ async function printAllIRP(){
     var recs=att.filter(function(a){return String(a.userId)===u.id&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
     if(recs.length===0)return;
     var tW=0,tH=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
+    var tTrans=recs.reduce(function(sum,r){
+      var tra=(r.transportationAllowance!==undefined&&r.transportationAllowance!==null&&r.transportationAllowance!=='')?Number(r.transportationAllowance):Number(u.transportationAllowance||0);
+      return sum+tra;
+    },0);
     recs.forEach(function(r){
       var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
       if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
@@ -7138,11 +7509,11 @@ async function printAllIRP(){
     var kk=checkKaikin(u,att,eM);
     var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
     var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
-    var bonus=alResult.total;var bd=bcDeduct*bentoPrice;var bdNext=bcNext*bentoPrice;var total=Math.round(tW)+bonus-bd;
+    var bonus=alResult.total;var bd=bcDeduct*bentoPrice;var bdNext=bcNext*bentoPrice;var total=Math.round(tW)+bonus-bd+tTrans;
     if(eT==='invoice'){
       if(bcNext>0)allH+=renderOneInvoice(u,recs,bcNext,bdNext,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
     }
-    else if(eT==='receipt')allH+=renderOneReceipt(u,recs,tW,tH,bcDeduct,bd,bonus,total,alResult,yStr,mStr,compName,fName,fNum,fType);
+    else if(eT==='receipt')allH+=renderOneReceipt(u,recs,tW,tH,bcDeduct,bd,bonus,tTrans,total,alResult,yStr,mStr,compName,fName,fNum,fType);
     else if(eT==='bentoReceipt'){
       if(bc>0)allH+=renderOneBentoReceipt(u,recs,bc,bc*bentoPrice,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
     }
@@ -7359,6 +7730,10 @@ function renderWageDetail(wd,fn){
     allowanceList.forEach(function(al){
       h+='<tr><td style="'+B+'padding:2px 5px">'+esc(al.name)+'</td><td style="'+B+'padding:2px 5px;text-align:right"></td><td style="'+B+'padding:2px 5px;text-align:right"></td><td style="'+B+'padding:2px 5px;text-align:right">¥'+Number(al.amount).toLocaleString()+'</td></tr>';
     });
+    if(u.transportAllowance>0){
+      adjRows++;
+      h+='<tr><td style="'+B+'padding:2px 5px;color:#2e7d32;font-weight:700">交通費（現金支給）</td><td style="'+B+'padding:2px 5px;text-align:right">'+u.days+'日</td><td style="'+B+'padding:2px 5px;text-align:right"></td><td style="'+B+'padding:2px 5px;text-align:right;color:#2e7d32;font-weight:700">¥'+u.transportAllowance.toLocaleString()+'</td></tr>';
+    }
     if(u.bentoCount>0){
       adjRows++;
       var pmRaw = u.bentoPaymentMethod || (u.u ? u.u.bentoPaymentMethod : '') || '工賃払い';
@@ -7371,7 +7746,7 @@ function renderWageDetail(wd,fn){
     for(var ei2=0;ei2<emptyAdj;ei2++){
       h+='<tr><td style="'+B+'padding:2px 5px;height:16px"></td><td style="'+B+'padding:2px 5px"></td><td style="'+B+'padding:2px 5px"></td><td style="'+B+'padding:2px 5px"></td></tr>';
     }
-    var adjSub=u.bonus-(u.bentoDed||0);
+    var adjSub=u.bonus-(u.bentoDed||0)+(u.transportAllowance||0);
     h+='</tbody><tfoot>';
     h+='<tr><td colspan="3" style="'+B+'padding:2px 5px;text-align:right;font-weight:700;background:#f5f0ea;-webkit-print-color-adjust:exact;print-color-adjust:exact">小計</td>';
     h+='<td style="'+B+'padding:2px 5px;text-align:right;font-weight:700;background:#f5f0ea;-webkit-print-color-adjust:exact;print-color-adjust:exact'+(adjSub<0?';color:#c00':'')+'">'+( adjSub>=0?'¥'+adjSub.toLocaleString():'-¥'+Math.abs(adjSub).toLocaleString())+'</td></tr>';

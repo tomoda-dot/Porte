@@ -701,6 +701,10 @@ async function _calcAttendanceList(ym){
         else bcDeduct += bCount;
       }
     });
+    var tTrans=recs.reduce(function(s,r){
+      var tra=(r.transportationAllowance!==undefined&&r.transportationAllowance!==null&&r.transportationAllowance!=='')?Number(r.transportationAllowance):Number(user.transportationAllowance||0);
+      return s+tra;
+    },0);
     var net=Math.max(0,tWM-tBM);var kk=_checkKaikin(user,att,ym);
     var bonus=0;
     if(activeAls.length>0){
@@ -719,7 +723,7 @@ async function _calcAttendanceList(ym){
     }else{
       if(kk.kaikin) bonus=KAIKIN_BONUS;
     }
-    result.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',days:recs.length,workMin:tServiceMin,breakMin:tBM,netMin:net,avgNetMin:recs.length>0?Math.round(tServiceMin/recs.length):0,bonus:bonus,wage:Math.round(tW),bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,total:Math.round(tW)+bonus-bcDeduct*bentoPrice});
+    result.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',days:recs.length,workMin:tServiceMin,breakMin:tBM,netMin:net,avgNetMin:recs.length>0?Math.round(tServiceMin/recs.length):0,bonus:bonus,wage:Math.round(tW),transportAllowance:tTrans,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,total:Math.round(tW)+bonus-bcDeduct*bentoPrice+tTrans});
   });
   return{users:result,bentoPrice:bentoPrice};
 }
@@ -749,6 +753,10 @@ async function _calcWageDetailPerUser(ym){
     var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
     if(recs.length===0)return;
     var byWt={},bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
+    var tTrans=recs.reduce(function(s,r){
+      var tra=(r.transportationAllowance!==undefined&&r.transportationAllowance!==null&&r.transportationAllowance!=='')?Number(r.transportationAllowance):Number(user.transportationAllowance||0);
+      return s+tra;
+    },0);
     recs.forEach(function(rec){
       var netH=_calcNetH(rec,user);if(netH<=0)return;
       var wt=_findWt(wts,rec.workTypeId||'',(rec.workTypeIdPm&&String(rec.workTypeIdPm)!=='')?rec.workTypeIdPm:rec.workTypeId||'');
@@ -797,7 +805,7 @@ async function _calcWageDetailPerUser(ym){
       }
     }
 
-    result.push({id:user.id,name:user.name,bentoPaymentMethod:user.bentoPaymentMethod||'工賃払い',days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,bentoPrice:bentoPrice,total:wSub+bonus-bcDeduct*bentoPrice});
+    result.push({id:user.id,name:user.name,bentoPaymentMethod:user.bentoPaymentMethod||'工賃払い',days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,transportAllowance:tTrans,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,bentoPrice:bentoPrice,total:wSub+bonus-bcDeduct*bentoPrice+tTrans});
   });
   return{ym:ym,companyName:companyName,payDate:payDateStr,users:result,bentoPrice:bentoPrice};
 }
