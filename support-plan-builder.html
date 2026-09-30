@@ -170,6 +170,15 @@
       box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
     }
 
+    .secret-masked-field {
+      -webkit-text-security: disc !important;
+      text-security: disc !important;
+    }
+    .secret-masked-field.show-text {
+      -webkit-text-security: none !important;
+      text-security: none !important;
+    }
+
     /* Stepper Header */
     .stepper-container {
       display: flex;
@@ -543,7 +552,10 @@
         </div>
         <div>
           <label class="small-label">API Key</label>
-          <input type="password" id="apiKeyInput" placeholder="AIのAPIキーを入力">
+          <div style="position:relative;">
+            <input type="text" id="apiKeyInput" name="sec_ai_token_no_fill_xyz" class="secret-masked-field" placeholder="AIのAPIキーを入力" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other">
+            <button type="button" id="btnToggleKeyVisibility" onclick="toggleApiKeyVisibility()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:14px; color:#64748b;" title="表示/非表示切替">👁️</button>
+          </div>
         </div>
       </div>
 
@@ -584,7 +596,7 @@
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
         <div>
           <label class="small-label">利用者氏名 <span style="color:red">*</span></label>
-          <input type="text" id="inputUserName" placeholder="例: 山田 太郎">
+          <input type="text" id="inputUserName" name="sec_target_member_name_no_fill" placeholder="例: 山田 太郎" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other">
         </div>
         <div>
           <label class="small-label">サービス種別</label>
@@ -817,6 +829,16 @@
         }
       } catch (e) {
         console.warn('Supabase config not active:', e);
+      }
+    }
+
+    // Toggle API Key text visibility
+    function toggleApiKeyVisibility() {
+      const input = document.getElementById('apiKeyInput');
+      const btn = document.getElementById('btnToggleKeyVisibility');
+      if (input) {
+        input.classList.toggle('show-text');
+        if (btn) btn.textContent = input.classList.contains('show-text') ? '🙈' : '👁️';
       }
     }
 
