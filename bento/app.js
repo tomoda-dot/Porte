@@ -141,6 +141,9 @@ function ensureBentoLots(bento) {
 // ユーザーデータの正規化 (複数食スロット: 1食, 2食, 3食... 対応)
 function normalizeUserData(u) {
   if (!u) return;
+  if ((Array.isArray(u.selectedBentoIds) && u.selectedBentoIds.some(Boolean)) || u.selectedBentoId) {
+    u.wantsBento = true;
+  }
   if (u.wantsBento === false) {
     u.bentoCount = 0;
   } else {
@@ -482,11 +485,10 @@ async function saveSettingToSupabase(keyName, jsonValueStr) {
   if (!url || !key || typeof supabase === 'undefined') return;
   try {
     const SB = supabase.createClient(url, key);
-    await SB.from('設定').delete().eq('key', keyName);
-    await SB.from('設定').insert({
+    await SB.from('設定').upsert({
       key: keyName,
       value: jsonValueStr
-    });
+    }, { onConflict: 'key' });
   } catch(e) {}
 }
 
@@ -543,23 +545,78 @@ function mergePorteUsers(remoteUsers, localUsers) {
 
   const localMap = {};
   localUsers.forEach(u => {
-    if (u && u.id) localMap[String(u.id).trim()] = u;
+    if (u && (u.id || u.name)) {
+      const key = String(u.id || u.name).trim();
+      localMap[key] = u;
+    }
   });
 
   const merged = remoteUsers.map(ru => {
-    if (!ru || !ru.id) return ru;
-    const lu = localMap[String(ru.id).trim()];
+    if (!ru) return ru;
+    const key = String(ru.id || ru.name || '').trim();
+    const lu = localMap[key];
     if (!lu) return ru;
-    return Object.assign({}, lu, ru);
+
+    const res = Object.assign({}, lu, ru);
+    
+    if (lu.wantsBento !== false || ru.wantsBento !== false) {
+      res.wantsBento = true;
+    }
+
+    const luIds = Array.isArray(lu.selectedBentoIds) ? lu.selectedBentoIds : (lu.selectedBentoId ? [lu.selectedBentoId] : []);
+    const ruIds = Array.isArray(ru.selectedBentoIds) ? ru.selectedBentoIds : (ru.selectedBentoId ? [ru.selectedBentoId] : []);
+    const maxLen = Math.max(luIds.length, ruIds.length, res.bentoCount || 1);
+    const mergedIds = [];
+    for (let i = 0; i < maxLen; i++) {
+      mergedIds[i] = ruIds[i] || luIds[i] || '';
+    }
+    res.selectedBentoIds = mergedIds;
+    res.selectedBentoId = mergedIds[0] || '';
+    if (mergedIds.some(Boolean)) {
+      res.wantsBento = true;
+    }
+    return res;
   });
 
   localUsers.forEach(lu => {
-    if (lu && lu.id && !merged.some(ru => String(ru.id).trim() === String(lu.id).trim())) {
-      merged.push(lu);
+    if (lu && (lu.id || lu.name)) {
+      const key = String(lu.id || lu.name).trim();
+      if (!merged.some(ru => String(ru.id || ru.name || '').trim() === key)) {
+        merged.push(lu);
+      }
     }
   });
 
   return merged;
+}
+
+function applyDailyOrdersToPorteUsers(dailyOrdersObj, usersArray) {
+  if (!dailyOrdersObj || !Array.isArray(usersArray)) return usersArray;
+  const todayKey = getTodayKey();
+  const dayRecord = dailyOrdersObj[todayKey];
+  if (!dayRecord || !Array.isArray(dayRecord.orders)) return usersArray;
+
+  dayRecord.orders.forEach(ord => {
+    if (!ord || (!ord.userId && !ord.userName)) return;
+    const u = usersArray.find(item => 
+      (ord.userId && String(item.id).trim() === String(ord.userId).trim()) ||
+      (ord.userName && String(item.name).trim() === String(ord.userName).trim())
+    );
+    if (u) {
+      normalizeUserData(u);
+      u.wantsBento = true;
+      if (!Array.isArray(u.selectedBentoIds)) u.selectedBentoIds = [];
+      const slotIdx = ord.slotIndex !== undefined ? Number(ord.slotIndex) : 0;
+      while (u.selectedBentoIds.length <= slotIdx) {
+        u.selectedBentoIds.push('');
+      }
+      if (ord.bentoId) {
+        u.selectedBentoIds[slotIdx] = ord.bentoId;
+        u.selectedBentoId = u.selectedBentoIds[0] || '';
+      }
+    }
+  });
+  return usersArray;
 }
 
 function mergeOrderHistory(remoteHist, localHist) {
@@ -653,6 +710,7 @@ async function syncFromSupabase() {
           const parsed = JSON.parse(latestByKey['bento_porte_users']);
           if (Array.isArray(parsed) && parsed.length > 0) {
             porteUsers = mergePorteUsers(parsed, porteUsers);
+            applyDailyOrdersToPorteUsers(dailyOrders, porteUsers);
             localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
           }
         } catch(e) {}
@@ -1688,7 +1746,10 @@ function renderUserPickerList(searchQuery) {
     targetList = porteUsers.filter(u => u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
   } else {
     // bentoOnly
-    targetList = porteUsers.filter(u => (u.type !== '👔 スタッフ' && !String(u.name).includes('👔')) && (modalShowAll || u.wantsBento !== false || u.selectedBentoId));
+    targetList = porteUsers.filter(u => (u.type !== '👔 スタッフ' && !String(u.name).includes('👔')) && (modalShowAll || u.wantsBento !== false || (u.selectedBentoIds && u.selectedBentoIds.some(Boolean)) || u.selectedBentoId));
+    if (targetList.length === 0) {
+      targetList = porteUsers.filter(u => u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
+    }
   }
 
   const filtered = targetList.filter(u => {
@@ -2921,9 +2982,15 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
 
         // お弁当が必要（wantsBento = true）かの判定：
+        // 欠席・お休みでない限り、明示的に「不要」「なし」と指定されていない場合はデフォルトで true
+        const isExplicitNegative = (val) => {
+          const s = String(val || '').trim();
+          return s === 'なし' || s === '不要' || s === '無' || s === '持参' || s === '0' || s === '0食' || s === '0個' || s === 'false';
+        };
+
         let wantsBento = false;
         if (!isAbsent) {
-          if (isBentoPositive(curB, curMeal)) {
+          if (!isExplicitNegative(curB) && !isExplicitNegative(curMeal)) {
             wantsBento = true;
           }
         }
@@ -2940,11 +3007,30 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           fullNote = wantsBento ? noteText : (noteText ? `【お弁当不要】${noteText}` : '【お弁当不要】');
         }
 
-        // 既存の選択中のお弁当IDを保護・マージ
+        // 既存の選択中のお弁当IDを保護・マージ (dailyOrders からも復元)
+        const todayKey = getTodayKey();
+        const todayOrders = (dailyOrders[todayKey] && Array.isArray(dailyOrders[todayKey].orders)) ? dailyOrders[todayKey].orders : [];
+        const userTodayOrders = todayOrders.filter(o => 
+          (o.userId && String(o.userId).trim() === uId) || 
+          (o.userName && String(o.userName).trim() === uName)
+        );
+
         const existingUser = porteUsers.find(item => String(item.id).trim() === uId || String(item.name).trim() === String(u.name || u.氏名).trim());
-        const savedBentoId = existingUser ? (existingUser.selectedBentoId || '') : '';
-        const savedBentoIds = existingUser && Array.isArray(existingUser.selectedBentoIds) ? [...existingUser.selectedBentoIds] : (savedBentoId ? [savedBentoId] : []);
+        let savedBentoIds = existingUser && Array.isArray(existingUser.selectedBentoIds) ? [...existingUser.selectedBentoIds] : (existingUser && existingUser.selectedBentoId ? [existingUser.selectedBentoId] : []);
+        
+        if (userTodayOrders.length > 0) {
+          userTodayOrders.forEach(o => {
+            const slotIdx = o.slotIndex !== undefined ? Number(o.slotIndex) : 0;
+            while (savedBentoIds.length <= slotIdx) savedBentoIds.push('');
+            if (o.bentoId) savedBentoIds[slotIdx] = o.bentoId;
+          });
+        }
+
+        const savedBentoId = savedBentoIds[0] || '';
         const savedBentoCount = existingUser && existingUser.bentoCount !== undefined ? existingUser.bentoCount : undefined;
+        if (savedBentoIds.some(Boolean)) {
+          wantsBento = true;
+        }
 
         loadedUsers.push({
           id: u.id || `P${idx+1}`,
@@ -3009,6 +3095,7 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
     }
 
     if (loadedUsers.length > 0) {
+      applyDailyOrdersToPorteUsers(dailyOrders, loadedUsers);
       porteUsers = loadedUsers;
     } else {
       showToast('⚠️ テーブル内にデータが見つかりませんでした。', 'warning');

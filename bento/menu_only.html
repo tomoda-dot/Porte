@@ -634,8 +634,7 @@
       if (!url || !key || typeof supabase === 'undefined') return;
       try {
         const SB = supabase.createClient(url, key);
-        await SB.from('設定').delete().eq('key', keyName);
-        await SB.from('設定').insert({ key: keyName, value: jsonValueStr });
+        await SB.from('設定').upsert({ key: keyName, value: jsonValueStr }, { onConflict: 'key' });
       } catch(e) {}
     }
 
@@ -736,6 +735,128 @@
       await saveOrderHistoryToSupabase(orderHistory);
     }
 
+    function mergeDailyOrders(remoteOrders, localOrders) {
+      const merged = Object.assign({}, remoteOrders || {});
+      if (!localOrders || typeof localOrders !== 'object') return merged;
+
+      Object.keys(localOrders).forEach(dateKey => {
+        const localRecord = localOrders[dateKey];
+        const remoteRecord = merged[dateKey];
+
+        if (!remoteRecord) {
+          merged[dateKey] = localRecord;
+        } else {
+          if (remoteRecord.status === 'CONFIRMED' && localRecord.status !== 'CONFIRMED') {
+            // Prefer remote confirmed record
+          } else if (localRecord.status === 'CONFIRMED' && remoteRecord.status !== 'CONFIRMED') {
+            merged[dateKey] = localRecord;
+          } else {
+            const remoteList = Array.isArray(remoteRecord.orders) ? remoteRecord.orders : [];
+            const localList = Array.isArray(localRecord.orders) ? localRecord.orders : [];
+            const orderMap = {};
+
+            remoteList.forEach(o => {
+              if (!o) return;
+              const k = `${o.userId || o.userName}_${o.slotIndex || 0}`;
+              orderMap[k] = o;
+            });
+            localList.forEach(o => {
+              if (!o) return;
+              const k = `${o.userId || o.userName}_${o.slotIndex || 0}`;
+              if (!orderMap[k]) orderMap[k] = o;
+            });
+
+            merged[dateKey] = {
+              status: (remoteRecord.status === 'CONFIRMED' || localRecord.status === 'CONFIRMED') ? 'CONFIRMED' : 'DRAFT',
+              confirmedAt: remoteRecord.confirmedAt || localRecord.confirmedAt,
+              orders: Object.values(orderMap)
+            };
+          }
+        }
+      });
+      return merged;
+    }
+
+    function mergePorteUsers(remoteUsers, localUsers) {
+      if (!Array.isArray(remoteUsers) || remoteUsers.length === 0) return localUsers || [];
+      if (!Array.isArray(localUsers) || localUsers.length === 0) return remoteUsers;
+
+      const localMap = {};
+      localUsers.forEach(u => {
+        if (u && (u.id || u.name)) {
+          const key = String(u.id || u.name).trim();
+          localMap[key] = u;
+        }
+      });
+
+      const merged = remoteUsers.map(ru => {
+        if (!ru) return ru;
+        const key = String(ru.id || ru.name || '').trim();
+        const lu = localMap[key];
+        if (!lu) return ru;
+
+        const res = Object.assign({}, lu, ru);
+        
+        if (lu.wantsBento !== false || ru.wantsBento !== false) {
+          res.wantsBento = true;
+        }
+
+        const luIds = Array.isArray(lu.selectedBentoIds) ? lu.selectedBentoIds : (lu.selectedBentoId ? [lu.selectedBentoId] : []);
+        const ruIds = Array.isArray(ru.selectedBentoIds) ? ru.selectedBentoIds : (ru.selectedBentoId ? [ru.selectedBentoId] : []);
+        const maxLen = Math.max(luIds.length, ruIds.length, res.bentoCount || 1);
+        const mergedIds = [];
+        for (let i = 0; i < maxLen; i++) {
+          mergedIds[i] = ruIds[i] || luIds[i] || '';
+        }
+        res.selectedBentoIds = mergedIds;
+        res.selectedBentoId = mergedIds[0] || '';
+        if (mergedIds.some(Boolean)) {
+          res.wantsBento = true;
+        }
+        return res;
+      });
+
+      localUsers.forEach(lu => {
+        if (lu && (lu.id || lu.name)) {
+          const key = String(lu.id || lu.name).trim();
+          if (!merged.some(ru => String(ru.id || ru.name || '').trim() === key)) {
+            merged.push(lu);
+          }
+        }
+      });
+
+      return merged;
+    }
+
+    function applyDailyOrdersToPorteUsers(dailyOrdersObj, usersArray) {
+      if (!dailyOrdersObj || !Array.isArray(usersArray)) return usersArray;
+      const todayKey = getTodayKey();
+      const dayRecord = dailyOrdersObj[todayKey];
+      if (!dayRecord || !Array.isArray(dayRecord.orders)) return usersArray;
+
+      dayRecord.orders.forEach(ord => {
+        if (!ord || (!ord.userId && !ord.userName)) return;
+        const u = usersArray.find(item => 
+          (ord.userId && String(item.id).trim() === String(ord.userId).trim()) ||
+          (ord.userName && String(item.name).trim() === String(ord.userName).trim())
+        );
+        if (u) {
+          normalizeUserData(u);
+          u.wantsBento = true;
+          if (!Array.isArray(u.selectedBentoIds)) u.selectedBentoIds = [];
+          const slotIdx = ord.slotIndex !== undefined ? Number(ord.slotIndex) : 0;
+          while (u.selectedBentoIds.length <= slotIdx) {
+            u.selectedBentoIds.push('');
+          }
+          if (ord.bentoId) {
+            u.selectedBentoIds[slotIdx] = ord.bentoId;
+            u.selectedBentoId = u.selectedBentoIds[0] || '';
+          }
+        }
+      });
+      return usersArray;
+    }
+
     async function syncFromSupabase() {
       const { url, key } = getSupabaseCredentials();
       if (!url || !key || typeof supabase === 'undefined') return;
@@ -777,11 +898,15 @@
               }
             } catch(e) {}
           }
+          let currentDailyOrders = {};
           if (latestByKey['bento_daily_orders']) {
             try {
               const parsed = JSON.parse(latestByKey['bento_daily_orders']);
               if (parsed && typeof parsed === 'object') {
-                localStorage.setItem('bento_daily_orders', JSON.stringify(parsed));
+                let localOrders = {};
+                try { localOrders = JSON.parse(localStorage.getItem('bento_daily_orders')) || {}; } catch(e){}
+                currentDailyOrders = mergeDailyOrders(parsed, localOrders);
+                localStorage.setItem('bento_daily_orders', JSON.stringify(currentDailyOrders));
               }
             } catch(e) {}
           }
@@ -789,7 +914,8 @@
             try {
               const parsed = JSON.parse(latestByKey['bento_porte_users']);
               if (Array.isArray(parsed) && parsed.length > 0) {
-                porteUsers = parsed;
+                porteUsers = mergePorteUsers(parsed, porteUsers);
+                applyDailyOrdersToPorteUsers(currentDailyOrders, porteUsers);
                 localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
               }
             } catch(e) {}
@@ -822,6 +948,10 @@
       } else {
         porteUsers = [];
       }
+
+      let localDailyOrders = {};
+      try { localDailyOrders = JSON.parse(localStorage.getItem('bento_daily_orders')) || {}; } catch(e){}
+      applyDailyOrdersToPorteUsers(localDailyOrders, porteUsers);
 
       autoReplaceSoldOutMenu();
       syncFromSupabase();
@@ -887,6 +1017,9 @@
 
     function normalizeUserData(u) {
       if (!u) return;
+      if ((Array.isArray(u.selectedBentoIds) && u.selectedBentoIds.some(Boolean)) || u.selectedBentoId) {
+        u.wantsBento = true;
+      }
       if (u.wantsBento === false) {
         u.bentoCount = 0;
       } else {
@@ -1044,7 +1177,10 @@
         users = porteUsers.filter(u => u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
       } else {
         // bentoOnly
-        users = porteUsers.filter(u => (u.type !== '👔 スタッフ' && !String(u.name).includes('👔')) && u.wantsBento !== false);
+        users = porteUsers.filter(u => (u.type !== '👔 スタッフ' && !String(u.name).includes('👔')) && (u.wantsBento !== false || (u.selectedBentoIds && u.selectedBentoIds.some(Boolean)) || u.selectedBentoId));
+        if (users.length === 0) {
+          users = porteUsers.filter(u => u.type !== '👔 スタッフ' && !String(u.name).includes('👔'));
+        }
       }
 
       if (users.length === 0) {
