@@ -820,13 +820,28 @@
       }
     }
 
-    // Provider Change Handler
+    // Provider Change Handler (Per-Provider Key Switching)
     function handleProviderChange() {
       const provider = document.getElementById('apiProviderSelect').value;
       const modelSel = document.getElementById('apiModelSelect');
+      const keyInput = document.getElementById('apiKeyInput');
       const list = providerModels[provider] || providerModels.offline;
       
       modelSel.innerHTML = list.map(m => `<option value="${m.val}">${m.text}</option>`).join('');
+
+      // Load saved key & model specifically for this provider
+      if (provider !== 'offline') {
+        const savedKey = localStorage.getItem('porte_ai_key_' + provider) || '';
+        const savedModel = localStorage.getItem('porte_ai_model_' + provider) || '';
+        keyInput.value = savedKey;
+        if (savedModel && list.some(m => m.val === savedModel)) {
+          modelSel.value = savedModel;
+        }
+      } else {
+        keyInput.value = '';
+      }
+
+      updateSavedBadgeSummary();
     }
 
     // Render Stepper Bar
@@ -1295,37 +1310,76 @@ ${document.getElementById('sheetShortGoal').value}
       showToast('📋 計画書テキストをクリップボードにコピーしました！');
     }
 
-    // Save / Load Local Settings
+    // Save / Load Per-Provider Local Settings
     function saveApiSettings() {
       const provider = document.getElementById('apiProviderSelect').value;
       const model = document.getElementById('apiModelSelect').value;
       const key = document.getElementById('apiKeyInput').value.trim();
 
-      localStorage.setItem('porte_ai_provider', provider);
-      localStorage.setItem('porte_ai_model', model);
-      localStorage.setItem('porte_ai_key', key);
-      showToast('⚙️ AI API設定を保存しました！');
+      if (provider === 'offline') {
+        showToast('⚡ オフライン定型文モードが選択されています。');
+        return;
+      }
+
+      if (!key) {
+        alert('API Key を入力してください。');
+        return;
+      }
+
+      // Save specifically for this provider
+      localStorage.setItem('porte_ai_key_' + provider, key);
+      localStorage.setItem('porte_ai_model_' + provider, model);
+      localStorage.setItem('porte_ai_last_provider', provider);
+
+      const providerNames = {
+        gemini: 'Gemini', openai: 'OpenAI', groq: 'Groq', openrouter: 'OpenRouter', claude: 'Claude'
+      };
+
+      updateSavedBadgeSummary();
+      showToast(`⚙️ ${providerNames[provider] || provider} のAPI Keyを保存しました！`);
     }
 
     function loadApiSettings() {
-      const provider = localStorage.getItem('porte_ai_provider') || 'gemini';
-      const model = localStorage.getItem('porte_ai_model') || 'gemini-2.5-flash-lite';
-      const key = localStorage.getItem('porte_ai_key') || '';
-
-      document.getElementById('apiProviderSelect').value = provider;
+      const lastProvider = localStorage.getItem('porte_ai_last_provider') || 'gemini';
+      document.getElementById('apiProviderSelect').value = lastProvider;
       handleProviderChange();
-      document.getElementById('apiModelSelect').value = model;
-      document.getElementById('apiKeyInput').value = key;
     }
 
     function clearApiSettings() {
-      localStorage.removeItem('porte_ai_provider');
-      localStorage.removeItem('porte_ai_model');
-      localStorage.removeItem('porte_ai_key');
-      document.getElementById('apiKeyInput').value = '';
-      document.getElementById('apiProviderSelect').value = 'offline';
-      handleProviderChange();
-      showToast('⚙️ 設定をクリアしました（オフラインモード）');
+      const provider = document.getElementById('apiProviderSelect').value;
+      if (provider !== 'offline') {
+        localStorage.removeItem('porte_ai_key_' + provider);
+        localStorage.removeItem('porte_ai_model_' + provider);
+        document.getElementById('apiKeyInput').value = '';
+        showToast(`⚙️ ${provider} の保存キーを削除しました。`);
+      } else {
+        ['gemini', 'openai', 'groq', 'openrouter', 'claude'].forEach(p => {
+          localStorage.removeItem('porte_ai_key_' + p);
+          localStorage.removeItem('porte_ai_model_' + p);
+        });
+        document.getElementById('apiKeyInput').value = '';
+        showToast('⚙️ 全AIプロバイダーの保存キーをクリアしました。');
+      }
+      updateSavedBadgeSummary();
+    }
+
+    function updateSavedBadgeSummary() {
+      const providers = ['gemini', 'openai', 'groq', 'openrouter', 'claude'];
+      const pNames = { gemini: 'Gemini', openai: 'OpenAI', groq: 'Groq', openrouter: 'OpenRouter', claude: 'Claude' };
+      const savedList = providers.filter(p => !!localStorage.getItem('porte_ai_key_' + p)).map(p => pNames[p]);
+
+      const badge = document.getElementById('aiActiveBadge');
+      if (badge) {
+        if (savedList.length > 0) {
+          badge.textContent = `保存済みキー: ${savedList.join(', ')} ✓`;
+          badge.style.background = '#dcfce7';
+          badge.style.color = '#15803d';
+        } else {
+          badge.textContent = '保存済みキー: なし (オフライン定型文可能)';
+          badge.style.background = '#f1f5f9';
+          badge.style.color = '#64748b';
+        }
+      }
     }
 
     function resetAllSteps() {
