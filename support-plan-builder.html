@@ -1034,33 +1034,39 @@
       return null;
     }
 
-    // Convert User Wish / Complaint into Professional Comprehensive Support Policy
+    // Convert User Wish / Complaint into Concise Professional Support Policy (2 lines max)
     async function convertWishToPolicy() {
-      const wish = document.getElementById('inputWish').value.trim();
+      let wish = document.getElementById('inputWish').value.trim();
       if (!wish) {
         alert('「希望する生活・本人の主訴」を入力してください。');
         document.getElementById('inputWish').focus();
         return;
       }
 
-      showToast('⏳ 主訴から「総合的な援助の方針」を変換中...');
+      showToast('⏳ 主訴から「総合的な援助の方針」を作成中...');
 
       const prompt = `あなたは就労継続支援B型事業所のサービス管理責任者です。
-利用者の聞き取った本人の主訴・希望:
+利用者の主訴・希望:
 "${wish}"
 
-上記の本人の主訴・希望を基に、相談支援員の方針がない場合でも事業所の個別支援計画書にふさわしい、フォーマルかつ温かみのある「総合的な援助の方針」の文章（150文字〜200文字程度）を作成してください。余計な解説は含めず、方針の本文のみを出力してください。`;
+上記を踏まえ、個別支援計画書の「総合的な援助の方針」を【80文字〜100文字程度（長くて2行）】の簡潔でフォーマルな文章で作成してください。
+※「『...』という想い」などの生の口語引用や重複テキストは避け、プロの福祉文章として自然な日本語に要約し、方針本文のみを出力してください。`;
 
       const aiRaw = await callLLMApi(prompt);
       let policyText = aiRaw ? aiRaw.trim() : null;
 
       if (!policyText) {
-        // High quality offline fallback
-        policyText = `利用者の『${wish}』という想いや意向を十分に尊重し、本人の心身の状況やペースに配慮しながら、安心できる事業所環境の中で安定した通所習慣の確立と各種作業活動を通じたスキルの習得・達成感の向上を段階的かつ丁寧に支援する。`;
+        // High quality concise offline fallback (Max 2 lines)
+        let cleanWish = wish.replace(/[。！!？?\n]/g, ' ').replace(/\s+/g, ' ').trim();
+        cleanWish = cleanWish.replace(/したいしたい/g, 'したい').replace(/やりたいやりたい/g, 'やりたい');
+        if (cleanWish.length > 35) cleanWish = cleanWish.substring(0, 35) + '…';
+        
+        policyText = `本人の「${cleanWish}」という意向を尊重し、心身の状況に配慮しながら安心できる環境の中で通所習慣の定着と作業スキルの向上を段階的に支援する。`;
       }
 
-      document.getElementById('inputPolicy').value = policyText;
-      showToast('✨ 本人の主訴から「総合的な援助の方針」を作成しました！');
+      // Completely overwrite and trim unnecessary newlines
+      document.getElementById('inputPolicy').value = policyText.replace(/[\r\n]+/g, '');
+      showToast('✨ 主訴から「総合的な援助の方針」（2行程度）を作成しました！');
     }
 
     // Clean JSON parser
