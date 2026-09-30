@@ -939,12 +939,17 @@
             groq: 'https://api.groq.com/openai/v1/chat/completions',
             openrouter: 'https://openrouter.ai/api/v1/chat/completions'
           };
+          const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          };
+          if (provider === 'openrouter') {
+            headers['HTTP-Referer'] = window.location.href;
+            headers['X-Title'] = 'Porte Support Plan Assistant';
+          }
           const resp = await fetch(endpoints[provider], {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`
-            },
+            headers: headers,
             body: JSON.stringify({
               model: model,
               messages: [{ role: 'user', content: promptText }],
@@ -952,8 +957,26 @@
             })
           });
           const json = await resp.json();
-          if (json.error) throw new Error(json.error.message);
+          if (json.error) throw new Error(json.error.message || JSON.stringify(json.error));
           return json.choices[0].message.content;
+        } else if (provider === 'claude') {
+          const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+              'dangerously-allow-browser': 'true'
+            },
+            body: JSON.stringify({
+              model: model,
+              max_tokens: 2000,
+              messages: [{ role: 'user', content: promptText }]
+            })
+          });
+          const json = await resp.json();
+          if (json.error) throw new Error(json.error.message || JSON.stringify(json.error));
+          return json.content.map(c => c.text || '').join('\n');
         }
       } catch (err) {
         console.warn('AI API Error, using offline template fallback:', err);
