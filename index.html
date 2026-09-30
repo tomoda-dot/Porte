@@ -7313,6 +7313,10 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     var recs=att.filter(function(a){return String(a.userId)===uid&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
     var tW=0,tH=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
+    var tTrans=recs.reduce(function(sum,r){
+      var tra=(r.transportationAllowance!==undefined&&r.transportationAllowance!==null&&r.transportationAllowance!=='')?Number(r.transportationAllowance):Number(u.transportationAllowance||0);
+      return sum+tra;
+    },0);
     recs.forEach(function(r){
       var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
       if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
@@ -7325,11 +7329,11 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     });
     var kk=checkKaikin(u,att,eM);
     var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
-    var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
+    var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:kk.kaikin?[{name:'皆勤手当',amount:KAIKIN_BONUS}]:[]};
     var bonus=alResult.total;
     var bd=bcDeduct*bentoPrice;
     var bdNext=bcNext*bentoPrice;
-    var total=Math.round(tW)+bonus-bd;
+    var total=Math.round(tW)+bonus-bd+tTrans;
     var ym=eM.split('-');var yStr=ym[0];var mStr=parseInt(ym[1]);
     var fNum=S.settings.facilityNumber||'';
     var fName=S.settings.facilityName||'';
@@ -7340,7 +7344,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
       document.getElementById('e-c').innerHTML=userSelHtml+renderOneInvoice(u,recs,bcNext,bdNext,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
 
     }else if(eT==='receipt'){
-      document.getElementById('e-c').innerHTML=userSelHtml+renderOneReceipt(u,recs,tW,tH,bcDeduct,bd,bonus,total,alResult,yStr,mStr,compName,fName,fNum,fType);
+      document.getElementById('e-c').innerHTML=userSelHtml+renderOneReceipt(u,recs,tW,tH,bcDeduct,bd,bonus,tTrans,total,alResult,yStr,mStr,compName,fName,fNum,fType);
 
     }else if(eT==='bentoReceipt'){
       var totalBento = bc * bentoPrice;
@@ -7455,7 +7459,7 @@ function renderOneReceipt(u,recs,tW,tH,bc,bd,bonus,tTrans,total,alResult,yStr,mS
   h+='<p style="margin-bottom:12px">上記の金額を'+yStr+'年'+mStr+'月分の工賃及び交通費（現金支給）として受領いたしました。</p>';
   h+='<table style="width:100%;border-collapse:collapse;margin-bottom:20px"><thead><tr style="background:#f5f5f5"><th style="border:1px solid #999;padding:8px;text-align:left">項目</th><th style="border:1px solid #999;padding:8px;text-align:right;width:120px">金額</th></tr></thead><tbody>';
   h+='<tr><td style="border:1px solid #999;padding:8px">工賃（'+recs.length+'日 / サービス提供時間 '+tH.toFixed(1)+'時間）</td><td style="border:1px solid #999;padding:8px;text-align:right">¥'+Math.round(tW).toLocaleString()+'</td></tr>';
-  if(bonus>0)alResult.details.forEach(function(a){h+='<tr><td style="border:1px solid #999;padding:8px">'+esc(a.name)+'</td><td style="border:1px solid #999;padding:8px;text-align:right">¥'+a.amount.toLocaleString()+'</td></tr>';});
+  if(bonus>0&&alResult&&Array.isArray(alResult.details))alResult.details.forEach(function(a){h+='<tr><td style="border:1px solid #999;padding:8px">'+esc(a.name)+'</td><td style="border:1px solid #999;padding:8px;text-align:right">¥'+a.amount.toLocaleString()+'</td></tr>';});
   if(tTrans>0)h+='<tr><td style="border:1px solid #999;padding:8px;color:#2e7d32;font-weight:700">交通費支給（現金）</td><td style="border:1px solid #999;padding:8px;text-align:right;color:#2e7d32;font-weight:700">¥'+tTrans.toLocaleString()+'</td></tr>';
   if(bd>0)h+='<tr><td style="border:1px solid #999;padding:8px">食事提供費控除（'+bc+'食）</td><td style="border:1px solid #999;padding:8px;text-align:right;color:#c62828">-¥'+bd.toLocaleString()+'</td></tr>';
   h+='</tbody><tfoot><tr style="font-weight:700;background:#f9f9f9"><td style="border:1px solid #999;padding:8px;text-align:right">支給合計</td><td style="border:1px solid #999;padding:8px;text-align:right;font-size:16px">¥'+Math.max(0,total).toLocaleString()+'</td></tr></tfoot></table>';
