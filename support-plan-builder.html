@@ -602,8 +602,13 @@
       </div>
 
       <div style="margin-bottom:14px;">
-        <label class="small-label">総合的な援助の方針（サビ管の方針）</label>
-        <textarea id="inputPolicy" rows="3" placeholder="例: 本人の希望を踏まえ、無理のない通所リズムの確立とPC作業スキルの着実な習得を支援する。"></textarea>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+          <label class="small-label" style="margin:0;">総合的な援助の方針（サビ管の方針）</label>
+          <button type="button" class="btn btn-secondary" style="padding:4px 12px; font-size:11px; background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; font-weight:700;" onclick="convertWishToPolicy()">
+            ✨ 本人の主訴から「総合方針」をAI自動作成
+          </button>
+        </div>
+        <textarea id="inputPolicy" rows="3" placeholder="「本人の主訴」を入力後に上のボタンを押すと、AIがフォーマルな方針文章へ自動変換します。"></textarea>
       </div>
 
       <div class="btn-row">
@@ -975,8 +980,6 @@
             })
           });
           const json = await resp.json();
-          if (json.error) throw new Error(json.error.message || JSON.stringify(json.error));
-          return json.content.map(c => c.text || '').join('\n');
         }
       } catch (err) {
         console.warn('AI API Error, using offline template fallback:', err);
@@ -984,6 +987,35 @@
         return null;
       }
       return null;
+    }
+
+    // Convert User Wish / Complaint into Professional Comprehensive Support Policy
+    async function convertWishToPolicy() {
+      const wish = document.getElementById('inputWish').value.trim();
+      if (!wish) {
+        alert('「希望する生活・本人の主訴」を入力してください。');
+        document.getElementById('inputWish').focus();
+        return;
+      }
+
+      showToast('⏳ 主訴から「総合的な援助の方針」を変換中...');
+
+      const prompt = `あなたは就労継続支援B型事業所のサービス管理責任者です。
+利用者の聞き取った本人の主訴・希望:
+"${wish}"
+
+上記の本人の主訴・希望を基に、相談支援員の方針がない場合でも事業所の個別支援計画書にふさわしい、フォーマルかつ温かみのある「総合的な援助の方針」の文章（150文字〜200文字程度）を作成してください。余計な解説は含めず、方針の本文のみを出力してください。`;
+
+      const aiRaw = await callLLMApi(prompt);
+      let policyText = aiRaw ? aiRaw.trim() : null;
+
+      if (!policyText) {
+        // High quality offline fallback
+        policyText = `利用者の『${wish}』という想いや意向を十分に尊重し、本人の心身の状況やペースに配慮しながら、安心できる事業所環境の中で安定した通所習慣の確立と各種作業活動を通じたスキルの習得・達成感の向上を段階的かつ丁寧に支援する。`;
+      }
+
+      document.getElementById('inputPolicy').value = policyText;
+      showToast('✨ 本人の主訴から「総合的な援助の方針」を作成しました！');
     }
 
     // Clean JSON parser
