@@ -180,6 +180,25 @@
       text-security: none !important;
     }
 
+    .chip-item {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      user-select: none;
+    }
+    .chip-item:hover {
+      background: #eff6ff;
+      border-color: #2563eb;
+      color: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
     /* Stepper Header */
     .stepper-container {
       display: flex;
@@ -611,7 +630,33 @@
 
       <div style="margin-bottom:14px;">
         <label class="small-label">希望する生活・本人の主訴 <span style="color:red">*</span></label>
-        <textarea id="inputWish" rows="3" placeholder="例: 焦らず穏やかに通所したい。PC入力を頑張って作業手当を増やしたい。"></textarea>
+        <textarea id="inputWish" rows="3" placeholder="例: 駄菓子の接客販売やシール貼りを頑張りたい。無理のないペースで通所したい。"></textarea>
+        
+        <!-- Facility Task Preset Chips -->
+        <div style="margin-top:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
+          <div style="font-size:11px; font-weight:700; color:#475569; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+            <span>💡 ワンクリック文例・キーワード挿入（当事業所の主な作業内容）</span>
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:5px;">
+            <!-- Category 1: 駄菓子・接客・値札 -->
+            <span class="chip-item" onclick="appendWishChip('駄菓子の販売・接客や値札貼りの作業にチャレンジしたい')">🍬 駄菓子販売・接客・値札</span>
+            <span class="chip-item" onclick="appendWishChip('正確に値札を貼り、商品棚にきれいに並べたい')">🏷️ 値札貼り・商品陳列</span>
+            
+            <!-- Category 2: ハンドメイド・ビーズ -->
+            <span class="chip-item" onclick="appendWishChip('ビーズアクセサリー作りを丁寧に集中して取り組みたい')">📿 ビーズアクセサリー作り</span>
+            <span class="chip-item" onclick="appendWishChip('ハンドメイド作品作りを覚えて素敵な商品を作りたい')">🎨 ハンドメイド作品作り</span>
+            
+            <!-- Category 3: コーヒー・シール -->
+            <span class="chip-item" onclick="appendWishChip('コーヒーの焙煎や計量・封入作業をマスターしたい')">☕ コーヒー焙煎・計量・封入</span>
+            <span class="chip-item" onclick="appendWishChip('シール貼りをまっすぐ丁寧に仕上げられるようになりたい')">🏷️ シール貼り作業</span>
+
+            <!-- Category 4: 通所・工賃・生活 -->
+            <span class="chip-item" onclick="appendWishChip('無理のないペースで週3日安定して通所したい')">⏰ 安定通所（週3日〜）</span>
+            <span class="chip-item" onclick="appendWishChip('作業精度を上げて作業手当（工賃）を増やしたい')">💰 工賃・作業手当向上</span>
+            <span class="chip-item" onclick="appendWishChip('明るい挨拶や報連相を意識して周りと良好な関係を作りたい')">💬 明るい挨拶・報連相</span>
+          </div>
+        </div>
       </div>
 
       <div style="margin-bottom:14px;">
@@ -831,6 +876,22 @@
       } catch (e) {
         console.warn('Supabase config not active:', e);
       }
+    }
+
+    // Append Wish Preset Chip to Textarea
+    function appendWishChip(text) {
+      const area = document.getElementById('inputWish');
+      if (!area) return;
+      const current = area.value.trim();
+      if (current) {
+        // Append nicely with punctuation
+        const lastChar = current.slice(-1);
+        const sep = (lastChar === '。' || lastChar === '！' || lastChar === '？') ? ' ' : '。';
+        area.value = current + sep + text + '。';
+      } else {
+        area.value = text + '。';
+      }
+      showToast(`💡 文例「${text}」を主訴にワンクリック挿入しました！`);
     }
 
     // Toggle API Key text visibility
