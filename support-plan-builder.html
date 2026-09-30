@@ -12,6 +12,7 @@
   <!-- Supabase JS Library & Local Config if available -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="ai-config.js"></script>
 
   <style>
     :root {
@@ -853,7 +854,10 @@
 
       // Load saved key & model specifically for this provider
       if (provider !== 'offline') {
-        const savedKey = localStorage.getItem('porte_ai_key_' + provider) || '';
+        let savedKey = localStorage.getItem('porte_ai_key_' + provider) || '';
+        if (!savedKey && typeof PRECONFIGURED_API_KEYS !== 'undefined' && PRECONFIGURED_API_KEYS[provider]) {
+          savedKey = PRECONFIGURED_API_KEYS[provider];
+        }
         const savedModel = localStorage.getItem('porte_ai_model_' + provider) || '';
         keyInput.value = savedKey;
         if (savedModel && list.some(m => m.val === savedModel)) {
@@ -958,7 +962,11 @@
     async function callLLMApi(promptText) {
       const provider = document.getElementById('apiProviderSelect').value;
       const model = document.getElementById('apiModelSelect').value;
-      const apiKey = document.getElementById('apiKeyInput').value.trim();
+      let apiKey = document.getElementById('apiKeyInput').value.trim();
+
+      if (!apiKey && typeof PRECONFIGURED_API_KEYS !== 'undefined' && PRECONFIGURED_API_KEYS[provider]) {
+        apiKey = PRECONFIGURED_API_KEYS[provider];
+      }
 
       if (provider === 'offline' || !apiKey) {
         return null; // Signals fallback to Guided Template Engine
@@ -1388,7 +1396,11 @@ ${document.getElementById('sheetShortGoal').value}
     function updateSavedBadgeSummary() {
       const providers = ['gemini', 'openai', 'groq', 'openrouter', 'claude'];
       const pNames = { gemini: 'Gemini', openai: 'OpenAI', groq: 'Groq', openrouter: 'OpenRouter', claude: 'Claude' };
-      const savedList = providers.filter(p => !!localStorage.getItem('porte_ai_key_' + p)).map(p => pNames[p]);
+      const savedList = providers.filter(p => {
+        const localK = localStorage.getItem('porte_ai_key_' + p);
+        const preK = (typeof PRECONFIGURED_API_KEYS !== 'undefined' && PRECONFIGURED_API_KEYS[p]);
+        return !!localK || !!preK;
+      }).map(p => pNames[p]);
 
       const badge = document.getElementById('aiActiveBadge');
       if (badge) {
