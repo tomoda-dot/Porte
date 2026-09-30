@@ -910,14 +910,14 @@
         document.getElementById('inputUserName').value = '新保 健太';
         document.getElementById('inputServiceType').value = '就労継続支援B型';
         document.getElementById('inputWish').value = '穏やかに安心して通所したい。パソコン入力を覚えて作業手当を増やしたい。';
-        document.getElementById('inputPolicy').value = '利用者の不安に配慮し、安定した通所習慣の確立とPC作業スキルの向上を段階的に支援する。';
-        showToast('🌱 新規利用者のサンプルをセットしました');
+        document.getElementById('inputPolicy').value = ''; // 空欄にして「AI自動作成ボタン」を押しやすく設定
+        showToast('🌱 新規利用者のサンプル主訴をセットしました');
       } else {
         document.getElementById('inputUserName').value = '鈴木 美咲';
         document.getElementById('inputServiceType').value = '就労継続支援B型';
         document.getElementById('inputWish').value = '作業精度を上げてミスを減らしたい。周りと良好な関係を作りたい。';
-        document.getElementById('inputPolicy').value = '作業面での成功体験を積み重ね、自信と報告・連絡・相談の習慣化をサポートする。';
-        showToast('👥 既存利用者のサンプルをセットしました');
+        document.getElementById('inputPolicy').value = '';
+        showToast('👥 既存利用者のサンプル主訴をセットしました');
       }
     }
 
