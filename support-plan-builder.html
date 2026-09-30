@@ -3,398 +3,411 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>個別支援計画 作成アシスタント | Standalone Edition</title>
+  <title>個別支援計画 AI＆定型文作成アシスタント (Standalone & Porte Ready)</title>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
   
+  <!-- Supabase JS Library & Local Config if available -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+
   <style>
     :root {
-      --primary: #4f46e5;
-      --primary-hover: #4338ca;
-      --primary-light: #eeeffe;
-      --secondary: #0ea5e9;
-      --success: #10b981;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #eff6ff;
+      --success: #16a34a;
+      --success-light: #f0fdf4;
       --warning: #f59e0b;
-      --danger: #ef4444;
+      --danger: #dc2626;
       --dark: #0f172a;
-      --text: #334155;
-      --text-muted: #64748b;
+      --slate: #334155;
+      --muted: #64748b;
       --bg: #f8fafc;
       --card: #ffffff;
       --border: #e2e8f0;
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --radius-lg: 18px;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 12px -2px rgba(0,0,0,0.08);
-      --shadow-lg: 0 12px 24px -4px rgba(0,0,0,0.12);
+      --radius: 12px;
+      --shadow: 0 4px 20px -2px rgba(0,0,0,0.08);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Noto Sans JP', 'Plus Jakarta Sans', sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      color: var(--slate);
       line-height: 1.6;
       padding-bottom: 60px;
     }
 
     header {
-      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
       color: white;
-      padding: 20px 32px;
-      box-shadow: var(--shadow-md);
+      padding: 18px 28px;
+      box-shadow: var(--shadow);
       position: sticky;
       top: 0;
       z-index: 100;
     }
 
-    .header-container {
-      max-width: 1400px;
+    .header-inner {
+      max-width: 1200px;
       margin: 0 auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
+      flex-wrap: wrap;
       gap: 12px;
     }
 
-    .brand-icon {
-      width: 42px;
-      height: 42px;
-      background: rgba(255,255,255,0.15);
-      backdrop-filter: blur(8px);
-      border-radius: var(--radius-md);
+    .brand-title {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      border: 1px solid rgba(255,255,255,0.2);
-    }
-
-    .brand-title {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
+      gap: 10px;
     }
 
     .brand-subtitle {
       font-size: 12px;
-      color: rgba(255,255,255,0.7);
+      color: #94a3b8;
+      margin-top: 2px;
     }
 
-    .badge-standalone {
-      background: rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #e0e7ff;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .btn-header {
-      background: rgba(255,255,255,0.12);
-      color: white;
-      border: 1px solid rgba(255,255,255,0.25);
-      padding: 8px 16px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-    }
-
-    .btn-header:hover {
-      background: rgba(255,255,255,0.25);
-    }
-
-    .main-container {
-      max-width: 1400px;
-      margin: 24px auto;
-      padding: 0 24px;
-      display: grid;
-      grid-template-columns: 460px 1fr;
-      gap: 24px;
-    }
-
-    @media (max-width: 1100px) {
-      .main-container {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .panel {
-      background: var(--card);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-sm);
-      padding: 24px;
-      height: fit-content;
-    }
-
-    .panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid var(--primary-light);
-    }
-
-    .panel-title {
-      font-size: 17px;
-      font-weight: 700;
-      color: var(--dark);
+    .header-badges {
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .tab-bar {
-      display: flex;
-      background: #f1f5f9;
-      padding: 4px;
-      border-radius: var(--radius-md);
-      margin-bottom: 20px;
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
       gap: 4px;
     }
 
-    .tab-btn {
-      flex: 1;
-      border: none;
-      background: transparent;
-      padding: 8px 12px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
+    .badge-standalone {
+      background: rgba(255,255,255,0.15);
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.2);
     }
 
-    .tab-btn.active {
+    .badge-ai {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+
+    .badge-porte {
+      background: #4ade80;
+      color: #064e3b;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+
+    /* API Settings Bar */
+    .api-config-card {
       background: var(--card);
-      color: var(--primary);
-      box-shadow: var(--shadow-sm);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      border-left: 5px solid var(--warning);
+      box-shadow: var(--shadow);
     }
 
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    label {
-      display: block;
-      font-size: 12px;
+    .api-config-card summary {
       font-weight: 700;
-      color: var(--text);
-      margin-bottom: 6px;
+      font-size: 14px;
+      color: #92400e;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    label .req {
-      color: var(--danger);
-      margin-left: 2px;
+    .api-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
     }
 
-    input[type="text"], input[type="date"], select, textarea {
+    label.small-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    input, select, textarea {
       width: 100%;
       padding: 9px 12px;
       font-size: 13px;
       border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      background: #ffffff;
-      color: var(--text);
+      border-radius: 8px;
       font-family: inherit;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      background: white;
+      color: var(--slate);
+      transition: all 0.2s;
     }
 
     input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
     }
 
-    textarea {
-      resize: vertical;
-      min-height: 70px;
-    }
-
-    .preset-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 6px;
-    }
-
-    .chip {
-      background: #f1f5f9;
-      border: 1px solid #cbd5e1;
-      color: #475569;
-      padding: 3px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .chip:hover {
-      background: var(--primary-light);
-      color: var(--primary);
-      border-color: var(--primary);
-    }
-
-    .chip.selected {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
-    }
-
-    .btn-action {
-      width: 100%;
-      padding: 13px 20px;
-      border: none;
-      border-radius: var(--radius-md);
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
+    /* Stepper Header */
+    .stepper-container {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
-      color: white;
-      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
-    }
-
-    .btn-secondary {
-      background: #f1f5f9;
-      color: var(--text);
-      border: 1.5px solid var(--border);
-    }
-
-    .btn-secondary:hover {
-      background: #e2e8f0;
-    }
-
-    /* Output Editor Section */
-    .editor-section {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .editor-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      margin-bottom: 24px;
       background: var(--card);
-      padding: 14px 20px;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-sm);
+      padding: 16px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      flex-wrap: wrap;
+      gap: 6px;
     }
 
-    .toolbar-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--dark);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .toolbar-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn-tool {
-      background: #ffffff;
-      border: 1.5px solid var(--border);
-      padding: 7px 14px;
-      border-radius: var(--radius-sm);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text);
-      cursor: pointer;
+    .step-item {
       display: flex;
       align-items: center;
       gap: 6px;
+    }
+
+    .step-num {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-num.active { background: var(--primary); }
+    .step-num.done { background: var(--success); }
+
+    .step-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .step-text.active { color: var(--primary); font-weight: 700; }
+    .step-line {
+      width: 28px;
+      height: 3px;
+      background: #cbd5e1;
+      margin: 0 6px;
+      border-radius: 2px;
+    }
+    .step-line.done { background: var(--success); }
+
+    /* Content Cards */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      display: none;
+      margin-bottom: 24px;
+    }
+
+    .card.active { display: block; }
+
+    .card-h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    /* Goal Items Grid/List */
+    .goal-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .goal-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #f8fafc;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
       transition: all 0.2s;
     }
 
-    .btn-tool:hover {
-      background: #f8fafc;
-      border-color: var(--primary);
-      color: var(--primary);
+    .goal-card:hover {
+      border-color: #93c5fd;
+      background: #f0f7ff;
     }
 
-    .btn-tool.primary-tool {
-      background: var(--primary);
+    .goal-card.selected {
       border-color: var(--primary);
+      background: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+    }
+
+    .goal-badge {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: var(--slate);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .goal-card.selected .goal-badge {
+      background: var(--primary);
       color: white;
     }
-    .btn-tool.primary-tool:hover {
-      background: var(--primary-hover);
+
+    .goal-text {
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--dark);
     }
 
-    /* A4 Preview Canvas */
-    .a4-preview-card {
-      background: var(--card);
-      border-radius: var(--radius-lg);
+    /* Tables */
+    .table-responsive {
+      overflow-x: auto;
+      border-radius: 8px;
       border: 1px solid var(--border);
-      box-shadow: var(--shadow-md);
-      padding: 32px;
+      margin-bottom: 16px;
     }
 
-    .plan-sheet {
-      background: white;
-      color: #000;
-      font-family: 'Noto Sans JP', sans-serif;
-      line-height: 1.4;
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 650px;
     }
 
-    .sheet-title {
-      text-align: center;
-      font-size: 20px;
+    table.data-table th {
+      background: #1e3a5f;
+      color: white;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    table.data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    table.data-table tr.selected-row {
+      background: var(--primary-light);
+    }
+
+    /* Selected Goal Banner */
+    .selected-banner {
+      padding: 12px 16px;
+      background: var(--primary-light);
+      border-left: 4px solid var(--primary);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--primary-dark);
+      margin-bottom: 16px;
+    }
+
+    /* Buttons & Actions */
+    .btn-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 11px 22px;
+      font-size: 14px;
       font-weight: 700;
-      letter-spacing: 2px;
-      margin-bottom: 20px;
-      padding-bottom: 6px;
-      border-bottom: 2px solid #000;
+      border-radius: 8px;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+    }
+
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.5; pointer-events: none; }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: var(--slate);
+      border: 1.5px solid var(--border);
+    }
+    .btn-secondary:hover { background: #e2e8f0; }
+
+    .btn-success {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(22,163,74,0.3);
+    }
+
+    /* A4 Print Layout Sheet */
+    .a4-sheet {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-top: 20px;
+      box-shadow: var(--shadow);
     }
 
     .sheet-table {
@@ -414,173 +427,71 @@
       background: #f1f5f9;
       font-weight: 700;
       text-align: center;
-      white-space: nowrap;
     }
 
-    .section-header-th {
-      background: #e2e8f0 !important;
-      text-align: left !important;
-      font-size: 13px;
-    }
-
-    .edit-area {
+    .sheet-edit {
       width: 100%;
-      border: 1px dashed transparent;
-      padding: 4px;
+      border: none;
       background: transparent;
       font-family: inherit;
       font-size: 12px;
+      resize: vertical;
       color: inherit;
-      border-radius: 4px;
     }
 
-    .edit-area:hover, .edit-area:focus {
-      border-color: var(--primary);
-      background: rgba(79, 70, 229, 0.03);
-      outline: none;
-    }
-
-    /* Task Rows Table */
-    .task-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-    }
-
-    .task-table th, .task-table td {
-      border: 1px solid #000;
-      padding: 6px 8px;
-      vertical-align: top;
-    }
-
-    .task-table th {
-      background: #f8fafc;
-      font-weight: 700;
+    .sheet-edit:focus {
+      outline: 1px dashed var(--primary);
+      background: rgba(37,99,235,0.03);
     }
 
     /* Modal Styling */
-    .modal-overlay {
+    .modal-backdrop {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(15,23,42,0.6);
       backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
+      display: none;
     }
 
-    .modal-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
+    .modal-backdrop.active { display: flex; }
 
-    .modal-card {
+    .modal-box {
       background: white;
       width: 90%;
-      max-width: 580px;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
+      max-width: 520px;
+      border-radius: 16px;
       padding: 24px;
-      transform: translateY(10px);
-      transition: transform 0.2s;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     }
 
-    .modal-overlay.active .modal-card {
-      transform: translateY(0);
-    }
-
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      padding-bottom: 10px;
-      border-bottom: 1.5px solid var(--border);
-    }
-
-    .modal-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--dark);
-    }
-
-    .close-btn {
-      background: none;
-      border: none;
-      font-size: 20px;
-      color: var(--text-muted);
-      cursor: pointer;
-    }
-
-    /* Loading Overlay */
-    .loading-spinner {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top-color: white;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Toast Notification */
-    .toast {
+    /* Toast */
+    .toast-popup {
       position: fixed;
       bottom: 24px;
       right: 24px;
       background: var(--dark);
       color: white;
       padding: 12px 20px;
-      border-radius: var(--radius-md);
+      border-radius: 10px;
       font-size: 13px;
       font-weight: 600;
-      box-shadow: var(--shadow-lg);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      transform: translateY(80px);
-      opacity: 0;
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: var(--shadow);
       z-index: 2000;
+      display: none;
     }
 
-    .toast.show {
-      transform: translateY(0);
-      opacity: 1;
-    }
-
-    /* Print Styles */
+    /* Print media rule */
     @media print {
-      body {
-        background: white;
-        padding: 0;
-      }
-      header, .main-container > .panel, .editor-toolbar, .toast, .badge-standalone, .btn-header {
-        display: none !important;
-      }
-      .main-container {
-        display: block !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        max-width: 100% !important;
-      }
-      .a4-preview-card {
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-      }
-      .edit-area {
-        border: none !important;
-        padding: 0 !important;
-      }
+      body { background: white; padding: 0; }
+      header, .api-config-card, .stepper-container, .btn-row, .no-print { display: none !important; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card { display: none !important; }
+      .card#step4 { display: block !important; box-shadow: none; border: none; padding: 0; }
+      .a4-sheet { border: none; box-shadow: none; padding: 0; }
     }
   </style>
 </head>
@@ -588,567 +499,447 @@
 
   <!-- App Header -->
   <header>
-    <div class="header-container">
-      <div class="brand">
-        <div class="brand-icon">📑</div>
-        <div>
-          <div class="brand-title">個別支援計画 作成アシスタント</div>
-          <div class="brand-subtitle">障がい福祉サービス（就労継続支援B型・移行支援対応）</div>
+    <div class="header-inner">
+      <div>
+        <div class="brand-title">
+          <span>📋</span> 個別支援計画 AI＆定型文アシスタント
         </div>
-        <span class="badge-standalone">Standalone Evaluator v1.0</span>
+        <div class="brand-subtitle">就労継続支援B型 / 障害福祉サービス対応（単体評価版 & Porte連携対応）</div>
       </div>
-      <div class="header-actions">
-        <button class="btn-header" onclick="loadSampleData('existing')">👥 既存利用者サンプル</button>
-        <button class="btn-header" onclick="loadSampleData('new')">🌱 新規利用者サンプル</button>
-        <button class="btn-header" onclick="openApiConfigModal()">⚙️ AI API設定</button>
+      <div class="header-badges">
+        <span class="badge badge-standalone">Standalone Mode</span>
+        <span class="badge badge-ai" id="badgeAiStatus">⚡ 100% オフライン定型文可能</span>
+        <span class="badge badge-porte" id="badgePorteStatus">Porte DB: 未接続</span>
       </div>
     </div>
   </header>
 
-  <!-- Main Work Area -->
-  <div class="main-container">
-    
-    <!-- Left Column: Assessment & Generator Controls -->
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">
-          <span>📝</span> 利用者情報＆作成設定
-        </div>
-        <span id="apiStatusBadge" style="font-size:11px; padding:3px 8px; border-radius:10px; background:#e0e7ff; color:#3730a3; font-weight:600;">
-          API: 未設定 (定型文モード)
+  <div class="container">
+
+    <!-- API & Porte Config Collapsible Card -->
+    <details class="api-config-card" id="apiConfigDetails" open>
+      <summary>
+        <span>⚙️ AI API設定 & Porte Supabase接続</span>
+        <span id="aiActiveBadge" style="font-size:11px; background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:10px;">
+          設定保存状況: ローカル保存済
         </span>
+      </summary>
+      
+      <div class="api-grid">
+        <div>
+          <label class="small-label">使用するAIエンジン</label>
+          <select id="apiProviderSelect" onchange="handleProviderChange()">
+            <option value="offline">⚡ オフライン定型文（API不要・完全無料）</option>
+            <option value="gemini" selected>Google Gemini (Gemini 2.5 / 2.0 / 1.5)</option>
+            <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
+            <option value="groq">Groq (Llama 3.3 70B - 超高速・無料枠)</option>
+            <option value="openrouter">OpenRouter (DeepSeek / Gemini / Claude)</option>
+            <option value="claude">Anthropic Claude (Claude 3.5 Sonnet / Haiku)</option>
+          </select>
+        </div>
+        <div>
+          <label class="small-label">AIモデル</label>
+          <select id="apiModelSelect"></select>
+        </div>
+        <div>
+          <label class="small-label">API Key</label>
+          <input type="password" id="apiKeyInput" placeholder="AIのAPIキーを入力">
+        </div>
       </div>
 
-      <!-- Mode Tabs -->
-      <div class="tab-bar">
-        <button class="tab-btn active" id="tabBtnWizard" onclick="switchTab('wizard')">⚡ 定型文生成 (完全OFFLINE)</button>
-        <button class="tab-btn" id="tabBtnAi" onclick="switchTab('ai')">🤖 Direct AI自動生成</button>
-        <button class="tab-btn" id="tabBtnPrompt" onclick="switchTab('prompt')">📋 プロンプト作成</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:10px; flex-wrap:wrap;">
+        <div style="font-size:11px; color:var(--muted);">
+          ※ APIキー未設定の場合でも「⚡ オフライン定型文」モードで100%計画作成が可能です。
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-secondary" style="padding:6px 14px; font-size:12px;" onclick="saveApiSettings()">💾 API設定を保存</button>
+          <button class="btn btn-secondary" style="padding:6px 14px; font-size:12px; color:var(--danger);" onclick="clearApiSettings()">設定クリア</button>
+        </div>
       </div>
+    </details>
 
-      <!-- Section: User Type & Info -->
-      <div class="form-group">
-        <label>対象利用者の区分<span class="req">*</span></label>
-        <select id="userTypeSelect" onchange="toggleUserTypeForm()">
-          <option value="new">🌱 新規利用者（アセスメント手動入力）</option>
-          <option value="existing">👥 既存利用者（履歴・出欠アセスメント）</option>
+    <!-- Stepper Navigation -->
+    <div class="stepper-container" id="stepperNav"></div>
+
+    <!-- Step 0: User & Assessment Input -->
+    <div class="card active" id="step0">
+      <div class="card-h2"><span>🌱</span> Step 0: 基本情報 ＆ アセスメント入力</div>
+      <div class="card-desc">Porteの利用者を選択するか、新規利用者のアセスメント情報を手動入力してください。</div>
+
+      <!-- User Loader from Porte / Sample -->
+      <div style="background:var(--primary-light); padding:14px; border-radius:10px; margin-bottom:18px; border:1px solid #bfdbfe;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+          <label style="font-size:12px; font-weight:700; color:var(--primary-dark);">👥 利用者データの読み込み</label>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="loadPorteUsersFromSupabase()">🔄 Porte利用者リスト取得</button>
+            <button class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="loadDemoSample('new')">🌱 新規サンプル</button>
+            <button class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="loadDemoSample('existing')">👥 既存サンプル</button>
+          </div>
+        </div>
+        <select id="porteUserSelect" onchange="handlePorteUserSelected()">
+          <option value="">-- 手動入力（新規利用者） --</option>
         </select>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label>利用者氏名<span class="req">*</span></label>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+        <div>
+          <label class="small-label">利用者氏名 <span style="color:red">*</span></label>
           <input type="text" id="inputUserName" placeholder="例: 山田 太郎">
         </div>
-        <div class="form-group">
-          <label>サービス種別</label>
+        <div>
+          <label class="small-label">サービス種別</label>
           <select id="inputServiceType">
             <option value="就労継続支援B型">就労継続支援B型</option>
             <option value="就労継続支援A型">就労継続支援A型</option>
             <option value="就労移行支援">就労移行支援</option>
-            <option value="生活介護">生活介護</option>
           </select>
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label>計画作成担当者</label>
-          <input type="text" id="inputManager" placeholder="例: 佐藤 サビ管">
-        </div>
-        <div class="form-group">
-          <label>適用開始年月日</label>
-          <input type="date" id="inputStartDate">
-        </div>
+      <div style="margin-bottom:14px;">
+        <label class="small-label">希望する生活・本人の主訴 <span style="color:red">*</span></label>
+        <textarea id="inputWish" rows="3" placeholder="例: 焦らず穏やかに通所したい。PC入力を頑張って作業手当を増やしたい。"></textarea>
       </div>
 
-      <!-- Section: Detailed Assessment Input -->
-      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border);">
-        <div style="font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 10px;">
-          🔍 アセスメント情報（目標生成の材料）
-        </div>
-
-        <div class="form-group">
-          <label>本人の希望・将来目指したい姿</label>
-          <textarea id="inputUserWish" placeholder="例: 毎日休まず通所したい。将来は週5日パソコン入力作業ができるようになりたい。"></textarea>
-          <div class="preset-chips">
-            <span class="chip" onclick="addChipText('inputUserWish','安定して通所したい')">+ 勤怠安定</span>
-            <span class="chip" onclick="addChipText('inputUserWish','PC入力をマスターしたい')">+ PCスキル</span>
-            <span class="chip" onclick="addChipText('inputUserWish','自分のペースで作業したい')">+ マイペース</span>
-            <span class="chip" onclick="addChipText('inputUserWish','将来は一般就労したい')">+ 一般就労</span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>得意なこと・強み（ストレングス）</label>
-          <textarea id="inputStrengths" placeholder="例: 丁寧な軽作業が得意。挨拶がしっかりできる。集中力が高い。"></textarea>
-          <div class="preset-chips">
-            <span class="chip" onclick="addChipText('inputStrengths','丁寧な作業ができる')">+ 丁寧さ</span>
-            <span class="chip" onclick="addChipText('inputStrengths','時間が守れる・真面目')">+ 時間遵守</span>
-            <span class="chip" onclick="addChipText('inputStrengths','パソコンの打鍵が速い')">+ 打鍵速度</span>
-            <span class="chip" onclick="addChipText('inputStrengths','素直で指示に従える')">+ 素直さ</span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>課題・苦手なこと・配慮が必要な点</label>
-          <textarea id="inputChallenges" placeholder="例: 疲れが溜まると体調を崩しやすい。複雑な作業指示で混乱することがある。"></textarea>
-          <div class="preset-chips">
-            <span class="chip" onclick="addChipText('inputChallenges','疲れやすく集中が切れやすい')">+ 疲れやすさ</span>
-            <span class="chip" onclick="addChipText('inputChallenges','報連相のタイミングに迷う')">+ 報連相の不安</span>
-            <span class="chip" onclick="addChipText('inputChallenges','環境変化で緊張しやすい')">+ 環境変化</span>
-            <span class="chip" onclick="addChipText('inputChallenges','手先の細かい作業が苦手')">+ 手先手作業</span>
-          </div>
-        </div>
+      <div style="margin-bottom:14px;">
+        <label class="small-label">総合的な援助の方針（サビ管の方針）</label>
+        <textarea id="inputPolicy" rows="3" placeholder="例: 本人の希望を踏まえ、無理のない通所リズムの確立とPC作業スキルの着実な習得を支援する。"></textarea>
       </div>
 
-      <!-- Specific Wizard Options (When Wizard Tab Active) -->
-      <div id="sectionWizardOptions" style="margin-top: 16px; background: var(--primary-light); padding: 14px; border-radius: var(--radius-md);">
-        <div style="font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">
-          🎯 重点的・強化したい方針テーマ（複数選択可）
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-          <label style="font-weight: 500; cursor: pointer;">
-            <input type="checkbox" id="catAttendance" checked> 1. 勤怠・体調管理
-          </label>
-          <label style="font-weight: 500; cursor: pointer;">
-            <input type="checkbox" id="catWork" checked> 2. 作業精度・PCスキル
-          </label>
-          <label style="font-weight: 500; cursor: pointer;">
-            <input type="checkbox" id="catComm" checked> 3. 報連相・コミュニケーション
-          </label>
-          <label style="font-weight: 500; cursor: pointer;">
-            <input type="checkbox" id="catIndependence"> 4. 自立・一般就労準備
-          </label>
-        </div>
-      </div>
-
-      <!-- Action Button -->
-      <div style="margin-top: 20px;">
-        <button class="btn-action btn-primary" id="btnGenerate" onclick="handleGenerate()">
-          <span id="btnGenIcon">✨</span> <span id="btnGenText">定型文で個別支援計画を高速作成</span>
-        </button>
-      </div>
-
-    </div>
-
-    <!-- Right Column: Document Editor & Live Preview Canvas -->
-    <div class="editor-section">
-
-      <!-- Editor Toolbar -->
-      <div class="editor-toolbar">
-        <div class="toolbar-title">
-          <span>📄</span> 個別支援計画書（案）リアルタイムプレビュー
-        </div>
-        <div class="toolbar-actions">
-          <button class="btn-tool" onclick="copyPlanAsJson()">📋 Porte形式コピー</button>
-          <button class="btn-tool" onclick="copyPlanAsText()">📝 テキストコピー</button>
-          <button class="btn-tool primary-tool" onclick="window.print()">🖨️ A4印刷 / PDF出力</button>
-        </div>
-      </div>
-
-      <!-- A4 Sheet Container -->
-      <div class="a4-preview-card">
-        <div class="plan-sheet">
-
-          <div class="sheet-title">個別支援計画書（原案）</div>
-
-          <!-- Header info table -->
-          <table class="sheet-table">
-            <tr>
-              <th style="width: 15%;">利用者氏名</th>
-              <td style="width: 35%; font-weight: 700;">
-                <input type="text" class="edit-area" id="planUserName" value="山田 太郎 様">
-              </td>
-              <th style="width: 15%;">作成年月日</th>
-              <td style="width: 35%;">
-                <input type="date" class="edit-area" id="planCreateDate">
-              </td>
-            </tr>
-            <tr>
-              <th>サービス種別</th>
-              <td>
-                <input type="text" class="edit-area" id="planServiceType" value="就労継続支援B型">
-              </td>
-              <th>支援期間</th>
-              <td>
-                <input type="text" class="edit-area" id="planPeriod" value="令和8年10月1日 〜 令和9年3月31日">
-              </td>
-            </tr>
-            <tr>
-              <th>事業所名</th>
-              <td>
-                <input type="text" class="edit-area" id="planFacility" value="Porte デモ事業所">
-              </td>
-              <th>計画作成担当者</th>
-              <td>
-                <input type="text" class="edit-area" id="planManager" value="佐藤 サビ管">
-              </td>
-            </tr>
-          </table>
-
-          <!-- Policy Table -->
-          <table class="sheet-table">
-            <tr>
-              <th class="section-header-th">総合的な援助の方針</th>
-            </tr>
-            <tr>
-              <td style="padding: 10px;">
-                <textarea class="edit-area" id="planPolicy" rows="3" placeholder="計画生成後に自動入力されます（手動編集可能）"></textarea>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Goals Table -->
-          <table class="sheet-table">
-            <tr>
-              <th class="section-header-th" style="width: 50%;">長期目標（6ヶ月〜1年）</th>
-              <th class="section-header-th" style="width: 50%;">短期目標（3ヶ月〜6ヶ月）</th>
-            </tr>
-            <tr>
-              <td style="padding: 10px;">
-                <textarea class="edit-area" id="planLongGoal" rows="3" placeholder="長期目標が入力されます"></textarea>
-              </td>
-              <td style="padding: 10px;">
-                <textarea class="edit-area" id="planShortGoal" rows="3" placeholder="短期目標が入力されます"></textarea>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Detailed Tasks & Support Matrix Table -->
-          <table class="task-table">
-            <thead>
-              <tr>
-                <th style="width: 4%;">No</th>
-                <th style="width: 25%;">具体的な課題・目標</th>
-                <th style="width: 25%;">本人の役割・取り組むこと</th>
-                <th style="width: 36%;">事業所の支援内容・配慮事項</th>
-                <th style="width: 10%;">達成時期</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Task 1 -->
-              <tr>
-                <td style="text-align:center; font-weight:700;">1</td>
-                <td><textarea class="edit-area" id="planTask1" rows="3"></textarea></td>
-                <td><textarea class="edit-area" id="planRole1" rows="3"></textarea></td>
-                <td><textarea class="edit-area" id="planSupport1" rows="3"></textarea></td>
-                <td><input type="text" class="edit-area" id="planPeriod1" value="6ヶ月以内" style="text-align:center;"></td>
-              </tr>
-              <!-- Task 2 -->
-              <tr>
-                <td style="text-align:center; font-weight:700;">2</td>
-                <td><textarea class="edit-area" id="planTask2" rows="3"></textarea></td>
-                <td><textarea class="edit-area" id="planRole2" rows="3"></textarea></td>
-                <td><textarea class="edit-area" id="planSupport2" rows="3"></textarea></td>
-                <td><input type="text" class="edit-area" id="planPeriod2" value="6ヶ月以内" style="text-align:center;"></td>
-              </tr>
-              <!-- Task 3 -->
-              <tr>
-                <td style="text-align:center; font-weight:700;">3</td>
-                <td><textarea class="edit-area" id="planTask3" rows="3"></textarea></td>
-                <td><textarea class="edit-area" id="planRole3" rows="3"></textarea></td>
-                <td><textarea class="edit-area" id="planSupport3" rows="3"></textarea></td>
-                <td><input type="text" class="edit-area" id="planPeriod3" value="6ヶ月以内" style="text-align:center;"></td>
-              </tr>
-              <!-- Task 4 -->
-              <tr>
-                <td style="text-align:center; font-weight:700;">4</td>
-                <td><textarea class="edit-area" id="planTask4" rows="3"></textarea></td>
-                <td><textarea class="edit-area" id="planRole4" rows="3"></textarea></td>
-                <td><textarea class="edit-area" id="planSupport4" rows="3"></textarea></td>
-                <td><input type="text" class="edit-area" id="planPeriod4" value="6ヶ月以内" style="text-align:center;"></td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- Remarks Table -->
-          <table class="sheet-table" style="margin-top: 16px;">
-            <tr>
-              <th class="section-header-th">特記事項・本人および家族の意向</th>
-            </tr>
-            <tr>
-              <td style="padding: 10px;">
-                <textarea class="edit-area" id="planRemarks" rows="2" placeholder="特記事項・ご本人のコメントなど"></textarea>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Signatures Footer -->
-          <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #ccc; font-size: 11px; display: flex; justify-content: space-between;">
-            <div>上記個別支援計画について説明を受け、同意いたしました。<br><br>同意日: 令和&nbsp;&nbsp;&nbsp;&nbsp;年&nbsp;&nbsp;&nbsp;&nbsp;月&nbsp;&nbsp;&nbsp;&nbsp;日&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;署名: ___________________________</div>
-            <div>交付日: 令和&nbsp;&nbsp;&nbsp;&nbsp;年&nbsp;&nbsp;&nbsp;&nbsp;月&nbsp;&nbsp;&nbsp;&nbsp;日</div>
-          </div>
-
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- API Config Modal -->
-  <div class="modal-overlay" id="apiModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">⚙️ Direct AI API 設定</div>
-        <button class="close-btn" onclick="closeApiModal()">&times;</button>
-      </div>
-
-      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
-        OpenAI, Google Gemini, Anthropic などのAPIキーを設定すると、Porte内で最新モデルによるダイレクト計画一括生成が利用可能になります。（キーはブラウザにのみ安全保存されます）
-      </div>
-
-      <div class="form-group">
-        <label>AI プロバイダー選択</label>
-        <select id="apiProvider" onchange="updateApiKeyHelp()">
-          <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
-          <option value="gemini">Google Gemini (Gemini 1.5 Flash / Pro)</option>
-          <option value="anthropic">Anthropic (Claude 3.5 Sonnet / Haiku)</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>API Key</label>
-        <input type="password" id="apiKeyInput" placeholder="sk-...">
-        <div id="apiKeyHelp" style="font-size:11px; color:var(--text-muted); margin-top:4px;">
-          OpenAI APIキーを入力してください。
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>使用モデル名</label>
-        <input type="text" id="apiModelInput" value="gpt-4o-mini">
-      </div>
-
-      <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button class="btn-action btn-primary" onclick="saveApiConfig()">保存して適用</button>
-        <button class="btn-action btn-secondary" onclick="clearApiConfig()">設定クリア</button>
+      <div class="btn-row">
+        <span></span>
+        <button class="btn btn-primary" onclick="generateLongTermGoals()">長期目標を生成する (Step 1) →</button>
       </div>
     </div>
+
+    <!-- Step 1: Long-term Goal Selection -->
+    <div class="card" id="step1">
+      <div class="card-h2"><span>🎯</span> Step 1: 長期目標の選択</div>
+      <div class="card-desc">提案された5件の長期目標から、最適な1件を選択してください。</div>
+      <div class="goal-list" id="longTermGoalList"></div>
+      
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goToStep(0)">← Step 0に戻る</button>
+        <button class="btn btn-primary" id="btnToStep2" disabled onclick="generateShortTermGoals()">短期目標を生成する (Step 2) →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Short-term Goal Selection -->
+    <div class="card" id="step2">
+      <div class="selected-banner" id="bannerSelectedLongGoal"></div>
+      <div class="card-h2"><span>🚀</span> Step 2: 短期目標の選択</div>
+      <div class="card-desc">長期目標を達成するための短期目標5件から、最適な1件を選択してください。</div>
+      <div class="goal-list" id="shortTermGoalList"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goToStep(1)">← Step 1に戻る</button>
+        <button class="btn btn-primary" id="btnToStep3" disabled onclick="generateDetailPlans()">具体的計画を生成する (Step 3) →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Detailed Support Matrix Selection (3 to 4 items) -->
+    <div class="card" id="step3">
+      <div class="selected-banner" id="bannerSelectedShortGoal"></div>
+      <div class="card-h2"><span>🛠️</span> Step 3: 具体的支援計画の選択</div>
+      <div class="card-desc">10件の計画案から、実施する項目を <strong>3〜4件</strong> チェック選択してください。</div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:40px; text-align:center;">選択</th>
+              <th style="width:30px; text-align:center;">No</th>
+              <th style="width:30%;">具体的到達目標</th>
+              <th style="width:30%;">本人の役割</th>
+              <th style="width:36%;">支援内容・配慮事項</th>
+            </tr>
+          </thead>
+          <tbody id="detailPlanTableBody"></tbody>
+        </table>
+      </div>
+
+      <div style="font-size:13px; font-weight:700; color:var(--primary-dark); margin-bottom:14px;">
+        選択中: <span id="selectedDetailCount">0</span> / 4 件（3〜4件を選択してください）
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goToStep(2)">← Step 2に戻る</button>
+        <button class="btn btn-primary" id="btnToStep4" disabled onclick="buildSummary()">計画書まとめを表示 (Step 4) →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Summary & A4 Print / Porte Export -->
+    <div class="card" id="step4">
+      <div class="card-h2"><span>📄</span> Step 4: 個別支援計画書（完成・プレビュー）</div>
+      <div class="card-desc">文字の微調整や、A4印刷・Porteデータベースへの登録が可能です。</div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:16px;" class="no-print">
+        <button class="btn btn-secondary" onclick="copyFullPlanText()">📋 全文テキストコピー</button>
+        <button class="btn btn-success" onclick="saveToPorteSupabase()">💾 PorteのDBに保存</button>
+        <button class="btn btn-primary" onclick="window.print()">🖨️ A4印刷 / PDF出力</button>
+      </div>
+
+      <!-- Printable A4 Format -->
+      <div class="a4-sheet">
+        <div style="text-align:center; font-size:18px; font-weight:800; border-bottom:2px solid #000; padding-bottom:6px; margin-bottom:16px;">
+          個別支援計画書（原案）
+        </div>
+
+        <table class="sheet-table">
+          <tr>
+            <th style="width:15%;">利用者氏名</th>
+            <td style="width:35%; font-weight:700;">
+              <input type="text" class="sheet-edit" id="sheetUserName">
+            </td>
+            <th style="width:15%;">作成年月日</th>
+            <td style="width:35%;">
+              <input type="date" class="sheet-edit" id="sheetCreateDate">
+            </td>
+          </tr>
+          <tr>
+            <th>サービス種別</th>
+            <td><input type="text" class="sheet-edit" id="sheetServiceType"></td>
+            <th>適用期間</th>
+            <td><input type="text" class="sheet-edit" id="sheetPeriod" value="6ヶ月間"></td>
+          </tr>
+        </table>
+
+        <table class="sheet-table">
+          <tr><th>総合的な援助の方針</th></tr>
+          <tr>
+            <td><textarea class="sheet-edit" id="sheetPolicy" rows="3"></textarea></td>
+          </tr>
+        </table>
+
+        <table class="sheet-table">
+          <tr>
+            <th style="width:50%;">長期目標</th>
+            <th style="width:50%;">短期目標</th>
+          </tr>
+          <tr>
+            <td><textarea class="sheet-edit" id="sheetLongGoal" rows="3"></textarea></td>
+            <td><textarea class="sheet-edit" id="sheetShortGoal" rows="3"></textarea></td>
+          </tr>
+        </table>
+
+        <table class="sheet-table">
+          <thead>
+            <tr>
+              <th style="width:5%;">No</th>
+              <th style="width:30%;">具体的到達目標</th>
+              <th style="width:30%;">本人の役割</th>
+              <th style="width:35%;">支援内容</th>
+            </tr>
+          </thead>
+          <tbody id="sheetTaskRows"></tbody>
+        </table>
+
+        <div style="margin-top:20px; font-size:11px; display:flex; justify-content:space-between;">
+          <div>上記個別支援計画について説明を受け、同意いたしました。<br><br>同意日: 令和____年____月____日&nbsp;&nbsp;&nbsp;&nbsp;署名: ______________________</div>
+          <div>交付日: 令和____年____月____日</div>
+        </div>
+      </div>
+
+      <div class="btn-row no-print" style="margin-top:24px;">
+        <button class="btn btn-secondary" onclick="goToStep(3)">← Step 3に戻る</button>
+        <button class="btn btn-secondary" style="color:var(--danger);" onclick="resetAllSteps()">最初からやり直す</button>
+      </div>
+    </div>
+
   </div>
 
   <!-- Toast Element -->
-  <div class="toast" id="toast">
-    <span id="toastIcon">✅</span>
-    <span id="toastMsg">通知メッセージ</span>
-  </div>
+  <div class="toast-popup" id="toastPopup"></div>
 
-  <!-- JavaScript Logic -->
+  <!-- JavaScript App Engine -->
   <script>
-    // State management
-    let currentMode = 'wizard'; // 'wizard', 'ai', 'prompt'
+    // State variables
+    let currentStep = 0;
+    let selectedLongGoalText = '';
+    let selectedShortGoalText = '';
+    let generatedDetailItems = [];
+    let selectedDetailIndices = [];
+    let porteUsersList = [];
+    let supabaseClient = null;
 
-    // Initialize Default Dates & State
+    const stepNames = ['基本情報', '長期目標', '短期目標', '具体的計画', 'まとめ・出力'];
+
+    // Provider models mapping
+    const providerModels = {
+      offline: [{ val: 'offline', text: '⚡ オフライン定型文エンジン（100%確実・高精度）' }],
+      gemini: [
+        { val: 'gemini-2.5-flash-lite', text: 'Gemini 2.5 Flash Lite（推奨）' },
+        { val: 'gemini-2.5-flash', text: 'Gemini 2.5 Flash（高性能）' },
+        { val: 'gemini-1.5-flash', text: 'Gemini 1.5 Flash' }
+      ],
+      openai: [
+        { val: 'gpt-4o-mini', text: 'GPT-4o mini（標準・推奨）' },
+        { val: 'gpt-4o', text: 'GPT-4o（高精度）' }
+      ],
+      groq: [
+        { val: 'llama-3.3-70b-versatile', text: 'Llama 3.3 70B（超高速）' }
+      ],
+      openrouter: [
+        { val: 'google/gemini-2.5-flash', text: 'Gemini 2.5 Flash' },
+        { val: 'meta-llama/llama-3.3-70b-instruct', text: 'Llama 3.3 70B' }
+      ],
+      claude: [
+        { val: 'claude-3-5-haiku-20241022', text: 'Claude 3.5 Haiku' },
+        { val: 'claude-3-5-sonnet-20241022', text: 'Claude 3.5 Sonnet' }
+      ]
+    };
+
+    // Initialize App
     document.addEventListener('DOMContentLoaded', () => {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('inputStartDate').value = today;
-      document.getElementById('planCreateDate').value = today;
+      renderStepper();
+      initSupabaseConnection();
+      loadApiSettings();
+      handleProviderChange();
+      loadDemoSample('new');
 
-      loadApiConfig();
-      loadSampleData('new'); // Pre-populate with sample for immediate trial
+      // Set default create date
+      document.getElementById('sheetCreateDate').value = new Date().toISOString().split('T')[0];
     });
 
-    // Switch generator tabs
-    function switchTab(mode) {
-      currentMode = mode;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-
-      const wizardSec = document.getElementById('sectionWizardOptions');
-      const btnIcon = document.getElementById('btnGenIcon');
-      const btnText = document.getElementById('btnGenText');
-
-      if (mode === 'wizard') {
-        document.getElementById('tabBtnWizard').classList.add('active');
-        wizardSec.style.display = 'block';
-        btnIcon.textContent = '⚡';
-        btnText.textContent = '定型文で個別支援計画を高速作成（100% OFFLINE）';
-      } else if (mode === 'ai') {
-        document.getElementById('tabBtnAi').classList.add('active');
-        wizardSec.style.display = 'none';
-        btnIcon.textContent = '🤖';
-        btnText.textContent = 'AIで個別支援計画案を一括自動生成';
-      } else if (mode === 'prompt') {
-        document.getElementById('tabBtnPrompt').classList.add('active');
-        wizardSec.style.display = 'none';
-        btnIcon.textContent = '📋';
-        btnText.textContent = 'ChatGPT用プロンプトを作成・コピー';
+    // Supabase Connection initialization
+    function initSupabaseConnection() {
+      try {
+        if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') {
+          supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          document.getElementById('badgePorteStatus').textContent = 'Porte DB: 接続可能';
+          document.getElementById('badgePorteStatus').style.background = '#dcfce7';
+          document.getElementById('badgePorteStatus').style.color = '#15803d';
+        }
+      } catch (e) {
+        console.warn('Supabase config not active:', e);
       }
     }
 
-    // Preset helper chip adder
-    function addChipText(fieldId, text) {
-      const el = document.getElementById(fieldId);
-      if (el.value) {
-        el.value += '、' + text;
-      } else {
-        el.value = text;
-      }
+    // Provider Change Handler
+    function handleProviderChange() {
+      const provider = document.getElementById('apiProviderSelect').value;
+      const modelSel = document.getElementById('apiModelSelect');
+      const list = providerModels[provider] || providerModels.offline;
+      
+      modelSel.innerHTML = list.map(m => `<option value="${m.val}">${m.text}</option>`).join('');
     }
 
-    // Toggle User Type Select
-    function toggleUserTypeForm() {
-      const type = document.getElementById('userTypeSelect').value;
-      if (type === 'existing') {
-        showToast('👥 既存利用者のアセスメントモードに切替えました');
-      } else {
-        showToast('🌱 新規利用者のアセスメントモードに切替えました');
-      }
+    // Render Stepper Bar
+    function renderStepper() {
+      const el = document.getElementById('stepperNav');
+      let html = '';
+      stepNames.forEach((name, idx) => {
+        const numCls = idx === currentStep ? 'active' : (idx < currentStep ? 'done' : '');
+        const txtCls = idx === currentStep ? 'active' : '';
+        const lineCls = idx < currentStep ? 'done' : '';
+        const icon = idx < currentStep ? '✓' : (idx + 1);
+
+        html += `
+          <div class="step-item">
+            <div class="step-num ${numCls}">${icon}</div>
+            <span class="step-text ${txtCls}">${name}</span>
+          </div>
+        `;
+        if (idx < stepNames.length - 1) {
+          html += `<div class="step-line ${lineCls}"></div>`;
+        }
+      });
+      el.innerHTML = html;
     }
 
-    // Sample Data Loader for quick demo
-    function loadSampleData(type) {
+    // Step Switcher
+    function goToStep(stepNum) {
+      currentStep = stepNum;
+      renderStepper();
+      document.querySelectorAll('.card').forEach((c, idx) => {
+        if (idx === stepNum) c.classList.add('active');
+        else c.classList.remove('active');
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Load Demo Samples
+    function loadDemoSample(type) {
       if (type === 'new') {
-        document.getElementById('userTypeSelect').value = 'new';
         document.getElementById('inputUserName').value = '新保 健太';
         document.getElementById('inputServiceType').value = '就労継続支援B型';
-        document.getElementById('inputManager').value = '佐藤 サビ管';
-        document.getElementById('inputUserWish').value = '体調を整えて毎日休まず通所したい。パソコン入力を覚えて簡単な仕事ができるようになりたい。';
-        document.getElementById('inputStrengths').value = '時間が守れ、挨拶がしっかりできる。指示された作業に素直に取り組める。';
-        document.getElementById('inputChallenges').value = '緊張すると疲れやすく気分の波がある。分からない時に自分から尋ねるのが少し苦手。';
-        showToast('🌱 新規利用者「新保 健太」様のサンプルデータを読み込みました');
+        document.getElementById('inputWish').value = '穏やかに安心して通所したい。パソコン入力を覚えて作業手当を増やしたい。';
+        document.getElementById('inputPolicy').value = '利用者の不安に配慮し、安定した通所習慣の確立とPC作業スキルの向上を段階的に支援する。';
+        showToast('🌱 新規利用者のサンプルをセットしました');
       } else {
-        document.getElementById('userTypeSelect').value = 'existing';
         document.getElementById('inputUserName').value = '鈴木 美咲';
         document.getElementById('inputServiceType').value = '就労継続支援B型';
-        document.getElementById('inputManager').value = '高橋 サビ管';
-        document.getElementById('inputUserWish').value = '軽作業の正確性を上げて時給手当を増やしたい。グループワークにも参加したい。';
-        document.getElementById('inputStrengths').value = '手先が器用で検品作業の正確性が非常に高い。落ち着いた態度で作業できる。';
-        document.getElementById('inputChallenges').value = '作業スピードの波があり、疲労時にミスが増える。長時間同じ姿勢を保つと腰痛が出る。';
-        showToast('👥 既存利用者「鈴木 美咲」様のサンプルデータを読み込みました');
-      }
-      
-      // Auto trigger generation for instant satisfaction
-      handleGenerate();
-    }
-
-    // Main Execution Handler
-    async function handleGenerate() {
-      const name = document.getElementById('inputUserName').value.trim() || '利用者';
-      const wish = document.getElementById('inputUserWish').value.trim();
-      const strengths = document.getElementById('inputStrengths').value.trim();
-      const challenges = document.getElementById('inputChallenges').value.trim();
-
-      if (currentMode === 'wizard') {
-        generateWizardPlan(name, wish, strengths, challenges);
-      } else if (currentMode === 'ai') {
-        await generateAiPlan(name, wish, strengths, challenges);
-      } else if (currentMode === 'prompt') {
-        copyPromptToClipboard(name, wish, strengths, challenges);
+        document.getElementById('inputWish').value = '作業精度を上げてミスを減らしたい。周りと良好な関係を作りたい。';
+        document.getElementById('inputPolicy').value = '作業面での成功体験を積み重ね、自信と報告・連絡・相談の習慣化をサポートする。';
+        showToast('👥 既存利用者のサンプルをセットしました');
       }
     }
 
-    // ⚡ 1. SMART TEMPLATE WIZARD GENERATOR (100% Offline / Reliable)
-    function generateWizardPlan(name, wish, strengths, challenges) {
-      const service = document.getElementById('inputServiceType').value;
-      const manager = document.getElementById('inputManager').value || '計画作成担当者';
-
-      // Update header sheet fields
-      document.getElementById('planUserName').value = name + ' 様';
-      document.getElementById('planServiceType').value = service;
-      document.getElementById('planManager').value = manager;
-
-      // Category Flags
-      const cAttendance = document.getElementById('catAttendance').checked;
-      const cWork = document.getElementById('catWork').checked;
-      const cComm = document.getElementById('catComm').checked;
-      const cIndep = document.getElementById('catIndependence').checked;
-
-      // Policy Generation
-      let policyText = `${name}様の「${wish || '安心・安定して通所し自信をつけたい'}」という想いを尊重し、${strengths ? strengths + 'という強みを活かしながら、' : ''}安心できる就労環境の中で生活リズムの安定と作業スキルの着実な習得を図ります。`;
-      if (challenges) {
-        policyText += `また、${challenges}に対しては本人の負担にならないようスタッフが丁寧な声かけ・環境調整を行い、自己効力感を高められるよう支援します。`;
-      }
-      document.getElementById('planPolicy').value = policyText;
-
-      // Goals
-      document.getElementById('planLongGoal').value = `【長期目標】自分のペースに合わせた安定通所を維持し、自信を持って得意な作業に取り組むことができる。`;
-      document.getElementById('planShortGoal').value = `【短期目標】①週3日以上の通所習慣を定着させる。\n②適切なタイミングで休憩や相談を行い、無理なく作業を進める。`;
-
-      // Task 1: Attendance / Health
-      if (cAttendance) {
-        document.getElementById('planTask1').value = '生活リズムの安定と通所習慣の定着';
-        document.getElementById('planRole1').value = '前日に十分な睡眠をとり、無理のない目標日数（週3〜4日）で元気に通所する。';
-        document.getElementById('planSupport1').value = '毎日の検温・体調チェッカーを活用して状態を把握し、疲労が見られる際は休憩を促す。';
-        document.getElementById('planPeriod1').value = '3ヶ月以内';
-      }
-
-      // Task 2: Work Skill
-      if (cWork) {
-        document.getElementById('planTask2').value = '作業手順の理解と正確性の向上';
-        document.getElementById('planRole2').value = 'マニュアルを確認しながら作業を行い、自己検品を意識して取り組む。';
-        document.getElementById('planSupport2').value = '工程ごとに視覚的な写真付き手順書を用意し、できた工程を具体的に褒めて達成感を育む。';
-        document.getElementById('planPeriod2').value = '6ヶ月以内';
-      }
-
-      // Task 3: Communication / Consult
-      if (cComm) {
-        document.getElementById('planTask3').value = '困りごとや体調変化の報告・連絡・相談（報連相）';
-        document.getElementById('planRole3').value = '作業中の疑問や体調の違和感がある時は、ヘルプカードやスタッフへ声かけをする。';
-        document.getElementById('planSupport3').value = '相談しやすい温かい雰囲気を整え、「報告してくれてありがとう」と応答して安心感を提供する。';
-        document.getElementById('planPeriod3').value = '6ヶ月以内';
-      }
-
-      // Task 4: Stress Management or Independence
-      if (cIndep) {
-        document.getElementById('planTask4').value = '自己理解と社会マナーの獲得';
-        document.getElementById('planRole4').value = '朝夕の挨拶を自ら行い、自分の得意・不得意の傾向を振り返る。';
-        document.getElementById('planSupport4').value = '定期的な振り返り面談（月1回）を実施し、将来の希望や課題について一緒に確認する。';
-        document.getElementById('planPeriod4').value = '6ヶ月以内';
-      } else {
-        document.getElementById('planTask4').value = '気分転換とストレス対処の獲得';
-        document.getElementById('planRole4').value = '疲れを感じたら深呼吸やストレッチを行い、適切なタイミングで休憩をとる。';
-        document.getElementById('planSupport4').value = '静養スペースの案内や個別の相談時間を確保し、リフレッシュ方法の選択肢を提示する。';
-        document.getElementById('planPeriod4').value = '6ヶ月以内';
-      }
-
-      // Remarks
-      document.getElementById('planRemarks').value = `ご本人・ご家族のご意向: 「${wish || '焦らず自分のペースで前進したい'}」\n※本人の体調および精神面での変化に配慮し、定期的なモニタリングで評価・更新を行います。`;
-
-      showToast('⚡ 定型文ウィザードにより高品質な支援計画案を作成しました！');
-    }
-
-    // 🤖 2. DIRECT AI GENERATION (Calls API Endpoint)
-    async function generateAiPlan(name, wish, strengths, challenges) {
-      const apiKey = localStorage.getItem('porte_ai_key');
-      const provider = localStorage.getItem('porte_ai_provider') || 'openai';
-      const model = localStorage.getItem('porte_ai_model') || 'gpt-4o-mini';
-
-      if (!apiKey) {
-        showToast('⚠️ APIキーが設定されていません。右上「⚙️ AI API設定」から設定してください。');
-        openApiConfigModal();
+    // Load Users from Porte Supabase
+    async function loadPorteUsersFromSupabase() {
+      if (!supabaseClient) {
+        showToast('⚠️ Supabase設定が見つかりません。手動入力をご利用ください。');
         return;
       }
+      try {
+        showToast('⏳ Porteから利用者一覧を取得中...');
+        const { data, error } = await supabaseClient
+          .from('利用者')
+          .select('id, name, furigana, serviceType, userStatus')
+          .order('name');
+        
+        if (error) throw error;
+        porteUsersList = data || [];
+        
+        const sel = document.getElementById('porteUserSelect');
+        sel.innerHTML = '<option value="">-- 手動入力（新規利用者） --</option>' + 
+          porteUsersList.map(u => `<option value="${u.id}">${u.name} (${u.serviceType || 'B型'})</option>`).join('');
+        
+        showToast(`✅ Porteから ${porteUsersList.length} 名の利用者を読み込みました！`);
+      } catch (err) {
+        alert('Porteデータ取得エラー: ' + err.message);
+      }
+    }
 
-      const btn = document.getElementById('btnGenerate');
-      btn.disabled = true;
-      btn.innerHTML = `<span class="loading-spinner"></span> AI思考中・生成中...`;
+    function handlePorteUserSelected() {
+      const uid = document.getElementById('porteUserSelect').value;
+      if (!uid) return;
+      const user = porteUsersList.find(u => u.id === uid);
+      if (user) {
+        document.getElementById('inputUserName').value = user.name;
+        if (user.serviceType) document.getElementById('inputServiceType').value = user.serviceType;
+        showToast(`👥 ${user.name} 様を選択しました`);
+      }
+    }
 
-      const promptText = `
-障害福祉サービス（就労継続支援B型）の個別支援計画書を作成してください。
-【対象者】${name} 様
-【本人の希望】${wish || '未入力'}
-【強み・得意】${strengths || '未入力'}
-【課題・配慮】${challenges || '未入力'}
+    // API Engine Direct Execution Handler
+    async function callLLMApi(promptText) {
+      const provider = document.getElementById('apiProviderSelect').value;
+      const model = document.getElementById('apiModelSelect').value;
+      const apiKey = document.getElementById('apiKeyInput').value.trim();
 
-以下のJSON形式のみで回答を出力してください:
-{
-  "policy": "総合的な援助の方針（200文字程度）",
-  "longGoal": "長期目標（100文字程度）",
-  "shortGoal": "短期目標（100文字程度）",
-  "tasks": [
-    {"task": "課題1", "role": "本人の役割1", "support": "支援内容1", "period": "3ヶ月"},
-    {"task": "課題2", "role": "本人の役割2", "support": "支援内容2", "period": "6ヶ月"},
-    {"task": "課題3", "role": "本人の役割3", "support": "支援内容3", "period": "6ヶ月"},
-    {"task": "課題4", "role": "本人の役割4", "support": "支援内容4", "period": "6ヶ月"}
-  ],
-  "remarks": "特記事項"
-}
-`;
+      if (provider === 'offline' || !apiKey) {
+        return null; // Signals fallback to Guided Template Engine
+      }
 
       try {
-        let resData;
-        if (provider === 'openai') {
-          const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        if (provider === 'gemini') {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+          });
+          const json = await resp.json();
+          if (json.error) throw new Error(json.error.message);
+          return json.candidates[0].content.parts[0].text;
+        } else if (provider === 'openai' || provider === 'groq' || provider === 'openrouter') {
+          const endpoints = {
+            openai: 'https://api.openai.com/v1/chat/completions',
+            groq: 'https://api.groq.com/openai/v1/chat/completions',
+            openrouter: 'https://openrouter.ai/api/v1/chat/completions'
+          };
+          const resp = await fetch(endpoints[provider], {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1156,225 +947,345 @@
             },
             body: JSON.stringify({
               model: model,
-              messages: [
-                { role: 'system', content: 'あなたは障害福祉サービスの熟練サビ管です。JSONフォーマットのみを返してください。' },
-                { role: 'user', content: promptText }
-              ],
+              messages: [{ role: 'user', content: promptText }],
               temperature: 0.7
             })
           });
           const json = await resp.json();
           if (json.error) throw new Error(json.error.message);
-          const rawContent = json.choices[0].message.content.replace(/```json|```/g, '').trim();
-          resData = JSON.parse(rawContent);
-        } else {
-          throw new Error('プロバイダーは準備中か、サポート外です。OpenAIを選択してください。');
+          return json.choices[0].message.content;
         }
-
-        // Apply AI Result
-        document.getElementById('planPolicy').value = resData.policy || '';
-        document.getElementById('planLongGoal').value = resData.longGoal || '';
-        document.getElementById('planShortGoal').value = resData.shortGoal || '';
-        
-        if (resData.tasks && resData.tasks.length >= 4) {
-          for (let i = 0; i < 4; i++) {
-            document.getElementById(`planTask${i+1}`).value = resData.tasks[i].task || '';
-            document.getElementById(`planRole${i+1}`).value = resData.tasks[i].role || '';
-            document.getElementById(`planSupport${i+1}`).value = resData.tasks[i].support || '';
-            document.getElementById(`planPeriod${i+1}`).value = resData.tasks[i].period || '6ヶ月';
-          }
-        }
-        document.getElementById('planRemarks').value = resData.remarks || '';
-
-        showToast('🤖 AIにより完全カスタマイズされた支援計画案が生成されました！');
       } catch (err) {
-        alert('AI生成エラー: ' + err.message + '\n\n代替の「定型文モード」をご利用ください。');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<span id="btnGenIcon">🤖</span> <span id="btnGenText">AIで個別支援計画案を一括自動生成</span>`;
+        console.warn('AI API Error, using offline template fallback:', err);
+        showToast('⚠️ AIエラー発生のため、高品質な定型文エンジンで自動補完しました');
+        return null;
+      }
+      return null;
+    }
+
+    // Clean JSON parser
+    function parseJsonResponse(rawText) {
+      if (!rawText) return null;
+      const clean = rawText.replace(/```json|```/g, '').trim();
+      try { return JSON.parse(clean); } catch(e) {
+        const match = clean.match(/\[[\s\S]*\]/);
+        if (match) return JSON.parse(match[0]);
+      }
+      return null;
+    }
+
+    // Step 1: Generate Long-term Goals (5 items)
+    async function generateLongTermGoals() {
+      const name = document.getElementById('inputUserName').value.trim() || '利用者';
+      const wish = document.getElementById('inputWish').value.trim();
+      const policy = document.getElementById('inputPolicy').value.trim();
+
+      if (!wish && !policy) {
+        alert('希望する生活または総合的な援助の方針を入力してください。');
+        return;
+      }
+
+      showToast('⏳ 長期目標案を生成中...');
+
+      const prompt = `あなたは就労継続支援B型事業所のサービス管理責任者です。
+【本人の希望】${wish}
+【総合方針】${policy}
+
+就労継続支援B型の支援範囲（通所の安定、作業スキルの習得、対人コミュニケーション）に基づき、長期目標の候補を5件作成しJSON配列で出力してください:
+["目標1", "目標2", "目標3", "目標4", "目標5"]`;
+
+      const aiRaw = await callLLMApi(prompt);
+      let goals = parseJsonResponse(aiRaw);
+
+      if (!goals || !Array.isArray(goals) || goals.length < 5) {
+        // High quality offline fallback matrix
+        goals = [
+          `自分のペースに合わせた安定した通所（週3〜4日）を継続し、無理なく作業活動に取り組むことができる。`,
+          `得意な作業工程を増やし、正確性を意識して責任を持って仕事に取り組むことができる。`,
+          `事業所での挨拶や報連相（報告・連絡・相談）を習慣化し、安心して作業できる環境を作る。`,
+          `作業効率とスキルの向上を図り、時給手当アップと作業への自信を高めることができる。`,
+          `生活リズムの整えと体調管理を身につけ、持続力を持って作業時間を維持することができる。`
+        ];
+      }
+
+      renderGoalOptions('longTermGoalList', goals, 'long');
+      selectedLongGoalText = '';
+      document.getElementById('btnToStep2').disabled = true;
+      goToStep(1);
+    }
+
+    // Step 2: Generate Short-term Goals (5 items)
+    async function generateShortTermGoals() {
+      const wish = document.getElementById('inputWish').value.trim();
+
+      showToast('⏳ 短期目標案を生成中...');
+
+      const prompt = `選択された長期目標: ${selectedLongGoalText}
+本人の希望: ${wish}
+
+長期目標に向けたスモールステップとしての短期目標の候補5件をJSON配列で出力してください:
+["短期目標1", "短期目標2", "短期目標3", "短期目標4", "短期目標5"]`;
+
+      const aiRaw = await callLLMApi(prompt);
+      let goals = parseJsonResponse(aiRaw);
+
+      if (!goals || !Array.isArray(goals) || goals.length < 5) {
+        goals = [
+          `通所日数を意識し、週3日以上の決められた時間に通所することができる。`,
+          `作業マニュアルを確認しながら集中して取り組み、自己検品を行うことができる。`,
+          `作業中の疑問や体調の変化があった際に、自分からスタッフへ声かけ相談ができる。`,
+          `一定の姿勢と集中力を保ち、1回の作業時間（50分）をやり遂げることができる。`,
+          `疲労を感じた際は適切なタイミングでリフレッシュし、体調を自己調整できる。`
+        ];
+      }
+
+      document.getElementById('bannerSelectedLongGoal').innerHTML = `<strong>長期目標：</strong> ${selectedLongGoalText}`;
+      renderGoalOptions('shortTermGoalList', goals, 'short');
+      selectedShortGoalText = '';
+      document.getElementById('btnToStep3').disabled = true;
+      goToStep(2);
+    }
+
+    // Step 3: Generate Detailed Plans (10 items)
+    async function generateDetailPlans() {
+      showToast('⏳ 具体的支援計画案を生成中...');
+
+      const prompt = `長期目標: ${selectedLongGoalText}
+短期目標: ${selectedShortGoalText}
+
+具体的到達目標・本人の役割・事業所の支援内容のセットを10件作成し、JSON配列で出力してください:
+[{"goal":"到達目標1","role":"本人の役割1","support":"支援内容1"}, ...]`;
+
+      const aiRaw = await callLLMApi(prompt);
+      let items = parseJsonResponse(aiRaw);
+
+      if (!items || !Array.isArray(items) || items.length < 10) {
+        items = [
+          { goal: '通所日数の安定維持（週3〜4日）', role: '前日に睡眠をしっかりとり、体調を整えて通所する。', support: '登所時に笑顔で出迎え、検温と体調確認を行い安心して過ごせる環境を提供する。' },
+          { goal: '作業手順の定着と正確性の向上', role: '写真付きマニュアルを確認しながら作業を行い丁寧に進める。', support: '工程ごとの視覚的な指示書を用意し、出来た工程を具体的に承認評価する。' },
+          { goal: '困りごとの早期相談・報連相の獲得', role: '不明点や疲労を感じた時はヘルプカード等でスタッフに合図する。', support: '相談しやすい雰囲気を保ち、報告を受けた際は迅速丁寧に応答する。' },
+          { goal: '集中力・持続力の向上', role: 'タイマーを意識して50分間作業に集中して取り組む。', support: '定時ごとの休憩アナウンスを行い、適度なストレッチ等を促す。' },
+          { goal: '自主検品によるミス防止', role: '仕上がり時に所定のチェックリストで点検を行う。', support: 'ダブルチェック体制を整え、検品ポイントを事前に明確に提示する。' },
+          { goal: '挨拶と対人マナーの習慣化', role: '朝夕の挨拶や「ありがとうございます」の声かけを意識する。', support: '日常的な明るい挨拶の手本を示し、コミュニケーショントラブルを防止する。' },
+          { goal: 'PC入力のスピード・正確性向上', role: '毎日のタイピング練習で目標文字数を目指す。', support: '入力レベルに合わせた課題を提供し、成長が実感できるようグラフでフィードバックする。' },
+          { goal: '静養・ストレス自己管理', role: '体調不良を感じたら無理をせず静養室利用を申し出る。', support: '静養スペースの環境を整え、個別の健康面談を適宜実施する。' },
+          { goal: '役割意識・作業意欲の醸成', role: '自分の担当作業を最後まで責任を持ってやり遂げる。', support: '工賃・作業手当の仕組みを説明し、労働への達成感を高める声かけをする。' },
+          { goal: '月1回の振り返り面談への参加', role: '1ヶ月の通所や作業の頑張りをスタッフと共に振り返る。', support: '定期面談で成果を共に喜び、次の課題を一緒に設定する。' }
+        ];
+      }
+
+      generatedDetailItems = items;
+      renderDetailTable(items);
+      document.getElementById('bannerSelectedShortGoal').innerHTML = `<strong>短期目標：</strong> ${selectedShortGoalText}`;
+      goToStep(3);
+    }
+
+    // Render Goal Options (Step 1 & Step 2)
+    function renderGoalOptions(containerId, goals, type) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = goals.map((g, idx) => `
+        <div class="goal-card" onclick="selectGoalOption(this, '${type}', \`${g}\`)">
+          <div class="goal-badge">${idx + 1}</div>
+          <div class="goal-text">${g}</div>
+        </div>
+      `).join('');
+    }
+
+    function selectGoalOption(el, type, text) {
+      el.parentElement.querySelectorAll('.goal-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+
+      if (type === 'long') {
+        selectedLongGoalText = text;
+        document.getElementById('btnToStep2').disabled = false;
+      } else {
+        selectedShortGoalText = text;
+        document.getElementById('btnToStep3').disabled = false;
       }
     }
 
-    // 📋 3. PROMPT COPY GENERATOR (For Web ChatGPT)
-    function copyPromptToClipboard(name, wish, strengths, challenges) {
-      const prompt = `あなたは就労継続支援B型のサービス管理責任者（サビ管）のプロフェッショナルです。
-以下の利用者のアセスメント情報を基に、実務で使える高品質な「個別支援計画書（案）」を作成してください。
-
-【対象利用者名】${name} 様
-【本人の希望】${wish || '安定して通所したい'}
-【強み・得意なこと】${strengths || '丁寧な作業、時間の遵守'}
-【課題・配慮事項】${challenges || '疲れやすさ、環境変化への緊張'}
-
-【出力してほしい項目】
-1. 総合的な援助の方針（約200文字）
-2. 長期目標（6ヶ月〜1年）
-3. 短期目標（3ヶ月〜6ヶ月）
-4. 具体的な課題・本人の役割・支援内容（4セット）
-   - 課題1: (例: 体調・勤怠管理)
-   - 課題2: (例: 作業スキルの習得)
-   - 課題3: (例: 報連相・コミュニケーション)
-   - 課題4: (例: ストレス対処・自己管理)
-5. 特記事項・本人家族意向
-
-現場の基準に即した、温かく具体的な表現で出力してください。`;
-
-      navigator.clipboard.writeText(prompt);
-      showToast('📋 最適化されたプロンプトをクリップボードにコピーしました！ChatGPT等の画面に貼り付けてお使いください。');
+    // Render Detail Matrix Table (Step 3)
+    function renderDetailTable(items) {
+      selectedDetailIndices = [];
+      const tbody = document.getElementById('detailPlanTableBody');
+      tbody.innerHTML = items.map((item, idx) => `
+        <tr id="row_${idx}" onclick="toggleDetailRow(${idx})" style="cursor:pointer;">
+          <td style="text-align:center;"><input type="checkbox" id="chk_${idx}" onclick="event.stopPropagation(); toggleDetailRow(${idx})"></td>
+          <td style="text-align:center; font-weight:700;">${idx + 1}</td>
+          <td>${item.goal}</td>
+          <td>${item.role}</td>
+          <td>${item.support}</td>
+        </tr>
+      `).join('');
+      updateDetailSelectionState();
     }
 
-    // Export Plan as Porte-Compatible JSON
-    function copyPlanAsJson() {
-      const planData = {
-        userName: document.getElementById('planUserName').value.replace(' 様', ''),
-        createDate: document.getElementById('planCreateDate').value,
-        serviceType: document.getElementById('planServiceType').value,
-        facility: document.getElementById('planFacility').value,
-        manager: document.getElementById('planManager').value,
-        policy: document.getElementById('planPolicy').value,
-        longGoal: document.getElementById('planLongGoal').value,
-        shortGoal: document.getElementById('planShortGoal').value,
-        task1: document.getElementById('planTask1').value,
-        role1: document.getElementById('planRole1').value,
-        support1: document.getElementById('planSupport1').value,
-        period1: document.getElementById('planPeriod1').value,
-        task2: document.getElementById('planTask2').value,
-        role2: document.getElementById('planRole2').value,
-        support2: document.getElementById('planSupport2').value,
-        period2: document.getElementById('planPeriod2').value,
-        task3: document.getElementById('planTask3').value,
-        role3: document.getElementById('planRole3').value,
-        support3: document.getElementById('planSupport3').value,
-        period3: document.getElementById('planPeriod3').value,
-        task4: document.getElementById('planTask4').value,
-        role4: document.getElementById('planRole4').value,
-        support4: document.getElementById('planSupport4').value,
-        period4: document.getElementById('planPeriod4').value,
-        remarks: document.getElementById('planRemarks').value
-      };
-
-      navigator.clipboard.writeText(JSON.stringify(planData, null, 2));
-      showToast('📋 Porte互換JSONデータをクリップボードにコピーしました！');
+    function toggleDetailRow(idx) {
+      const pos = selectedDetailIndices.indexOf(idx);
+      if (pos >= 0) {
+        selectedDetailIndices.splice(pos, 1);
+      } else {
+        if (selectedDetailIndices.length >= 4) {
+          alert('具体的支援計画は最大4件まで選択可能です。');
+          return;
+        }
+        selectedDetailIndices.push(idx);
+      }
+      updateDetailSelectionState();
     }
 
-    // Export Plan as Plain Text
-    function copyPlanAsText() {
-      const txt = `【個別支援計画書（案）】
-対象者: ${document.getElementById('planUserName').value}
-作成日: ${document.getElementById('planCreateDate').value}
-担当者: ${document.getElementById('planManager').value}
+    function updateDetailSelectionState() {
+      generatedDetailItems.forEach((_, idx) => {
+        const isSelected = selectedDetailIndices.includes(idx);
+        const row = document.getElementById(`row_${idx}`);
+        const chk = document.getElementById(`chk_${idx}`);
+        if (chk) chk.checked = isSelected;
+        if (row) {
+          if (isSelected) row.classList.add('selected-row');
+          else row.classList.remove('selected-row');
+        }
+      });
+
+      const count = selectedDetailIndices.length;
+      document.getElementById('selectedDetailCount').textContent = count;
+      document.getElementById('btnToStep4').disabled = (count < 3 || count > 4);
+    }
+
+    // Step 4: Build Final Summary Sheet
+    function buildSummary() {
+      document.getElementById('sheetUserName').value = (document.getElementById('inputUserName').value || '山田 太郎') + ' 様';
+      document.getElementById('sheetServiceType').value = document.getElementById('inputServiceType').value;
+      document.getElementById('sheetPolicy').value = document.getElementById('inputPolicy').value;
+      document.getElementById('sheetLongGoal').value = selectedLongGoalText;
+      document.getElementById('sheetShortGoal').value = selectedShortGoalText;
+
+      const tbody = document.getElementById('sheetTaskRows');
+      const sortedIndices = [...selectedDetailIndices].sort((a, b) => a - b);
+      
+      tbody.innerHTML = sortedIndices.map((idx, i) => {
+        const item = generatedDetailItems[idx];
+        return `
+          <tr>
+            <td style="text-align:center; font-weight:700;">${i + 1}</td>
+            <td><textarea class="sheet-edit" rows="3">${item.goal}</textarea></td>
+            <td><textarea class="sheet-edit" rows="3">${item.role}</textarea></td>
+            <td><textarea class="sheet-edit" rows="3">${item.support}</textarea></td>
+          </tr>
+        `;
+      }).join('');
+
+      goToStep(4);
+    }
+
+    // Save to Porte Supabase Database
+    async function saveToPorteSupabase() {
+      if (!supabaseClient) {
+        alert('Supabase接続が有効化されていません。');
+        return;
+      }
+
+      try {
+        showToast('⏳ Porteのデータベースに保存中...');
+        const newId = 'sp' + Date.now() + Math.random().toString(36).substring(2, 6);
+        const userName = document.getElementById('sheetUserName').value.replace(' 様', '');
+
+        const row = {
+          id: newId,
+          userName: userName,
+          serviceType: document.getElementById('sheetServiceType').value,
+          createDate: document.getElementById('sheetCreateDate').value,
+          startDate: document.getElementById('sheetCreateDate').value,
+          policy: document.getElementById('sheetPolicy').value,
+          longGoal: document.getElementById('sheetLongGoal').value,
+          shortGoal: document.getElementById('sheetShortGoal').value
+        };
+
+        // Tasks
+        const taskRows = document.querySelectorAll('#sheetTaskRows tr');
+        taskRows.forEach((r, idx) => {
+          const tas = r.querySelectorAll('textarea');
+          if (tas.length >= 3 && idx < 4) {
+            row[`task${idx + 1}`] = tas[0].value;
+            row[`role${idx + 1}`] = tas[1].value;
+            row[`support${idx + 1}`] = tas[2].value;
+            row[`period${idx + 1}`] = '6ヶ月以内';
+          }
+        });
+
+        const { error } = await supabaseClient.from('個別支援計画').insert([row]);
+        if (error) throw error;
+
+        showToast('🎉 Porteのデータベースに正常に保存されました！');
+      } catch (err) {
+        alert('Porte保存エラー: ' + err.message);
+      }
+    }
+
+    // Copy Full Text
+    function copyFullPlanText() {
+      const text = `【個別支援計画書（案）】
+対象者: ${document.getElementById('sheetUserName').value}
+作成日: ${document.getElementById('sheetCreateDate').value}
 
 ■ 総合的な援助の方針
-${document.getElementById('planPolicy').value}
+${document.getElementById('sheetPolicy').value}
 
 ■ 長期目標
-${document.getElementById('planLongGoal').value}
+${document.getElementById('sheetLongGoal').value}
 
 ■ 短期目標
-${document.getElementById('planShortGoal').value}
-
-■ 課題と支援内容
-1. 【課題】${document.getElementById('planTask1').value}
-   【役割】${document.getElementById('planRole1').value}
-   【支援】${document.getElementById('planSupport1').value}
-
-2. 【課題】${document.getElementById('planTask2').value}
-   【役割】${document.getElementById('planRole2').value}
-   【支援】${document.getElementById('planSupport2').value}
-
-3. 【課題】${document.getElementById('planTask3').value}
-   【役割】${document.getElementById('planRole3').value}
-   【支援】${document.getElementById('planSupport3').value}
-
-4. 【課題】${document.getElementById('planTask4').value}
-   【役割】${document.getElementById('planRole4').value}
-   【支援】${document.getElementById('planSupport4').value}
-
-■ 特記事項
-${document.getElementById('planRemarks').value}
+${document.getElementById('sheetShortGoal').value}
 `;
-
-      navigator.clipboard.writeText(txt);
-      showToast('📝 プレーンテキストとしてコピーしました！');
+      navigator.clipboard.writeText(text);
+      showToast('📋 計画書テキストをクリップボードにコピーしました！');
     }
 
-    // Modal & API Management
-    function openApiConfigModal() {
-      document.getElementById('apiModal').classList.add('active');
-    }
-
-    function closeApiModal() {
-      document.getElementById('apiModal').classList.remove('active');
-    }
-
-    function updateApiKeyHelp() {
-      const p = document.getElementById('apiProvider').value;
-      const help = document.getElementById('apiKeyHelp');
-      const model = document.getElementById('apiModelInput');
-      if (p === 'openai') {
-        help.textContent = 'OpenAI (sk-...) APIキーを入力してください。';
-        model.value = 'gpt-4o-mini';
-      } else if (p === 'gemini') {
-        help.textContent = 'Google AI Studio (AIzaSy...) APIキーを入力してください。';
-        model.value = 'gemini-1.5-flash';
-      } else {
-        help.textContent = 'Anthropic (sk-ant-...) APIキーを入力してください。';
-        model.value = 'claude-3-5-haiku-20241022';
-      }
-    }
-
-    function saveApiConfig() {
+    // Save / Load Local Settings
+    function saveApiSettings() {
+      const provider = document.getElementById('apiProviderSelect').value;
+      const model = document.getElementById('apiModelSelect').value;
       const key = document.getElementById('apiKeyInput').value.trim();
-      const provider = document.getElementById('apiProvider').value;
-      const model = document.getElementById('apiModelInput').value.trim();
 
-      if (key) {
-        localStorage.setItem('porte_ai_key', key);
-        localStorage.setItem('porte_ai_provider', provider);
-        localStorage.setItem('porte_ai_model', model);
-        document.getElementById('apiStatusBadge').textContent = `API: ${provider.toUpperCase()} (${model})`;
-        document.getElementById('apiStatusBadge').style.background = '#dcfce7';
-        document.getElementById('apiStatusBadge').style.color = '#166534';
-        showToast('⚙️ AI APIキー設定をローカルに保存しました！');
-      }
-      closeApiModal();
+      localStorage.setItem('porte_ai_provider', provider);
+      localStorage.setItem('porte_ai_model', model);
+      localStorage.setItem('porte_ai_key', key);
+      showToast('⚙️ AI API設定を保存しました！');
     }
 
-    function clearApiConfig() {
-      localStorage.removeItem('porte_ai_key');
+    function loadApiSettings() {
+      const provider = localStorage.getItem('porte_ai_provider') || 'gemini';
+      const model = localStorage.getItem('porte_ai_model') || 'gemini-2.5-flash-lite';
+      const key = localStorage.getItem('porte_ai_key') || '';
+
+      document.getElementById('apiProviderSelect').value = provider;
+      handleProviderChange();
+      document.getElementById('apiModelSelect').value = model;
+      document.getElementById('apiKeyInput').value = key;
+    }
+
+    function clearApiSettings() {
       localStorage.removeItem('porte_ai_provider');
       localStorage.removeItem('porte_ai_model');
+      localStorage.removeItem('porte_ai_key');
       document.getElementById('apiKeyInput').value = '';
-      document.getElementById('apiStatusBadge').textContent = 'API: 未設定 (定型文モード)';
-      document.getElementById('apiStatusBadge').style.background = '#e0e7ff';
-      document.getElementById('apiStatusBadge').style.color = '#3730a3';
-      showToast('⚙️ API設定をクリアしました。定型文モードで動作します。');
-      closeApiModal();
+      document.getElementById('apiProviderSelect').value = 'offline';
+      handleProviderChange();
+      showToast('⚙️ 設定をクリアしました（オフラインモード）');
     }
 
-    function loadApiConfig() {
-      const key = localStorage.getItem('porte_ai_key');
-      const provider = localStorage.getItem('porte_ai_provider') || 'openai';
-      const model = localStorage.getItem('porte_ai_model') || 'gpt-4o-mini';
-
-      if (key) {
-        document.getElementById('apiKeyInput').value = key;
-        document.getElementById('apiProvider').value = provider;
-        document.getElementById('apiModelInput').value = model;
-        document.getElementById('apiStatusBadge').textContent = `API: ${provider.toUpperCase()} (${model})`;
-        document.getElementById('apiStatusBadge').style.background = '#dcfce7';
-        document.getElementById('apiStatusBadge').style.color = '#166534';
-      }
+    function resetAllSteps() {
+      selectedLongGoalText = '';
+      selectedShortGoalText = '';
+      generatedDetailItems = [];
+      selectedDetailIndices = [];
+      goToStep(0);
     }
 
-    // Helper Toast System
-    function showToast(msg, icon = '✅') {
-      const toast = document.getElementById('toast');
-      document.getElementById('toastMsg').textContent = msg;
-      document.getElementById('toastIcon').textContent = icon;
-      toast.classList.add('show');
-      setTimeout(() => {
-        toast.classList.remove('show');
-      }, 3500);
+    function showToast(msg) {
+      const toast = document.getElementById('toastPopup');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
     }
   </script>
 </body>
