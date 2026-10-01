@@ -1223,6 +1223,108 @@
       else if (stepId === 'step3') generateDetailPlans(true, text);
     }
 
+    // Call LLM API (Gemini, OpenAI, Groq, OpenRouter, Claude) with fallback to offline mode
+    async function callLLMApi(prompt) {
+      const providerSelect = document.getElementById('apiProviderSelect');
+      const provider = providerSelect ? providerSelect.value : 'offline';
+      const modelSelect = document.getElementById('apiModelSelect');
+      const model = modelSelect ? modelSelect.value : '';
+      const keyInput = document.getElementById('apiKeyInput');
+      const userKey = keyInput ? keyInput.value.trim() : '';
+
+      const savedKey = localStorage.getItem('porte_ai_key_' + provider) || (typeof PRECONFIGURED_API_KEYS !== 'undefined' ? PRECONFIGURED_API_KEYS[provider] : '');
+      const apiKey = userKey || savedKey;
+
+      if (provider === 'offline' || !apiKey) {
+        return null;
+      }
+
+      try {
+        if (provider === 'gemini') {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-2.0-flash'}:generateContent?key=${apiKey}`;
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+          if (!resp.ok) {
+            console.warn('Gemini API Error:', resp.status);
+            return null;
+          }
+          const data = await resp.json();
+          return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+        } else if (provider === 'openai' || provider === 'groq' || provider === 'openrouter') {
+          let endpoint = 'https://api.openai.com/v1/chat/completions';
+          if (provider === 'groq') endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+          if (provider === 'openrouter') endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+
+          const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          };
+          if (provider === 'openrouter') {
+            headers['HTTP-Referer'] = window.location.href;
+            headers['X-Title'] = 'Porte Support Plan Builder';
+          }
+
+          const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+              model: model || (provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini'),
+              messages: [{ role: 'user', content: prompt }]
+            })
+          });
+          if (!resp.ok) {
+            console.warn(`${provider} API Error:`, resp.status);
+            return null;
+          }
+          const data = await resp.json();
+          return data?.choices?.[0]?.message?.content || null;
+        } else if (provider === 'claude') {
+          const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+              model: model || 'claude-3-5-haiku-20241022',
+              max_tokens: 1024,
+              messages: [{ role: 'user', content: prompt }]
+            })
+          });
+          if (!resp.ok) {
+            console.warn('Claude API Error:', resp.status);
+            return null;
+          }
+          const data = await resp.json();
+          return data?.content?.[0]?.text || null;
+        }
+      } catch (err) {
+        console.warn('LLM API Call Exception:', err);
+        return null;
+      }
+      return null;
+    }
+
+    // Helper: Parse JSON from AI response text
+    function parseJsonResponse(raw) {
+      if (!raw || typeof raw !== 'string') return null;
+      try {
+        let cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const jsonMatch = cleaned.match(/\[[\s\S]*\]/) || cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+        return JSON.parse(cleaned);
+      } catch (e) {
+        console.warn('Failed to parse JSON from AI response:', raw, e);
+        return null;
+      }
+    }
+
     // Step 1: Generate Long-term Goals (5 items)
     async function generateLongTermGoals(isReload = false, rethinkFocus = '') {
       const name = document.getElementById('inputUserName').value.trim() || '利用者';
@@ -1253,8 +1355,13 @@
 就労継続支援B型の支援範囲に基づき、長期目標の候補を5件作成しJSON配列で出力してください:
 ["目標1", "目標2", "目標3", "目標4", "目標5"]`;
 
-      const aiRaw = await callLLMApi(prompt);
-      let goals = parseJsonResponse(aiRaw);
+      let goals = null;
+      try {
+        const aiRaw = await callLLMApi(prompt);
+        goals = parseJsonResponse(aiRaw);
+      } catch (err) {
+        console.warn('generateLongTermGoals error:', err);
+      }
 
       if (!goals || !Array.isArray(goals) || goals.length < 5) {
         const pool = [
@@ -1306,8 +1413,13 @@
 長期目標に向けたスモールステップとしての短期目標の候補5件をJSON配列で出力してください:
 ["短期目標1", "短期目標2", "短期目標3", "短期目標4", "短期目標5"]`;
 
-      const aiRaw = await callLLMApi(prompt);
-      let goals = parseJsonResponse(aiRaw);
+      let goals = null;
+      try {
+        const aiRaw = await callLLMApi(prompt);
+        goals = parseJsonResponse(aiRaw);
+      } catch (err) {
+        console.warn('generateShortTermGoals error:', err);
+      }
 
       if (!goals || !Array.isArray(goals) || goals.length < 5) {
         const pool = [
@@ -1409,8 +1521,12 @@ ${focusPrompt}${keptPrompt}
 上記4つの前提要素すべてを網羅・調和させた具体的支援計画のセットを【${numNeeded}件】作成し、JSON配列で出力してください:
 [{"goal":"到達目標1","role":"本人の役割1","support":"支援内容1"}, ...]`;
 
-        const aiRaw = await callLLMApi(prompt);
-        newItems = parseJsonResponse(aiRaw);
+        try {
+          const aiRaw = await callLLMApi(prompt);
+          newItems = parseJsonResponse(aiRaw);
+        } catch (err) {
+          console.warn('generateDetailPlans error:', err);
+        }
       }
 
       if (!newItems || !Array.isArray(newItems) || newItems.length < numNeeded) {
