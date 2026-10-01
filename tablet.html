@@ -585,6 +585,8 @@ async function fetchAttendanceForDate(date){
 function isScheduledToday(user, date){
   if(!date)return false;
   if(user.userStatus==='利用終了')return false;
+  if(user.enrollDate&&user.enrollDate>date)return false;
+  if(user.endDate&&user.endDate<date)return false;
   var attMap=ATTENDANCE_CACHE[date]||{};
   var uKey=String(user.id||'').trim();
   var att=attMap[uKey];
@@ -609,6 +611,8 @@ async function renderUserList(){
 
   var list=USERS.filter(function(u){
     if(u.userStatus==='利用終了')return false;
+    if(u.enrollDate&&u.enrollDate>date)return false;
+    if(u.endDate&&u.endDate<date)return false;
     if(!kw)return true;
     return(u.name||'').indexOf(kw)>=0||(u.kana||'').indexOf(kw)>=0||(u.furigana||'').indexOf(kw)>=0;
   });

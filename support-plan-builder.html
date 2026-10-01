@@ -529,11 +529,16 @@
   <!-- App Header -->
   <header>
     <div class="header-inner">
-      <div>
-        <div class="brand-title">
-          <span>📋</span> 個別支援計画 AI＆定型文アシスタント
+      <div style="display:flex;align-items:center;gap:14px">
+        <button onclick="returnToMainScreen()" style="background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.35);padding:7px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s;font-family:inherit" onmouseover="this.style.background='rgba(255,255,255,0.3)';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(255,255,255,0.18)';this.style.transform='none'">
+          🏠 Porte メイン画面に戻る
+        </button>
+        <div>
+          <div class="brand-title">
+            <span>📋</span> 個別支援計画 AI＆定型文アシスタント
+          </div>
+          <div class="brand-subtitle">就労継続支援B型 / 障害福祉サービス対応（単体評価版 & Porte連携対応）</div>
         </div>
-        <div class="brand-subtitle">就労継続支援B型 / 障害福祉サービス対応（単体評価版 & Porte連携対応）</div>
       </div>
       <div class="header-badges">
         <span class="badge badge-standalone">Standalone Mode</span>
@@ -683,8 +688,35 @@
 
     <!-- Step 1: Long-term Goal Selection -->
     <div class="card" id="step1">
-      <div class="card-h2"><span>🎯</span> Step 1: 長期目標の選択</div>
-      <div class="card-desc">提案された5件の長期目標から、最適な1件を選択してください。</div>
+      <div class="card-h2" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <span><span>🎯</span> Step 1: 長期目標の選択</span>
+        <button type="button" class="btn btn-secondary" style="padding:5px 14px; font-size:12px; background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; font-weight:700;" onclick="generateLongTermGoals(true)">
+          🔄 別の角度から再考案・再提案
+        </button>
+      </div>
+      <div class="card-desc">提案された5件の長期目標から、最適な1件を選択してください。現在の提案にしっくり来ない場合は、以下の重視ポイントを選択または入力して【再考案】ができます。</div>
+
+      <!-- 再考案 アシスタントブロック -->
+      <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:10px 14px; margin-bottom:14px;">
+        <div style="font-size:11px; font-weight:700; color:#0369a1; margin-bottom:6px;">
+          💡 再考案の切り口・重視ポイントを指定する（ワンタップ選択または自由入力）
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;">
+          <span class="chip-item" onclick="setRethinkChip('step1', '通所・生活リズムの安定を最優先')">🌱 通所・生活リズム</span>
+          <span class="chip-item" onclick="setRethinkChip('step1', '作業精度・スキル習得と正確性重視')">🛠️ 作業精度・スキル</span>
+          <span class="chip-item" onclick="setRethinkChip('step1', '挨拶・報連相・対人関係重視')">💬 報連相・人間関係</span>
+          <span class="chip-item" onclick="setRethinkChip('step1', '作業手当（工賃）向上とスピードアップ')">💰 工賃向上・効率</span>
+          <span class="chip-item" onclick="setRethinkChip('step1', 'セルフケア・ストレス・体調管理重視')">🧘 セルフケア・メンタル</span>
+          <span class="chip-item" onclick="setRethinkChip('step1', '駄菓子接客・販売・値札貼りをメイン')">🍬 駄菓子接客・値札</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="rethinkInputStep1" placeholder="例: パニックを予防しながら、無理のない作業量で... (自由入力可)" style="flex:1; font-size:12px; padding:6px 10px; border:1px solid #7dd3fc; border-radius:6px;">
+          <button type="button" class="btn btn-secondary" style="padding:6px 14px; font-size:12px; background:#0284c7; color:#fff; font-weight:700; border:none;" onclick="generateLongTermGoals(true, document.getElementById('rethinkInputStep1').value)">
+            ⚡ この切り口で再考案
+          </button>
+        </div>
+      </div>
+
       <div class="goal-list" id="longTermGoalList"></div>
       
       <div class="btn-row">
@@ -696,8 +728,34 @@
     <!-- Step 2: Short-term Goal Selection -->
     <div class="card" id="step2">
       <div class="selected-banner" id="bannerSelectedLongGoal"></div>
-      <div class="card-h2"><span>🚀</span> Step 2: 短期目標の選択</div>
-      <div class="card-desc">長期目標を達成するための短期目標5件から、最適な1件を選択してください。</div>
+      <div class="card-h2" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <span><span>🚀</span> Step 2: 短期目標の選択</span>
+        <button type="button" class="btn btn-secondary" style="padding:5px 14px; font-size:12px; background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; font-weight:700;" onclick="generateShortTermGoals(true)">
+          🔄 別の角度から再考案・再提案
+        </button>
+      </div>
+      <div class="card-desc">長期目標を達成するための短期目標5件から1件を選択してください。現在の提案にしっくり来ない場合は、以下の重視ポイントを選択または入力して【再考案】ができます。</div>
+
+      <!-- 再考案 アシスタントブロック -->
+      <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:10px 14px; margin-bottom:14px;">
+        <div style="font-size:11px; font-weight:700; color:#0369a1; margin-bottom:6px;">
+          💡 再考案の切り口・重視ポイントを指定する
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;">
+          <span class="chip-item" onclick="setRethinkChip('step2', '通所時間と作業習慣の定着ステップ')">⏰ 通所時間・習慣</span>
+          <span class="chip-item" onclick="setRethinkChip('step2', 'マニュアル確認と自己検品スモールステップ')">📋 マニュアル・自己検品</span>
+          <span class="chip-item" onclick="setRethinkChip('step2', '作業中の困りごと相談・ヘルプサイン提出')">🆘 困りごと相談・ヘルプ</span>
+          <span class="chip-item" onclick="setRethinkChip('step2', '1枠50分の集中力維持ステップ')">⏱️ 50分集中維持</span>
+          <span class="chip-item" onclick="setRethinkChip('step2', '作業前後の道具準備・片付けの自立')">🧹 準備・片付け自立</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="rethinkInputStep2" placeholder="例: 最初は1時間から無理なく通所させる... (自由入力可)" style="flex:1; font-size:12px; padding:6px 10px; border:1px solid #7dd3fc; border-radius:6px;">
+          <button type="button" class="btn btn-secondary" style="padding:6px 14px; font-size:12px; background:#0284c7; color:#fff; font-weight:700; border:none;" onclick="generateShortTermGoals(true, document.getElementById('rethinkInputStep2').value)">
+            ⚡ この切り口で再考案
+          </button>
+        </div>
+      </div>
+
       <div class="goal-list" id="shortTermGoalList"></div>
 
       <div class="btn-row">
@@ -709,8 +767,38 @@
     <!-- Step 3: Detailed Support Matrix Selection (3 to 4 items) -->
     <div class="card" id="step3">
       <div class="selected-banner" id="bannerSelectedShortGoal"></div>
-      <div class="card-h2"><span>🛠️</span> Step 3: 具体的支援計画の選択</div>
-      <div class="card-desc">10件の計画案から、実施する項目を <strong>3〜4件</strong> チェック選択してください。</div>
+      <div class="card-h2" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <span><span>🛠️</span> Step 3: 具体的支援計画の選択</span>
+        <button type="button" class="btn btn-secondary" style="padding:5px 14px; font-size:12px; background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; font-weight:700;" onclick="generateDetailPlans(true)">
+          🔄 別の角度から再考案・再提案
+        </button>
+      </div>
+      <div class="card-desc">10件の計画案から <strong>3〜4件</strong> チェック選択してください。現在の提案にしっくり来ない場合は、以下の重視ポイントを選択または入力して【再考案】ができます。</div>
+
+      <!-- 再考案 アシスタントブロック -->
+      <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:10px 14px; margin-bottom:14px;">
+        <!-- キープ中項目の保護バナー -->
+        <div id="keepItemsNotice" style="font-size:12px; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #86efac; border-radius:6px; padding:7px 12px; margin-bottom:10px; display:none;">
+          🔒 チェック選択中の <span id="keepCountBadge">0</span> 件を【キープ固定】しています。再考案を行ってもこの項目は残り、未選択の枠のみ新しく再考案されます！
+        </div>
+
+        <div style="font-size:11px; font-weight:700; color:#0369a1; margin-bottom:6px;">
+          💡 再考案の切り口・重視ポイントを指定する
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;">
+          <span class="chip-item" onclick="setRethinkChip('step3', '視覚的マニュアルと個別指導を強化')">👁️ 視覚指示・個別指導</span>
+          <span class="chip-item" onclick="setRethinkChip('step3', 'ダブルチェックと自己検品体制重視')">☑️ 二重点検・検品強化</span>
+          <span class="chip-item" onclick="setRethinkChip('step3', '静養スペース確保と健康面談サポート')">🌿 静養・健康サポート</span>
+          <span class="chip-item" onclick="setRethinkChip('step3', '工賃算出・達成感のフィードバック重視')">📈 工賃・成果評価</span>
+          <span class="chip-item" onclick="setRethinkChip('step3', '駄菓子・ビーズ・コーヒー作業に特化')">☕ 事業所固有作業特化</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="rethinkInputStep3" placeholder="例: 疲れたらすぐ静養室を使える配慮を入れる... (自由入力可)" style="flex:1; font-size:12px; padding:6px 10px; border:1px solid #7dd3fc; border-radius:6px;">
+          <button type="button" class="btn btn-secondary" style="padding:6px 14px; font-size:12px; background:#0284c7; color:#fff; font-weight:700; border:none;" onclick="generateDetailPlans(true, document.getElementById('rethinkInputStep3').value)">
+            ⚡ この切り口で再考案
+          </button>
+        </div>
+      </div>
 
       <div class="table-responsive">
         <table class="data-table">
@@ -978,9 +1066,33 @@
       el.innerHTML = html;
     }
 
+    // Navigation & History handling
+    let isNavigatingHistory = false;
+
+    window.addEventListener('popstate', function(event) {
+      if (event.state && typeof event.state.step === 'number') {
+        isNavigatingHistory = true;
+        goToStep(event.state.step, true);
+        isNavigatingHistory = false;
+      } else {
+        returnToMainScreen();
+      }
+    });
+
+    function returnToMainScreen() {
+      if (window.history.length > 1 && document.referrer.includes('index.html')) {
+        window.history.back();
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+
     // Step Switcher
-    function goToStep(stepNum) {
+    function goToStep(stepNum, isFromPopState = false) {
       currentStep = stepNum;
+      if (!isFromPopState && !isNavigatingHistory) {
+        try { history.pushState({ step: stepNum }, '', location.href); } catch(e){}
+      }
       renderStepper();
       document.querySelectorAll('.card').forEach((c, idx) => {
         if (idx === stepNum) c.classList.add('active');
@@ -1043,176 +1155,96 @@
       }
     }
 
-    // API Engine Direct Execution Handler
-    async function callLLMApi(promptText) {
-      const provider = document.getElementById('apiProviderSelect').value;
-      const model = document.getElementById('apiModelSelect').value;
-      let apiKey = document.getElementById('apiKeyInput').value.trim();
-
-      if (!apiKey && typeof PRECONFIGURED_API_KEYS !== 'undefined' && PRECONFIGURED_API_KEYS[provider]) {
-        apiKey = PRECONFIGURED_API_KEYS[provider];
+    function setRethinkChip(stepId, text) {
+      const inputId = stepId === 'step1' ? 'rethinkInputStep1' : (stepId === 'step2' ? 'rethinkInputStep2' : 'rethinkInputStep3');
+      const input = document.getElementById(inputId);
+      if (input) {
+        input.value = text;
       }
-
-      if (provider === 'offline' || !apiKey) {
-        return null; // Signals fallback to Guided Template Engine
-      }
-
-      try {
-        if (provider === 'gemini') {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-          const resp = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-          });
-          const json = await resp.json();
-          if (json.error) throw new Error(json.error.message);
-          return json.candidates[0].content.parts[0].text;
-        } else if (provider === 'openai' || provider === 'groq' || provider === 'openrouter') {
-          const endpoints = {
-            openai: 'https://api.openai.com/v1/chat/completions',
-            groq: 'https://api.groq.com/openai/v1/chat/completions',
-            openrouter: 'https://openrouter.ai/api/v1/chat/completions'
-          };
-          const headers = {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          };
-          if (provider === 'openrouter') {
-            headers['HTTP-Referer'] = window.location.href;
-            headers['X-Title'] = 'Porte Support Plan Assistant';
-          }
-          const resp = await fetch(endpoints[provider], {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({
-              model: model,
-              messages: [{ role: 'user', content: promptText }],
-              temperature: 0.7
-            })
-          });
-          const json = await resp.json();
-          if (json.error) throw new Error(json.error.message || JSON.stringify(json.error));
-          return json.choices[0].message.content;
-        } else if (provider === 'claude') {
-          const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': apiKey,
-              'anthropic-version': '2023-06-01',
-              'dangerously-allow-browser': 'true'
-            },
-            body: JSON.stringify({
-              model: model,
-              max_tokens: 2000,
-              messages: [{ role: 'user', content: promptText }]
-            })
-          });
-          const json = await resp.json();
-        }
-      } catch (err) {
-        console.warn('AI API Error, using offline template fallback:', err);
-        showToast('⚠️ AIエラー発生のため、高品質な定型文エンジンで自動補完しました');
-        return null;
-      }
-      return null;
-    }
-
-    // Convert User Wish / Complaint into Concise Professional Support Policy (2 lines max)
-    async function convertWishToPolicy() {
-      let wish = document.getElementById('inputWish').value.trim();
-      if (!wish) {
-        alert('「希望する生活・本人の主訴」を入力してください。');
-        document.getElementById('inputWish').focus();
-        return;
-      }
-
-      showToast('⏳ 主訴から「総合的な援助の方針」を作成中...');
-
-      const prompt = `あなたは就労継続支援B型事業所のサービス管理責任者です。
-利用者の主訴・希望:
-"${wish}"
-
-上記を踏まえ、個別支援計画書の「総合的な援助の方針」を【80文字〜100文字程度（長くて2行）】の簡潔でフォーマルな文章で作成してください。
-※「『...』という想い」などの生の口語引用や重複テキストは避け、プロの福祉文章として自然な日本語に要約し、方針本文のみを出力してください。`;
-
-      const aiRaw = await callLLMApi(prompt);
-      let policyText = aiRaw ? aiRaw.trim() : null;
-
-      if (!policyText) {
-        // High quality concise offline fallback (Max 2 lines)
-        let cleanWish = wish.replace(/[。！!？?\n]/g, ' ').replace(/\s+/g, ' ').trim();
-        cleanWish = cleanWish.replace(/したいしたい/g, 'したい').replace(/やりたいやりたい/g, 'やりたい');
-        if (cleanWish.length > 35) cleanWish = cleanWish.substring(0, 35) + '…';
-        
-        policyText = `本人の「${cleanWish}」という意向を尊重し、心身の状況に配慮しながら安心できる環境の中で通所習慣の定着と作業スキルの向上を段階的に支援する。`;
-      }
-
-      // Completely overwrite and trim unnecessary newlines
-      document.getElementById('inputPolicy').value = policyText.replace(/[\r\n]+/g, '');
-      showToast('✨ 主訴から「総合的な援助の方針」（2行程度）を作成しました！');
-    }
-
-    // Clean JSON parser
-    function parseJsonResponse(rawText) {
-      if (!rawText) return null;
-      const clean = rawText.replace(/```json|```/g, '').trim();
-      try { return JSON.parse(clean); } catch(e) {
-        const match = clean.match(/\[[\s\S]*\]/);
-        if (match) return JSON.parse(match[0]);
-      }
-      return null;
+      if (stepId === 'step1') generateLongTermGoals(true, text);
+      else if (stepId === 'step2') generateShortTermGoals(true, text);
+      else if (stepId === 'step3') generateDetailPlans(true, text);
     }
 
     // Step 1: Generate Long-term Goals (5 items)
-    async function generateLongTermGoals() {
+    async function generateLongTermGoals(isReload = false, rethinkFocus = '') {
       const name = document.getElementById('inputUserName').value.trim() || '利用者';
       const wish = document.getElementById('inputWish').value.trim();
       const policy = document.getElementById('inputPolicy').value.trim();
+      const inputVal = document.getElementById('rethinkInputStep1') ? document.getElementById('rethinkInputStep1').value.trim() : '';
+      const focusText = (rethinkFocus || inputVal).trim();
 
       if (!wish && !policy) {
         alert('希望する生活または総合的な援助の方針を入力してください。');
+        if (currentStep !== 0) goToStep(0);
         return;
       }
 
-      showToast('⏳ 長期目標案を生成中...');
+      showToast(focusText ? `🔄 「${focusText}」の切り口で再考案中...` : (isReload ? '🔄 別の角度から長期目標案を再考案中...' : '⏳ 長期目標案を生成中...'));
+
+      let focusPrompt = '';
+      if (focusText) {
+        focusPrompt = `\n【再考案の重点切り口・こだわり要求】: "${focusText}"\n※現在提案中の案には納得がいっていません。上記のこだわり要求を最優先に反映させ、完全に新しい切り口・着眼点から深く再考案した候補を5件作成してください。`;
+      } else if (isReload) {
+        focusPrompt = `\n※現在提案中の案には納得がいっていません。通所安定型、作業精度向上型、対人・コミュニケーション型、セルフケア型、挑戦・工賃獲得型などの異なる切り口から、深く再考案した別案5件を作成してください。`;
+      }
 
       const prompt = `あなたは就労継続支援B型事業所のサービス管理責任者です。
 【本人の希望】${wish}
-【総合方針】${policy}
+【総合方針】${policy}${focusPrompt}
 
-就労継続支援B型の支援範囲（通所の安定、作業スキルの習得、対人コミュニケーション）に基づき、長期目標の候補を5件作成しJSON配列で出力してください:
+就労継続支援B型の支援範囲に基づき、長期目標の候補を5件作成しJSON配列で出力してください:
 ["目標1", "目標2", "目標3", "目標4", "目標5"]`;
 
       const aiRaw = await callLLMApi(prompt);
       let goals = parseJsonResponse(aiRaw);
 
       if (!goals || !Array.isArray(goals) || goals.length < 5) {
-        // High quality offline fallback matrix
-        goals = [
-          `自分のペースに合わせた安定した通所（週3〜4日）を継続し、無理なく作業活動に取り組むことができる。`,
-          `得意な作業工程を増やし、正確性を意識して責任を持って仕事に取り組むことができる。`,
-          `事業所での挨拶や報連相（報告・連絡・相談）を習慣化し、安心して作業できる環境を作る。`,
+        const pool = [
+          focusText ? `【${focusText}】を意識し、自分のペースに合わせた安定した通所（週3〜4日）を継続して取り組むことができる。` : `自分のペースに合わせた安定した通所（週3〜4日）を継続し、無理なく作業活動に取り組むことができる。`,
+          focusText ? `【${focusText}】を取り入れ、得意な作業工程を増やし正確性を意識して責任を持って仕事に取り組むことができる。` : `得意な作業工程（駄菓子値札貼り、ビーズ制作等）を増やし、正確性を意識して責任を持って仕事に取り組むことができる。`,
+          `事業所での挨拶や報連相（報告・連絡・相談）を習慣化し、周囲と安心して作業できる環境を作る。`,
           `作業効率とスキルの向上を図り、時給手当アップと作業への自信を高めることができる。`,
-          `生活リズムの整えと体調管理を身につけ、持続力を持って作業時間を維持することができる。`
+          `生活リズムの整えと体調管理を身につけ、持続力を持って作業時間を維持することができる。`,
+          `新しい作業工程（商品陳列やコーヒー焙煎・計量等）に意欲的にチャレンジし、自立的な作業姿勢を身につける。`,
+          `困りごとや疲労を感じた際に適切なタイミングでヘルプサインを出し、セルフケアを行いながら通所を継続できる。`,
+          `指示を正確に理解して作業をやり遂げ、職場内での信頼関係と労働意欲を深めることができる。`,
+          `作業前後の準備・片付けを主導的に行い、集中力を保ちながら安全・丁寧に業務を遂行できる。`,
+          `毎月の通所目標を意識し、精神的な安定と自己肯定感を育みながら社会参加の基盤を作る。`
         ];
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        goals = shuffled.slice(0, 5);
       }
 
       renderGoalOptions('longTermGoalList', goals, 'long');
       selectedLongGoalText = '';
       document.getElementById('btnToStep2').disabled = true;
-      goToStep(1);
+      if (!isReload) goToStep(1);
     }
 
     // Step 2: Generate Short-term Goals (5 items)
-    async function generateShortTermGoals() {
+    async function generateShortTermGoals(isReload = false, rethinkFocus = '') {
       const wish = document.getElementById('inputWish').value.trim();
+      const inputVal = document.getElementById('rethinkInputStep2') ? document.getElementById('rethinkInputStep2').value.trim() : '';
+      const focusText = (rethinkFocus || inputVal).trim();
 
-      showToast('⏳ 短期目標案を生成中...');
+      if (!selectedLongGoalText) {
+        alert('Step 1で長期目標を1つ選択してください。');
+        if (currentStep !== 1) goToStep(1);
+        return;
+      }
+
+      showToast(focusText ? `🔄 「${focusText}」の切り口で短期目標を再考案中...` : (isReload ? '🔄 別のステップから短期目標案を再考案中...' : '⏳ 短期目標案を生成中...'));
+
+      let focusPrompt = '';
+      if (focusText) {
+        focusPrompt = `\n【再考案の重点切り口・こだわり要求】: "${focusText}"\n※現在の提案には納得がいっていません。上記のこだわり要求を強く反映し、長期目標達成に向けたスモールステップとして深く再考案した候補5件を作成してください。`;
+      } else if (isReload) {
+        focusPrompt = `\n※現在の提案には納得がいっていません。動作手順、作業報告、時間配分、セルフチェック、道具準備など、視点をガラリと変えたスモールステップ5件を再考案してください。`;
+      }
 
       const prompt = `選択された長期目標: ${selectedLongGoalText}
-本人の希望: ${wish}
+本人の希望: ${wish}${focusPrompt}
 
 長期目標に向けたスモールステップとしての短期目標の候補5件をJSON配列で出力してください:
 ["短期目標1", "短期目標2", "短期目標3", "短期目標4", "短期目標5"]`;
@@ -1221,39 +1253,113 @@
       let goals = parseJsonResponse(aiRaw);
 
       if (!goals || !Array.isArray(goals) || goals.length < 5) {
-        goals = [
-          `通所日数を意識し、週3日以上の決められた時間に通所することができる。`,
-          `作業マニュアルを確認しながら集中して取り組み、自己検品を行うことができる。`,
+        const pool = [
+          focusText ? `【${focusText}】を意識し、通所日数を確保して決められた時間に通所することができる。` : `通所日数を意識し、週3日以上の決められた時間に通所することができる。`,
+          focusText ? `【${focusText}】を重視し、作業マニュアルを確認しながら自己検品を行うことができる。` : `作業マニュアルを確認しながら集中して取り組み、自己検品を行うことができる。`,
           `作業中の疑問や体調の変化があった際に、自分からスタッフへ声かけ相談ができる。`,
           `一定の姿勢と集中力を保ち、1回の作業時間（50分）をやり遂げることができる。`,
-          `疲労を感じた際は適切なタイミングでリフレッシュし、体調を自己調整できる。`
+          `疲労を感じた際は適切なタイミングでリフレッシュし、体調を自己調整できる。`,
+          `作業開始時の挨拶と道具の準備をスムーズに行い、意欲的に作業に取りかかることができる。`,
+          `商品ラベル・値札貼り等の細かい手作業で、ズレやシワのない丁寧な仕上げを意識できる。`,
+          `指示された数量や作業工程を守り、提出前にダブルチェックを実施できる。`,
+          `作業中の不要な焦りを減らし、一定のテンポを保って落ち着いて業務を進めることができる。`,
+          `報告・連絡・相談を怠らず、スタッフや他の利用者と円滑な協力関係を維持できる。`
         ];
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        goals = shuffled.slice(0, 5);
       }
 
-      document.getElementById('bannerSelectedLongGoal').innerHTML = `<strong>長期目標：</strong> ${selectedLongGoalText}`;
+      const wishText = document.getElementById('inputWish') ? document.getElementById('inputWish').value.trim() : '';
+      const policyText = document.getElementById('inputPolicy') ? document.getElementById('inputPolicy').value.trim() : '';
+
+      document.getElementById('bannerSelectedLongGoal').innerHTML = `
+        <div style="font-size:12px; font-weight:800; color:#1e40af; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+          📌 【計画作成の前提条件（本人の希望・総合方針・長期目標）】
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:8px; font-size:12px; line-height:1.5;">
+          <div style="background:#fff; border:1px solid #dbeafe; padding:8px 12px; border-radius:6px;">
+            <strong style="color:#1d4ed8;">🌱 本人の希望:</strong> ${wishText || '（未入力）'}
+          </div>
+          <div style="background:#fff; border:1px solid #dbeafe; padding:8px 12px; border-radius:6px;">
+            <strong style="color:#1d4ed8;">📋 総合的な援助の方針:</strong> ${policyText || '（未入力）'}
+          </div>
+          <div style="background:#fff; border:1px solid #dbeafe; padding:8px 12px; border-radius:6px; grid-column: 1 / -1;">
+            <strong style="color:#1d4ed8;">🎯 選択された長期目標:</strong> ${selectedLongGoalText || '（未選択）'}
+          </div>
+        </div>
+      `;
       renderGoalOptions('shortTermGoalList', goals, 'short');
       selectedShortGoalText = '';
       document.getElementById('btnToStep3').disabled = true;
-      goToStep(2);
+      if (!isReload) goToStep(2);
     }
 
-    // Step 3: Generate Detailed Plans (10 items)
-    async function generateDetailPlans() {
-      showToast('⏳ 具体的支援計画案を生成中...');
+    // Step 3: Generate Detailed Plans (10 items total)
+    async function generateDetailPlans(isReload = false, rethinkFocus = '') {
+      const inputVal = document.getElementById('rethinkInputStep3') ? document.getElementById('rethinkInputStep3').value.trim() : '';
+      const focusText = (rethinkFocus || inputVal).trim();
+      const wishText = document.getElementById('inputWish') ? document.getElementById('inputWish').value.trim() : '';
+      const policyText = document.getElementById('inputPolicy') ? document.getElementById('inputPolicy').value.trim() : '';
 
-      const prompt = `長期目標: ${selectedLongGoalText}
-短期目標: ${selectedShortGoalText}
+      if (!selectedShortGoalText) {
+        alert('Step 2で短期目標を1つ選択してください。');
+        if (currentStep !== 2) goToStep(2);
+        return;
+      }
 
-具体的到達目標・本人の役割・事業所の支援内容のセットを10件作成し、JSON配列で出力してください:
+      // 既に選択/チェックしている項目を抽出（キープ保護）
+      let keptItems = [];
+      if (isReload && selectedDetailIndices.length > 0 && generatedDetailItems.length > 0) {
+        keptItems = selectedDetailIndices.map(idx => generatedDetailItems[idx]).filter(Boolean);
+      }
+
+      const numNeeded = 10 - keptItems.length;
+
+      if (keptItems.length > 0) {
+        showToast(`🔒 選択中の ${keptItems.length} 件を固定保持し、残り ${numNeeded} 件を「${focusText || '別角度'}」で再考案中...`);
+      } else {
+        showToast(focusText ? `🔄 「${focusText}」の切り口で具体的計画を再考案中...` : (isReload ? '🔄 別のバリエーションで具体的支援計画案を再考案中...' : '⏳ 具体的支援計画案を生成中...'));
+      }
+
+      let focusPrompt = '';
+      if (focusText) {
+        focusPrompt = `\n【再考案の重点切り口・配慮要望】: "${focusText}"\n※現在の提案には納得がいっていません。上記の配慮要望を最優先で反映させてください。`;
+      } else if (isReload) {
+        focusPrompt = `\n※現在の提案には納得がいっていません。環境調整、視覚指示、健康面談、二重点検、作業手当フィードバックなど、多角的な支援内容で再考案してください。`;
+      }
+
+      let keptPrompt = '';
+      if (keptItems.length > 0) {
+        keptPrompt = `\n【既に採用・固定中の計画 (${keptItems.length}件)】:\n` + 
+          keptItems.map((k, idx) => `・到達目標: ${k.goal} / 本人の役割: ${k.role} / 支援内容: ${k.support}`).join('\n') +
+          `\n※上記の固定項目と内容が重複しないよう、全く新しい補完的アイデアを作成してください。`;
+      }
+
+      let newItems = [];
+      if (numNeeded > 0) {
+        const prompt = `あなたは就労継続支援B型事業所のサービス管理責任者です。
+個別支援計画の「具体的支援計画」を作成してください。
+
+【計画作成における必須要件】:
+単一の項目（短期目標のみ等）に偏らず、以下の4つの要素【1.本人の希望】【2.総合的な援助の方針】【3.長期目標】【4.短期目標】の全てを複合的かつ網羅的に踏まえた「具体的到達目標」「本人の役割」「事業所の支援内容」を作成してください。
+
+1. 【本人の希望】: ${wishText || '指定なし'}
+2. 【総合的な援助の方針】: ${policyText || '指定なし'}
+3. 【長期目標】: ${selectedLongGoalText}
+4. 【短期目標】: ${selectedShortGoalText}
+${focusPrompt}${keptPrompt}
+
+上記4つの前提要素すべてを網羅・調和させた具体的支援計画のセットを【${numNeeded}件】作成し、JSON配列で出力してください:
 [{"goal":"到達目標1","role":"本人の役割1","support":"支援内容1"}, ...]`;
 
-      const aiRaw = await callLLMApi(prompt);
-      let items = parseJsonResponse(aiRaw);
+        const aiRaw = await callLLMApi(prompt);
+        newItems = parseJsonResponse(aiRaw);
+      }
 
-      if (!items || !Array.isArray(items) || items.length < 10) {
-        items = [
-          { goal: '通所日数の安定維持（週3〜4日）', role: '前日に睡眠をしっかりとり、体調を整えて通所する。', support: '登所時に笑顔で出迎え、検温と体調確認を行い安心して過ごせる環境を提供する。' },
-          { goal: '作業手順の定着と正確性の向上', role: '写真付きマニュアルを確認しながら作業を行い丁寧に進める。', support: '工程ごとの視覚的な指示書を用意し、出来た工程を具体的に承認評価する。' },
+      if (!newItems || !Array.isArray(newItems) || newItems.length < numNeeded) {
+        const pool = [
+          { goal: '通所日数の安定維持（週3〜4日）', role: '前日に睡眠をしっかりとり、体調を整えて通所する。', support: focusText ? `【${focusText}】に配慮し、登所時に検温と体調確認を行い安心して過ごせる環境を提供する。` : '登所時に笑顔で出迎え、検温と体調確認を行い安心して過ごせる環境を提供する。' },
+          { goal: '作業手順の定着と正確性の向上', role: '写真付きマニュアルを確認しながら作業を行い丁寧に進める。', support: focusText ? `【${focusText}】を導入し、工程ごとの視覚的な指示書を用意して出来た工程を具体的に承認評価する。` : '工程ごとの視覚的な指示書を用意し、出来た工程を具体的に承認評価する。' },
           { goal: '困りごとの早期相談・報連相の獲得', role: '不明点や疲労を感じた時はヘルプカード等でスタッフに合図する。', support: '相談しやすい雰囲気を保ち、報告を受けた際は迅速丁寧に応答する。' },
           { goal: '集中力・持続力の向上', role: 'タイマーを意識して50分間作業に集中して取り組む。', support: '定時ごとの休憩アナウンスを行い、適度なストレッチ等を促す。' },
           { goal: '自主検品によるミス防止', role: '仕上がり時に所定のチェックリストで点検を行う。', support: 'ダブルチェック体制を整え、検品ポイントを事前に明確に提示する。' },
@@ -1261,14 +1367,48 @@
           { goal: 'PC入力のスピード・正確性向上', role: '毎日のタイピング練習で目標文字数を目指す。', support: '入力レベルに合わせた課題を提供し、成長が実感できるようグラフでフィードバックする。' },
           { goal: '静養・ストレス自己管理', role: '体調不良を感じたら無理をせず静養室利用を申し出る。', support: '静養スペースの環境を整え、個別の健康面談を適宜実施する。' },
           { goal: '役割意識・作業意欲の醸成', role: '自分の担当作業を最後まで責任を持ってやり遂げる。', support: '工賃・作業手当の仕組みを説明し、労働への達成感を高める声かけをする。' },
-          { goal: '月1回の振り返り面談への参加', role: '1ヶ月の通所や作業の頑張りをスタッフと共に振り返る。', support: '定期面談で成果を共に喜び、次の課題を一緒に設定する。' }
+          { goal: '月1回の振り返り面談への参加', role: '1ヶ月の通所や作業の頑張りをスタッフと共に振り返る。', support: '定期面談で成果を共に喜び、次の課題を一緒に設定する。' },
+          { goal: '駄菓子接客・値札貼り作業の精度向上', role: '商品と値札を照合し、まっすぐに丁寧に貼り付ける。', support: '現物サンプルを配置し、作業終了時に仕上がり状況を評価・フィードバックする。' },
+          { goal: 'ビーズ制作・ハンドメイドのスキル習得', role: '色の組み合わせや配置手順を守り根気強く制作する。', support: '難易度の低い工程から段階的に指示し、手元のサポートを必要に応じて行う。' },
+          { goal: 'コーヒー焙煎・計量・封入作業の習得', role: '計量器の目盛りをしっかり確認し、正確なグラム数で袋詰めする。', support: '計量治具や自動スケールを準備し、誤差が少ない作業手順を視覚的に提示する。' },
+          { goal: '作業環境の整理整頓とクリーン維持', role: '作業前後に道具の定位置管理と机上の清掃を行う。', support: '整理用トレーや片付けラベルを配置し、環境整備の維持をサポートする。' },
+          { goal: '時間配分と作業ペース配分の習慣化', role: '時計を確認しながら、決められた時間内で目標数を仕上げる。', support: '時間あたりの目安個数を提示し、見通しを持って落ち着いて作業できるよう促す。' }
         ];
+
+        const keptGoals = keptItems.map(k => k.goal);
+        const filteredPool = pool.filter(p => !keptGoals.includes(p.goal));
+        const shuffled = [...filteredPool].sort(() => Math.random() - 0.5);
+        newItems = shuffled.slice(0, numNeeded);
       }
 
-      generatedDetailItems = items;
-      renderDetailTable(items);
-      document.getElementById('bannerSelectedShortGoal').innerHTML = `<strong>短期目標：</strong> ${selectedShortGoalText}`;
-      goToStep(3);
+      // キープ項目 + 新規再考案項目を合体
+      const combinedItems = [...keptItems, ...newItems];
+      generatedDetailItems = combinedItems;
+
+      // キープした項目のインデックス (0, 1, ..., keptItems.length - 1) を選択状態に維持
+      selectedDetailIndices = keptItems.map((_, idx) => idx);
+
+      renderDetailTable(combinedItems, true);
+      document.getElementById('bannerSelectedShortGoal').innerHTML = `
+        <div style="font-size:12px; font-weight:800; color:#1e40af; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+          📌 【計画作成の前提条件（本人の希望・総合方針・長短目標）】
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:8px; font-size:12px; line-height:1.5;">
+          <div style="background:#fff; border:1px solid #dbeafe; padding:8px 12px; border-radius:6px;">
+            <strong style="color:#1d4ed8;">🌱 本人の希望:</strong> ${wishText || '（未入力）'}
+          </div>
+          <div style="background:#fff; border:1px solid #dbeafe; padding:8px 12px; border-radius:6px;">
+            <strong style="color:#1d4ed8;">📋 総合的な援助の方針:</strong> ${policyText || '（未入力）'}
+          </div>
+          <div style="background:#fff; border:1px solid #dbeafe; padding:8px 12px; border-radius:6px;">
+            <strong style="color:#1d4ed8;">🎯 長期目標:</strong> ${selectedLongGoalText || '（未選択）'}
+          </div>
+          <div style="background:#fff; border:1px solid #dbeafe; padding:8px 12px; border-radius:6px;">
+            <strong style="color:#2563eb;">⏱️ 短期目標:</strong> ${selectedShortGoalText || '（未選択）'}
+          </div>
+        </div>
+      `;
+      if (!isReload) goToStep(3);
     }
 
     // Render Goal Options (Step 1 & Step 2)
@@ -1296,13 +1436,20 @@
     }
 
     // Render Detail Matrix Table (Step 3)
-    function renderDetailTable(items) {
-      selectedDetailIndices = [];
+    function renderDetailTable(items, preserveSelection = false) {
+      if (!preserveSelection) {
+        selectedDetailIndices = [];
+      }
       const tbody = document.getElementById('detailPlanTableBody');
       tbody.innerHTML = items.map((item, idx) => `
         <tr id="row_${idx}" onclick="toggleDetailRow(${idx})" style="cursor:pointer;">
-          <td style="text-align:center;"><input type="checkbox" id="chk_${idx}" onclick="event.stopPropagation(); toggleDetailRow(${idx})"></td>
-          <td style="text-align:center; font-weight:700;">${idx + 1}</td>
+          <td style="text-align:center;">
+            <input type="checkbox" id="chk_${idx}" onclick="event.stopPropagation(); toggleDetailRow(${idx})">
+          </td>
+          <td style="text-align:center; font-weight:700;">
+            ${idx + 1}
+            <span id="lock_badge_${idx}" style="display:none; font-size:10px; background:#dcfce7; color:#15803d; padding:1px 5px; border-radius:4px; margin-left:2px;">🔒固定</span>
+          </td>
           <td>${item.goal}</td>
           <td>${item.role}</td>
           <td>${item.support}</td>
@@ -1330,16 +1477,34 @@
         const isSelected = selectedDetailIndices.includes(idx);
         const row = document.getElementById(`row_${idx}`);
         const chk = document.getElementById(`chk_${idx}`);
+        const lockBadge = document.getElementById(`lock_badge_${idx}`);
         if (chk) chk.checked = isSelected;
+        if (lockBadge) lockBadge.style.display = isSelected ? 'inline-block' : 'none';
         if (row) {
-          if (isSelected) row.classList.add('selected-row');
-          else row.classList.remove('selected-row');
+          if (isSelected) {
+            row.style.background = '#f0fdf4';
+            row.style.fontWeight = '500';
+          } else {
+            row.style.background = '';
+            row.style.fontWeight = 'normal';
+          }
         }
       });
 
       const count = selectedDetailIndices.length;
       document.getElementById('selectedDetailCount').textContent = count;
       document.getElementById('btnToStep4').disabled = (count < 3 || count > 4);
+
+      const notice = document.getElementById('keepItemsNotice');
+      const badgeCount = document.getElementById('keepCountBadge');
+      if (notice && badgeCount) {
+        if (count > 0) {
+          notice.style.display = 'block';
+          badgeCount.textContent = count;
+        } else {
+          notice.style.display = 'none';
+        }
+      }
     }
 
     // Step 4: Build Final Summary Sheet
@@ -1521,6 +1686,10 @@ ${document.getElementById('sheetShortGoal').value}
       toast.style.display = 'block';
       setTimeout(() => { toast.style.display = 'none'; }, 3000);
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      try { history.replaceState({ step: 0 }, '', location.href); } catch(e){}
+    });
   </script>
 </body>
 </html>

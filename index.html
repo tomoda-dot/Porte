@@ -297,7 +297,7 @@ var getPmId=function(rep,att){
 };
 var wtRate=function(id){return Number((S.workTypes.find(function(w){return String(w.id)===String(id);})||{}).rate)||0;};
 var staffName=function(id){return(S.staff.find(function(s){return String(s.id)===String(id);})||{}).name||'';};
-var isUserActive=function(u,d){if(!u)return false;if(u.userStatus==='利用終了')return false;if(u.enrollDate&&u.enrollDate>d)return false;if(u.endDate&&u.endDate<d)return false;return true;};
+var isUserActive=function(u,d){if(!u)return false;if(u.userStatus==='利用終了')return false;if(!d)d=today();d=String(d).slice(0,10);if(d.length===7){var ymStart=d+'-01',ymEnd=d+'-31';if(u.enrollDate&&u.enrollDate>ymEnd)return false;if(u.endDate&&u.endDate<ymStart)return false;return true;}if(u.enrollDate&&u.enrollDate>d)return false;if(u.endDate&&u.endDate<d)return false;return true;};
 var PREFS=['北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県','茨城県','栃木県','群馬県','埼玉県','千葉県','東京都','神奈川県','新潟県','富山県','石川県','福井県','山梨県','長野県','岐阜県','静岡県','愛知県','三重県','滋賀県','京都府','大阪府','兵庫県','奈良県','和歌山県','鳥取県','島根県','岡山県','広島県','山口県','徳島県','香川県','愛媛県','高知県','福岡県','佐賀県','長崎県','熊本県','大分県','宮崎県','鹿児島県','沖縄県'];
 var DAYS_JP=['月','火','水','木','金','土','日'];
 var KANA_GROUPS=[{label:'あ',chars:['あ','い','う','え','お','ア','イ','ウ','エ','オ']},{label:'か',chars:['か','き','く','け','こ','が','ぎ','ぐ','げ','ご','カ','キ','ク','ケ','コ','ガ','ギ','グ','ゲ','ゴ']},{label:'さ',chars:['さ','し','す','せ','そ','ざ','じ','ず','ぜ','ぞ','サ','シ','ス','セ','ソ','ザ','ジ','ズ','ゼ','ゾ']},{label:'た',chars:['た','ち','つ','て','と','だ','ぢ','づ','で','ど','タ','チ','ツ','テ','ト','ダ','ヂ','ヅ','デ','ド']},{label:'な',chars:['な','に','ぬ','ね','の','ナ','ニ','ヌ','ネ','ノ']},{label:'は',chars:['は','ひ','ふ','へ','ほ','ば','び','ぶ','べ','ぼ','ぱ','ぴ','ぷ','ぺ','ぽ','ハ','ヒ','フ','ヘ','ホ','バ','ビ','ブ','ベ','ボ','パ','ピ','プ','ペ','ポ']},{label:'ま',chars:['ま','み','む','め','も','マ','ミ','ム','メ','モ']},{label:'や',chars:['や','ゆ','よ','ヤ','ユ','ヨ']},{label:'ら',chars:['ら','り','る','れ','ろ','ラ','リ','ル','レ','ロ']},{label:'わ',chars:['わ','を','ん','ワ','ヲ','ン']}];
@@ -620,7 +620,26 @@ function updateNav(){
   var btns=nav.querySelectorAll('button[data-tab]');
   for(var i=0;i<btns.length;i++){btns[i].className=btns[i].getAttribute('data-tab')===S.tab?'act':'';}
 }
-function switchTab(t){guardNav(function(){if(t==='export')eT='menu';if(t==='attendance')S.attSubTab='daily';if(t==='staff')_staffTab='list';if(t==='transport')tSubTab='daily';S.tab=t;updateNav();renderTab();});}
+var _isNavHistory=false;
+window.addEventListener('popstate',function(e){
+  var modalIds=['modal-bg','modal-container','att-daily-modal','modal'];
+  var closedAny=false;
+  modalIds.forEach(function(mid){
+    var m=document.getElementById(mid);
+    if(m&&(m.style.display==='block'||m.style.display==='flex'||m.innerHTML!=='')){
+      m.style.display='none';
+      m.innerHTML='';
+      closedAny=true;
+    }
+  });
+  if(closedAny)return;
+  if(e.state&&e.state.tab){
+    _isNavHistory=true;
+    switchTab(e.state.tab,true);
+    _isNavHistory=false;
+  }
+});
+function switchTab(t,isHistory){guardNav(function(){if(t==='export')eT='menu';if(t==='attendance')S.attSubTab='daily';if(t==='staff')_staffTab='list';if(t==='transport')tSubTab='daily';S.tab=t;if(!isHistory&&!_isNavHistory){try{history.pushState({tab:t},'',location.href);}catch(err){}}updateNav();renderTab();});}
 function renderTab(){var c=document.getElementById('content');var fn='render'+S.tab.charAt(0).toUpperCase()+S.tab.slice(1);if(typeof window[fn]==='function')window[fn](c);else c.innerHTML='準備中';}
 function closeModal(id){document.getElementById(id).innerHTML='';}
 
@@ -1075,11 +1094,11 @@ function openTempAddModal(ds){
   var dwj=weekday(ds);
   var allIds=[];
   S.users.forEach(function(u){
-    if(u.userStatus==='利用終了')return;
+    if(!isUserActive(u,ds))return;
     if(u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0){allIds.push(u.id);return;}
   });
   (calExtraIds||[]).forEach(function(id){if(allIds.indexOf(id)<0)allIds.push(id);});
-  var candidates=S.users.filter(function(u){return u.userStatus!=='利用終了'&&allIds.indexOf(u.id)<0;});
+  var candidates=S.users.filter(function(u){return isUserActive(u,ds)&&allIds.indexOf(u.id)<0;});
   window._tempAddDs=ds;
   window._tempSelected={};
 
@@ -1443,7 +1462,7 @@ async function openAttDailyM(uid, ds){
     // 当日の予定者リスト（左パネル用）
     var _dp=ds.split('-'),_dw=new Date(Number(_dp[0]),Number(_dp[1])-1,Number(_dp[2])).getDay();
     var _dwj=['日','月','火','水','木','金','土'][_dw];
-    var schUsers=S.users.filter(function(x){return x.userStatus!=='利用終了'&&x.scheduleDays&&x.scheduleDays.indexOf(_dwj)>=0;});
+    var schUsers=S.users.filter(function(x){return isUserActive(x,ds)&&x.scheduleDays&&x.scheduleDays.indexOf(_dwj)>=0;});
     // 出欠記録のある利用者も含める
     var attUids=atts.map(function(a){return a.userId;});
     // 臨時利用者も含める
@@ -2397,10 +2416,7 @@ function renderPlanArea(userId){
   var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
   h+='<h3 style="margin:0;font-size:16px">📋 個別支援計画</h3>';
   h+='<div style="display:flex;gap:8px;align-items:center">';
-  var _pSess=getSession()||{};
-  if(_pSess.name&&_pSess.name.indexOf('友田')>=0){
-    h+='<a href="https://script.google.com/macros/s/AKfycbwq7MGA-tlpXcwV6Znhov-SdcVF0cCg-WedmSV_EHNYp7wX-WVvQJnvv4rfdGLxnzo3/exec" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:#fff;border:1.5px solid var(--pri);border-radius:7px;color:var(--pri);font-size:12px;font-weight:600;text-decoration:none;transition:all .15s" onmouseover="this.style.background=\'var(--pri)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'var(--pri)\'">🤖 個別支援計画書AI</a>';
-  }
+  h+='<a href="support-plan-builder.html?userId='+userId+'" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:#fff;border:1.5px solid var(--pri);border-radius:7px;color:var(--pri);font-size:12px;font-weight:600;text-decoration:none;transition:all .15s" onmouseover="this.style.background=\'var(--pri)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'var(--pri)\'">🤖 個別支援計画 AI作成アシスタント</a>';
   h+='<button class="bp" onclick="openPlanForm(\''+userId+'\')">＋ 新規登録</button>';
   h+='</div></div>';
   h+='<p style="font-size:11px;color:var(--sub);margin-bottom:8px">※計画適用開始日までに計画は交付しましょう。交付済みの行は緑色になります。</p>';
@@ -5749,7 +5765,7 @@ function renderRouteCards(){
 
 // ─── 新規ルート追加 ───
 function openNewRoute(){
-  var activeUsers=S.users.filter(function(u){return u.userStatus!=='利用終了';});
+  var activeUsers=S.users.filter(function(u){return isUserActive(u,tDate);});
   var _tp=tDate.split('-'),dow=new Date(Number(_tp[0]),Number(_tp[1])-1,Number(_tp[2])).getDay();var dwj=['日','月','火','水','木','金','土'][dow];
   document.getElementById('t-modal').innerHTML=
     '<div class="overlay" onclick="closeModal(\'t-modal\')"><div class="modal" style="width:700px" onclick="event.stopPropagation()">'+
@@ -5986,7 +6002,7 @@ async function autoGenRoutes(){
   var dayAtt=[];
   try{var allAtt=await cachedGas('getAttendance',tDate.slice(0,7));dayAtt=allAtt.filter(function(a){return String(a.date)===tDate;});}catch(e){}
   var au=S.users.filter(function(u){
-    if(u.userStatus==='利用終了')return false;
+    if(!isUserActive(u,tDate))return false;
     if(!u.scheduleDays||u.scheduleDays.indexOf(dwj)<0)return false;
     var r=dayAtt.find(function(a){return String(a.userId)===String(u.id);});
     // 欠席系・調整休はスキップ
@@ -6536,7 +6552,7 @@ async function deleteWorkTypeConfirm(wtId){
 }
 
 function renderWsUserRates(body){
-  var activeUsers = S.users.filter(function(u){ return u.userStatus !== '利用終了'; });
+  var activeUsers = S.users.filter(function(u){ return isUserActive(u); });
   var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
     '<div style="font-weight:700;font-size:14px;color:var(--pri)">👥 利用者別 工賃・交通費・時間一括設定</div>' +
     '<button class="bp" onclick="saveBatchUserRates()" style="font-size:13px;padding:6px 16px">💾 一括保存</button>' +
@@ -6573,7 +6589,7 @@ function renderWsUserRates(body){
 }
 
 async function saveBatchUserRates(){
-  var activeUsers = S.users.filter(function(u){ return u.userStatus !== '利用終了'; });
+  var activeUsers = S.users.filter(function(u){ return isUserActive(u); });
   if(activeUsers.length === 0) return;
   if(!lockUI()) return;
   try {
@@ -6600,7 +6616,7 @@ var adjM = today().slice(0, 7);
 var adjUserId = '';
 
 async function renderWageAdjustments(c){
-  var uOpts = '<option value="">-- 全利用者一覧 --</option>' + S.users.filter(function(u){ return u.userStatus !== '利用終了'; }).map(function(u){
+  var uOpts = '<option value="">-- 全利用者一覧 --</option>' + S.users.filter(function(u){ return isUserActive(u, adjM); }).map(function(u){
     return '<option value="' + u.id + '"' + (String(u.id) === String(adjUserId) ? ' selected' : '') + '>' + esc(u.name) + '</option>';
   }).join('');
 
@@ -6638,7 +6654,7 @@ async function loadWageAdjustments(){
 }
 
 function renderAllUsersWageAdjustmentSummary(container, allAtt, closedDays, bentoPrice){
-  var activeUsers = S.users.filter(function(u){ return u.userStatus !== '利用終了'; });
+  var activeUsers = S.users.filter(function(u){ return isUserActive(u, adjM); });
   var data = activeUsers.map(function(u){
     var recs = allAtt.filter(function(a){ return String(a.userId) === String(u.id) && ['出席','遅刻','早退'].indexOf(a.status) >= 0; });
     var tH = 0, tW = 0;
@@ -7204,7 +7220,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var ym=eM.split('-');var yStr=ym[0];var mStr=parseInt(ym[1]);
     var fn=S.settings.facilityName||'事業所';
     var compName=S.settings.companyName||'';
-    var users=S.users.filter(function(u){return u.userStatus!=='利用終了';});
+    var users=S.users.filter(function(u){return isUserActive(u,eM);});
 
     var summaryList=[];
     var grandCount=0, grandAmount=0;
@@ -7490,7 +7506,7 @@ async function printAllIRP(){
   var ym=eM.split('-');var yStr=ym[0];var mStr=parseInt(ym[1]);
   var fNum=S.settings.facilityNumber||'';var fName=S.settings.facilityName||'';
   var compName=S.settings.companyName||'';var fType=S.settings.facilityType||'就労継続支援B型';
-  var users=S.users.filter(function(u){return u.userStatus!=='利用終了';});
+  var users=S.users.filter(function(u){return isUserActive(u,eM);});
   var allH='';
   users.forEach(function(u){
     var recs=att.filter(function(a){return String(a.userId)===u.id&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
@@ -8300,7 +8316,7 @@ async function dlCSV(){try{
   } else if(eT==='bentoSummary'){
     var attB=await cachedGas('getAttendance',eM);
     var bentoPriceB=Number(S.settings.bentoPrice)||100;
-    var usersB=S.users.filter(function(u){return u.userStatus!=='利用終了';});
+    var usersB=S.users.filter(function(u){return isUserActive(u,eM);});
     var csvB='対象月,サービス種別,氏名,支払方法,食数,単価,売上金額,工賃控除食数,翌月請求食数,当日精算食数\n';
     var totalCB=0, totalAB=0;
     usersB.forEach(function(u){
