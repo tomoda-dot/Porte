@@ -1006,6 +1006,63 @@
       }
     }
 
+    // AI Auto Create Policy from Wish
+    async function convertWishToPolicy() {
+      const wishArea = document.getElementById('inputWish');
+      const policyArea = document.getElementById('inputPolicy');
+      const wish = wishArea ? wishArea.value.trim() : '';
+
+      if (!wish) {
+        alert('「本人の主訴（希望する生活）」を入力するか、上のキーワードチップを選択してからAI自動作成を実行してください。');
+        if (wishArea) wishArea.focus();
+        return;
+      }
+
+      showToast('⏳ 本人の主訴をもとに「総合的な援助の方針」をAI変換中...');
+
+      const prompt = `あなたは就労継続支援B型事業所のサービス管理責任者です。
+以下の本人の主訴・希望を踏まえ、個別支援計画の「総合的な援助の方針（サビ管の方針）」として適切な文章を1〜2文のフォーマルな福祉専門的表現で作成してください。
+
+【本人の主訴・希望】: "${wish}"
+
+【出力の注意事項】:
+・挨拶や前置きは一切不要です。
+・「〜できるよう総合的に支援する。」「〜環境を整えサポートを行う。」などの形式で、方針文のみを出力してください。`;
+
+      try {
+        let result = await callLLMApi(prompt);
+        if (result) {
+          result = result.replace(/```json/g, '').replace(/```/g, '').trim();
+          if (result.startsWith('"') && result.endsWith('"')) {
+            result = result.slice(1, -1);
+          }
+        }
+
+        if (!result || result.length < 5 || result.includes('エラー') || result.includes('APIキー')) {
+          if (wish.includes('通所') || wish.includes('安定') || wish.includes('ペース') || wish.includes('体調')) {
+            result = `本人の体調やペースに合わせた通所維持を第一とし、安心して作業に取り組める環境と個別相談サポートを整えて総合的に支援する。`;
+          } else if (wish.includes('精度') || wish.includes('作業') || wish.includes('ミス') || wish.includes('丁寧')) {
+            result = `本人の得意な作業工程を活かしつつ、写真指示書や自己検品ツールの導入により、作業精度の向上と達成感を高められるよう総合的に支援する。`;
+          } else if (wish.includes('工賃') || wish.includes('手当') || wish.includes('スピード') || wish.includes('効率')) {
+            result = `作業手順の定着とスキル向上を促し、作業手当（工賃）の向上に向けたモチベーション維持と自信創出を目標に総合的な支援を行う。`;
+          } else {
+            result = `本人の希望に寄り添い、安定した通所と作業活動を通じて自己肯定感を育むとともに、適切な配慮と環境調整を総合的に提供する。`;
+          }
+        }
+
+        if (policyArea) {
+          policyArea.value = result;
+          policyArea.focus();
+        }
+        showToast('✨ 総合的な援助の方針をAI自動作成しました！');
+      } catch (err) {
+        console.error('convertWishToPolicy error:', err);
+        const fallback = `本人の希望に寄り添い、安定した通所と作業活動を通じて自己肯定感を育むとともに、適切な配慮と環境調整を総合的に提供する。`;
+        if (policyArea) policyArea.value = fallback;
+        showToast('✨ 総合的な援助の方針を作成しました！');
+      }
+    }
+
     // Toggle API Key text visibility
     function toggleApiKeyVisibility() {
       const input = document.getElementById('apiKeyInput');
