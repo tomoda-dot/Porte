@@ -1472,8 +1472,7 @@ async function openAttDailyM(uid, ds){
     var allDayUids=[];
     schUsers.forEach(function(x){if(allDayUids.indexOf(x.id)<0)allDayUids.push(x.id);});
     attUids.forEach(function(id){if(allDayUids.indexOf(id)<0)allDayUids.push(id);});
-    tempUids.forEach(function(id){if(allDayUids.indexOf(id)<0)allDayUids.push(id);});
-    var allDayUsers=allDayUids.map(function(id){return S.users.find(function(x){return x.id===id;});}).filter(function(x){return x;});
+    var allDayUsers=allDayUids.map(function(id){return S.users.find(function(x){return x.id===id;});}).filter(function(x){return x && isUserActive(x,ds);});
     var isTempUser=function(id){return tempUids.indexOf(id)>=0&&!schUsers.find(function(x){return x.id===id;});};
 
     // 左サイドパネル
@@ -4953,7 +4952,7 @@ async function renderAttendance(c){
       '  <div style="display:flex;gap:15px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'+
       '    <span style="font-size:12px;color:var(--sub)">対象利用者:</span>'+
       '    <select id="att-user-select" onchange="S.attUserId=this.value;renderAttMonthlyTbl()" style="width:200px">'+
-             S.users.map(function(u){
+             S.users.filter(function(u){return isUserActive(u,S.attMonth);}).map(function(u){
                return'<option value="'+u.id+'"'+(S.attUserId===u.id?' selected':'')+'>'+esc(u.name)+'</option>';
              }).join('')+
       '    </select>'+
