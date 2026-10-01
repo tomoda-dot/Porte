@@ -1018,7 +1018,7 @@
         return;
       }
 
-      showToast('⏳ 本人の主訴をもとに「総合的な援助の方針」をAI変換中...');
+      showToast('⏳ 本人の主訴をもとに「総合的な援助の方針」を変換中...');
 
       const prompt = `あなたは就労継続支援B型事業所のサービス管理責任者です。
 以下の本人の主訴・希望を踏まえ、個別支援計画の「総合的な援助の方針（サビ管の方針）」として適切な文章を1〜2文のフォーマルな福祉専門的表現で作成してください。
@@ -1029,37 +1029,58 @@
 ・挨拶や前置きは一切不要です。
 ・「〜できるよう総合的に支援する。」「〜環境を整えサポートを行う。」などの形式で、方針文のみを出力してください。`;
 
+      let result = null;
+      let isLiveAI = false;
+
       try {
-        let result = await callLLMApi(prompt);
+        result = await callLLMApi(prompt);
         if (result) {
           result = result.replace(/```json/g, '').replace(/```/g, '').trim();
           if (result.startsWith('"') && result.endsWith('"')) {
             result = result.slice(1, -1);
           }
+          isLiveAI = true;
         }
-
-        if (!result || result.length < 5 || result.includes('エラー') || result.includes('APIキー')) {
-          if (wish.includes('通所') || wish.includes('安定') || wish.includes('ペース') || wish.includes('体調')) {
-            result = `本人の体調やペースに合わせた通所維持を第一とし、安心して作業に取り組める環境と個別相談サポートを整えて総合的に支援する。`;
-          } else if (wish.includes('精度') || wish.includes('作業') || wish.includes('ミス') || wish.includes('丁寧')) {
-            result = `本人の得意な作業工程を活かしつつ、写真指示書や自己検品ツールの導入により、作業精度の向上と達成感を高められるよう総合的に支援する。`;
-          } else if (wish.includes('工賃') || wish.includes('手当') || wish.includes('スピード') || wish.includes('効率')) {
-            result = `作業手順の定着とスキル向上を促し、作業手当（工賃）の向上に向けたモチベーション維持と自信創出を目標に総合的な支援を行う。`;
-          } else {
-            result = `本人の希望に寄り添い、安定した通所と作業活動を通じて自己肯定感を育むとともに、適切な配慮と環境調整を総合的に提供する。`;
-          }
-        }
-
-        if (policyArea) {
-          policyArea.value = result;
-          policyArea.focus();
-        }
-        showToast('✨ 総合的な援助の方針をAI自動作成しました！');
       } catch (err) {
-        console.error('convertWishToPolicy error:', err);
-        const fallback = `本人の希望に寄り添い、安定した通所と作業活動を通じて自己肯定感を育むとともに、適切な配慮と環境調整を総合的に提供する。`;
-        if (policyArea) policyArea.value = fallback;
-        showToast('✨ 総合的な援助の方針を作成しました！');
+        console.warn('convertWishToPolicy API error:', err);
+      }
+
+      // Smart Dynamic Generator if offline or API Key missing
+      if (!result || result.length < 5 || result.includes('エラー') || result.includes('APIキー')) {
+        isLiveAI = false;
+
+        let actList = [];
+        if (wish.match(/(駄菓子|販売|接客|値札)/)) actList.push('駄菓子販売');
+        if (wish.match(/(アクセサリー|ビーズ|ハンドメイド|作品|制作|手作業)/)) actList.push('アクセサリー制作');
+        if (wish.match(/(コーヒー|焙煎|計量|封入)/)) actList.push('コーヒー作業');
+        if (wish.match(/(シール|検品|陳列|軽作業)/)) actList.push('商品陳列・軽作業');
+        if (wish.match(/(パソコン|PC|入力|タイピング)/)) actList.push('PC入力作業');
+        if (wish.match(/(外出|レク|イベント|余暇)/)) actList.push('外出レク');
+
+        let actStr = actList.length > 0 ? actList.join('・') : 'ご本人の興味関心に添った作業';
+
+        if (wish.match(/(通所|安定|ペース|体調|健康|静養)/)) {
+          result = `ご本人の体調やペースに配慮しながら、${actStr}などの作業を取り入れ、安心して通所を継続できるよう総合的に支援する。`;
+        } else if (wish.match(/(精度|ミス|丁寧|集中|検品)/)) {
+          result = `${actStr}を通じて得意な工程を活かしつつ、視覚的マニュアルや検品体制の工夫により作業精度の向上と達成感を高められるよう総合的に支援する。`;
+        } else if (wish.match(/(工賃|手当|工賃アップ|手当向上|スピード|効率)/)) {
+          result = `${actStr}のステップアップを図り、作業手順の習得と作業手当（工賃）向上に向けたモチベーション維持を目標に総合的に支援する。`;
+        } else if (wish.match(/(挨拶|報連相|人間関係|コミュニケーション)/)) {
+          result = `${actStr}を行う中で挨拶や報連相の定着を図り、職員や周囲と良好な関係で安心して活動できるよう総合的に支援する。`;
+        } else {
+          result = `ご本人が関心を持つ${actStr}に意欲的に取り組める環境を整え、自己肯定感と通所意欲を高められるよう総合的に支援する。`;
+        }
+      }
+
+      if (policyArea) {
+        policyArea.value = result;
+        policyArea.focus();
+      }
+
+      if (isLiveAI) {
+        showToast('✨ リアルAI通信により「総合的な援助の方針」を生成しました！');
+      } else {
+        showToast('⚡ 主訴キーワードを解析し「総合的な援助の方針」を高度自動生成しました（※APIキー設定でリアルAI通信が可能）');
       }
     }
 
