@@ -963,16 +963,49 @@
     });
 
     // Supabase Connection initialization
-    function initSupabaseConnection() {
+    async function initSupabaseConnection() {
       try {
         if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_KEY !== 'undefined') {
           supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
           document.getElementById('badgePorteStatus').textContent = 'Porte DB: 接続可能';
           document.getElementById('badgePorteStatus').style.background = '#dcfce7';
           document.getElementById('badgePorteStatus').style.color = '#15803d';
+          // Supabase接続後にAPIキーを自動ロード（全端末共有）
+          await loadApiKeysFromSupabase();
         }
       } catch (e) {
         console.warn('Supabase config not active:', e);
+      }
+    }
+
+    // Supabase の設定テーブルからAPIキーを読み込む
+    async function loadApiKeysFromSupabase() {
+      if (!supabaseClient) return;
+      try {
+        const providers = ['gemini', 'openai', 'groq', 'openrouter', 'claude'];
+        const { data, error } = await supabaseClient
+          .from('設定')
+          .select('key, value')
+          .in('key', providers.map(p => 'ai_key_' + p).concat(providers.map(p => 'ai_model_' + p)).concat(['ai_last_provider']));
+        if (error || !data) return;
+        data.forEach(row => {
+          if (row.key.startsWith('ai_key_')) {
+            const provider = row.key.replace('ai_key_', '');
+            // Supabaseの値でlocalStorageを更新（Supabase優先）
+            if (row.value) localStorage.setItem('porte_ai_key_' + provider, row.value);
+          } else if (row.key.startsWith('ai_model_')) {
+            const provider = row.key.replace('ai_model_', '');
+            if (row.value) localStorage.setItem('porte_ai_model_' + provider, row.value);
+          } else if (row.key === 'ai_last_provider') {
+            if (row.value) localStorage.setItem('porte_ai_last_provider', row.value);
+          }
+        });
+        // 画面に反映
+        loadApiSettings();
+        updateSavedBadgeSummary();
+        showToast('☁️ Supabase からAPIキーを同期しました');
+      } catch (e) {
+        console.warn('Supabase APIキー読み込みエラー:', e);
       }
     }
 
@@ -1795,7 +1828,7 @@ ${document.getElementById('sheetShortGoal').value}
     }
 
     // Save / Load Per-Provider Local Settings
-    function saveApiSettings() {
+    async function saveApiSettings() {
       const provider = document.getElementById('apiProviderSelect').value;
       const model = document.getElementById('apiModelSelect').value;
       const key = document.getElementById('apiKeyInput').value.trim();
@@ -1810,7 +1843,7 @@ ${document.getElementById('sheetShortGoal').value}
         return;
       }
 
-      // Save specifically for this provider
+      // ローカルに保存
       localStorage.setItem('porte_ai_key_' + provider, key);
       localStorage.setItem('porte_ai_model_' + provider, model);
       localStorage.setItem('porte_ai_last_provider', provider);
@@ -1819,8 +1852,32 @@ ${document.getElementById('sheetShortGoal').value}
         gemini: 'Gemini', openai: 'OpenAI', groq: 'Groq', openrouter: 'OpenRouter', claude: 'Claude'
       };
 
+      // Supabase にも保存（全端末共有）
+      if (supabaseClient) {
+        try {
+          const upsertRows = [
+            { key: 'ai_key_' + provider, value: key },
+            { key: 'ai_model_' + provider, value: model },
+            { key: 'ai_last_provider', value: provider }
+          ];
+          for (const row of upsertRows) {
+            const { data: exist } = await supabaseClient.from('設定').select('key').eq('key', row.key).limit(1);
+            if (exist && exist.length > 0) {
+              await supabaseClient.from('設定').update({ value: row.value }).eq('key', row.key);
+            } else {
+              await supabaseClient.from('設定').insert([row]);
+            }
+          }
+          showToast(`☁️ ${providerNames[provider] || provider} のAPI KeyをSupabase（全端末共有）に保存しました！`);
+        } catch (e) {
+          console.warn('Supabase APIキー保存エラー:', e);
+          showToast(`⚙️ ${providerNames[provider] || provider} のAPI Keyをローカルに保存しました（Supabase保存失敗）`);
+        }
+      } else {
+        showToast(`⚙️ ${providerNames[provider] || provider} のAPI Keyをローカルに保存しました！`);
+      }
+
       updateSavedBadgeSummary();
-      showToast(`⚙️ ${providerNames[provider] || provider} のAPI Keyを保存しました！`);
     }
 
     function loadApiSettings() {
