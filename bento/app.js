@@ -47,6 +47,12 @@ let currentSelectedMonth = '';
 let currentCategoryFilter = 'ALL';
 let currentSelectingBentoId = null;
 let isOrderHistoryExpanded = false;
+let showStaffInMatrix = false;
+
+window.toggleStaffInMatrix = function(checked) {
+  showStaffInMatrix = !!checked;
+  renderMonthlyMatrix();
+};
 
 window.toggleOrderHistoryExpand = function() {
   isOrderHistoryExpanded = !isOrderHistoryExpanded;
@@ -265,6 +271,7 @@ function addBentoStockLot(bento, qty, expDate, type = 'ARRIVED') {
 
 function cleanupAutoAttOrders() {
   let modified = false;
+  const todayKey = getTodayKey();
 
   // dailyOrders から自動生成された偽の ord_att_ 注文データを削除
   if (dailyOrders && typeof dailyOrders === 'object') {
@@ -280,17 +287,38 @@ function cleanupAutoAttOrders() {
         if (dayRecord.orders.length !== originalCount) {
           modified = true;
         }
+        if (dateKey === todayKey && dayRecord.orders.length === 0 && dayRecord.status === 'CONFIRMED') {
+          dayRecord.status = 'DRAFT';
+          dayRecord.confirmedAt = null;
+          modified = true;
+        }
       }
     });
   }
 
-  // orderHistory から自動生成された偽の ord_att_ 注文データを削除
+  // orderHistory から自動生成された偽の注文ログデータを削除
   if (Array.isArray(orderHistory)) {
     const originalHistCount = orderHistory.length;
     orderHistory = orderHistory.filter(o => {
       if (!o) return false;
       const isAttAuto = (o.id && String(o.id).startsWith('ord_att_')) || (o.orderId && String(o.orderId).startsWith('ord_att_'));
-      return !isAttAuto;
+      if (isAttAuto) return false;
+
+      // 当日のログで、現在porteUsersでそのお弁当を選択していないものを削除（自動作成ログのクリア）
+      if (o.dateKey === todayKey) {
+        const u = porteUsers.find(user => 
+          (o.userId && String(user.id).trim() === String(o.userId).trim()) ||
+          (o.userName && String(user.name).replace('👔','').trim() === String(o.userName).replace('👔','').trim())
+        );
+        if (u) {
+          normalizeUserData(u);
+          const userHasBento = Array.isArray(u.selectedBentoIds) && u.selectedBentoIds.some(bId => bId === o.bentoId);
+          if (!userHasBento) return false;
+        } else {
+          return false;
+        }
+      }
+      return true;
     });
     if (orderHistory.length !== originalHistCount) {
       modified = true;
@@ -1261,7 +1289,8 @@ function renderMonthlyMatrix() {
 
   const userMap = {};
   porteUsers.forEach(u => {
-    userMap[u.id] = { id: u.id, name: u.name, kana: u.kana || '' };
+    const isStaff = u.type === '👔 スタッフ' || u.isStaff || String(u.name).includes('👔');
+    userMap[u.id] = { id: u.id, name: u.name, kana: u.kana || '', isStaff: isStaff };
   });
 
   for (let day = 1; day <= daysInMonth; day++) {
@@ -1270,13 +1299,17 @@ function renderMonthlyMatrix() {
     if (dayRecord && dayRecord.orders) {
       dayRecord.orders.forEach(o => {
         if (!userMap[o.userId]) {
-          userMap[o.userId] = { id: o.userId, name: o.userName, kana: o.userKana || '' };
+          const isStaff = o.userType === '👔 スタッフ' || String(o.userName || '').includes('👔');
+          userMap[o.userId] = { id: o.userId, name: o.userName, kana: o.userKana || '', isStaff: isStaff };
         }
       });
     }
   }
 
-  const userList = Object.values(userMap);
+  let userList = Object.values(userMap);
+  if (!showStaffInMatrix) {
+    userList = userList.filter(u => !u.isStaff);
+  }
   if (userList.length === 0) {
     container.innerHTML = `<div style="padding:30px; text-align:center; color:#747d8c;">利用者データが登録されていません。</div>`;
     return;

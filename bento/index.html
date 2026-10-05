@@ -191,11 +191,15 @@
         <!-- 📅 月間利用マトリクス表（1か月の注文実績一覧） -->
         <div class="card" style="margin-top: 24px;">
           <div class="card-header" style="flex-wrap: wrap; gap: 12px; justify-content: space-between;">
-            <div style="display:flex; align-items:center; gap:12px;">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
               <h3>📅 月間お弁当利用マトリクス表（1か月の実績追跡）</h3>
               <select id="monthlyMatrixMonthSelect" style="padding:6px 12px; border-radius:10px; border:2px solid #ced4da; font-weight:700; font-size:0.95rem; cursor:pointer;">
                 <!-- JSで月選択の選択肢を自動生成 -->
               </select>
+              <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.9rem; font-weight:800; color:#1864ab; background:#eef7ff; padding:6px 14px; border-radius:12px; border:1.5px solid #91c7ff; cursor:pointer; user-select:none;">
+                <input type="checkbox" id="showStaffInMatrixCheckbox" onchange="toggleStaffInMatrix(this.checked)" style="width:16px; height:16px; cursor:pointer;">
+                👔 スタッフも表示する
+              </label>
             </div>
             <div style="display:flex; gap:10px;">
               <button class="btn btn-sm btn-pop" id="exportMonthlyMatrixCsvBtn" style="font-size:0.85rem;">
