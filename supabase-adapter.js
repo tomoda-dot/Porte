@@ -651,7 +651,7 @@ function _getBentoCount(rec){
   var s = String(rec.bento).trim();
   if(s==='3食' || s==='3' || s==='3個') return 3;
   if(s==='2食' || s==='2' || s==='2個') return 2;
-  if(s==='1食' || s==='1' || s==='1個' || s==='あり' || s==='true' || s==='要') return 1;
+  if(s==='1食' || s==='1' || s==='1個' || s==='あり' || s==='true' || s==='要' || s==='体験食(無料)' || s==='あり(無料)' || s==='無料' || s==='体験食') return 1;
   return 0;
 }
 function _isBento(rec){return _getBentoCount(rec) > 0;}
@@ -696,7 +696,10 @@ async function _calcAttendanceList(ym){
       if(bCount > 0){
         bc += bCount;
         var pm=rec.bentoPaymentMethod || (user&&user.bentoPaymentMethod) || '工賃払い';
-        if(pm==='当日')bcDaily += bCount;
+        var isFreeMeal = String(rec.bento||'').includes('無料') || String(rec.bento||'').includes('体験食');
+        if(isFreeMeal || pm==='無料' || pm==='対象外'){
+          // 無料体験食：工賃控除しない
+        } else if(pm==='当日')bcDaily += bCount;
         else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext += bCount;
         else bcDeduct += bCount;
       }
@@ -771,7 +774,10 @@ async function _calcWageDetailPerUser(ym){
       if(bCount > 0){
         bc += bCount;
         var pm=rec.bentoPaymentMethod || (user&&user.bentoPaymentMethod) || '工賃払い';
-        if(pm==='当日')bcDaily += bCount;
+        var isFreeMeal = String(rec.bento||'').includes('無料') || String(rec.bento||'').includes('体験食');
+        if(isFreeMeal || pm==='無料' || pm==='対象外'){
+          // 無料体験食：工賃控除しない
+        } else if(pm==='当日')bcDaily += bCount;
         else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext += bCount;
         else bcDeduct += bCount;
       }

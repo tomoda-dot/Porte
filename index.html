@@ -241,13 +241,15 @@ var fmtPickupIcon=function(pStr){
 };
 var renderBentoOptions=function(val){
   var s=String(val||'').trim();
+  var isFree=s==='体験食(無料)'||s==='あり(無料)'||s==='体験食'||s==='無料';
   var is3=s==='3食'||s==='3'||s==='3個';
   var is2=s==='2食'||s==='2'||s==='2個';
   var is1=s==='1食'||s==='1'||s==='1個'||s==='あり'||s==='true'||s==='要';
-  return '<option value="なし"'+(!is1&&!is2&&!is3?' selected':'')+'>なし</option>'+
-         '<option value="1食"'+(is1?' selected':'')+'>1食</option>'+
+  return '<option value="なし"'+(!is1&&!is2&&!is3&&!isFree?' selected':'')+'>なし</option>'+
+         '<option value="1食"'+(is1&&!isFree?' selected':'')+'>1食</option>'+
          '<option value="2食"'+(is2?' selected':'')+'>2食</option>'+
-         '<option value="3食"'+(is3?' selected':'')+'>3食</option>';
+         '<option value="3食"'+(is3?' selected':'')+'>3食</option>'+
+         '<option value="体験食(無料)"'+(isFree?' selected':'')+'>体験食(無料)</option>';
 };
 var fmtBentoBadge=function(curB, isAb, masterBento, payMethod){
   if(isAb){
@@ -255,15 +257,16 @@ var fmtBentoBadge=function(curB, isAb, masterBento, payMethod){
     return hasB ? '<span style="color:var(--red)">❌</span>' : '−';
   }
   var s = String(curB||'').trim();
-  var isHas = (s==='1食'||s==='1'||s==='1個'||s==='あり'||s==='true'||s==='要'||s==='2食'||s==='2'||s==='2個'||s==='3食'||s==='3'||s==='3個');
+  var isFree = s.includes('無料') || s.includes('体験');
+  var isHas = (s==='1食'||s==='1'||s==='1個'||s==='あり'||s==='true'||s==='要'||s==='2食'||s==='2'||s==='2個'||s==='3食'||s==='3'||s==='3個'||isFree);
   if(isHas){
     var pm = String(payMethod||'').trim();
-    var subText = '工賃';
-    var subColor = '#2e7d32'; // 緑色: 工賃払い
-    if(pm === '月末締め翌月払い' || pm === '翌月払い' || pm === '翌月') {
+    var subText = isFree ? '無料' : '工賃';
+    var subColor = isFree ? '#7b1fa2' : '#2e7d32'; // 紫色: 無料(体験食)
+    if(!isFree && (pm === '月末締め翌月払い' || pm === '翌月払い' || pm === '翌月')) {
       subText = '翌月';
       subColor = '#1565c0'; // 青色: 翌月払い
-    } else if(pm === '当日' || pm === '当日払い') {
+    } else if(!isFree && (pm === '当日' || pm === '当日払い')) {
       subText = '当日';
       subColor = '#e65100'; // オレンジ色: 当日払い
     }
@@ -271,7 +274,7 @@ var fmtBentoBadge=function(curB, isAb, masterBento, payMethod){
     if(s==='3食'||s==='3'||s==='3個') countStr = '×3';
     else if(s==='2食'||s==='2'||s==='2個') countStr = '×2';
 
-    return '<span title="お弁当 ('+(pm||'工賃払い')+')" style="color:'+subColor+';font-weight:700;display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;font-size:11px;vertical-align:middle"><span>🍱'+countStr+'</span><span style="font-size:9.5px">'+subText+'</span></span>';
+    return '<span title="お弁当 ('+(isFree?'無料':(pm||'工賃払い'))+')" style="color:'+subColor+';font-weight:700;display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;font-size:11px;vertical-align:middle"><span>🍱'+countStr+'</span><span style="font-size:9.5px">'+subText+'</span></span>';
   }
   var mHas = masterBento && masterBento !== 'なし' && masterBento !== '0' && masterBento !== 'false';
   if(mHas && (s==='なし'||s==='0'||s==='false')) return '<span style="color:var(--red);font-size:10px;font-weight:700">❌取消</span>';
@@ -281,7 +284,7 @@ var getBentoCountValue=function(val){
   var s = String(val||'').trim();
   if(s==='3食'||s==='3'||s==='3個') return 3;
   if(s==='2食'||s==='2'||s==='2個') return 2;
-  if(s==='1食'||s==='1'||s==='1個'||s==='あり'||s==='true'||s==='要') return 1;
+  if(s==='1食'||s==='1'||s==='1個'||s==='あり'||s==='true'||s==='要'||s==='体験食(無料)'||s==='あり(無料)'||s==='無料'||s==='体験食') return 1;
   return 0;
 };
 var userName=function(id){return(S.users.find(function(u){return String(u.id)===String(id);})||{}).name||'?';};
@@ -313,6 +316,14 @@ function isAdminUser(sess){
   var r = String(s.role || '');
   var lid = String(s.loginId || '');
   return n.indexOf('友田') >= 0 || r === '管理者' || r === 'サービス管理責任者' || s.isAdmin === true || lid.toLowerCase() === 'administrator' || n.toLowerCase() === 'administrator';
+}
+
+function isSabikanUser(sess){
+  var s = sess || getSession() || {};
+  var n = String(s.name || '');
+  var r = String(s.role || '');
+  var lid = String(s.loginId || '');
+  return r === 'サービス管理責任者' || r === 'サビ管' || n.indexOf('友田') >= 0 || r === '管理者' || s.isAdmin === true || lid.toLowerCase() === 'administrator' || n.toLowerCase() === 'administrator';
 }
 
 var _selectedStaffForLogin = null;
@@ -2415,7 +2426,9 @@ function renderPlanArea(userId){
   var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
   h+='<h3 style="margin:0;font-size:16px">📋 個別支援計画</h3>';
   h+='<div style="display:flex;gap:8px;align-items:center">';
-  h+='<a href="support-plan-builder.html?userId='+userId+'" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:#fff;border:1.5px solid var(--pri);border-radius:7px;color:var(--pri);font-size:12px;font-weight:600;text-decoration:none;transition:all .15s" onmouseover="this.style.background=\'var(--pri)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'var(--pri)\'">🤖 個別支援計画 AI作成アシスタント</a>';
+  if(isSabikanUser()){
+    h+='<a href="support-plan-builder.html?userId='+userId+'" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:#fff;border:1.5px solid var(--pri);border-radius:7px;color:var(--pri);font-size:12px;font-weight:600;text-decoration:none;transition:all .15s" onmouseover="this.style.background=\'var(--pri)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'var(--pri)\'">🤖 個別支援計画 AI作成アシスタント</a>';
+  }
   h+='<button class="bp" onclick="openPlanForm(\''+userId+'\')">＋ 新規登録</button>';
   h+='</div></div>';
   h+='<p style="font-size:11px;color:var(--sub);margin-bottom:8px">※計画適用開始日までに計画は交付しましょう。交付済みの行は緑色になります。</p>';
@@ -4336,7 +4349,7 @@ function renderTrials(c){
       return '<tr><td style="font-weight:700;white-space:nowrap">'+fmtDate(t.date)+'</td><td style="white-space:nowrap">'+esc(t.time||'')+'</td>'+
       '<td style="font-weight:600;color:var(--pri);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(t.name)+'">'+esc(t.name)+'</td>'+
       '<td style="text-align:center;white-space:nowrap"><span class="badge" style="background:'+(t.type==='体験'?'var(--acc)':'#1565c0')+'">'+esc(t.type||'見学')+'</span></td>'+
-      '<td style="text-align:center">'+(t.bento==='あり'?'🍱':'−')+'</td><td style="text-align:center">'+(isPickupUser(t.pickup)?'🚐':'−')+'</td>'+
+      '<td style="text-align:center">'+(t.bento && t.bento !== 'なし' && t.bento !== '0' ? (t.bento.includes('無料') || t.bento.includes('体験') ? '🍱(無料)' : '🍱') : '−')+'</td><td style="text-align:center">'+(isPickupUser(t.pickup)?'🚐':'−')+'</td>'+
       '<td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(t.contact||'')+'">'+esc(t.contact||'')+'</td>'+
       '<td style="white-space:nowrap">'+esc(t.status||'予定')+'</td>'+
       '<td style="font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(rep.notes||'')+'">'+esc(rep.notes||'−')+'</td>'+
@@ -4492,9 +4505,9 @@ function openTrialModal(t){
     '</div>'+
 
     '<div class="btns">'+
-      (isEdit?'<button class="bg" onclick=\'openTrialReportModal('+JSON.stringify(d).replace(/\'/g,"&#39;")+')\' style="margin-right:auto;color:var(--pri);border-color:var(--pri)">📄 報告書プレビュー・印刷</button>':'')+
-      '<button class="bg" onclick="closeModal(\'tr-modal\')">キャンセル</button>'+
-      '<button class="bp" onclick="saveTrial(\''+(d.id||'')+'\')">保存</button>'+
+      (isEdit?'<button class="bg" type="button" onclick="handleTrialPreviewFromModal(\''+(d.id||'')+'\')" style="margin-right:auto;color:var(--pri);border-color:var(--pri)">📄 報告書プレビュー・印刷</button>':'')+
+      '<button class="bg" type="button" onclick="closeModal(\'tr-modal\')">キャンセル</button>'+
+      '<button class="bp" type="button" onclick="saveTrial(\''+(d.id||'')+'\')">保存</button>'+
     '</div></div></div>';
     
   document.getElementById('tr-modal').innerHTML=html;
@@ -4751,6 +4764,7 @@ function openTrialReportModal(t){
       '<h3 style="margin:0;color:var(--pri)">📄 体験利用報告書 プレビュー</h3>'+
       '<div style="display:flex;gap:8px">'+
         '<button class="bp" onclick="printTrialReport()" style="padding:8px 18px">🖨️ 印刷</button>'+
+        '<button class="bg" onclick=\'openTrialModal('+JSON.stringify(t).replace(/\'/g,"&#39;")+')\'>✏️ 編集画面に戻る</button>'+
         '<button class="bg" onclick="closeModal(\'tr-modal\')">閉じる</button>'+
       '</div>'+
     '</div>'+
@@ -4775,7 +4789,7 @@ function openTrialReportModal(t){
           '<th style="background:#f0f4f0;border:1px solid #777;padding:6px 10px;text-align:center">送 迎 利 用</th>'+
           '<td style="border:1px solid #777;padding:6px 10px">'+(isPickupUser(t.pickup) ? 'あり' : 'なし')+'</td>'+
           '<th style="background:#f0f4f0;border:1px solid #777;padding:6px 10px;text-align:center">食 事 利 用</th>'+
-          '<td style="border:1px solid #777;padding:6px 10px">'+(t.bento === 'あり' ? 'あり' : 'なし')+'</td>'+
+          '<td style="border:1px solid #777;padding:6px 10px">'+(t.bento && t.bento !== 'なし' ? (t.bento.includes('無料') || t.bento.includes('体験') ? 'あり (無料)' : 'あり') : 'なし')+'</td>'+
         '</tr>'+
       '</table>'+
 
@@ -4823,18 +4837,36 @@ function openTrialReportModal(t){
   document.getElementById('tr-modal').innerHTML = html;
 }
 
-async function saveTrial(id){
-  if(!lockUI())return;
-  var name=document.getElementById('tr-name').value;
-  var type=document.getElementById('tr-type').value;
-  var date=document.getElementById('tr-date').value;
-  var time=document.getElementById('tr-time').value;
-  var bento=document.getElementById('tr-bento').value;
-  var pickup=document.getElementById('tr-pickup').value;
-  var contact=document.getElementById('tr-contact').value;
-  var status=document.getElementById('tr-status').value;
+async function handleTrialPreviewFromModal(id){
+  if(await cConfirm('編集中の入力データを保存してから印刷プレビューを表示しますか？\n\n【OK】: 入力内容を自動保存してプレビュー表示\n【キャンセル】: 保存せずに戻る')){
+    var saved = await saveTrial(id, true);
+    if(saved){
+      openTrialReportModal(saved);
+    }
+  }
+}
+
+async function saveTrial(id, returnSavedObjectOnly){
+  if(!lockUI())return null;
+  var nameEl=document.getElementById('tr-name');
+  var name=nameEl?nameEl.value:'';
+  var typeEl=document.getElementById('tr-type');
+  var type=typeEl?typeEl.value:'';
+  var dateEl=document.getElementById('tr-date');
+  var date=dateEl?dateEl.value:'';
+  var timeEl=document.getElementById('tr-time');
+  var time=timeEl?timeEl.value:'';
+  var bentoEl=document.getElementById('tr-bento');
+  var bento=bentoEl?bentoEl.value:'';
+  var pickupEl=document.getElementById('tr-pickup');
+  var pickup=pickupEl?pickupEl.value:'';
+  var contactEl=document.getElementById('tr-contact');
+  var contact=contactEl?contactEl.value:'';
+  var statusEl=document.getElementById('tr-status');
+  var status=statusEl?statusEl.value:'';
   
-  var creator=document.getElementById('tr-creator').value;
+  var creatorEl=document.getElementById('tr-creator');
+  var creator=creatorEl?creatorEl.value:'';
   
   // Collect dynamic schedule table rows
   var schedRows = [];
@@ -4854,19 +4886,34 @@ async function saveTrial(id){
   });
   var schedule = JSON.stringify(schedRows);
 
-  var evalAccuracyRank=document.getElementById('tr-eval-accuracy-rank').value;
-  var evalAccuracyText=document.getElementById('tr-eval-accuracy-text').value;
-  var evalSpeedRank=document.getElementById('tr-eval-speed-rank').value;
-  var evalSpeedText=document.getElementById('tr-eval-speed-text').value;
-  var evalAutonomyRank=document.getElementById('tr-eval-autonomy-rank').value;
-  var evalAutonomyText=document.getElementById('tr-eval-autonomy-text').value;
-  var evalCommRank=document.getElementById('tr-eval-comm-rank').value;
-  var evalCommText=document.getElementById('tr-eval-comm-text').value;
-  var summary=document.getElementById('tr-summary').value;
-  var futurePlan=document.getElementById('tr-future-plan').value;
-  var userNotes=document.getElementById('tr-notes').value;
+  var evalAccRankEl=document.getElementById('tr-eval-accuracy-rank');
+  var evalAccuracyRank=evalAccRankEl?evalAccRankEl.value:'';
+  var evalAccTxtEl=document.getElementById('tr-eval-accuracy-text');
+  var evalAccuracyText=evalAccTxtEl?evalAccTxtEl.value:'';
 
-  if(!name||!date){await cAlert('氏名と予定日は必須です');unlockUI();return;}
+  var evalSpdRankEl=document.getElementById('tr-eval-speed-rank');
+  var evalSpeedRank=evalSpdRankEl?evalSpdRankEl.value:'';
+  var evalSpdTxtEl=document.getElementById('tr-eval-speed-text');
+  var evalSpeedText=evalSpdTxtEl?evalSpdTxtEl.value:'';
+
+  var evalAutRankEl=document.getElementById('tr-eval-autonomy-rank');
+  var evalAutonomyRank=evalAutRankEl?evalAutRankEl.value:'';
+  var evalAutTxtEl=document.getElementById('tr-eval-autonomy-text');
+  var evalAutonomyText=evalAutTxtEl?evalAutTxtEl.value:'';
+
+  var evalCommRankEl=document.getElementById('tr-eval-comm-rank');
+  var evalCommRank=evalCommRankEl?evalCommRankEl.value:'';
+  var evalCommTxtEl=document.getElementById('tr-eval-comm-text');
+  var evalCommText=evalCommTxtEl?evalCommTxtEl.value:'';
+
+  var summaryEl=document.getElementById('tr-summary');
+  var summary=summaryEl?summaryEl.value:'';
+  var futurePlanEl=document.getElementById('tr-future-plan');
+  var futurePlan=futurePlanEl?futurePlanEl.value:'';
+  var notesEl=document.getElementById('tr-notes');
+  var userNotes=notesEl?notesEl.value:'';
+
+  if(!name||!date){await cAlert('氏名と予定日は必須です');unlockUI();return null;}
 
   var extraObj={
     creator:creator,
@@ -4911,12 +4958,18 @@ async function saveTrial(id){
 
   try{
     if(id){data.id=id;await gas('updateTrial',data);}
-    else{await gas('addTrial',data);}
+    else{var addRes = await gas('addTrial',data); if(addRes&&addRes.id) data.id=addRes.id;}
     S.trials=await gas('getTrials');
+    if(returnSavedObjectOnly){
+      var updatedObj = S.trials.find(function(x){ return String(x.id) === String(data.id || id); }) || data;
+      return updatedObj;
+    }
     closeModal('tr-modal');
     if(S.tab==='trials')renderTrials(document.getElementById('content'));
+    return data;
   }catch(e){
     await cAlert('保存失敗: '+e);
+    return null;
   }finally{
     unlockUI();
   }

@@ -1944,6 +1944,19 @@ ${document.getElementById('sheetShortGoal').value}
 
     document.addEventListener('DOMContentLoaded', () => {
       try { history.replaceState({ step: 0 }, '', location.href); } catch(e){}
+      try {
+        const raw = sessionStorage.getItem('porte_session');
+        if (raw) {
+          const sess = JSON.parse(raw);
+          const r = String(sess.role || '');
+          const n = String(sess.name || '');
+          const isSabikan = r === 'サービス管理責任者' || r === 'サビ管' || r === '管理者' || n.indexOf('友田') >= 0 || sess.isAdmin === true;
+          if (!isSabikan) {
+            alert('個別支援計画 AIアシスタントは「サービス管理責任者」専用機能です。');
+            window.location.href = 'index.html';
+          }
+        }
+      } catch(e){}
     });
   </script>
 </body>
