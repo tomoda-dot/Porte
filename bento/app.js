@@ -263,6 +263,47 @@ function addBentoStockLot(bento, qty, expDate, type = 'ARRIVED') {
   recalculateBentoTotalStock(bento);
 }
 
+function cleanupAutoAttOrders() {
+  let modified = false;
+
+  // dailyOrders から自動生成された偽の ord_att_ 注文データを削除
+  if (dailyOrders && typeof dailyOrders === 'object') {
+    Object.keys(dailyOrders).forEach(dateKey => {
+      const dayRecord = dailyOrders[dateKey];
+      if (dayRecord && Array.isArray(dayRecord.orders)) {
+        const originalCount = dayRecord.orders.length;
+        dayRecord.orders = dayRecord.orders.filter(o => {
+          if (!o) return false;
+          const isAttAuto = (o.orderId && String(o.orderId).startsWith('ord_att_')) || (o.id && String(o.id).startsWith('ord_att_'));
+          return !isAttAuto;
+        });
+        if (dayRecord.orders.length !== originalCount) {
+          modified = true;
+        }
+      }
+    });
+  }
+
+  // orderHistory から自動生成された偽の ord_att_ 注文データを削除
+  if (Array.isArray(orderHistory)) {
+    const originalHistCount = orderHistory.length;
+    orderHistory = orderHistory.filter(o => {
+      if (!o) return false;
+      const isAttAuto = (o.id && String(o.id).startsWith('ord_att_')) || (o.orderId && String(o.orderId).startsWith('ord_att_'));
+      return !isAttAuto;
+    });
+    if (orderHistory.length !== originalHistCount) {
+      modified = true;
+    }
+  }
+
+  if (modified) {
+    saveDailyOrdersToSupabase();
+    saveOrderHistoryToSupabase();
+    savePorteUsers();
+  }
+}
+
 function loadData() {
   const savedMaster = localStorage.getItem('bento_master');
   if (savedMaster) {
@@ -315,6 +356,8 @@ function loadData() {
       dailyOrders = {};
     }
   }
+
+  cleanupAutoAttOrders();
 
 
 
@@ -592,6 +635,15 @@ function mergePorteUsers(remoteUsers, localUsers) {
 
 function applyDailyOrdersToPorteUsers(dailyOrdersObj, usersArray) {
   if (!dailyOrdersObj || !Array.isArray(usersArray)) return usersArray;
+
+  // 全利用者の本日の選択状態を初期化（前日や無選択状態のキャリーオーバーを防止）
+  usersArray.forEach(u => {
+    normalizeUserData(u);
+    const count = u.bentoCount || 1;
+    u.selectedBentoIds = Array(count).fill('');
+    u.selectedBentoId = '';
+  });
+
   const todayKey = getTodayKey();
   const dayRecord = dailyOrdersObj[todayKey];
   if (!dayRecord || !Array.isArray(dayRecord.orders)) return usersArray;
@@ -715,6 +767,7 @@ async function syncFromSupabase() {
           }
         } catch(e) {}
       }
+      cleanupAutoAttOrders();
     } else {
       // フォールバック: カスタムテーブルから読み込み
       const masterRes = await SB.from('bento_master').select('*');
@@ -1150,23 +1203,33 @@ async function syncMonthlyAttendanceToDailyOrders(targetMonth) {
       );
 
       if (!existingOrder) {
-        const defaultBento = bentoMaster[0] || { id: 'default', name: '日替わり弁当', category: 'お弁当', price: 500, icon: '🍱' };
-        dailyOrders[dateKey].orders.push({
-          orderId: 'ord_att_' + dateKey + '_' + (targetUserId || Math.random().toString(36).substr(2, 5)),
-          dateKey: dateKey,
-          userId: targetUserId,
-          userName: targetUserName,
-          userKana: userMaster ? userMaster.kana : '',
-          userType: userMaster ? userMaster.type : '通所',
-          slotIndex: 0,
-          slotName: '1食目',
-          bentoId: defaultBento.id,
-          bentoName: defaultBento.name,
-          category: defaultBento.category || 'お弁当',
-          bentoIcon: defaultBento.icon || '🍱',
-          price: defaultBento.price || 500
-        });
-        modified = true;
+        // 出欠で明確なお弁当ID/商品名が指定されている場合のみ自動連携（未選択の場合はデフォルト弁当を自動設定しない）
+        let explicitBento = null;
+        if (att.bentoId) {
+          explicitBento = bentoMaster.find(b => b.id === att.bentoId);
+        }
+        if (!explicitBento && bentoVal) {
+          explicitBento = bentoMaster.find(b => b.id === bentoVal || b.name === bentoVal);
+        }
+
+        if (explicitBento) {
+          dailyOrders[dateKey].orders.push({
+            orderId: 'ord_att_' + dateKey + '_' + (targetUserId || Math.random().toString(36).substr(2, 5)),
+            dateKey: dateKey,
+            userId: targetUserId,
+            userName: targetUserName,
+            userKana: userMaster ? userMaster.kana : '',
+            userType: userMaster ? userMaster.type : '通所',
+            slotIndex: 0,
+            slotName: '1食目',
+            bentoId: explicitBento.id,
+            bentoName: explicitBento.name,
+            category: explicitBento.category || 'お弁当',
+            bentoIcon: explicitBento.icon || '🍱',
+            price: explicitBento.price || 500
+          });
+          modified = true;
+        }
       }
     });
 
