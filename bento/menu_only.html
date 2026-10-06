@@ -797,16 +797,12 @@
 
         const res = Object.assign({}, lu, ru);
         
-        if (lu.wantsBento !== false || ru.wantsBento !== false) {
-          res.wantsBento = true;
-        }
-
         const luIds = Array.isArray(lu.selectedBentoIds) ? lu.selectedBentoIds : (lu.selectedBentoId ? [lu.selectedBentoId] : []);
         const ruIds = Array.isArray(ru.selectedBentoIds) ? ru.selectedBentoIds : (ru.selectedBentoId ? [ru.selectedBentoId] : []);
         const maxLen = Math.max(luIds.length, ruIds.length, res.bentoCount || 1);
         const mergedIds = [];
         for (let i = 0; i < maxLen; i++) {
-          mergedIds[i] = ruIds[i] || luIds[i] || '';
+          mergedIds[i] = ruIds[i] !== undefined ? ruIds[i] : (luIds[i] || '');
         }
         res.selectedBentoIds = mergedIds;
         res.selectedBentoId = mergedIds[0] || '';
@@ -920,8 +916,7 @@
               }
             } catch(e) {}
           }
-          autoReplaceSoldOutMenu();
-          renderClientMenu();
+          renderClientView();
         }
       } catch(e) {}
     }
@@ -953,7 +948,6 @@
       try { localDailyOrders = JSON.parse(localStorage.getItem('bento_daily_orders')) || {}; } catch(e){}
       applyDailyOrdersToPorteUsers(localDailyOrders, porteUsers);
 
-      autoReplaceSoldOutMenu();
       syncFromSupabase();
     }
 
@@ -968,30 +962,8 @@
     }
 
     function autoReplaceSoldOutMenu() {
-      if (!bentoMaster || bentoMaster.length === 0 || !todaysMenuIds) return;
-      const inStockMaster = bentoMaster.filter(b => b.stock > 0);
-      if (inStockMaster.length === 0) return;
-
-      let changed = false;
-      const currentlyOrderedIds = porteUsers.map(u => u.selectedBentoId).filter(Boolean);
-
-      for (let i = 0; i < todaysMenuIds.length; i++) {
-        const currentId = todaysMenuIds[i];
-        const bento = bentoMaster.find(b => b.id === currentId);
-        const isOrderedBySomeone = currentlyOrderedIds.includes(currentId);
-
-        if (!isOrderedBySomeone && (!bento || bento.stock <= 0)) {
-          const unusedInStock = inStockMaster.find(b => !todaysMenuIds.includes(b.id));
-          if (unusedInStock) {
-            todaysMenuIds[i] = unusedInStock.id;
-            changed = true;
-          }
-        }
-      }
-
-      if (changed) {
-        localStorage.setItem('bento_todays_menu', JSON.stringify(todaysMenuIds));
-      }
+      // ご利用者様注文画面では第1案〜第5案のカード位置を自動入替・変動させない
+      return;
     }
 
     function getBentoEarliestExpDate(bento) {
@@ -1003,16 +975,8 @@
     }
 
     function sortTodaysMenuIdsByExpiration() {
-      if (!todaysMenuIds || todaysMenuIds.length === 0) return;
-      todaysMenuIds.sort((idA, idB) => {
-        const bA = bentoMaster.find(b => b.id === idA);
-        const bB = bentoMaster.find(b => b.id === idB);
-        if (!bA) return 1;
-        if (!bB) return -1;
-        if (bA.stock > 0 && bB.stock <= 0) return -1;
-        if (bA.stock <= 0 && bB.stock > 0) return 1;
-        return 0;
-      });
+      // ご利用者様注文画面では第1案〜第5案の表示位置を固定
+      return;
     }
 
     function normalizeUserData(u) {
@@ -1374,6 +1338,11 @@
     document.addEventListener('visibilitychange', function() {
       if (!document.hidden) syncFromSupabase();
     });
+
+    // 4秒ごとに全端末間で選択情報を自動同期
+    setInterval(function() {
+      syncFromSupabase();
+    }, 4000);
   </script>
 </body>
 </html>

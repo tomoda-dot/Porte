@@ -629,17 +629,13 @@ function mergePorteUsers(remoteUsers, localUsers) {
     if (!lu) return ru;
 
     const res = Object.assign({}, lu, ru);
-    
-    if (lu.wantsBento !== false || ru.wantsBento !== false) {
-      res.wantsBento = true;
-    }
 
     const luIds = Array.isArray(lu.selectedBentoIds) ? lu.selectedBentoIds : (lu.selectedBentoId ? [lu.selectedBentoId] : []);
     const ruIds = Array.isArray(ru.selectedBentoIds) ? ru.selectedBentoIds : (ru.selectedBentoId ? [ru.selectedBentoId] : []);
     const maxLen = Math.max(luIds.length, ruIds.length, res.bentoCount || 1);
     const mergedIds = [];
     for (let i = 0; i < maxLen; i++) {
-      mergedIds[i] = ruIds[i] || luIds[i] || '';
+      mergedIds[i] = ruIds[i] !== undefined ? ruIds[i] : (luIds[i] || '');
     }
     res.selectedBentoIds = mergedIds;
     res.selectedBentoId = mergedIds[0] || '';
