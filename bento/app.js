@@ -1174,12 +1174,13 @@ async function syncMonthlyAttendanceToDailyOrders(targetMonth) {
 
     let modified = false;
     const isBentoPositive = (val, mealVal) => {
-      if (mealVal === true || mealVal === 'あり' || mealVal === '必要' || mealVal === '1食' || mealVal === '2食' || mealVal === '3食') return true;
+      if (mealVal === true || mealVal === 'あり' || mealVal === '必要' || mealVal === '1食' || mealVal === '2食' || mealVal === '3食' || mealVal === '体験食(無料)' || mealVal === 'あり(無料)' || mealVal === '無料' || mealVal === '体験食') return true;
       const s = String(val || '').trim();
       return (
         s === 'あり' || s === '必要' || s === 'true' || s === '1' ||
         s === '1食' || s === '2食' || s === '3食' ||
-        s === '2' || s === '3' || s === '1個' || s === '2個' || s === '3個'
+        s === '2' || s === '3' || s === '1個' || s === '2個' || s === '3個' ||
+        s === '体験食(無料)' || s === 'あり(無料)' || s === '無料' || s === '体験食'
       );
     };
 
@@ -3022,12 +3023,13 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
     }
 
     const isBentoPositive = (val, mealVal) => {
-      if (mealVal === true || mealVal === 'あり' || mealVal === '必要' || mealVal === '1食' || mealVal === '2食' || mealVal === '3食') return true;
+      if (mealVal === true || mealVal === 'あり' || mealVal === '必要' || mealVal === '1食' || mealVal === '2食' || mealVal === '3食' || mealVal === '体験食(無料)' || mealVal === 'あり(無料)' || mealVal === '無料' || mealVal === '体験食') return true;
       const s = String(val || '').trim();
       return (
         s === 'あり' || s === '必要' || s === 'true' || s === '1' ||
         s === '1食' || s === '2食' || s === '3食' ||
-        s === '2' || s === '3' || s === '1個' || s === '2個' || s === '3個'
+        s === '2' || s === '3' || s === '1個' || s === '2個' || s === '3個' ||
+        s === '体験食(無料)' || s === 'あり(無料)' || s === '無料' || s === '体験食'
       );
     };
 
