@@ -632,6 +632,74 @@ function exportMonthlyMatrixCSV() {
   a.click();
 }
 
+// ─── 本日の5品 メニュー変更ロジック ───
+function randomSelectFive() {
+  if (bentoMaster.length < 5) return;
+  const shuffled = [...bentoMaster].sort(() => Math.random() - 0.5);
+  todaysMenuIds = shuffled.slice(0, 5).map(b => b.id);
+  saveTodaysMenuToDB();
+  renderAll();
+  toast('🎲 本日の5品をランダム選出しました');
+}
+
+function autoStockPickFive() {
+  const inStock = bentoMaster.filter(b => b.stock > 0);
+  let selected = [];
+  if (inStock.length >= 5) {
+    selected = inStock.slice(0, 5).map(b => b.id);
+  } else {
+    selected = inStock.map(b => b.id);
+    const remaining = bentoMaster.filter(b => !selected.includes(b.id));
+    selected = selected.concat(remaining.slice(0, 5 - selected.length).map(b => b.id));
+  }
+  todaysMenuIds = selected;
+  saveTodaysMenuToDB();
+  renderAll();
+  toast('🔄 在庫あり商品を優先して本日5品を設定しました');
+}
+
+function openPickFiveModal() {
+  const container = document.getElementById('pickFiveItemsList');
+  if (!container) return;
+
+  container.innerHTML = bentoMaster.map(b => {
+    const isChecked = todaysMenuIds.includes(b.id);
+    return `
+      <label style="display:flex; align-items:center; gap:8px; padding:8px 10px; background:#fff; border:1px solid #ced4da; border-radius:10px; cursor:pointer">
+        <input type="checkbox" class="pick-five-check" value="${b.id}" ${isChecked ? 'checked' : ''} onchange="updatePickFiveCount()">
+        <span style="font-size:1.2rem">${b.icon}</span>
+        <span style="font-weight:700; font-size:0.85rem">${b.name}</span>
+      </label>
+    `;
+  }).join('');
+
+  updatePickFiveCount();
+  document.getElementById('pickFiveModal').classList.add('active');
+}
+
+function closePickFiveModal() {
+  document.getElementById('pickFiveModal').classList.remove('active');
+}
+
+function updatePickFiveCount() {
+  const checked = document.querySelectorAll('.pick-five-check:checked');
+  const countEl = document.getElementById('selectedFiveCount');
+  if (countEl) countEl.textContent = checked.length;
+}
+
+function saveCustomPickFive() {
+  const checked = Array.from(document.querySelectorAll('.pick-five-check:checked')).map(el => el.value);
+  if (checked.length !== 5) {
+    alert(`ちょうど5品を選択してください（現在: ${checked.length}品）`);
+    return;
+  }
+  todaysMenuIds = checked;
+  saveTodaysMenuToDB();
+  closePickFiveModal();
+  renderAll();
+  toast('⚙️ 本日のメニュー5品を保存しました');
+}
+
 // ─── 初期化 ＆ イベントリスナー ───
 document.addEventListener('DOMContentLoaded', () => {
   fetchSupabaseData();
@@ -663,25 +731,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Header Manual Refresh
-  document.getElementById('refreshUsersHeaderBtn').addEventListener('click', () => fetchSupabaseData(true));
-  document.getElementById('confirmDailyOrderBtn').addEventListener('click', confirmDailyOrder);
-  document.getElementById('exportMonthlyMatrixCsvBtn').addEventListener('click', exportMonthlyMatrixCSV);
+  // Header Manual Refresh & Menu Selection Buttons
+  const refreshBtn = document.getElementById('refreshUsersHeaderBtn');
+  if (refreshBtn) refreshBtn.addEventListener('click', () => fetchSupabaseData(true));
+  const confirmBtn = document.getElementById('confirmDailyOrderBtn');
+  if (confirmBtn) confirmBtn.addEventListener('click', confirmDailyOrder);
+  const exportBtn = document.getElementById('exportMonthlyMatrixCsvBtn');
+  if (exportBtn) exportBtn.addEventListener('click', exportMonthlyMatrixCSV);
+
+  const randBtn = document.getElementById('randomSelectBtn');
+  if (randBtn) randBtn.addEventListener('click', randomSelectFive);
+  const autoBtn = document.getElementById('autoStockPickBtn');
+  if (autoBtn) autoBtn.addEventListener('click', autoStockPickFive);
+  const customBtn = document.getElementById('customPickBtn');
+  if (customBtn) customBtn.addEventListener('click', openPickFiveModal);
 
   // Add Lot Form Submit
-  document.getElementById('addLotForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const id = document.getElementById('addLotBentoId').value;
-    const qty = parseInt(document.getElementById('lotQtyInput').value, 10);
-    const expDate = document.getElementById('lotExpDateInput').value;
+  const addLotF = document.getElementById('addLotForm');
+  if (addLotF) {
+    addLotF.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = document.getElementById('addLotBentoId').value;
+      const qty = parseInt(document.getElementById('lotQtyInput').value, 10);
+      const expDate = document.getElementById('lotExpDateInput').value;
 
-    const b = bentoMaster.find(x => x.id === id);
-    if (b) {
-      addBentoStockLot(b, qty, expDate);
-      saveBentoMasterToDB();
-      closeAddLotModal();
-      renderAll();
-      toast('📦 在庫ロットを追加しました');
-    }
-  });
+      const b = bentoMaster.find(x => x.id === id);
+      if (b) {
+        addBentoStockLot(b, qty, expDate);
+        saveBentoMasterToDB();
+        closeAddLotModal();
+        renderAll();
+        toast('📦 在庫ロットを追加しました');
+      }
+    });
+  }
 });

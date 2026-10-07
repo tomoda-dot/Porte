@@ -85,8 +85,17 @@
         </div>
         <div class="action-buttons">
           <a href="user.html" target="_blank" class="btn btn-pop" style="text-decoration:none">
-            📱 タブレット専用メニュー画面を表示 (全画面)
+            📱 タブレット画面を表示 (全画面)
           </a>
+          <button class="btn btn-pop" id="randomSelectBtn">
+            🎲 ランダム5品選出
+          </button>
+          <button class="btn btn-outline" id="autoStockPickBtn">
+            🔄 在庫優先選出
+          </button>
+          <button class="btn btn-outline" id="customPickBtn">
+            ⚙️ 5品を手動で選ぶ
+          </button>
         </div>
       </div>
 
@@ -244,6 +253,24 @@
           <button type="submit" class="btn btn-primary">入荷保存 💾</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- 5品手動選出モーダル -->
+  <div class="modal-overlay" id="pickFiveModal">
+    <div class="modal-box" style="max-width:640px">
+      <div class="modal-header">
+        <h3>⚙️ 本日のメニュー5品をカスタム選択</h3>
+        <button class="close-btn" onclick="closePickFiveModal()">&times;</button>
+      </div>
+      <p style="font-size:0.9rem; color:var(--subtext); margin-bottom:14px">全30品の中から、本日提供するお弁当をちょうど5品選んでください。（選択中: <strong id="selectedFiveCount" style="color:var(--primary)">0</strong> / 5）</p>
+      <div id="pickFiveItemsList" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; max-height:45vh; overflow-y:auto; margin-bottom:20px; padding:6px; border:1px solid #e9ecef; border-radius:12px">
+        <!-- JS動的表示 -->
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px">
+        <button type="button" class="btn btn-outline" onclick="closePickFiveModal()">キャンセル</button>
+        <button type="button" class="btn btn-primary" onclick="saveCustomPickFive()">本日のメニューに設定 💾</button>
+      </div>
     </div>
   </div>
 
