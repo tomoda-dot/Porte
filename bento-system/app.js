@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// ひとつぎ お弁当システム (Ultra-Clean & Rock-Solid Architecture)
+// ひとつぎ お弁当システム Engine (Pure & Flawless Architecture)
 // ═══════════════════════════════════════════════════
 
 const DEFAULT_30_BENTO = [
@@ -26,7 +26,7 @@ const DEFAULT_30_BENTO = [
   { id: 'b21', name: '若鶏の利休焼き弁当', category: '鶏肉', icon: '🐓', stock: 10, desc: '香ばしいゴマの香りが広がる伝統和風メニュー。' },
   { id: 'b22', name: '牛肉と茄子の麻婆ソース弁当', category: '牛肉', icon: '🐂', stock: 10, desc: 'ジューシーな茄子と牛肉のピリ辛本格麻婆。' },
   { id: 'b23', name: '野菜たっぷりキーマカレー弁当', category: '和食・その他', icon: '🍛', stock: 10, desc: 'スパイス香るマイルドで食べやすいキーマカレー。' },
-  { id: 'b24', name: '韓国風焼肉炒め弁当', category: '牛肉', icon: '🐂', stock: 0, desc: '特製プルコギダレで炒めたしっかり味付けのお肉。' },
+  { id: 'b24', name: '韓国風焼肉炒め弁当', category: '牛肉', icon: '🐂', stock: 10, desc: '特製プルコギダレで炒めたしっかり味付けのお肉。' },
   { id: 'b25', name: '鶏の照焼き弁当', category: '鶏肉', icon: '🐓', stock: 10, desc: '照り照りの甘辛タレが絡む定番の照り焼き。' },
   { id: 'b26', name: 'チリソースミートボール弁当', category: '和食・その他', icon: '🧆', stock: 10, desc: '甘辛チリソースが食欲を刺激するミートボール。' },
   { id: 'b27', name: 'ズッキーニとチキンのトマト煮込み弁当', category: '鶏肉', icon: '🐓', stock: 10, desc: '彩り野菜とチキンのヘルシーな地中海風煮込み。' },
@@ -35,7 +35,7 @@ const DEFAULT_30_BENTO = [
   { id: 'b30', name: '牛肉きのこの甘辛炒め弁当', category: '牛肉', icon: '🐂', stock: 10, desc: 'たっぷりのきのこ風味と牛肉の甘辛和風炒め。' }
 ];
 
-// App State (Single Source of Truth)
+// App State
 let bentoMaster = [];
 let todaysMenuIds = [];
 let porteUsers = [];
@@ -89,10 +89,8 @@ async function saveSettingToDB(keyName, jsonValueStr) {
   const SB = getSB();
   if (!SB) return;
   try {
-    // 既存行をチェック
     const checkR = await SB.from('設定').select('key').eq('key', keyName);
     if (checkR.data && checkR.data.length > 0) {
-      // 全マッチ行を一括更新（絶対に重複行を残さない）
       await SB.from('設定').update({ value: jsonValueStr }).eq('key', keyName);
     } else {
       await SB.from('設定').insert([{ key: keyName, value: jsonValueStr }]);
@@ -115,7 +113,7 @@ async function saveDailyOrdersToDB() {
   await saveSettingToDB('bento_order_history', JSON.stringify(orderHistory));
 }
 
-// ─── Supabase からの完全ロード（DBが正解）───
+// ─── Supabase からのダイレクト取得（画面読み込み・フォーカス時）───
 async function fetchSupabaseData(showToast = false) {
   if (isSyncing) return;
   isSyncing = true;
@@ -129,7 +127,6 @@ async function fetchSupabaseData(showToast = false) {
     const settingsMap = {};
 
     if (settingsRes.data) {
-      // 同一キーの重複行があっても「一番新しい行」で上書き
       settingsRes.data.forEach(item => {
         if (item.key && item.value) {
           settingsMap[item.key] = item.value;
@@ -161,7 +158,7 @@ async function fetchSupabaseData(showToast = false) {
       orderHistory = [];
     }
 
-    // 利用者 & 今日の出欠取得
+    // 利用者 ＆ スタッフデータ取得
     const [uRes, attRes, stRes] = await Promise.all([
       SB.from('利用者').select('*'),
       SB.from('出欠').select('*').eq('date', todayKey),
@@ -198,7 +195,7 @@ async function fetchSupabaseData(showToast = false) {
       });
     });
 
-    // 今日の確定済み/下書き注文スナップショットを復元
+    // 今日の注文データを適用
     if (dailyOrders[todayKey] && Array.isArray(dailyOrders[todayKey].orders)) {
       dailyOrders[todayKey].orders.forEach(ord => {
         const u = porteUsers.find(item => String(item.id) === String(ord.userId) || item.name === ord.userName);
@@ -210,7 +207,7 @@ async function fetchSupabaseData(showToast = false) {
     }
 
     renderAll();
-    if (showToast) toast('🔄 最新データをSupabaseから読み込みました');
+    if (showToast) toast('🔄 最新データを読み込みました');
   } catch (e) {
     console.error('Supabase fetch error:', e);
   } finally {
@@ -218,7 +215,7 @@ async function fetchSupabaseData(showToast = false) {
   }
 }
 
-// ─── 注文の記録 & 出欠テーブル連動 ───
+// ─── 注文の記録 & Porte「出欠」テーブル連動 ───
 async function recordUserOrder(userId, bentoId) {
   const todayKey = getTodayKey();
   const u = porteUsers.find(x => String(x.id) === String(userId));
@@ -414,23 +411,23 @@ function renderTodaysMenu() {
 
   container.innerHTML = items.map((b, idx) => {
     const orderedUsers = activeOrders.filter(o => o.bentoId === b.id);
-    const userPills = orderedUsers.map(o => `<span class="user-pill">${o.userName}</span>`).join('');
+    const userPills = orderedUsers.map(o => `<span class="user-tag">${o.userName}</span>`).join('');
     const isSoldOut = b.stock <= 0;
 
     return `
-      <div class="menu-card ${isSoldOut ? 'sold-out' : ''}">
-        <span class="card-num-badge">本日 ${idx + 1}</span>
-        <span class="card-cat-badge">${b.category}</span>
+      <div class="bento-card ${isSoldOut ? 'sold-out' : ''}">
+        <span class="card-num">本日 ${idx + 1}</span>
+        <span class="card-cat">${b.category}</span>
         <div class="bento-icon">${b.icon}</div>
-        <div class="bento-title">${b.name}</div>
+        <div class="bento-name">${b.name}</div>
         <div class="bento-desc">${b.desc}</div>
-        <div class="stock-indicator ${isSoldOut ? 'out-of-stock' : 'in-stock'}">
+        <div class="stock-tag ${isSoldOut ? 'zero' : 'ok'}">
           ${isSoldOut ? '❌ 完売 (在庫0)' : '📦 残り在庫: ' + b.stock + '食'}
         </div>
-        <div class="selected-users-list">
-          ${userPills || '<span style="font-size:0.78rem;color:#999">まだ選択されていません</span>'}
+        <div class="users-list-box">
+          ${userPills || '<span style="font-size:0.78rem;color:#999">未選択</span>'}
         </div>
-        <button class="btn btn-primary btn-choose" ${isSoldOut ? 'disabled' : ''} onclick="openUserSelectModal('${b.id}')">
+        <button class="btn btn-primary" style="width:100%" ${isSoldOut ? 'disabled' : ''} onclick="openUserSelectModal('${b.id}')">
           ${isSoldOut ? '完売' : 'これにする！ 🎯'}
         </button>
       </div>
@@ -454,12 +451,12 @@ function renderPorteUserTable() {
       <tr>
         <td style="font-weight:800; color:var(--dark)">${u.name}</td>
         <td style="text-align:center">
-          <span class="pill-btn ${u.wantsBento ? 'active' : ''}">${u.wantsBento ? '必要' : '不要'}</span>
+          <span class="btn btn-sm ${u.wantsBento ? 'btn-pop' : 'btn-outline'}">${u.wantsBento ? '必要' : '不要'}</span>
         </td>
         <td style="color:var(--subtext); font-size:0.82rem">${u.bentoVal || '-'}</td>
         <td style="font-weight:700; color:#d9480f">${isDone ? bentoItem.name : '<span style="color:#999">未選択</span>'}</td>
         <td style="text-align:center">
-          ${isDone ? '<span class="badge-count" style="background:#e6fcf5;color:#0ca678">✅ 選択済</span>' : '<span class="badge-count pending">未受付</span>'}
+          ${isDone ? '<span class="stat-badge" style="background:#e6fcf5;color:#0ca678;border-color:#63e6be">✅ 選択済</span>' : '<span class="stat-badge" style="background:#ffe8cc;color:#d9480f;border-color:#ffd8a8">未受付</span>'}
         </td>
       </tr>
     `;
@@ -476,7 +473,7 @@ function renderOrderHistoryTable() {
       <td style="font-size:0.8rem; color:var(--subtext)">${l.date}</td>
       <td style="font-weight:800">${l.userName}</td>
       <td style="font-weight:800; color:#d9480f">${l.bentoName}</td>
-      <td><span class="card-cat-badge" style="position:static">${l.category}</span></td>
+      <td><span class="card-cat" style="position:static">${l.category}</span></td>
     </tr>
   `).join('');
 }
@@ -490,7 +487,7 @@ function renderMonthlyMatrix() {
   const y = parseInt(parts[0]), m = parseInt(parts[1]);
   const daysInMonth = new Date(y, m, 0).getDate();
 
-  let html = `<table class="data-table" style="font-size:0.8rem"><thead><tr><th style="min-width:120px">利用者名</th>`;
+  let html = `<table><thead><tr><th style="min-width:120px">利用者名</th>`;
   for (let d = 1; d <= daysInMonth; d++) {
     html += `<th style="text-align:center; min-width:32px; padding:6px 2px">${d}</th>`;
   }
@@ -528,10 +525,10 @@ function renderMasterGrid() {
   const mStock = document.getElementById('masterTotalStockText');
   if (mStock) mStock.textContent = bentoMaster.reduce((s, b) => s + b.stock, 0);
 
-  container.innerHTML = `<div class="master-grid">` + items.map(b => `
-    <div class="master-item-card">
+  container.innerHTML = `<div class="master-grid-30">` + items.map(b => `
+    <div class="master-card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <span class="card-cat-badge" style="position:static">${b.category}</span>
+        <span class="card-cat" style="position:static">${b.category}</span>
         <span style="font-weight:900; color:${b.stock > 0 ? '#0ca678' : '#c92a2a'}">${b.stock > 0 ? '在庫: ' + b.stock + '食' : '完売'}</span>
       </div>
       <div style="font-size:1.8rem; text-align:center; margin:6px 0">${b.icon}</div>
@@ -578,7 +575,7 @@ function renderUserPickerList() {
   container.innerHTML = porteUsers.map(u => {
     const isChosen = u.selectedBentoId === currentSelectingBentoId;
     return `
-      <div class="user-btn ${isChosen ? 'chosen' : ''}" onclick="selectUserForBento('${u.id}')">
+      <div class="user-item-btn ${isChosen ? 'selected' : ''}" onclick="selectUserForBento('${u.id}')">
         <span>${u.name}</span>
         <span>${isChosen ? '✅ 選択中' : '選ぶ 🎯'}</span>
       </div>
@@ -667,14 +664,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(p => {
-    p.addEventListener('click', () => {
-      document.querySelectorAll('#categoryFilterPills .pill-btn').forEach(x => x.classList.remove('active'));
-      p.classList.add('active');
-      currentCategoryFilter = p.getAttribute('data-category');
-      renderMasterGrid();
+  const btnFilter = document.getElementById('filterBentoUsersOnlyBtn');
+  if (btnFilter) {
+    btnFilter.addEventListener('click', () => {
+      btnFilter.classList.toggle('active');
+      renderPorteUserTable();
     });
-  });
+  }
 
   const refreshBtn = document.getElementById('refreshUsersHeaderBtn');
   if (refreshBtn) refreshBtn.addEventListener('click', () => fetchSupabaseData(true));
