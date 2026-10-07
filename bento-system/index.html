@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ひとつぎお弁当 メニュー ＆ 在庫管理システム</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- トップヘッダー -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">🍱</div>
+        <div>
+          <h1 class="brand-title">ひとつぎお弁当システム</h1>
+          <p class="brand-subtitle">お昼ごはん注文 ＆ リアルタイム在庫管理</p>
+        </div>
+      </div>
+      <div class="header-stats">
+        <div class="stat-badge date-badge" id="currentDateBadge">2026/10/07 の状況</div>
+        <div class="stat-badge">
+          <span>通所者数:</span>
+          <strong id="headerUserCount">0名</strong>
+        </div>
+        <div class="stat-badge">
+          <span>お弁当決定:</span>
+          <strong id="headerOrderedCount" style="color:var(--primary)">0食</strong>
+        </div>
+        <div class="stat-badge total-stock-badge">
+          <span>📦 総在庫数:</span>
+          <strong id="headerTotalStockCount">0食</strong>
+        </div>
+        <button class="btn btn-primary" id="refreshUsersHeaderBtn">
+          🔄 最新取得
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- プログレスバー -->
+  <div class="progress-banner">
+    <div class="progress-container">
+      <div class="progress-info">
+        <span class="progress-label">🍱 本日の注文受付進捗</span>
+        <span class="progress-val" id="progressText">0 / 0 名完了 (0%)</span>
+        <span class="progress-sub" id="progressSubText">未選択: 0名</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill" style="width: 0%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ナビゲーション タブ -->
+  <nav class="app-nav">
+    <div class="nav-container">
+      <button class="tab-btn active" data-tab="menu-tab">
+        <span>✨</span> 本日の5品メニュー表
+        <span class="badge-count">5品</span>
+      </button>
+      <button class="tab-btn" data-tab="porte-tab">
+        <span>📋</span> 注文受付 ＆ 月間マトリクス
+        <span class="badge-count pending" id="porteTabBadge">未受付 0</span>
+      </button>
+      <button class="tab-btn" data-tab="master-tab">
+        <span>⚙️</span> 商品マスター ＆ 在庫管理
+        <span class="badge-count" id="masterCountBadge">30品目</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- メインコンテンツ -->
+  <main class="main-content">
+
+    <!-- タブ1: 本日の5品 メニュー表 -->
+    <section id="menu-tab" class="tab-content active">
+      <div class="section-header-banner">
+        <div>
+          <h2>本日のメニュー表作成 🍱</h2>
+          <p>下記のお弁当をタップするとお名前選択モーダルが開きます。</p>
+        </div>
+        <div class="action-buttons">
+          <a href="user.html" target="_blank" class="btn btn-pop" style="text-decoration:none">
+            📱 タブレット専用メニュー画面を表示 (全画面)
+          </a>
+        </div>
+      </div>
+
+      <!-- 本日の5品グリッド -->
+      <div class="todays-menu-grid" id="todaysMenuGrid">
+        <!-- JS動的描画 -->
+      </div>
+    </section>
+
+    <!-- タブ2: 注文受付 ＆ 受付履歴・月間マトリクス -->
+    <section id="porte-tab" class="tab-content">
+      <div class="section-header-banner">
+        <div>
+          <h2>📋 本日の注文受付 ＆ 月間実績</h2>
+          <p>通所者様ごとの選択状態および過去・月間の利用履歴を追跡できます。</p>
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-success" id="confirmDailyOrderBtn">
+            🔒 本日の注文を確定して実績保存
+          </button>
+        </div>
+      </div>
+
+      <!-- 利用者様別 注文選択テーブル -->
+      <div class="card">
+        <div class="card-header">
+          <h3>👥 通所者様別 注文選択リスト</h3>
+          <div style="display:flex; gap:8px;">
+            <button class="pill-btn active" id="filterBentoUsersOnlyBtn">🍱 お弁当対象者のみ</button>
+            <button class="pill-btn" id="filterAllUsersBtn">👥 全員表示</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>氏名</th>
+                <th style="text-align:center">お弁当必要</th>
+                <th>設定内容</th>
+                <th>選んだお弁当</th>
+                <th style="text-align:center">状態</th>
+              </tr>
+            </thead>
+            <tbody id="porteUserTableBody">
+              <!-- 行動的描画 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 履歴ログ -->
+      <div class="card">
+        <div class="card-header">
+          <h3>📜 注文・受付履歴ログ</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>日時</th>
+                <th>利用者名</th>
+                <th>注文お弁当</th>
+                <th>カテゴリ</th>
+              </tr>
+            </thead>
+            <tbody id="orderHistoryTableBody">
+              <!-- 行動的描画 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 月間お弁当利用マトリクス表 -->
+      <div class="card">
+        <div class="card-header">
+          <h3>📅 月間お弁当利用マトリクス表</h3>
+          <button class="btn btn-sm btn-outline" id="exportMonthlyMatrixCsvBtn">
+            📊 当月実績CSVを出力
+          </button>
+        </div>
+        <div class="table-responsive" id="monthlyMatrixContainer">
+          <!-- マトリクス動的描画 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- タブ3: 商品マスター ＆ 在庫管理 -->
+    <section id="master-tab" class="tab-content">
+      <div class="section-header-banner">
+        <div>
+          <h2>⚙️ 商品マスター ＆ 全在庫・賞味期限管理</h2>
+          <p>全<span id="masterTotalCount">30</span>品目 / 総在庫: <span id="masterTotalStockText" style="color:var(--primary); font-weight:900">0</span>食</p>
+        </div>
+      </div>
+
+      <!-- フィルター・検索バー -->
+      <div class="master-filter-bar">
+        <div class="category-pills" id="categoryFilterPills">
+          <button type="button" class="pill-btn active" data-category="ALL">すべて (30)</button>
+          <button type="button" class="pill-btn" data-category="魚">🐟 魚</button>
+          <button type="button" class="pill-btn" data-category="豚肉">🐖 豚肉</button>
+          <button type="button" class="pill-btn" data-category="牛肉">🐂 牛肉</button>
+          <button type="button" class="pill-btn" data-category="鶏肉">🐓 鶏肉</button>
+          <button type="button" class="pill-btn" data-category="和食・その他">🍲 和食・その他</button>
+        </div>
+        <div class="search-box">
+          <input type="search" id="masterSearchInput" placeholder="お弁当名で検索..." oninput="renderMasterGrid()">
+        </div>
+      </div>
+
+      <!-- グッドグリッド -->
+      <div id="masterItemsGrid">
+        <!-- JS描画 -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- お名前選択モーダル -->
+  <div class="modal-overlay" id="userSelectForBentoModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="selectUserModalBentoTitle">🍱 お名前を選択してください</h3>
+        <button class="close-btn" onclick="closeUserSelectForBentoModal()">&times;</button>
+      </div>
+      <div class="user-picker-grid" id="userPickerList">
+        <!-- 動的表示 -->
+      </div>
+      <div style="text-align:center; margin-top:10px">
+        <button class="btn btn-outline" onclick="closeUserSelectForBentoModal()">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 在庫ロット追加モーダル -->
+  <div class="modal-overlay" id="addLotModal">
+    <div class="modal-box" style="max-width:480px">
+      <div class="modal-header">
+        <h3>📦 入荷・賞味期限の追加</h3>
+        <button class="close-btn" onclick="closeAddLotModal()">&times;</button>
+      </div>
+      <form id="addLotForm">
+        <input type="hidden" id="addLotBentoId">
+        <p id="addLotBentoName" style="font-weight:900; color:#d9480f; margin-bottom:14px; font-size:1.1rem"></p>
+        <div style="margin-bottom:14px">
+          <label style="font-weight:800; display:block; margin-bottom:4px">入荷数量（食）</label>
+          <input type="number" id="lotQtyInput" value="5" min="1" required style="width:100%; padding:10px; border-radius:12px; border:1.5px solid #ced4da">
+        </div>
+        <div style="margin-bottom:20px">
+          <label style="font-weight:800; display:block; margin-bottom:4px">賞味期限</label>
+          <input type="date" id="lotExpDateInput" required style="width:100%; padding:10px; border-radius:12px; border:1.5px solid #ced4da">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px">
+          <button type="button" class="btn btn-outline" onclick="closeAddLotModal()">キャンセル</button>
+          <button type="submit" class="btn btn-primary">入荷保存 💾</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- スクリプト類 -->
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

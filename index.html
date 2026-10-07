@@ -866,6 +866,45 @@ async function renderDashboard(c){
   });
   birthdayUsers.sort(function(a,b){return a.day-b.day;});
 
+  // 本日の打刻未完了チェック（出勤ボタン未押下 / 退勤ボタン未押下）
+  var unclockedAlerts = [];
+  var _nowObj = new Date();
+  var _nowHM = String(_nowObj.getHours()).padStart(2,'0') + ':' + String(_nowObj.getMinutes()).padStart(2,'0');
+
+  plannedIds.forEach(function(uid){
+    var u = S.users.find(function(x){return x.id === uid;}); if(!u) return;
+    var r = att.find(function(a){return a.userId === uid;});
+    var st = (r && r.startTime) ? r.startTime : '';
+    var et = (r && r.endTime) ? r.endTime : '';
+    var stStatus = r ? r.status : '予定';
+
+    if (['欠席','体調不良','通院','調整休'].indexOf(stStatus) >= 0) return;
+
+    var sSch = u.scheduleStart || '10:00';
+    var eSch = u.scheduleEnd || '16:00';
+
+    if (!st) {
+      unclockedAlerts.push({
+        userId: u.id,
+        userName: u.name,
+        type: 'no_clock_in',
+        schTime: sSch + '〜' + eSch,
+        msg: '出勤ボタンが押されていません。（遅刻またはお休みですか？）'
+      });
+    } else if (st && !et) {
+      if (_nowHM >= eSch) {
+        unclockedAlerts.push({
+          userId: u.id,
+          userName: u.name,
+          type: 'no_clock_out',
+          schTime: sSch + '〜' + eSch,
+          clockInTime: st,
+          msg: '退勤ボタンが押されていません。（退勤の記録漏れですか？）'
+        });
+      }
+    }
+  });
+
   var _sessName=_sess.name||'';
   var _sessRole=_sess.role||'';
   c.innerHTML='<div class="hd-row"><h2>📊 ダッシュボード</h2>'+
@@ -881,6 +920,19 @@ async function renderDashboard(c){
     '<div class="stat" style="border-color:var(--grn)"><div class="stat-l">本日の予定</div><div class="stat-v">'+plannedIds.length+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div>'+
     '<div class="stat" style="border-color:var(--acc)"><div class="stat-l">🍱本日のお弁当</div><div class="stat-v">'+bc+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div>'+
     '<div class="stat" style="border-color:#1565c0"><div class="stat-l">🚐本日の送迎</div><div class="stat-v">'+pc+'<span style="font-size:14px;font-weight:400;margin-left:4px">名</span></div></div></div>'+
+    // 打刻未完了・連絡確認アラート
+    (unclockedAlerts.length>0?'<div class="card" style="margin-bottom:12px;border-left:4px solid #d32f2f;background:#fff8f8;cursor:pointer" onclick="var b=this.querySelector(\'.ds-body\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.ds-arrow\').textContent=b.style.display===\'none\'?\'▶\':\'▼\'"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0;color:#c62828">⏰ 打刻未記録・未確認アラート <span style="font-size:12px;color:#c62828;font-weight:400">（'+unclockedAlerts.length+'件）</span></h3><span class="ds-arrow" style="font-size:12px;color:var(--sub)">▼</span></div><div class="ds-body" onclick="event.stopPropagation()" style="margin-top:10px">'+
+      unclockedAlerts.map(function(item){
+        var badge = item.type === 'no_clock_in' ?
+          '<span style="background:#ffebee;color:#c62828;border:1px solid #ffcdd2;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">🔴 出勤未打刻</span>' :
+          '<span style="background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">🟡 退勤未打刻</span>';
+        return '<div style="background:#fff;border:1px solid #ffcdd2;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'+
+          '<div><div style="display:flex;align-items:center;gap:8px">'+badge+'<span style="font-weight:700;font-size:14px">'+esc(item.userName)+' 様</span><span style="font-size:12px;color:var(--sub)">（予定: '+item.schTime+'）</span></div>'+
+          '<div style="font-size:12px;color:#d32f2f;margin-top:4px;font-weight:600">💬 '+esc(item.msg)+'</div></div>'+
+          '<button onclick="openCalAttM(\''+item.userId+'\',\''+d+'\')" style="background:var(--pri);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">📝 出欠を記録</button>'+
+        '</div>';
+      }).join('')+
+    '</div></div>':'')+
     '<div class="card"><div class="card-hd"><span class="card-t">本日の予定者</span></div><div id="ds-s">読み込み中...</div></div>'+
     // 変更申請（シフト・勤怠修正）承認待ち — 友田のみ
     ((_sess.name&&_sess.name.indexOf('友田')>=0)&&crRequests.length>0?'<div class="card" style="margin-bottom:12px;border-left:4px solid #6a1b9a;background:#f3e5f5"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="margin:0">📝 変更申請 承認待ち <span style="font-size:12px;color:#6a1b9a;font-weight:400">（'+crRequests.length+'件）</span></h3></div>'+
@@ -1319,8 +1371,6 @@ async function openCalAttM(uid, ds){
     var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',content:'',mood:'普通',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
     if(u){
-      if(!att.startTime)att.startTime=u.scheduleStart||'10:00';
-      if(!att.endTime && att.status==='予定')att.endTime=u.scheduleEnd||'16:00';
       if(!att.bento)att.bento=u.bento||'なし';
       if(!att.pickup)att.pickup=u.pickup||'なし';
     }
@@ -1465,8 +1515,6 @@ async function openAttDailyM(uid, ds){
     var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',content:'',mood:'普通',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
     if(u){
-      if(!att.startTime)att.startTime=u.scheduleStart||'10:00';
-      if(!att.endTime && att.status==='予定')att.endTime=u.scheduleEnd||'16:00';
       if(!att.bento)att.bento=u.bento||'なし';
       if(!att.pickup)att.pickup=u.pickup||'なし';
     }
@@ -5038,17 +5086,17 @@ async function renderAttTbl(){
 
   var activeUsers=S.users.filter(function(u){
     if(!isUserActive(u,attDate))return false;
-    var r=attData.find(function(a){return a.userId===u.id;});
+    var r=attData.find(function(a){return String(a.userId)===String(u.id);});
     if(r&&r.status==='調整休')return false;
     var isScheduled=u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;
-    var hasRecord=attData.some(function(a){return a.userId===u.id;});
+    var hasRecord=attData.some(function(a){return String(a.userId)===String(u.id);});
     var isTemp=tempUids.indexOf(u.id)>=0;
     return isScheduled||hasRecord||isTemp;
   });
   document.getElementById('att-tbl').innerHTML='<table><thead><tr><th>利用者名</th><th>状態</th><th>出勤</th><th>退勤</th><th style="text-align:center">弁当</th><th style="text-align:center">送迎</th><th>作業(AM)</th><th>作業(PM)</th><th>日報内容</th><th>体調</th></tr></thead><tbody>'+
     activeUsers.map(function(u){
-      var r=attData.find(function(a){return a.userId===u.id;});
-      var rep=dailyData.find(function(d){return d.userId===u.id;});
+      var r=attData.find(function(a){return String(a.userId)===String(u.id);});
+      var rep=dailyData.find(function(d){return String(d.userId)===String(u.id);});
       var h=r?calcH(r.startTime,r.endTime):0;
       var status=r?r.status:'未記録';
       var isTemp=tempUids.indexOf(u.id)>=0||(r && !(u.scheduleDays && u.scheduleDays.indexOf(dwj)>=0));
@@ -6381,11 +6429,16 @@ async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var attR
       bt[item.name].h+=item.h; bt[item.name].w+=item.wage;
     });
     if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
-      bc++;
+      var isFreeMeal = String(r.bento).includes('無料') || String(r.bento).includes('体験');
       var pm=r.bentoPaymentMethod || (u&&u.bentoPaymentMethod) || '工賃払い';
-      if(pm==='当日')bcDaily++;
-      else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
-      else bcDeduct++;
+      if(isFreeMeal || pm==='無料' || pm==='対象外'){
+        // 無料体験食：請求・工賃控除から除外
+      } else {
+        bc++;
+        if(pm==='当日')bcDaily++;
+        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
+        else bcDeduct++;
+      }
     }
   });
   var kk=checkKaikin(u, att, wM, closedDays);
@@ -6720,8 +6773,9 @@ function renderAllUsersWageAdjustmentSummary(container, allAtt, closedDays, bent
       var w = calcWage(r, u);
       tH += w.h; tW += w.wage;
       if(r.bento && String(r.bento) !== 'なし' && String(r.bento) !== '0' && String(r.bento) !== 'false'){
+        var isFreeMeal = String(r.bento).includes('無料') || String(r.bento).includes('体験');
         var pm = r.bentoPaymentMethod || u.bentoPaymentMethod || '工賃払い';
-        if(pm === '工賃払い') bcDeduct += getBentoCountValue(r.bento);
+        if(!isFreeMeal && pm !== '無料' && pm !== '対象外' && pm === '工賃払い') bcDeduct += getBentoCountValue(r.bento);
       }
     });
     var kk = checkKaikin(u, allAtt, adjM, closedDays);
@@ -7285,11 +7339,16 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
       var bc=0, bcDeduct=0, bcDaily=0, bcNext=0;
       recs.forEach(function(r){
         if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
-          bc++;
+          var isFreeMeal = String(r.bento).includes('無料') || String(r.bento).includes('体験');
           var pm=r.bentoPaymentMethod || (u&&u.bentoPaymentMethod) || '工賃払い';
-          if(pm==='当日')bcDaily++;
-          else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
-          else bcDeduct++;
+          if(isFreeMeal || pm==='無料' || pm==='対象外'){
+            // 無料体験食：控除・請求から除外
+          } else {
+            bc++;
+            if(pm==='当日')bcDaily++;
+            else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
+            else bcDeduct++;
+          }
         }
       });
       if(bc>0){
@@ -7388,11 +7447,16 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     recs.forEach(function(r){
       var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
       if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
-        bc++;
+        var isFreeMeal = String(r.bento).includes('無料') || String(r.bento).includes('体験');
         var pm=r.bentoPaymentMethod || (u&&u.bentoPaymentMethod) || '工賃払い';
-        if(pm==='当日')bcDaily++;
-        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
-        else bcDeduct++;
+        if(isFreeMeal || pm==='無料' || pm==='対象外'){
+          // 無料体験食：控除・請求から除外
+        } else {
+          bc++;
+          if(pm==='当日')bcDaily++;
+          else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
+          else bcDeduct++;
+        }
       }
     });
     var kk=checkKaikin(u,att,eM);
@@ -7571,11 +7635,16 @@ async function printAllIRP(){
     recs.forEach(function(r){
       var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
       if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
-        bc++;
+        var isFreeMeal = String(r.bento).includes('無料') || String(r.bento).includes('体験');
         var pm=r.bentoPaymentMethod || (u&&u.bentoPaymentMethod) || '工賃払い';
-        if(pm==='当日')bcDaily++;
-        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
-        else bcDeduct++;
+        if(isFreeMeal || pm==='無料' || pm==='対象外'){
+          // 無料体験食：控除・請求から除外
+        } else {
+          bc++;
+          if(pm==='当日')bcDaily++;
+          else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
+          else bcDeduct++;
+        }
       }
     });
     var kk=checkKaikin(u,att,eM);
@@ -8376,11 +8445,16 @@ async function dlCSV(){try{
       var bc=0, bcDeduct=0, bcDaily=0, bcNext=0;
       recs.forEach(function(r){
         if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
-          bc++;
+          var isFreeMeal = String(r.bento).includes('無料') || String(r.bento).includes('体験');
           var pm=r.bentoPaymentMethod || (u&&u.bentoPaymentMethod) || '工賃払い';
-          if(pm==='当日')bcDaily++;
-          else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
-          else bcDeduct++;
+          if(isFreeMeal || pm==='無料' || pm==='対象外'){
+            // 無料体験食：控除・請求から除外
+          } else {
+            bc++;
+            if(pm==='当日')bcDaily++;
+            else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
+            else bcDeduct++;
+          }
         }
       });
       if(bc>0){

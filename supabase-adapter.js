@@ -59,17 +59,72 @@ async function _getAll(table){
     r=await supabase.from(table).select('*');
   }
   if(r.error)_throwErr(r.error);
-  return(r.data||[]).map(_padTimes);
+  var data=(r.data||[]).map(_padTimes);
+  if(table==='出欠') data=_dedupAttendanceRows(data);
+  return data;
 }
 
 // テーブルからフィルタ取得
-async function _getFiltered(table,col,val){var r=await supabase.from(table).select('*').eq(col,val);if(r.error)_throwErr(r.error);return(r.data||[]).map(_padTimes);}
+async function _getFiltered(table,col,val){
+  var r=await supabase.from(table).select('*').eq(col,val);
+  if(r.error)_throwErr(r.error);
+  var data=(r.data||[]).map(_padTimes);
+  if(table==='出欠') data=_dedupAttendanceRows(data);
+  return data;
+}
 
 // 前方一致フィルタ（日付のym検索用）
-async function _getLike(table,col,prefix){var r=await supabase.from(table).select('*').like(col,prefix+'%');if(r.error)_throwErr(r.error);return(r.data||[]).map(_padTimes);}
+async function _getLike(table,col,prefix){
+  var r=await supabase.from(table).select('*').like(col,prefix+'%');
+  if(r.error)_throwErr(r.error);
+  var data=(r.data||[]).map(_padTimes);
+  if(table==='出欠') data=_dedupAttendanceRows(data);
+  return data;
+}
 
 // 以上フィルタ
-async function _getGte(table,col,val){var r=await supabase.from(table).select('*').gte(col,val).order(col);if(r.error)_throwErr(r.error);return(r.data||[]).map(_padTimes);}
+async function _getGte(table,col,val){
+  var r=await supabase.from(table).select('*').gte(col,val).order(col);
+  if(r.error)_throwErr(r.error);
+  var data=(r.data||[]).map(_padTimes);
+  if(table==='出欠') data=_dedupAttendanceRows(data);
+  return data;
+}
+
+// 出欠レコードの重複解消・非空フィールド統合
+function _dedupAttendanceRows(rows){
+  if(!rows || rows.length <= 1) return rows;
+  var map = {};
+  var result = [];
+  for(var i=0; i<rows.length; i++){
+    var r = rows[i];
+    var key = String(r.userId) + '_' + String(r.date);
+    if(!map[key]){
+      map[key] = Object.assign({}, r);
+      result.push(map[key]);
+    } else {
+      var merged = map[key];
+      var keys = Object.keys(r);
+      for(var k=0; k<keys.length; k++){
+        var keyName = keys[k];
+        var val = r[keyName];
+        if(val !== null && val !== undefined && val !== '' && val !== '-'){
+          if(merged[keyName] === null || merged[keyName] === undefined || merged[keyName] === '' || merged[keyName] === '-'){
+            merged[keyName] = val;
+          } else if(keyName === 'status'){
+            var statusOrder = ['出席','遅刻','早退','欠席','体調不良','通院','予定','調整休'];
+            var curIdx = statusOrder.indexOf(merged.status);
+            var newIdx = statusOrder.indexOf(val);
+            if(newIdx >= 0 && (curIdx < 0 || newIdx < curIdx)){
+              merged.status = val;
+            }
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
 
 // 時刻フィールドをHH:mm形式にパディング
 function _padTimes(row){
@@ -125,10 +180,33 @@ async function _update(table,obj){
 // 削除
 async function _del(table,id){var r=await supabase.from(table).delete().eq('id',id);if(r.error)_throwErr(r.error);return true;}
 
-// Upsert（userId+dateで既存チェック）
+// Upsert（userId+dateで既存チェック＆出欠は重複排除・既存時刻情報非上書き統合）
 async function _upsertByUserDate(table,obj,idPrefix){
-  var r=await supabase.from(table).select('id').eq('userId',obj.userId).eq('date',obj.date).limit(1);
-  if(r.data&&r.data.length>0){obj.id=r.data[0].id;return _update(table,obj);}
+  var r=await supabase.from(table).select('*').eq('userId',obj.userId).eq('date',obj.date);
+  if(r.data&&r.data.length>0){
+    obj.id=r.data[0].id;
+    if(table==='出欠'){
+      for(var i=0;i<r.data.length;i++){
+        var existingRow=r.data[i];
+        var keys=Object.keys(existingRow);
+        for(var k=0;k<keys.length;k++){
+          var keyName=keys[k];
+          var exVal=existingRow[keyName];
+          if(exVal!==null&&exVal!==undefined&&exVal!==''&&exVal!=='-'){
+            if(obj[keyName]===undefined||obj[keyName]===null||obj[keyName]===''){
+              obj[keyName]=exVal;
+            }
+          }
+        }
+      }
+      if(r.data.length>1){
+        for(var d=1;d<r.data.length;d++){
+          _del(table,r.data[d].id).catch(function(){});
+        }
+      }
+    }
+    return _update(table,obj);
+  }
   else{obj.id=_genId(idPrefix);return _add(table,obj);}
 }
 
@@ -390,9 +468,11 @@ async function gas(fn){
     // ── サイン保存 ──
     case 'saveSignatureForDate':
       // a1=userId, a2=date, a3=signatureDataUrl
-      var sigR=await supabase.from('出欠').select('id').eq('userId',a1).eq('date',a2).limit(1);
+      var sigR=await supabase.from('出欠').select('id').eq('userId',a1).eq('date',a2);
       if(sigR.data&&sigR.data.length>0){
-        await supabase.from('出欠').update({signature:a3}).eq('id',sigR.data[0].id);
+        for(var sidx=0;sidx<sigR.data.length;sidx++){
+          await supabase.from('出欠').update({signature:a3}).eq('id',sigR.data[sidx].id);
+        }
       }
       return{success:true};
 
