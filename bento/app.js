@@ -2095,7 +2095,7 @@ function renderPorteSection() {
 
       // 食数変更ドロップダウン
       const countSelectHtml = `
-        <select style="padding:4px 8px; border-radius:10px; border:1.5px solid #ffc078; font-weight:800; font-size:0.85rem; background:#fff5eb; color:#d9480f; cursor:pointer; ${isConfirmedToday ? 'opacity:0.6; cursor:not-allowed;' : ''}" ${isConfirmedToday ? 'disabled title="本日の注文は確定済みです"' : ''} onchange="changeUserBentoCount(${realIndex}, this.value)">
+        <select style="padding:4px 8px; border-radius:10px; border:1.5px solid #ffc078; font-weight:800; font-size:0.85rem; background:#fff5eb; color:#d9480f; cursor:pointer;" onchange="changeUserBentoCount(${realIndex}, this.value)">
           <option value="0" ${u.wantsBento === false || targetCount === 0 ? 'selected' : ''}>⚪ 注文なし</option>
           <option value="1" ${u.wantsBento !== false && targetCount === 1 ? 'selected' : ''}>🍱 1食分</option>
           <option value="2" ${u.wantsBento !== false && targetCount === 2 ? 'selected' : ''}>🍱 2食分</option>
@@ -2131,7 +2131,7 @@ function renderPorteSection() {
           slotsHtml += `
             <div style="display:flex; align-items:center; gap:6px;">
               ${labelPrefix}
-              <select class="bento-select-dropdown" style="flex:1;" ${isConfirmedToday ? 'disabled style="background:#e9ecef; cursor:not-allowed; opacity:0.85; border-color:#ced4da;" title="本日の注文は確定済みです"' : ''} onchange="assignUserBentoSlot(${realIndex}, ${slotIdx}, this.value)">
+              <select class="bento-select-dropdown" style="flex:1;" onchange="assignUserBentoSlot(${realIndex}, ${slotIdx}, this.value)">
                 ${optionsHtml}
               </select>
             </div>
@@ -2173,10 +2173,6 @@ function renderPorteSection() {
 }
 
 window.toggleUserBentoWant = function(userIndex) {
-  if (isTodayOrderConfirmed()) {
-    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「確定を解除」してください。', 'warning');
-    return;
-  }
   const user = porteUsers[userIndex];
   if (!user) return;
   normalizeUserData(user);
@@ -2189,11 +2185,6 @@ window.toggleUserBentoWant = function(userIndex) {
 };
 
 window.changeUserBentoCount = function(userIndex, countVal) {
-  if (isTodayOrderConfirmed()) {
-    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「確定を解除」してください。', 'warning');
-    renderAll();
-    return;
-  }
   const user = porteUsers[userIndex];
   if (!user) return;
   normalizeUserData(user);
