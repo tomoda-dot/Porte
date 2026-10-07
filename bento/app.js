@@ -46,7 +46,7 @@ let showHiddenItems = false;
 let currentSelectedMonth = '';
 let currentCategoryFilter = 'ALL';
 let currentSelectingBentoId = null;
-let isOrderHistoryExpanded = false;
+let isOrderHistoryExpanded = true;
 let showStaffInMatrix = false;
 
 window.toggleStaffInMatrix = function(checked) {
