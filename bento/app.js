@@ -556,10 +556,12 @@ async function saveSettingToSupabase(keyName, jsonValueStr) {
   if (!url || !key || typeof supabase === 'undefined') return;
   try {
     const SB = supabase.createClient(url, key);
-    await SB.from('設定').upsert({
-      key: keyName,
-      value: jsonValueStr
-    }, { onConflict: 'key' });
+    const checkRes = await SB.from('設定').select('key').eq('key', keyName);
+    if (checkRes.data && checkRes.data.length > 0) {
+      await SB.from('設定').update({ value: jsonValueStr }).eq('key', keyName);
+    } else {
+      await SB.from('設定').insert({ key: keyName, value: jsonValueStr });
+    }
   } catch(e) {}
 }
 
@@ -727,9 +729,7 @@ async function syncFromSupabase() {
       settingsRes.data.forEach(item => {
         if (item.key && item.value) {
           countsByKey[item.key] = (countsByKey[item.key] || 0) + 1;
-          if (!latestByKey[item.key]) {
-            latestByKey[item.key] = item.value;
-          }
+          latestByKey[item.key] = item.value;
         }
       });
 
