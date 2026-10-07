@@ -817,47 +817,85 @@ async function syncFromSupabase() {
   }
 }
 
+function cleanNameForMatch(n) {
+  return String(n || '')
+    .replace(/👔/g, '')
+    .replace(/スタッフ/g, '')
+    .replace(/髙/g, '高')
+    .replace(/\s+/g, '')
+    .trim();
+}
+
 function syncOrderHistoryWithDailyOrders() {
-  if (!dailyOrders || typeof dailyOrders !== 'object') return;
+  if (!dailyOrders || typeof dailyOrders !== 'object') dailyOrders = {};
+  if (!Array.isArray(orderHistory)) orderHistory = [];
   let changed = false;
 
+  // 1. dailyOrders -> orderHistory
   Object.keys(dailyOrders).forEach(dateKey => {
     const dayRecord = dailyOrders[dateKey];
-    if (dayRecord && dayRecord.status === 'CONFIRMED' && Array.isArray(dayRecord.orders) && dayRecord.orders.length > 0) {
-      const existing = orderHistory.filter(ord => ord.dateKey === dateKey);
-      if (existing.length === 0) {
-        const parts = dateKey.split('-');
-        let mStr = dateKey;
-        if (parts.length === 3) {
-          let timeStr = '23:59';
-          if (dayRecord.confirmedAt) {
-            const matchTime = dayRecord.confirmedAt.match(/\d{1,2}:\d{2}/);
-            if (matchTime) timeStr = matchTime[0];
-          }
-          mStr = `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)} ${timeStr}`;
-        }
-
-        dayRecord.orders.forEach(s => {
+    if (dayRecord && Array.isArray(dayRecord.orders) && dayRecord.orders.length > 0) {
+      dayRecord.orders.forEach(s => {
+        if (!s || !s.bentoId) return;
+        const exists = orderHistory.some(ord => ord.dateKey === dateKey && (
+          (ord.userId && s.userId && String(ord.userId).trim() === String(s.userId).trim()) ||
+          (ord.userName && s.userName && cleanNameForMatch(ord.userName) === cleanNameForMatch(s.userName))
+        ));
+        if (!exists) {
           orderHistory.unshift({
             id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-            date: mStr,
+            date: dateKey,
             dateKey: dateKey,
             userId: s.userId,
             userName: s.userName,
-            slotIndex: s.slotIndex,
+            slotIndex: s.slotIndex || 0,
             slotName: s.slotName || '1食目',
             bentoId: s.bentoId,
             bentoName: s.bentoName,
             category: s.category || ''
           });
-        });
-        changed = true;
-      }
+          changed = true;
+        }
+      });
+    }
+  });
+
+  // 2. orderHistory -> dailyOrders
+  orderHistory.forEach(ord => {
+    if (!ord || !ord.dateKey || !ord.bentoId) return;
+    const dateKey = ord.dateKey;
+    if (!dailyOrders[dateKey]) {
+      dailyOrders[dateKey] = {
+        status: 'CONFIRMED',
+        confirmedAt: `${dateKey} (履歴参照)`,
+        orders: []
+      };
+      changed = true;
+    }
+    if (!Array.isArray(dailyOrders[dateKey].orders)) {
+      dailyOrders[dateKey].orders = [];
+    }
+    const exists = dailyOrders[dateKey].orders.some(o => 
+      (o.userId && ord.userId && String(o.userId).trim() === String(ord.userId).trim()) ||
+      (o.userName && ord.userName && cleanNameForMatch(o.userName) === cleanNameForMatch(ord.userName))
+    );
+    if (!exists) {
+      dailyOrders[dateKey].orders.push({
+        userId: ord.userId,
+        userName: ord.userName,
+        slotIndex: ord.slotIndex || 0,
+        slotName: ord.slotName || '1食目',
+        bentoId: ord.bentoId,
+        bentoName: ord.bentoName,
+        category: ord.category || ''
+      });
+      changed = true;
     }
   });
 
   if (changed) {
     saveOrderHistory();
+    saveDailyOrders();
   }
 }
 
@@ -1287,7 +1325,8 @@ function renderMonthlyMatrix() {
   const userMap = {};
   porteUsers.forEach(u => {
     const isStaff = u.type === '👔 スタッフ' || u.isStaff || String(u.name).includes('👔');
-    userMap[u.id] = { id: u.id, name: u.name, kana: u.kana || '', isStaff: isStaff };
+    const normKey = u.id || cleanNameForMatch(u.name);
+    userMap[normKey] = { id: u.id, name: u.name, kana: u.kana || '', isStaff: isStaff };
   });
 
   for (let day = 1; day <= daysInMonth; day++) {
@@ -1295,12 +1334,21 @@ function renderMonthlyMatrix() {
     const dayRecord = dailyOrders[dayKey];
     if (dayRecord && dayRecord.orders) {
       dayRecord.orders.forEach(o => {
-        if (!userMap[o.userId]) {
+        const normKey = o.userId || cleanNameForMatch(o.userName);
+        if (!userMap[normKey]) {
           const isStaff = o.userType === '👔 スタッフ' || String(o.userName || '').includes('👔');
-          userMap[o.userId] = { id: o.userId, name: o.userName, kana: o.userKana || '', isStaff: isStaff };
+          userMap[normKey] = { id: o.userId, name: o.userName, kana: o.userKana || '', isStaff: isStaff };
         }
       });
     }
+
+    orderHistory.filter(h => h.dateKey === dayKey).forEach(h => {
+      const normKey = h.userId || cleanNameForMatch(h.userName);
+      if (!userMap[normKey]) {
+        const isStaff = String(h.userName || '').includes('👔');
+        userMap[normKey] = { id: h.userId, name: h.userName, kana: '', isStaff: isStaff };
+      }
+    });
   }
 
   let userList = Object.values(userMap);
@@ -1328,31 +1376,47 @@ function renderMonthlyMatrix() {
     for (let d = 1; d <= daysInMonth; d++) {
       const dayKey = `${targetMonth}-${String(d).padStart(2, '0')}`;
       const isToday = dayKey === todayKey;
-      const dayRecord = dailyOrders[dayKey];
       
+      const combinedOrders = [];
+
+      const dayRecord = dailyOrders[dayKey];
+      if (dayRecord && Array.isArray(dayRecord.orders)) {
+        dayRecord.orders.forEach(o => {
+          if (!o) return;
+          const idMatch = o.userId && u.id && String(o.userId).trim() === String(u.id).trim();
+          const nameMatch = o.userName && u.name && cleanNameForMatch(o.userName) === cleanNameForMatch(u.name);
+          if (idMatch || nameMatch) {
+            combinedOrders.push(o);
+          }
+        });
+      }
+
+      orderHistory.filter(h => h.dateKey === dayKey).forEach(h => {
+        const idMatch = h.userId && u.id && String(h.userId).trim() === String(u.id).trim();
+        const nameMatch = h.userName && u.name && cleanNameForMatch(h.userName) === cleanNameForMatch(u.name);
+        if (idMatch || nameMatch) {
+          const exists = combinedOrders.some(co => co.bentoId === h.bentoId || co.bentoName === h.bentoName);
+          if (!exists) {
+            combinedOrders.push(h);
+          }
+        }
+      });
+
       let cellContent = `<span class="matrix-cell-empty">-</span>`;
 
-      if (dayRecord && dayRecord.orders && dayRecord.orders.length > 0) {
-        const userOrders = dayRecord.orders.filter(o => {
-          if (!o) return false;
-          const idMatch = o.userId && u.id && String(o.userId).trim() === String(u.id).trim();
-          const nameMatch = o.userName && u.name && String(o.userName).replace('👔','').trim() === String(u.name).replace('👔','').trim();
-          return idMatch || nameMatch;
-        });
-        if (userOrders.length > 0) {
-          monthTotalCount += userOrders.length;
-          const namesJoin = userOrders.map(o => `${o.slotName || ''}: ${o.bentoName}`).join(', ');
-          if (userOrders.length === 1) {
-            const o0 = userOrders[0];
-            const bento = bentoMaster.find(b => b.id === o0.bentoId);
-            const icon = bento ? bento.icon : (o0.bentoIcon || '🍱');
-            const shortName = (o0.bentoName || '').slice(0, 5);
-            cellContent = `<span class="matrix-cell-chip" title="${namesJoin}">${icon} ${shortName}</span>`;
-          } else {
-            const firstBento = bentoMaster.find(b => b.id === userOrders[0].bentoId);
-            const icon = firstBento ? firstBento.icon : '🍱';
-            cellContent = `<span class="matrix-cell-chip" style="background:#fff3bf; color:#f59f00; border:1px solid #ffe066;" title="${namesJoin}">${icon} ×${userOrders.length}</span>`;
-          }
+      if (combinedOrders.length > 0) {
+        monthTotalCount += combinedOrders.length;
+        const namesJoin = combinedOrders.map(o => `${o.slotName || '1食目'}: ${o.bentoName}`).join(', ');
+        if (combinedOrders.length === 1) {
+          const o0 = combinedOrders[0];
+          const bento = bentoMaster.find(b => b.id === o0.bentoId);
+          const icon = bento ? bento.icon : (o0.bentoIcon || '🍱');
+          const shortName = (o0.bentoName || '').slice(0, 5);
+          cellContent = `<span class="matrix-cell-chip" title="${namesJoin}">${icon} ${shortName}</span>`;
+        } else {
+          const firstBento = bentoMaster.find(b => b.id === combinedOrders[0].bentoId);
+          const icon = firstBento ? firstBento.icon : '🍱';
+          cellContent = `<span class="matrix-cell-chip" style="background:#fff3bf; color:#f59f00; border:1px solid #ffe066;" title="${namesJoin}">${icon} ×${combinedOrders.length}</span>`;
         }
       }
 
