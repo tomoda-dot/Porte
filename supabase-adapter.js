@@ -126,9 +126,15 @@ function _dedupAttendanceRows(rows){
   return result;
 }
 
-// 時刻フィールドをHH:mm形式にパディング
+// 時刻フィールドをHH:mm形式にパディング＆時刻フィールド相互補完
 function _padTimes(row){
-  var timeFields=['startTime','endTime','scheduleStart','scheduleEnd','contractStart','contractEnd','departTime','arriveTime'];
+  if(row){
+    if(!row.startTime && (row.in || row.clockIn)) row.startTime = row.in || row.clockIn;
+    if(!row.endTime && (row.out || row.clockOut)) row.endTime = row.out || row.clockOut;
+    if(!row.in && row.startTime) row.in = row.startTime;
+    if(!row.out && row.endTime) row.out = row.endTime;
+  }
+  var timeFields=['startTime','endTime','scheduleStart','scheduleEnd','contractStart','contractEnd','departTime','arriveTime','in','out'];
   for(var i=0;i<timeFields.length;i++){
     var k=timeFields[i];
     if(row[k]&&typeof row[k]==='string'&&row[k].match(/^\d{1,2}:\d{2}$/)){
@@ -965,7 +971,9 @@ async function _calcServiceRecordData(srYm){
       var rec=null;for(var ri=0;ri<recs.length;ri++){if(String(recs[ri].date)===ds){rec=recs[ri];break;}}
       var dd={day:d,dow:dow,status:'',startTime:'',endTime:'',pickup:false,dropoff:false,meal:false,notes:'',signUrl:''};
       if(rec&&_isAttend(rec)){
-        totalDays++;dd.status='1';dd.startTime=rec.startTime||'';dd.endTime=rec.endTime||'';
+        totalDays++;dd.status='1';
+        dd.startTime=rec.startTime||rec.in||rec.clockIn||rec.scheduleStart||user.scheduleStart||user.contractStart||'10:00';
+        dd.endTime=rec.endTime||rec.out||rec.clockOut||rec.scheduleEnd||user.scheduleEnd||user.contractEnd||'15:30';
         var pu=(rec.pickup!==undefined&&rec.pickup!==null&&String(rec.pickup).trim()!=='')?String(rec.pickup):String(user.pickup||'');
         if(pu.indexOf('往')>=0||pu.indexOf('迎')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.pickup=true;pickupCount++;}
         if(pu.indexOf('復')>=0||pu.indexOf('送')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.dropoff=true;dropoffCount++;}

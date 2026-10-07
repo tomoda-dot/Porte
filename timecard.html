@@ -218,7 +218,7 @@ async function clockIn(userId,signatureDataUrl){
   var r3=await sb.from('作業種別').select('id').limit(1);
   var defaultWt=(r3.data&&r3.data.length>0)?r3.data[0].id:'';
   if(existing){
-    await sb.from('出欠').update({startTime:now,status:'出席',signature:signatureDataUrl||null}).eq('id',existing.id);
+    await sb.from('出欠').update({startTime:now,status:'出席',signature:signatureDataUrl||null}).eq('userId',userId).eq('date',today2);
   }else{
     var rec={id:_genId('a'),userId:userId,date:today2,status:'出席',startTime:now,endTime:null,
       breakMin:String(user.breakMin!==undefined&&user.breakMin!==null&&user.breakMin!==''?user.breakMin:60),workTypeId:defaultWt,
@@ -238,9 +238,13 @@ async function clockIn(userId,signatureDataUrl){
 }
 async function clockOut(userId){
   var today2=_today();var now=_now();
-  var r=await sb.from('出欠').select('id').eq('userId',userId).eq('date',today2).limit(1);
-  if(!r.data||r.data.length===0)throw new Error('出勤記録がありません');
-  await sb.from('出欠').update({endTime:now}).eq('id',r.data[0].id);
+  var r=await sb.from('出欠').select('*').eq('userId',userId).eq('date',today2);
+  if(!r.data||r.data.length===0){
+    // If missing attendance row, create one with clock-out time
+    await sb.from('出欠').insert([{id:_genId('a'),userId:userId,date:today2,status:'出席',startTime:'10:00',endTime:now}]);
+  }else{
+    await sb.from('出欠').update({endTime:now,status:'出席'}).eq('userId',userId).eq('date',today2);
+  }
   return{success:true,time:now};
 }
 
@@ -443,15 +447,6 @@ function closeSuccess(){document.getElementById('success-area').innerHTML='';}
 
 loadData();
 setInterval(function(){loadData();},300000);
-document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
-var _lastTouchEndTimecard = 0;
-document.addEventListener('touchend', function(e) {
-  var now = (new Date()).getTime();
-  if (now - _lastTouchEndTimecard <= 300) {
-    e.preventDefault();
-  }
-  _lastTouchEndTimecard = now;
-}, false);
 </script>
 <img src="kuma.png" style="position:fixed;bottom:10px;right:10px;width:180px;opacity:0.7;pointer-events:none;z-index:1">
 </body>
