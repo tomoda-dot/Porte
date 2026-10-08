@@ -596,7 +596,7 @@ async function loadAll(){
   }
 }
 
-var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['bmi','⚖️','BMI測定管理'],['transport','🚐','送迎管理'],['wages','💰','工賃計算'],['wageSettings','⚙️','工賃・手当変更'],['wageAdjustments','🎛️','手当・時間調整'],['export','📄','帳票出力'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
+var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['bmi','⚖️','BMI測定管理'],['transport','🚐','送迎管理'],['wages','💰','工賃管理'],['export','📄','帳票出力'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
 
 var _shellRendered=false;
 function render(){
@@ -650,7 +650,7 @@ window.addEventListener('popstate',function(e){
     _isNavHistory=false;
   }
 });
-function switchTab(t,isHistory){guardNav(function(){if(t==='export')eT='menu';if(t==='attendance')S.attSubTab='daily';if(t==='staff')_staffTab='list';if(t==='transport')tSubTab='daily';S.tab=t;if(!isHistory&&!_isNavHistory){try{history.pushState({tab:t},'',location.href);}catch(err){}}updateNav();renderTab();});}
+function switchTab(t,isHistory){guardNav(function(){if(t==='export')eT='menu';if(t==='attendance')S.attSubTab='daily';if(t==='staff')_staffTab='list';if(t==='transport')tSubTab='daily';if(t==='wageSettings'){t='wages';S.wagesSubTab='settings';}else if(t==='wageAdjustments'){t='wages';S.wagesSubTab='adjust';}else if(t==='wages'&&!S.wagesSubTab){S.wagesSubTab='calc';}S.tab=t;if(!isHistory&&!_isNavHistory){try{history.pushState({tab:t},'',location.href);}catch(err){}}updateNav();renderTab();});}
 function renderTab(){var c=document.getElementById('content');var fn='render'+S.tab.charAt(0).toUpperCase()+S.tab.slice(1);if(typeof window[fn]==='function')window[fn](c);else c.innerHTML='準備中';}
 function closeModal(id){document.getElementById(id).innerHTML='';}
 
@@ -6335,7 +6335,31 @@ async function printRoutesByPattern(pattern){
 
 // ═══ 工賃 ═══
 var wM=today().slice(0,7);
-async function renderWages(c){c.innerHTML='<div class="hd-row"><h2>💰 工賃計算</h2><input type="month" value="'+wM+'" onchange="wM=this.value;loadW()"></div><div class="stats" id="w-st"></div><div class="card"><div class="card-hd"><span class="card-t">'+fmtMonth(wM)+' 工賃一覧</span></div><div class="tbl-wrap" id="w-tbl">読み込み中...</div></div>';loadW();}
+function switchWagesSubTab(sub){
+  S.wagesSubTab=sub;
+  renderWages(document.getElementById('content'));
+}
+function getWagesSubTabs(){
+  if(!S.wagesSubTab)S.wagesSubTab='calc';
+  return '<div class="filter-tabs no-print" style="margin-bottom:16px">' +
+    '<button class="filter-tab'+(S.wagesSubTab==='calc'?' active':'')+'" onclick="switchWagesSubTab(\'calc\')">📊 工賃計算・集計</button>' +
+    '<button class="filter-tab'+(S.wagesSubTab==='adjust'?' active':'')+'" onclick="switchWagesSubTab(\'adjust\')">⏱️ 手当・時間調整</button>' +
+    '<button class="filter-tab'+(S.wagesSubTab==='settings'?' active':'')+'" onclick="switchWagesSubTab(\'settings\')">⚙️ 作業種別・単価設定</button>' +
+    '</div>';
+}
+async function renderWages(c){
+  if(!S.wagesSubTab)S.wagesSubTab='calc';
+  if(S.wagesSubTab==='adjust'){
+    renderWageAdjustments(c);
+  }else if(S.wagesSubTab==='settings'){
+    renderWageSettings(c);
+  }else{
+    c.innerHTML='<div class="hd-row"><h2>💰 工賃管理</h2><input type="month" value="'+wM+'" onchange="wM=this.value;loadW()"></div>'+
+      getWagesSubTabs()+
+      '<div class="stats" id="w-st"></div><div class="card"><div class="card-hd"><span class="card-t">'+fmtMonth(wM)+' 工賃一覧</span></div><div class="tbl-wrap" id="w-tbl">読み込み中...</div></div>';
+    loadW();
+  }
+}
 
 // 皆勤判定: 利用予定日すべてに「出席」or「通院」で出ていればtrue（遅刻・早退・欠席・体調不良はNG、未記録はスキップ）
 function checkKaikin(u, allAtt, ym, closedDays){
@@ -6565,7 +6589,9 @@ var totalBentoAll=data.reduce(function(s,d){return s+d.bc;},0);
 // ═══ 工賃・手当変更 ═══
 var _wsSubTab = 'wt';
 async function renderWageSettings(c){
-  c.innerHTML = '<div class="hd-row"><h2>⚙️ 工賃・手当設定・変更</h2></div>' +
+  var subTabs = (S.tab==='wages') ? getWagesSubTabs() : '';
+  c.innerHTML = '<div class="hd-row"><h2>💰 工賃管理</h2></div>' +
+    subTabs +
     '<div style="display:flex;gap:10px;margin-bottom:16px" class="no-print">' +
     '<button id="ws-tab-wt" class="'+(_wsSubTab==='wt'?'bp':'bg')+'" onclick="_wsSubTab=\'wt\';renderWageSettings(document.getElementById(\'content\'))" style="padding:8px 16px;font-weight:700">作業種別・工賃単価</button>' +
     '<button id="ws-tab-user" class="'+(_wsSubTab==='user'?'bp':'bg')+'" onclick="_wsSubTab=\'user\';renderWageSettings(document.getElementById(\'content\'))" style="padding:8px 16px;font-weight:700">利用者別工賃・交通費設定</button>' +
@@ -6726,8 +6752,9 @@ async function renderWageAdjustments(c){
     return '<option value="' + u.id + '"' + (String(u.id) === String(adjUserId) ? ' selected' : '') + '>' + esc(u.name) + '</option>';
   }).join('');
 
+  var subTabs = (S.tab==='wages') ? getWagesSubTabs() : '';
   c.innerHTML = '<div class="hd-row">' +
-    '<h2>🎛️ 手当・工賃時間調整</h2>' +
+    '<h2>💰 工賃管理</h2>' +
     '<div style="display:flex;gap:10px;align-items:center">' +
       '<input type="month" value="' + adjM + '" onchange="adjM=this.value;loadWageAdjustments()">' +
       '<select id="adj-u-select" onchange="adjUserId=this.value;loadWageAdjustments()" style="padding:6px 12px;border-radius:6px;border:1px solid #ccc;font-weight:600">' +
@@ -6735,6 +6762,7 @@ async function renderWageAdjustments(c){
       '</select>' +
     '</div>' +
     '</div>' +
+    subTabs +
     '<div id="adj-area">読み込み中...</div>';
   loadWageAdjustments();
 }
