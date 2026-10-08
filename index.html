@@ -2282,7 +2282,7 @@ function openUserModal(u, isTabSwitch){
       '<option value="往路"'+(d.pickup==='往路'||d.pickup==='行き'?' selected':'')+'>往路（行きのみ）</option>'+
       '<option value="復路"'+(d.pickup==='復路'||d.pickup==='帰り'?' selected':'')+'>復路（帰りのみ）</option>'+
     '</select></div></div>'+
-    '<div class="grid2" style="margin-top:8px"><div class="field"><label>交通費支給額（1日あたり/円） <span style="font-size:10px;color:var(--sub);font-weight:400">※現金支給</span></label><input type="number" id="uf-trans-allowance" value="'+(d.transportationAllowance!=null?d.transportationAllowance:0)+'" placeholder="例: 200" style="width:100%"></div><div class="field"><label>工賃手当の支給</label><select id="uf-allowance-enabled" style="width:100%"><option value="true"'+(d.allowanceEnabled!==false?' selected':'')+'>手当を付ける（支給対象）</option><option value="false"'+(d.allowanceEnabled===false?' selected':'')+'>手当を付けない（対象外）</option></select></div></div></div>';
+    '<div class="grid2" style="margin-top:8px"><div class="field"><label>交通費支給額（1日あたり/円） <span style="font-size:10px;color:var(--sub);font-weight:400">※現金支給</span></label><input type="number" id="uf-trans-allowance" value="'+(d.transportationAllowance!=null?d.transportationAllowance:0)+'" placeholder="例: 200" style="width:100%"></div><div></div></div></div>';
 
   // 利用後の進路（基本情報内）
   html+='<div class="card" style="margin-bottom:12px"><div class="section-title" style="margin-top:0">利用後の進路</div>'+
@@ -3963,7 +3963,6 @@ async function saveUser(id){
     contractStart:gv('uf-cstart',existing.contractStart||'09:10'),contractEnd:gv('uf-cend',existing.contractEnd||'16:30'),
     bento:gv('uf-bento',existing.bento||'なし'),bentoPaymentMethod:gv('uf-bento-pay',existing.bentoPaymentMethod||'工賃払い'),pickup:gv('uf-pickup',existing.pickup||'なし'),
     transportationAllowance:Number(gv('uf-trans-allowance',existing.transportationAllowance||0))||0,
-    allowanceEnabled:document.getElementById('uf-allowance-enabled')?(document.getElementById('uf-allowance-enabled').value==='true'):(existing.allowanceEnabled!==false),
     notes:gv('uf-notes',existing.notes||''),
     afterCarePlan:gv('uf-aftercare',existing.afterCarePlan||''),afterCareOrg:gv('uf-afterorg',existing.afterCareOrg||''),
     relatedOrgs:document.getElementById('rel-org-body')?JSON.stringify(collectRelOrgs()):(existing.relatedOrgs||''),
@@ -6745,48 +6744,68 @@ async function saveBatchUserRates(){
 var adjM = today().slice(0, 7);
 var adjUserId = '';
 
-function renderUserAllowanceToggleTable(){
+function renderIndividualAllowanceAdjustmentCard(){
   var activeUsers = S.users.filter(function(u){ return isUserActive(u, adjM); });
+  if(adjUserId){
+    activeUsers = activeUsers.filter(function(u){ return String(u.id) === String(adjUserId); });
+  }
+  var als = getAllowances().filter(function(a){ return a.enabled !== false; });
+  var map = getUserAllowanceOverrideMap();
+
   var h = '<div class="card" style="margin-bottom:16px;background:#faf8f5;border:1px solid var(--bdr)">' +
-    '<div class="card-hd"><span class="card-t">👥 利用者別 手当適用設定（個人ごとに手当を付ける / 付けない）</span></div>' +
-    '<p style="font-size:11px;color:var(--sub);margin-bottom:10px">ご利用者様個人ごとに、工賃手当（皆勤手当・精勤手当等）を「手当を付ける（支給対象）」か「手当を付けない（対象外）」かを設定できます。</p>' +
-    '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr style="background:#f0eae1">' +
-    '<th>氏名</th><th style="text-align:center;width:220px">手当を付ける / 付けない</th><th style="text-align:right;width:150px">交通費日額</th>' +
+    '<div class="card-hd"><span class="card-t">🎁 ' + fmtMonth(adjM) + ' 利用者別 手当の個別適用・調整（送迎ありの自力来所付与・特例精勤付与など）</span></div>' +
+    '<p style="font-size:11px;color:var(--sub);margin-bottom:12px">「送迎を1回行ったが特別に自力来所手当を付ける」「やむを得ない事情のため特例で精勤手当を付ける」など、利用者様ごとに手当を個別調整できます。</p>';
+
+  if(als.length === 0){
+    h += '<div style="font-size:12px;color:var(--sub);padding:8px">※設定された手当ルールがありません。下の「全体手当ルール設定」から手当を追加できます。</div></div>';
+    return h;
+  }
+
+  h += '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr style="background:#f0eae1">' +
+    '<th style="padding:8px;width:120px">氏名</th><th style="padding:8px">手当ごとの個別適用状態（クリックで手動切替）</th>' +
     '</tr></thead><tbody>';
 
   if(activeUsers.length === 0){
-    h += '<tr><td colspan="3" style="text-align:center;color:var(--sub);padding:12px">対象の利用者がいません</td></tr>';
+    h += '<tr><td colspan="2" style="text-align:center;color:var(--sub);padding:12px">対象の利用者がいません</td></tr>';
   } else {
     activeUsers.forEach(function(u){
-      var isEnabled = u.allowanceEnabled !== false;
       h += '<tr>' +
-        '<td style="font-weight:700">' + esc(u.name) + ' 様</td>' +
-        '<td style="text-align:center">' +
-          '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:' + (isEnabled ? '#e8f5e9' : '#fff3e0') + ';padding:4px 12px;border-radius:12px;border:1px solid ' + (isEnabled ? '#a5d6a7' : '#ffe0b2') + '">' +
-            '<input type="checkbox" ' + (isEnabled ? 'checked' : '') + ' onchange="toggleUserAllowance(\'' + u.id + '\')" style="width:16px;height:16px;cursor:pointer">' +
-            (isEnabled ? '<span style="color:#2e7d32;font-weight:700;font-size:12px">手当を付ける (対象)</span>' : '<span style="color:#e65100;font-weight:700;font-size:12px">手当を付けない (対象外)</span>') +
-          '</label>' +
-        '</td>' +
-        '<td style="text-align:right;color:var(--sub)">¥' + (u.transportationAllowance != null ? u.transportationAllowance : 0) + ' /日</td>' +
-      '</tr>';
+        '<td style="font-weight:700;vertical-align:middle;padding:10px 8px;white-space:nowrap">' + esc(u.name) + ' 様</td>' +
+        '<td style="padding:8px"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">';
+
+      als.forEach(function(a){
+        var key = adjM + '_' + u.id + '_' + a.name;
+        var curVal = map[key];
+
+        var statusBg = 'background:#f5f5f5;border:1px solid #ccc;color:#666';
+        var statusTxt = '自動判定';
+        if(curVal === true){
+          statusBg = 'background:#e8f5e9;border:1px solid #a5d6a7;color:#2e7d32;font-weight:700';
+          statusTxt = '＋ 手動付与中';
+        } else if(curVal === false){
+          statusBg = 'background:#ffebee;border:1px solid #ef9a9a;color:#c62828;font-weight:700';
+          statusTxt = '✕ 手動除外中';
+        }
+
+        h += '<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:6px 10px;display:inline-flex;align-items:center;gap:10px;box-shadow:0 1px 2px rgba(0,0,0,0.05)">' +
+          '<div>' +
+            '<div style="font-weight:700;font-size:12px;color:var(--pri)">' + esc(a.name) + ' <span style="font-weight:400;font-size:10px;color:var(--sub)">¥' + a.amount.toLocaleString() + '</span></div>' +
+            '<div style="font-size:10px;margin-top:2px"><span style="padding:1px 6px;border-radius:10px;' + statusBg + '">' + statusTxt + '</span></div>' +
+          '</div>' +
+          '<div style="display:flex;gap:3px">' +
+            '<button class="bg" onclick="setUserAllowanceOverride(\'' + adjM + '\',\'' + u.id + '\',\'' + esc(a.name) + '\', null)" style="font-size:10px;padding:3px 7px;' + (curVal === undefined ? 'background:var(--pri);color:#fff;font-weight:700' : '') + '" title="通常の条件判定に戻します">自動</button>' +
+            '<button class="bp" onclick="setUserAllowanceOverride(\'' + adjM + '\',\'' + u.id + '\',\'' + esc(a.name) + '\', true)" style="font-size:10px;padding:3px 7px;' + (curVal === true ? 'background:#2e7d32;color:#fff;font-weight:700' : 'background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7') + '" title="条件に関わらず手当を付けます">＋ 付ける</button>' +
+            '<button class="bg" onclick="setUserAllowanceOverride(\'' + adjM + '\',\'' + u.id + '\',\'' + esc(a.name) + '\', false)" style="font-size:10px;padding:3px 7px;' + (curVal === false ? 'background:#c62828;color:#fff;font-weight:700' : 'background:#ffebee;color:#c62828;border:1px solid #ef9a9a') + '" title="条件に関わらず手当を外します">✕ 外す</button>' +
+          '</div>' +
+        '</div>';
+      });
+
+      h += '</div></td></tr>';
     });
   }
+
   h += '</tbody></table></div></div>';
   return h;
-}
-
-async function toggleUserAllowance(userId){
-  var u = S.users.find(function(x){ return String(x.id) === String(userId); });
-  if(!u) return;
-  u.allowanceEnabled = (u.allowanceEnabled === false) ? true : false;
-  if(!lockUI()) return;
-  try {
-    await gas('updateUser', u);
-    toast(u.allowanceEnabled ? '✅ ' + u.name + ' 様の手当を【手当を付ける（対象）】に設定しました' : '⏸️ ' + u.name + ' 様の手当を【手当を付けない（対象外）】に設定しました');
-    renderWageAdjustments(document.getElementById('content'));
-  } catch(e) {
-    await cAlert('保存失敗: ' + e);
-  } finally { unlockUI(); }
 }
 
 async function renderWageAdjustments(c){
@@ -6805,7 +6824,7 @@ async function renderWageAdjustments(c){
     '</div>' +
     '</div>' +
     subTabs +
-    renderUserAllowanceToggleTable() +
+    renderIndividualAllowanceAdjustmentCard() +
     '<div class="card" style="margin-bottom:16px;background:#faf8f5;border:1px solid var(--bdr)">' +
       '<div class="card-hd"><span class="card-t">🎁 全体手当ルール設定</span></div>' +
       buildAllowanceUI() +
@@ -9566,28 +9585,61 @@ async function deleteAllowance(idx){
     refreshAllowanceUIParent();
   }catch(e){await cAlert('削除失敗: '+e);}finally{unlockUI();}
 }
+function getUserAllowanceOverrideMap(){
+  try { return JSON.parse(S.settings.userAllowanceMap || '{}'); } catch(e) { return {}; }
+}
+
+async function setUserAllowanceOverride(ym, userId, alName, val){
+  var map = getUserAllowanceOverrideMap();
+  var key = ym + '_' + userId + '_' + alName;
+  if(val === null || val === undefined){
+    delete map[key];
+  } else {
+    map[key] = val;
+  }
+  if(!lockUI()) return;
+  try {
+    var jsonStr = JSON.stringify(map);
+    await gas('saveSetting', 'userAllowanceMap', jsonStr);
+    S.settings.userAllowanceMap = jsonStr;
+    var u = S.users.find(function(x){ return String(x.id) === String(userId); });
+    var uName = u ? u.name : '利用者';
+    toast(val === true ? '✅ ' + uName + ' 様の「' + alName + '」を【手動で適用】しました' : (val === false ? '⏸️ ' + uName + ' 様の「' + alName + '」を【手動で除外】しました' : '🔄 「' + alName + '」を【自動判定】に戻しました'));
+    if(S.tab === 'wages') renderWageAdjustments(document.getElementById('content'));
+  } catch(e) {
+    await cAlert('保存失敗: ' + e);
+  } finally { unlockUI(); }
+}
+
 // 手当計算（工賃計算から呼び出し）
 function calcAllowances(user,att,ym,kaikinResult){
-  if(user && user.allowanceEnabled === false){
-    return {total:0, details:[]};
-  }
   var als=getAllowances().filter(function(a){return a.enabled!==false;});
   var total=0;var details=[];
   var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
+  var overrideMap = getUserAllowanceOverrideMap();
+
   als.forEach(function(a){
+    var key = ym + '_' + user.id + '_' + a.name;
+    var overrideVal = overrideMap[key];
     var match=false;
-    if(a.condition==='kaikin'){match=kaikinResult.kaikin;}
-    else if(a.condition==='seikin'){match=!kaikinResult.kaikin&&kaikinResult.ng<=2&&kaikinResult.ok>0;}
-    else if(a.condition==='all'){match=recs.length>0;}
-    else if(a.condition==='birthday'){
-      if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
-    }
-    else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
-    else if(a.condition==='no_pickup'){match=recs.length>0&&!isPickupUser(user.pickup);}
-    else if(a.condition==='custom'){
-      // カスタム手当は手動選択。_customAllowanceMapに設定があればマッチ
-      var key=user.id+'_'+a.name;
-      match=window._customAllowanceMap&&window._customAllowanceMap[key];
+
+    if(overrideVal === true){
+      match = true;
+    } else if(overrideVal === false){
+      match = false;
+    } else {
+      if(a.condition==='kaikin'){match=kaikinResult.kaikin;}
+      else if(a.condition==='seikin'){match=!kaikinResult.kaikin&&kaikinResult.ng<=2&&kaikinResult.ok>0;}
+      else if(a.condition==='all'){match=recs.length>0;}
+      else if(a.condition==='birthday'){
+        if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
+      }
+      else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
+      else if(a.condition==='no_pickup'){match=recs.length>0&&!isPickupUser(user.pickup);}
+      else if(a.condition==='custom'){
+        var ckey=user.id+'_'+a.name;
+        match=window._customAllowanceMap&&window._customAllowanceMap[ckey];
+      }
     }
     if(match){total+=a.amount;details.push(a);}
   });
