@@ -884,13 +884,15 @@ async function renderDashboard(c){
     var eSch = u.scheduleEnd || '16:00';
 
     if (!st) {
-      unclockedAlerts.push({
-        userId: u.id,
-        userName: u.name,
-        type: 'no_clock_in',
-        schTime: sSch + '〜' + eSch,
-        msg: '出勤ボタンが押されていません。（遅刻またはお休みですか？）'
-      });
+      if (_nowHM >= sSch) {
+        unclockedAlerts.push({
+          userId: u.id,
+          userName: u.name,
+          type: 'no_clock_in',
+          schTime: sSch + '〜' + eSch,
+          msg: '出勤ボタンが押されていません。（遅刻またはお休みですか？）'
+        });
+      }
     } else if (st && !et) {
       if (_nowHM >= eSch) {
         unclockedAlerts.push({
