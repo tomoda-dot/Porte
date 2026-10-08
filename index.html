@@ -6744,7 +6744,26 @@ async function saveBatchUserRates(){
 var adjM = today().slice(0, 7);
 var adjUserId = '';
 
-function renderIndividualAllowanceAdjustmentCard(){
+function checkAllowanceAutoMatch(a, user, att, ym, kaikinResult){
+  var recs = att.filter(function(x){ return String(x.userId) === String(user.id) && ['出席','遅刻','早退'].indexOf(x.status) >= 0; });
+  if(a.condition === 'kaikin') return kaikinResult.kaikin;
+  if(a.condition === 'seikin') return !kaikinResult.kaikin && kaikinResult.ng <= 2 && kaikinResult.ok > 0;
+  if(a.condition === 'all') return recs.length > 0;
+  if(a.condition === 'birthday'){
+    if(user.birthdate){ var bd = String(user.birthdate).substring(5, 7); var cm = ym.split('-')[1]; return bd === cm; }
+    return false;
+  }
+  if(a.condition === 'days_over'){ var threshold = parseInt(a.conditionValue) || 0; return recs.length >= threshold; }
+  if(a.condition === 'no_pickup') return recs.length > 0 && !isPickupUser(user.pickup);
+  if(a.condition === 'custom'){
+    var ckey = user.id + '_' + a.name;
+    return !!(window._customAllowanceMap && window._customAllowanceMap[ckey]);
+  }
+  return false;
+}
+
+function renderIndividualAllowanceAdjustmentCard(container, allAtt, closedDays){
+  if(!container) return;
   var activeUsers = S.users.filter(function(u){ return isUserActive(u, adjM); });
   if(adjUserId){
     activeUsers = activeUsers.filter(function(u){ return String(u.id) === String(adjUserId); });
@@ -6753,49 +6772,57 @@ function renderIndividualAllowanceAdjustmentCard(){
   var map = getUserAllowanceOverrideMap();
 
   var h = '<div class="card" style="margin-bottom:16px;background:#faf8f5;border:1px solid var(--bdr)">' +
-    '<div class="card-hd"><span class="card-t">🎁 ' + fmtMonth(adjM) + ' 利用者別 手当の個別適用・調整（送迎ありの自力来所付与・特例精勤付与など）</span></div>' +
-    '<p style="font-size:11px;color:var(--sub);margin-bottom:12px">「送迎を1回行ったが特別に自力来所手当を付ける」「やむを得ない事情のため特例で精勤手当を付ける」など、利用者様ごとに手当を個別調整できます。</p>';
+    '<div class="card-hd"><span class="card-t">🎁 ' + fmtMonth(adjM) + ' 利用者別 手当支給状態（タップでON / OFF切替）</span></div>' +
+    '<p style="font-size:11px;color:var(--sub);margin-bottom:12px">カードをタップするだけで「ON (支給あり)」と「OFF (支給なし)」がワンタップで切り替わります（送迎あり時の自力来所付与や、特例の精勤手当付与など）。</p>';
 
   if(als.length === 0){
-    h += '<div style="font-size:12px;color:var(--sub);padding:8px">※設定された手当ルールがありません。下の「全体手当ルール設定」から手当を追加できます。</div></div>';
-    return h;
+    h += '<div style="font-size:12px;color:var(--sub);padding:8px">※設定された手当ルールがありません。</div></div>';
+    container.innerHTML = h;
+    return;
   }
 
   h += '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr style="background:#f0eae1">' +
-    '<th style="padding:8px;width:120px">氏名</th><th style="padding:8px">手当ごとの個別適用状態（クリックで手動切替）</th>' +
+    '<th style="padding:10px 8px;width:120px">氏名</th><th style="padding:10px 8px">各手当の現状（タップでON / OFF切替）</th>' +
     '</tr></thead><tbody>';
 
   if(activeUsers.length === 0){
     h += '<tr><td colspan="2" style="text-align:center;color:var(--sub);padding:12px">対象の利用者がいません</td></tr>';
   } else {
     activeUsers.forEach(function(u){
+      var kk = checkKaikin(u, allAtt || [], adjM, closedDays || []);
+
       h += '<tr>' +
-        '<td style="font-weight:700;vertical-align:middle;padding:10px 8px;white-space:nowrap">' + esc(u.name) + ' 様</td>' +
-        '<td style="padding:8px"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">';
+        '<td style="font-weight:700;vertical-align:middle;padding:12px 8px;white-space:nowrap">' + esc(u.name) + ' 様</td>' +
+        '<td style="padding:10px 8px"><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">';
 
       als.forEach(function(a){
+        var autoMatch = checkAllowanceAutoMatch(a, u, allAtt || [], adjM, kk);
         var key = adjM + '_' + u.id + '_' + a.name;
-        var curVal = map[key];
+        var overrideVal = map[key];
+        var effectiveOn = (overrideVal !== undefined) ? overrideVal : autoMatch;
 
-        var statusBg = 'background:#f5f5f5;border:1px solid #ccc;color:#666';
-        var statusTxt = '自動判定';
-        if(curVal === true){
-          statusBg = 'background:#e8f5e9;border:1px solid #a5d6a7;color:#2e7d32;font-weight:700';
-          statusTxt = '＋ 手動付与中';
-        } else if(curVal === false){
-          statusBg = 'background:#ffebee;border:1px solid #ef9a9a;color:#c62828;font-weight:700';
-          statusTxt = '✕ 手動除外中';
+        var cardBg = effectiveOn ? '#e8f5e9' : '#f5f5f5';
+        var cardBorder = effectiveOn ? '2px solid #2e7d32' : '1px solid #ccc';
+        var badgeBg = effectiveOn ? '#2e7d32' : '#757575';
+        var badgeText = effectiveOn ? '🟢 ON' : '⚪ OFF';
+        var titleColor = effectiveOn ? '#1b5e20' : '#424242';
+
+        var subNote = '';
+        if(overrideVal === true){
+          subNote = '手動設定: 適用中';
+        } else if(overrideVal === false){
+          subNote = '手動設定: 除外中';
+        } else {
+          subNote = autoMatch ? '自動判定: 適用中' : '自動判定: 対象外';
         }
 
-        h += '<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:6px 10px;display:inline-flex;align-items:center;gap:10px;box-shadow:0 1px 2px rgba(0,0,0,0.05)">' +
+        h += '<div onclick="toggleAllowanceState(\'' + adjM + '\',\'' + u.id + '\',\'' + esc(a.name) + '\',' + effectiveOn + ',' + autoMatch + ')" ' +
+          'style="cursor:pointer;user-select:none;background:' + cardBg + ';border:' + cardBorder + ';border-radius:10px;padding:8px 14px;display:inline-flex;align-items:center;gap:12px;box-shadow:0 2px 4px rgba(0,0,0,0.06);transition:transform 0.1s ease" ' +
+          'onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'">' +
+          '<div style="background:' + badgeBg + ';color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:20px;white-space:nowrap">' + badgeText + '</div>' +
           '<div>' +
-            '<div style="font-weight:700;font-size:12px;color:var(--pri)">' + esc(a.name) + ' <span style="font-weight:400;font-size:10px;color:var(--sub)">¥' + a.amount.toLocaleString() + '</span></div>' +
-            '<div style="font-size:10px;margin-top:2px"><span style="padding:1px 6px;border-radius:10px;' + statusBg + '">' + statusTxt + '</span></div>' +
-          '</div>' +
-          '<div style="display:flex;gap:3px">' +
-            '<button class="bg" onclick="setUserAllowanceOverride(\'' + adjM + '\',\'' + u.id + '\',\'' + esc(a.name) + '\', null)" style="font-size:10px;padding:3px 7px;' + (curVal === undefined ? 'background:var(--pri);color:#fff;font-weight:700' : '') + '" title="通常の条件判定に戻します">自動</button>' +
-            '<button class="bp" onclick="setUserAllowanceOverride(\'' + adjM + '\',\'' + u.id + '\',\'' + esc(a.name) + '\', true)" style="font-size:10px;padding:3px 7px;' + (curVal === true ? 'background:#2e7d32;color:#fff;font-weight:700' : 'background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7') + '" title="条件に関わらず手当を付けます">＋ 付ける</button>' +
-            '<button class="bg" onclick="setUserAllowanceOverride(\'' + adjM + '\',\'' + u.id + '\',\'' + esc(a.name) + '\', false)" style="font-size:10px;padding:3px 7px;' + (curVal === false ? 'background:#c62828;color:#fff;font-weight:700' : 'background:#ffebee;color:#c62828;border:1px solid #ef9a9a') + '" title="条件に関わらず手当を外します">✕ 外す</button>' +
+            '<div style="font-weight:700;font-size:13px;color:' + titleColor + '">' + esc(a.name) + ' <span style="font-size:11px;font-weight:400;color:var(--sub)">¥' + a.amount.toLocaleString() + '</span></div>' +
+            '<div style="font-size:10px;color:var(--sub);margin-top:2px">' + subNote + ' <span style="text-decoration:underline;color:var(--pri)">(タップで切替)</span></div>' +
           '</div>' +
         '</div>';
       });
@@ -6805,7 +6832,7 @@ function renderIndividualAllowanceAdjustmentCard(){
   }
 
   h += '</tbody></table></div></div>';
-  return h;
+  container.innerHTML = h;
 }
 
 async function renderWageAdjustments(c){
@@ -6824,7 +6851,7 @@ async function renderWageAdjustments(c){
     '</div>' +
     '</div>' +
     subTabs +
-    renderIndividualAllowanceAdjustmentCard() +
+    '<div id="adj-allowance-card"></div>' +
     '<div id="adj-area">読み込み中...</div>';
   loadWageAdjustments();
 }
@@ -6838,6 +6865,8 @@ async function loadWageAdjustments(){
     var allAtt = attRes[0] || [];
     var closedDays = attRes[1] || [];
     var bentoPrice = Number(S.settings.bentoPrice) || 100;
+
+    renderIndividualAllowanceAdjustmentCard(document.getElementById('adj-allowance-card'), allAtt, closedDays);
 
     if(adjUserId){
       renderUserWageAdjustmentDetail(area, adjUserId, allAtt, closedDays, bentoPrice);
@@ -9600,11 +9629,17 @@ async function setUserAllowanceOverride(ym, userId, alName, val){
     S.settings.userAllowanceMap = jsonStr;
     var u = S.users.find(function(x){ return String(x.id) === String(userId); });
     var uName = u ? u.name : '利用者';
-    toast(val === true ? '✅ ' + uName + ' 様の「' + alName + '」を【手動で適用】しました' : (val === false ? '⏸️ ' + uName + ' 様の「' + alName + '」を【手動で除外】しました' : '🔄 「' + alName + '」を【自動判定】に戻しました'));
-    if(S.tab === 'wages') renderWageAdjustments(document.getElementById('content'));
+    toast(val === true ? '✅ ' + uName + ' 様の「' + alName + '」を【ON (支給あり)】に切り替えました' : (val === false ? '⚪ ' + uName + ' 様の「' + alName + '」を【OFF (支給なし)】に切り替えました' : '🔄 「' + alName + '」を【自動判定】に戻しました'));
+    if(S.tab === 'wages') loadWageAdjustments();
   } catch(e) {
     await cAlert('保存失敗: ' + e);
   } finally { unlockUI(); }
+}
+
+async function toggleAllowanceState(ym, userId, alName, currentEffectiveOn, autoMatch){
+  var nextVal = !currentEffectiveOn;
+  var overrideVal = (nextVal === autoMatch) ? null : nextVal;
+  await setUserAllowanceOverride(ym, userId, alName, overrideVal);
 }
 
 // 手当計算（工賃計算から呼び出し）
