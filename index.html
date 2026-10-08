@@ -6340,19 +6340,16 @@ function switchWagesSubTab(sub){
   renderWages(document.getElementById('content'));
 }
 function getWagesSubTabs(){
-  if(!S.wagesSubTab)S.wagesSubTab='calc';
+  if(!S.wagesSubTab || S.wagesSubTab==='settings')S.wagesSubTab='calc';
   return '<div class="filter-tabs no-print" style="margin-bottom:16px">' +
     '<button class="filter-tab'+(S.wagesSubTab==='calc'?' active':'')+'" onclick="switchWagesSubTab(\'calc\')">📊 工賃計算・集計</button>' +
     '<button class="filter-tab'+(S.wagesSubTab==='adjust'?' active':'')+'" onclick="switchWagesSubTab(\'adjust\')">⏱️ 手当・時間調整</button>' +
-    '<button class="filter-tab'+(S.wagesSubTab==='settings'?' active':'')+'" onclick="switchWagesSubTab(\'settings\')">⚙️ 作業種別・単価設定</button>' +
     '</div>';
 }
 async function renderWages(c){
-  if(!S.wagesSubTab)S.wagesSubTab='calc';
+  if(!S.wagesSubTab || S.wagesSubTab==='settings')S.wagesSubTab='calc';
   if(S.wagesSubTab==='adjust'){
     renderWageAdjustments(c);
-  }else if(S.wagesSubTab==='settings'){
-    renderWageSettings(c);
   }else{
     c.innerHTML='<div class="hd-row"><h2>💰 工賃管理</h2><input type="month" value="'+wM+'" onchange="wM=this.value;loadW()"></div>'+
       getWagesSubTabs()+
@@ -6763,6 +6760,10 @@ async function renderWageAdjustments(c){
     '</div>' +
     '</div>' +
     subTabs +
+    '<div class="card" style="margin-bottom:16px;background:#faf8f5;border:1px solid var(--bdr)">' +
+      '<div class="card-hd"><span class="card-t">🎁 手当の自動適用設定（手当を付ける / 付けないの切替）</span></div>' +
+      buildAllowanceUI() +
+    '</div>' +
     '<div id="adj-area">読み込み中...</div>';
   loadWageAdjustments();
 }
@@ -9434,23 +9435,45 @@ function getAllowances(){
 }
 function buildAllowanceUI(){
   var als=getAllowances();
-  var h='<p style="font-size:11px;color:var(--sub);margin-bottom:10px">工賃計算時に自動適用される手当を設定します。条件に合致した利用者に手当が加算されます。</p>';
-  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openAllowanceModal()" style="font-size:12px">＋ 追加</button></div>';
-  h+='<table><thead><tr><th>手当名</th><th>金額</th><th>条件</th><th>有効</th><th>操作</th></tr></thead><tbody>';
+  var h='<p style="font-size:11px;color:var(--sub);margin-bottom:10px">工賃計算時に自動適用される手当を設定します。チェックを入れると手当が「有効（付ける）」になり、外すと「無効（付けない）」になります。</p>';
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openAllowanceModal()" style="font-size:12px">＋ 新しい手当を追加</button></div>';
+  h+='<table style="width:100%"><thead><tr><th>手当名</th><th>金額</th><th>条件</th><th style="text-align:center;width:160px">手当を付ける/付けない</th><th style="width:100px;text-align:center">操作</th></tr></thead><tbody>';
   if(als.length===0){
     h+='<tr><td colspan="5" style="text-align:center;color:var(--sub);padding:16px">手当が登録されていません</td></tr>';
   }
   als.forEach(function(a,i){
     var condLabel={'kaikin':'皆勤（NG日数0）','seikin':'精勤（欠席2日以内）','all':'全員','birthday':'誕生月','days_over':'出席日数が指定以上','no_pickup':'自力来所（送迎なし）','custom':'カスタム'};
+    var isEnabled = a.enabled !== false;
     h+='<tr><td style="font-weight:600">'+esc(a.name)+'</td>';
     h+='<td style="text-align:right">¥'+Number(a.amount).toLocaleString()+'</td>';
     h+='<td style="font-size:11px">'+(condLabel[a.condition]||a.condition)+(a.conditionValue?' ('+esc(a.conditionValue)+')':'')+'</td>';
-    h+='<td style="text-align:center">'+(a.enabled!==false?'<span style="color:var(--grn)">✅</span>':'<span style="color:#999">−</span>')+'</td>';
-    h+='<td><button class="bg" onclick="openAllowanceModal('+i+')" style="font-size:11px;padding:2px 8px">編集</button> ';
+    h+='<td style="text-align:center">'+
+      '<label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:'+(isEnabled?'#e8f5e9':'#f5f5f5')+';padding:4px 10px;border-radius:12px;border:1px solid '+(isEnabled?'#a5d6a7':'#ccc')+'">'+
+      '<input type="checkbox" '+(isEnabled?'checked':'')+' onchange="toggleAllowanceEnabled('+i+')" style="width:16px;height:16px;cursor:pointer">'+
+      (isEnabled?'<span style="color:#2e7d32;font-weight:700;font-size:12px">有効 (付ける)</span>':'<span style="color:#757575;font-size:12px">無効 (付けない)</span>')+
+      '</label></td>';
+    h+='<td style="text-align:center"><button class="bg" onclick="openAllowanceModal('+i+')" style="font-size:11px;padding:2px 8px">編集</button> ';
     h+='<button onclick="deleteAllowance('+i+')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:13px">✕</button></td></tr>';
   });
   h+='</tbody></table>';
   return h;
+}
+async function toggleAllowanceEnabled(idx){
+  var als=getAllowances();
+  if(!als[idx])return;
+  als[idx].enabled = (als[idx].enabled === false) ? true : false;
+  if(!lockUI())return;
+  try{
+    await gas('saveSetting','allowances',JSON.stringify(als));
+    S.settings.allowances=JSON.stringify(als);
+    toast(als[idx].enabled ? '✅ 「'+als[idx].name+'」を【有効（付ける）】にしました' : '⏸️ 「'+als[idx].name+'」を【無効（付けない）】にしました');
+    refreshAllowanceUIParent();
+  }catch(e){await cAlert('変更失敗: '+e);}finally{unlockUI();}
+}
+function refreshAllowanceUIParent(){
+  if(S.tab==='wages') renderWageAdjustments(document.getElementById('content'));
+  else if(document.getElementById('ws-body')) document.getElementById('ws-body').innerHTML = buildAllowanceUI();
+  else renderSettings(document.getElementById('content'));
 }
 function openAllowanceModal(idx){
   var als=getAllowances();
@@ -9465,7 +9488,7 @@ function openAllowanceModal(idx){
   h+='</select></div>';
   h+='<div id="al-cv-wrap" style="display:'+(a.condition==='days_over'||a.condition==='custom'?'block':'none')+'">';
   h+='<div class="field"><label>条件の値</label><input id="al-cv" value="'+esc(a.conditionValue||'')+'" placeholder="例: 20（日数）やメモ" style="width:100%"></div></div>';
-  h+='<div class="field"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="al-enabled"'+(a.enabled!==false?' checked':'')+'> 有効</label></div>';
+  h+='<div class="field"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="al-enabled"'+(a.enabled!==false?' checked':'')+'> 有効（手当を付ける）</label></div>';
   h+='<div class="btns"><button class="bg" onclick="closeModal(\'al-modal\')">キャンセル</button><button class="bp" onclick="saveAllowance('+(isEdit?idx:'undefined')+')">保存</button></div></div></div>';
   document.getElementById('al-modal').innerHTML=h;
 }
@@ -9484,7 +9507,7 @@ async function saveAllowance(idx){
     await gas('saveSetting','allowances',JSON.stringify(als));
     S.settings.allowances=JSON.stringify(als);
     closeModal('al-modal');
-    renderSettings(document.getElementById('content'));
+    refreshAllowanceUIParent();
   }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
 }
 async function deleteAllowance(idx){
@@ -9494,7 +9517,7 @@ async function deleteAllowance(idx){
   try{
     await gas('saveSetting','allowances',JSON.stringify(als));
     S.settings.allowances=JSON.stringify(als);
-    renderSettings(document.getElementById('content'));
+    refreshAllowanceUIParent();
   }catch(e){await cAlert('削除失敗: '+e);}finally{unlockUI();}
 }
 // 手当計算（工賃計算から呼び出し）
