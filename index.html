@@ -6420,14 +6420,14 @@ function calcWage(r,user){
   var pmId=(r.workTypeIdPm!==undefined&&r.workTypeIdPm!==null&&r.workTypeIdPm!=='')?r.workTypeIdPm:(r.workTypeId||'');
   var wtAm=amId?S.workTypes.find(function(w){return String(w.id)===String(amId);}):null;
   var wtPm=(pmId&&pmId!=='none'&&pmId!=='なし')?S.workTypes.find(function(w){return String(w.id)===String(pmId);}):null;
-  if(!wtAm&&!wtPm&&S.workTypes.length>0&&pmId!=='none'&&pmId!=='なし'){wtAm=S.workTypes[0];wtPm=S.workTypes[0];}
+  if(!wtAm&&!wtPm&&S.workTypes.length>0){wtAm=S.workTypes[0];wtPm=S.workTypes[0];}
   else if(!wtAm&&wtPm){wtAm=wtPm;}
   else if(wtAm&&!wtPm&&pmId!=='none'&&pmId!=='なし'){wtPm=wtAm;}
-  if(!wtAm&&S.workTypes.length>0&&pmId!=='none'&&pmId!=='なし'){wtAm=S.workTypes[0];}
+  if(!wtAm&&S.workTypes.length>0){wtAm=S.workTypes[0];}
   if(!wtAm||(wtPm&&wtAm.id===wtPm.id)||(!wtPm&&(pmId==='none'||pmId==='なし'))){
     var wt=wtAm||wtPm;
     var rt=wt?Number(wt.rate):0;
-    var nm=wt?wt.name:'未設定';
+    var nm=wt?wt.name:'軽作業';
     return{h:totalH,wage:totalH*rt,items:[{name:nm,h:totalH,rate:rt,wage:totalH*rt}]};
   }
   var halfH=totalH/2;

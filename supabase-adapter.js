@@ -716,8 +716,10 @@ function _calcNetH(rec,user){
 }
 function _findWt(wts,amId,pmId){
   var wtAm=null,wtPm=null;
-  for(var w=0;w<wts.length;w++){if(String(wts[w].id)===String(amId))wtAm=wts[w];if(String(wts[w].id)===String(pmId))wtPm=wts[w];}
-  if(!wtAm&&!wtPm&&wts.length>0&&pmId!=='none'&&pmId!=='なし'){wtAm=wts[0];wtPm=wts[0];}
+  if(Array.isArray(wts)){
+    for(var w=0;w<wts.length;w++){if(String(wts[w].id)===String(amId))wtAm=wts[w];if(String(wts[w].id)===String(pmId))wtPm=wts[w];}
+  }
+  if(!wtAm&&!wtPm&&wts&&wts.length>0){wtAm=wts[0];wtPm=wts[0];}
   else if(!wtAm&&wtPm)wtAm=wtPm;
   else if(wtAm&&!wtPm&&pmId!=='none'&&pmId!=='なし')wtPm=wtAm;
   return{am:wtAm,pm:wtPm};
