@@ -8057,6 +8057,53 @@ function printWD(all){
   setTimeout(function(){window.print();},200);
 }
 
+function getItemOffsets(){
+  var defaults = { ym: {top:0, left:0}, wage: {top:0, left:0}, dept: {top:0, left:0}, name: {top:0, left:0} };
+  try {
+    var parsed = JSON.parse(S.settings.envItemOffsets || '{}');
+    return {
+      ym: Object.assign({}, defaults.ym, parsed.ym || {}),
+      wage: Object.assign({}, defaults.wage, parsed.wage || {}),
+      dept: Object.assign({}, defaults.dept, parsed.dept || {}),
+      name: Object.assign({}, defaults.name, parsed.name || {})
+    };
+  } catch(e) { return defaults; }
+}
+
+async function changeItemOffset(itemKey, axis, delta){
+  var offsets = getItemOffsets();
+  if(!offsets[itemKey]) offsets[itemKey] = {top:0, left:0};
+  offsets[itemKey][axis] = (offsets[itemKey][axis] || 0) + delta;
+
+  var jsonStr = JSON.stringify(offsets);
+  S.settings.envItemOffsets = jsonStr;
+
+  renderEnvelopePrint(window._wdData, window._wdFn);
+
+  if(window._envItemSaveTimer) clearTimeout(window._envItemSaveTimer);
+  window._envItemSaveTimer = setTimeout(async function(){
+    try {
+      await gas('saveSetting', 'envItemOffsets', jsonStr);
+    } catch(e){}
+  }, 600);
+}
+
+async function resetAllItemOffsets(){
+  var defaults = { ym: {top:0, left:0}, wage: {top:0, left:0}, dept: {top:0, left:0}, name: {top:0, left:0} };
+  var jsonStr = JSON.stringify(defaults);
+  S.settings.envItemOffsets = jsonStr;
+  renderEnvelopePrint(window._wdData, window._wdFn);
+  try {
+    await gas('saveSetting', 'envItemOffsets', jsonStr);
+    toast('すべての項目別位置調整をリセットしました');
+  } catch(e){}
+}
+
+function toggleEnvEditMode(){
+  window._envEditMode = !window._envEditMode;
+  renderEnvelopePrint(window._wdData, window._wdFn);
+}
+
 function changeEnvOffset(type, deltaOrVal, isDirectVal){
   if(window._envTopOffset === undefined) window._envTopOffset = Number(S.settings.envTopOffset) || 0;
   if(window._envLeftOffset === undefined) window._envLeftOffset = Number(S.settings.envLeftOffset) || 0;
@@ -8147,6 +8194,11 @@ function renderEnvelopePrint(wd, fn){
 
   selHtml += '<label style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" '+(window._envShowWage?'checked':'')+' onchange="window._envShowWage=this.checked;renderEnvelopePrint(window._wdData,window._wdFn)"> 工賃金額を表示</label>';
 
+  var editModeBtnStyle = window._envEditMode ?
+    'background:#e65100;color:#fff;border:none;font-weight:700;box-shadow:0 0 0 2px #ffe0b2;' :
+    'background:#fff;color:#e65100;border:1.5px solid #e65100;font-weight:700;';
+  selHtml += '<button onclick="toggleEnvEditMode()" style="font-size:11px;padding:4px 12px;border-radius:6px;cursor:pointer;' + editModeBtnStyle + '">⚙️ 項目別 位置編集モード: ' + (window._envEditMode ? 'ON (編集画面)' : 'OFF') + '</button>';
+
   selHtml += '<div style="display:flex;gap:6px;margin-left:auto">';
   selHtml += '<button class="bp" onclick="printEnv(false)" style="font-size:11px;padding:5px 14px">🖨 この利用者を印刷</button>';
   selHtml += '<button class="bg" onclick="printEnv(true)" style="font-size:11px;padding:5px 14px">🖨 全員分を印刷</button>';
@@ -8154,21 +8206,22 @@ function renderEnvelopePrint(wd, fn){
 
   // 位置調整コントロールバー
   selHtml += '<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:#fff8f0;border:1px solid #f0d5c0;border-radius:8px;margin-top:6px;width:100%;flex-wrap:wrap">';
-  selHtml += '<div style="font-size:12px;font-weight:700;color:var(--pri);display:flex;align-items:center;gap:4px">📐 印字位置の微調整（プリンターの印刷ズレ補正）:</div>';
+  selHtml += '<div style="font-size:12px;font-weight:700;color:var(--pri);display:flex;align-items:center;gap:4px">📐 印字位置の微調整（全体ズレ補正）:</div>';
 
-  selHtml += '<div style="display:flex;align-items:center;gap:4px"><span style="font-size:12px;font-weight:600">上下:</span>';
+  selHtml += '<div style="display:flex;align-items:center;gap:4px"><span style="font-size:12px;font-weight:600">全体上下:</span>';
   selHtml += '<button class="bg" onclick="changeEnvOffset(\'top\', -1)" style="padding:2px 8px;font-size:11px;font-weight:700;border-radius:4px" title="1mm上に移動">▲ 上へ</button>';
   selHtml += '<input type="number" value="' + window._envTopOffset + '" onchange="changeEnvOffset(\'top\', Number(this.value), true)" style="width:48px;text-align:center;padding:2px 4px;font-size:12px;font-weight:700;border:1px solid #ccc;border-radius:4px">';
   selHtml += '<span style="font-size:11px;color:var(--sub)">mm</span>';
   selHtml += '<button class="bg" onclick="changeEnvOffset(\'top\', 1)" style="padding:2px 8px;font-size:11px;font-weight:700;border-radius:4px" title="1mm下に移動">▼ 下へ</button></div>';
 
-  selHtml += '<div style="display:flex;align-items:center;gap:4px;margin-left:8px"><span style="font-size:12px;font-weight:600">左右:</span>';
+  selHtml += '<div style="display:flex;align-items:center;gap:4px;margin-left:8px"><span style="font-size:12px;font-weight:600">全体左右:</span>';
   selHtml += '<button class="bg" onclick="changeEnvOffset(\'left\', -1)" style="padding:2px 8px;font-size:11px;font-weight:700;border-radius:4px" title="1mm左に移動">◀ 左へ</button>';
   selHtml += '<input type="number" value="' + window._envLeftOffset + '" onchange="changeEnvOffset(\'left\', Number(this.value), true)" style="width:48px;text-align:center;padding:2px 4px;font-size:12px;font-weight:700;border:1px solid #ccc;border-radius:4px">';
   selHtml += '<span style="font-size:11px;color:var(--sub)">mm</span>';
   selHtml += '<button class="bg" onclick="changeEnvOffset(\'left\', 1)" style="padding:2px 8px;font-size:11px;font-weight:700;border-radius:4px" title="1mm右に移動">▶ 右へ</button></div>';
 
-  selHtml += '<button class="bg" onclick="resetEnvOffsets()" style="font-size:11px;padding:2px 10px;margin-left:auto;color:#757575;border-radius:4px">🔄 初期化 (0mm)</button>';
+  selHtml += '<button class="bg" onclick="resetEnvOffsets()" style="font-size:11px;padding:2px 10px;margin-left:auto;color:#757575;border-radius:4px">🔄 全体初期化</button>';
+  selHtml += '<button class="bg" onclick="resetAllItemOffsets()" style="font-size:11px;padding:2px 10px;color:#757575;border-radius:4px" title="項目ごとの個別調整を初期化">🔄 項目別調整リセット</button>';
   selHtml += '</div>';
   selHtml += '</div>';
 
@@ -8180,38 +8233,82 @@ function renderEnvelopePrint(wd, fn){
     var honorific = window._envHonorific === 'なし' ? '' : esc(window._envHonorific);
     var showWage = window._envShowWage;
 
-    var topOffset = Number(window._envTopOffset || 0);
-    var leftOffset = Number(window._envLeftOffset || 0);
+    var topGlobal = Number(window._envTopOffset || 0);
+    var leftGlobal = Number(window._envLeftOffset || 0);
+    var itemOffsets = getItemOffsets();
 
     var parts = eM.split('-');
     var yearStr = parts[0] || '';
     var monthStr = parts[1] || '';
     var ymOverlayStr = yearStr + '<span style="display:inline-block;width:9mm"></span>' + monthStr;
 
+    var isEditMode = !!window._envEditMode;
+
     if (window._envMode === 'overlay') {
       // 既成給料袋（角形8号 119mm x 197mm）直接印字モード
-      var topYM = 30 + topOffset;
-      var topWage = 50 + topOffset;
-      var topDept = 73 + topOffset;
-      var topName = 86 + topOffset;
+      var topYM = 30 + topGlobal + (itemOffsets.ym.top || 0);
+      var leftYM = -2 + leftGlobal + (itemOffsets.ym.left || 0);
 
-      var leftYM = -2 + leftOffset;
-      var leftWage = -2 + leftOffset;
-      var leftDept = 41 + leftOffset;
-      var leftName = 39 + leftOffset;
+      var topWage = 50 + topGlobal + (itemOffsets.wage.top || 0);
+      var leftWage = -2 + leftGlobal + (itemOffsets.wage.left || 0);
+
+      var topDept = 73 + topGlobal + (itemOffsets.dept.top || 0);
+      var leftDept = 41 + leftGlobal + (itemOffsets.dept.left || 0);
+
+      var topName = 86 + topGlobal + (itemOffsets.name.top || 0);
+      var leftName = 39 + leftGlobal + (itemOffsets.name.left || 0);
+
+      var makeHandle = function(key, label, curOff){
+        if(!isEditMode) return '';
+        var tOff = curOff.top || 0;
+        var lOff = curOff.left || 0;
+        return '<div class="no-print" style="position:absolute;top:-26px;left:50%;transform:translateX(-50%);background:#1565c0;color:#fff;border-radius:4px;padding:2px 6px;font-size:10px;display:inline-flex;align-items:center;gap:3px;z-index:200;box-shadow:0 2px 6px rgba(0,0,0,0.25);font-family:sans-serif;white-space:nowrap;user-select:none">' +
+          '<span style="font-weight:700;color:#bbdefb">[' + label + ']</span>' +
+          '<button class="bg" onclick="event.stopPropagation();changeItemOffset(\'' + key + '\',\'top\',-1)" style="padding:1px 6px;font-size:10px;cursor:pointer;background:#0d47a1;color:#fff;border:none;border-radius:3px;font-weight:700" title="上へ">▲</button>' +
+          '<button class="bg" onclick="event.stopPropagation();changeItemOffset(\'' + key + '\',\'top\',1)" style="padding:1px 6px;font-size:10px;cursor:pointer;background:#0d47a1;color:#fff;border:none;border-radius:3px;font-weight:700" title="下へ">▼</button>' +
+          '<button class="bg" onclick="event.stopPropagation();changeItemOffset(\'' + key + '\',\'left\',-1)" style="padding:1px 6px;font-size:10px;cursor:pointer;background:#0d47a1;color:#fff;border:none;border-radius:3px;font-weight:700" title="左へ">◀</button>' +
+          '<button class="bg" onclick="event.stopPropagation();changeItemOffset(\'' + key + '\',\'left\',1)" style="padding:1px 6px;font-size:10px;cursor:pointer;background:#0d47a1;color:#fff;border:none;border-radius:3px;font-weight:700" title="右へ">▶</button>' +
+          '<span style="color:#e3f2fd;font-size:9px;margin-left:2px">(' + (tOff >= 0 ? '+' + tOff : tOff) + ',' + (lOff >= 0 ? '+' + lOff : lOff) + 'mm)</span>' +
+        '</div>';
+      };
+
+      var boxStyle = isEditMode ? 'outline:2px dashed #1565c0;outline-offset:3px;background:rgba(21,101,192,0.03);' : '';
 
       var h = '<div class="env-page env-overlay" style="width:119mm;height:197mm;box-sizing:border-box;margin:0 auto;padding:0;position:relative;background:#fff;font-family:\'MS 明朝\',\'Hiragino Mincho ProN\',serif;color:#000;">';
-      h += '<div style="position:absolute;top:' + topYM + 'mm;left:' + leftYM + 'mm;width:100%;text-align:center;font-size:15px;font-weight:700;letter-spacing:1px;">' + ymOverlayStr + '</div>';
+      
+      // 年月日
+      h += '<div style="position:absolute;top:' + topYM + 'mm;left:' + leftYM + 'mm;width:100%;text-align:center;font-size:15px;font-weight:700;letter-spacing:1px;' + boxStyle + '">' +
+        makeHandle('ym', '年月日', itemOffsets.ym) +
+        ymOverlayStr +
+      '</div>';
+
+      // 工賃金額
       if (showWage && userWage) {
-        h += '<div style="position:absolute;top:' + topWage + 'mm;left:' + leftWage + 'mm;width:100%;text-align:center;font-size:18px;font-weight:800;">' + userWage + '</div>';
+        h += '<div style="position:absolute;top:' + topWage + 'mm;left:' + leftWage + 'mm;width:100%;text-align:center;font-size:18px;font-weight:800;' + boxStyle + '">' +
+          makeHandle('wage', '金額', itemOffsets.wage) +
+          userWage +
+        '</div>';
       }
-      h += '<div style="position:absolute;top:' + topDept + 'mm;left:' + leftDept + 'mm;width:68mm;font-size:11.5px;font-weight:600;white-space:nowrap;">' + deptText + '</div>';
-      h += '<div style="position:absolute;top:' + topName + 'mm;left:' + leftName + 'mm;width:68mm;font-size:22px;font-weight:800;letter-spacing:1px;">' + nameText + (honorific ? '<span style="margin-left:10px;font-size:19px;font-weight:600;">' + honorific + '</span>' : '') + '</div>';
+
+      // 所属（事業所名）
+      h += '<div style="position:absolute;top:' + topDept + 'mm;left:' + leftDept + 'mm;width:68mm;font-size:11.5px;font-weight:600;white-space:nowrap;' + boxStyle + '">' +
+        makeHandle('dept', '所属名', itemOffsets.dept) +
+        deptText +
+      '</div>';
+
+      // 氏名 ＋ 敬称
+      h += '<div style="position:absolute;top:' + topName + 'mm;left:' + leftName + 'mm;width:68mm;font-size:22px;font-weight:800;letter-spacing:1px;' + boxStyle + '">' +
+        makeHandle('name', '利用者名', itemOffsets.name) +
+        nameText + (honorific ? '<span style="margin-left:10px;font-size:19px;font-weight:600;">' + honorific + '</span>' : '') +
+      '</div>';
+
       h += '</div>';
       return h;
     } else {
       // 無地封筒・用紙（二重枠線＋文字）モード
-      var h = '<div class="env-page env-frame" style="width:119mm;height:197mm;box-sizing:border-box;margin:' + topOffset + 'mm auto 0 ' + (leftOffset > 0 ? leftOffset + 'mm' : 'auto') + ';padding:6mm;position:relative;background:#fff;font-family:\'MS 明朝\',\'Hiragino Mincho ProN\',serif;color:#803020;">';
+      var topYM = topGlobal + (itemOffsets.ym.top || 0);
+      var leftYM = leftGlobal + (itemOffsets.ym.left || 0);
+      var h = '<div class="env-page env-frame" style="width:119mm;height:197mm;box-sizing:border-box;margin:' + topYM + 'mm auto 0 ' + (leftYM > 0 ? leftYM + 'mm' : 'auto') + ';padding:6mm;position:relative;background:#fff;font-family:\'MS 明朝\',\'Hiragino Mincho ProN\',serif;color:#803020;">';
       h += '<div style="border:3px double #803020;border-radius:12px;height:185mm;padding:8mm 6mm;box-sizing:border-box;position:relative;">';
       // No.
       h += '<div style="font-size:11px;margin-bottom:6mm;"><u>No.　　　　　　</u></div>';
