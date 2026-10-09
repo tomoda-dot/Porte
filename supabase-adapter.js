@@ -52,43 +52,71 @@ async function _filterCols(table,obj){
   return filtered;
 }
 
+// ネットワーク通信エラー（Failed to fetch等）の自動リトライ処理
+async function _retryOp(fn){
+  var lastErr;
+  for(var attempt = 1; attempt <= 4; attempt++){
+    try {
+      return await fn();
+    } catch(e) {
+      lastErr = e;
+      var errStr = String(e || '');
+      if(errStr.indexOf('Failed to fetch') >= 0 || errStr.indexOf('NetworkError') >= 0 || errStr.indexOf('timeout') >= 0 || errStr.indexOf('fetch') >= 0){
+        console.warn('📡 ネットワーク再接続中 (' + attempt + '/4回目):', e);
+        await new Promise(function(r){ setTimeout(r, attempt * 400); });
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+
 // テーブルから全件取得（時刻パディング付き・id順）
 async function _getAll(table){
-  var r=await supabase.from(table).select('*').order('id');
-  if(r.error&&r.error.message&&r.error.message.indexOf('id')>=0){
-    r=await supabase.from(table).select('*');
-  }
-  if(r.error)_throwErr(r.error);
-  var data=(r.data||[]).map(_padTimes);
-  if(table==='出欠') data=_dedupAttendanceRows(data);
-  return data;
+  return _retryOp(async function(){
+    var r=await supabase.from(table).select('*').order('id');
+    if(r.error&&r.error.message&&r.error.message.indexOf('id')>=0){
+      r=await supabase.from(table).select('*');
+    }
+    if(r.error)_throwErr(r.error);
+    var data=(r.data||[]).map(_padTimes);
+    if(table==='出欠') data=_dedupAttendanceRows(data);
+    return data;
+  });
 }
 
 // テーブルからフィルタ取得
 async function _getFiltered(table,col,val){
-  var r=await supabase.from(table).select('*').eq(col,val);
-  if(r.error)_throwErr(r.error);
-  var data=(r.data||[]).map(_padTimes);
-  if(table==='出欠') data=_dedupAttendanceRows(data);
-  return data;
+  return _retryOp(async function(){
+    var r=await supabase.from(table).select('*').eq(col,val);
+    if(r.error)_throwErr(r.error);
+    var data=(r.data||[]).map(_padTimes);
+    if(table==='出欠') data=_dedupAttendanceRows(data);
+    return data;
+  });
 }
 
 // 前方一致フィルタ（日付のym検索用）
 async function _getLike(table,col,prefix){
-  var r=await supabase.from(table).select('*').like(col,prefix+'%');
-  if(r.error)_throwErr(r.error);
-  var data=(r.data||[]).map(_padTimes);
-  if(table==='出欠') data=_dedupAttendanceRows(data);
-  return data;
+  return _retryOp(async function(){
+    var r=await supabase.from(table).select('*').like(col,prefix+'%');
+    if(r.error)_throwErr(r.error);
+    var data=(r.data||[]).map(_padTimes);
+    if(table==='出欠') data=_dedupAttendanceRows(data);
+    return data;
+  });
 }
 
 // 以上フィルタ
 async function _getGte(table,col,val){
-  var r=await supabase.from(table).select('*').gte(col,val).order(col);
-  if(r.error)_throwErr(r.error);
-  var data=(r.data||[]).map(_padTimes);
-  if(table==='出欠') data=_dedupAttendanceRows(data);
-  return data;
+  return _retryOp(async function(){
+    var r=await supabase.from(table).select('*').gte(col,val).order(col);
+    if(r.error)_throwErr(r.error);
+    var data=(r.data||[]).map(_padTimes);
+    if(table==='出欠') data=_dedupAttendanceRows(data);
+    return data;
+  });
 }
 
 // 出欠レコードの重複解消・非空フィールド統合
