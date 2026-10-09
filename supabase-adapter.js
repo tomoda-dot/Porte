@@ -849,12 +849,15 @@ async function _calcWageDetailPerUser(ym){
     recs.forEach(function(rec){
       var netH=_calcNetH(rec,user);if(netH<=0)return;
       var wt=_findWt(wts,rec.workTypeId||'',(rec.workTypeIdPm&&String(rec.workTypeIdPm)!=='')?rec.workTypeIdPm:rec.workTypeId||'');
-      if(!wt.am||String(wt.am.id)===String(wt.pm.id)){
-        var nm=wt.am?wt.am.name:'未設定';var rt=wt.am?Number(wt.am.rate):0;
+      if(!wt.am || !wt.pm || String(wt.am.id)===String(wt.pm.id)){
+        var targetWt=wt.am||wt.pm;
+        var nm=targetWt?targetWt.name:'未設定';var rt=targetWt?Number(targetWt.rate):0;
         if(!byWt[nm])byWt[nm]={hours:0,rate:rt,wage:0};byWt[nm].hours+=netH;byWt[nm].wage+=netH*rt;
       }else{var hh=netH/2;
-        if(!byWt[wt.am.name])byWt[wt.am.name]={hours:0,rate:Number(wt.am.rate)||0,wage:0};byWt[wt.am.name].hours+=hh;byWt[wt.am.name].wage+=hh*(Number(wt.am.rate)||0);
-        if(!byWt[wt.pm.name])byWt[wt.pm.name]={hours:0,rate:Number(wt.pm.rate)||0,wage:0};byWt[wt.pm.name].hours+=hh;byWt[wt.pm.name].wage+=hh*(Number(wt.pm.rate)||0);
+        var amName=wt.am?wt.am.name:'未設定';var amRate=wt.am?Number(wt.am.rate)||0:0;
+        var pmName=wt.pm?wt.pm.name:'未設定';var pmRate=wt.pm?Number(wt.pm.rate)||0:0;
+        if(!byWt[amName])byWt[amName]={hours:0,rate:amRate,wage:0};byWt[amName].hours+=hh;byWt[amName].wage+=hh*amRate;
+        if(!byWt[pmName])byWt[pmName]={hours:0,rate:pmRate,wage:0};byWt[pmName].hours+=hh;byWt[pmName].wage+=hh*pmRate;
       }
       var bCount = _getBentoCount(rec);
       if(bCount > 0){
@@ -870,20 +873,32 @@ async function _calcWageDetailPerUser(ym){
     });
     var items=[],wSub=0;Object.keys(byWt).forEach(function(k){var w=byWt[k];var rw=Math.round(w.wage);items.push({name:k,hours:Math.round(w.hours*100)/100,rate:w.rate,wage:rw});wSub+=rw;});
     
+    var userOverrideMap = {};
+    try { userOverrideMap = JSON.parse(settings.userAllowanceMap || '{}'); } catch(e){}
+
     var kk=_checkKaikin(user,att,ym);
     var userAllowances=[];
     var bonus=0;
     if(activeAls.length>0){
       activeAls.forEach(function(a){
+        var key = ym + '_' + user.id + '_' + a.name;
+        var overrideVal = userOverrideMap[key];
         var match=false;
-        if(a.condition==='kaikin'){match=kk.kaikin;}
-        else if(a.condition==='seikin'){match=!kk.kaikin&&kk.ng<=2&&kk.ok>0;}
-        else if(a.condition==='all'){match=recs.length>0;}
-        else if(a.condition==='birthday'){
-          if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
+
+        if(overrideVal === true){
+          match = true;
+        } else if(overrideVal === false){
+          match = false;
+        } else {
+          if(a.condition==='kaikin'){match=kk.kaikin;}
+          else if(a.condition==='seikin'){match=!kk.kaikin&&kk.ng<=2&&kk.ok>0;}
+          else if(a.condition==='all'){match=recs.length>0;}
+          else if(a.condition==='birthday'){
+            if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
+          }
+          else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
+          else if(a.condition==='no_pickup'){match=recs.length>0&&!_isPickupUser(user.pickup);}
         }
-        else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
-        else if(a.condition==='no_pickup'){match=recs.length>0&&!_isPickupUser(user.pickup);}
         if(match){
           var amt=Number(a.amount)||0;
           bonus+=amt;
@@ -917,8 +932,9 @@ async function _calcWorkTypeSummary(ym){
       var day=Number(String(rec.date).split('-')[2]);if(day<1||day>dim)return;
       var netH=_calcNetH(rec,user);if(netH<=0)return;
       var wt=_findWt(wts,rec.workTypeId||'',(rec.workTypeIdPm&&String(rec.workTypeIdPm)!=='')?rec.workTypeIdPm:rec.workTypeId||'');
-      if(!wt.am||String(wt.am.id)===String(wt.pm.id)){
-        var nm=wt.am?wt.am.name:'未設定';var rt=wt.am?Number(wt.am.rate):0;
+      if(!wt.am || !wt.pm || String(wt.am.id)===String(wt.pm.id)){
+        var targetWt=wt.am||wt.pm;
+        var nm=targetWt?targetWt.name:'未設定';var rt=targetWt?Number(targetWt.rate):0;
         if(!byWt[nm])byWt[nm]={wageByDay:new Array(dim).fill(0),hoursByDay:new Array(dim).fill(0),wageTotal:0,hoursTotal:0,count:0};
         byWt[nm].wageByDay[day-1]+=netH*rt;byWt[nm].hoursByDay[day-1]+=netH;byWt[nm].wageTotal+=netH*rt;byWt[nm].hoursTotal+=netH;byWt[nm].count++;
       }else{var hh=netH/2;
