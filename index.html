@@ -165,7 +165,7 @@ function cachedGas(fn){
   var args=Array.prototype.slice.call(arguments,1);
   var key=fn+'|'+JSON.stringify(args);
   if(_cache[key]&&(Date.now()-_cache[key].t<300000))return Promise.resolve(_cache[key].d);
-  return gas.apply(null,[fn].concat(args)).then(function(d){_cache[key]={d:d,t:Date.now()};return d;}).catch(function(err){delete _cache[key];throw err;});
+  return gas.apply(null,[fn].concat(args)).then(function(d){_cache[key]={d:d,t:Date.now()};return d;});
 }
 function clearCache(prefix){
   if(!prefix){_cache={};return;}
@@ -4790,99 +4790,6 @@ function printTrialReport(){
   }, 1000);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function openTrialReportModal(t){
   var rep = _getTrialReportData(t);
   var fName = (S.settings && S.settings.facilityName) || '就労継続支援 B 型事業所 ひとつぎ豊中小曽根';
@@ -4952,182 +4859,173 @@ function openTrialReportModal(t){
         '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">'+
           '<thead><tr style="background:#f0f4f0">'+
             '<th style="border:1px solid #777;padding:6px;width:180px;text-align:center">評価項目</th>'+
-            '<th style="border:1px solid #777;padding:6px;width:130px;text-align:center">評価</th>'+
-            '<th style="border:1px solid #777;padding:6px;text-align:center">具体的なご様子・ストレングス</th>'+
+            '<th style="border:1px solid #777;padding:6px;width:130px;text-align:center">評価・所見</th>'+
+            '<th style="border:1px solid #777;padding:6px;text-align:center">具体的なご様子・ストレングス（強み）</th>'+
           '</tr></thead>'+
           '<tbody>'+
-            '<tr>'+
-              '<td style="border:1px solid #777;padding:8px;font-weight:700">作業精度・手先の器用さ</td>'+
-              '<td style="border:1px solid #777;padding:8px;text-align:center;font-weight:700">'+esc(rep.evalAccuracyRank)+'</td>'+
-              '<td style="border:1px solid #777;padding:8px;white-space:pre-wrap">'+esc(rep.evalAccuracyText || '−')+'</td>'+
-            '</tr>'+
-            '<tr>'+
-              '<td style="border:1px solid #777;padding:8px;font-weight:700">作業速度・持続力</td>'+
-              '<td style="border:1px solid #777;padding:8px;text-align:center;font-weight:700">'+esc(rep.evalSpeedRank)+'</td>'+
-              '<td style="border:1px solid #777;padding:8px;white-space:pre-wrap">'+esc(rep.evalSpeedText || '−')+'</td>'+
-            '</tr>'+
-            '<tr>'+
-              '<td style="border:1px solid #777;padding:8px;font-weight:700">自律性・自己管理</td>'+
-              '<td style="border:1px solid #777;padding:8px;text-align:center;font-weight:700">'+esc(rep.evalAutonomyRank)+'</td>'+
-              '<td style="border:1px solid #777;padding:8px;white-space:pre-wrap">'+esc(rep.evalAutonomyText || '−')+'</td>'+
-            '</tr>'+
-            '<tr>'+
-              '<td style="border:1px solid #777;padding:8px;font-weight:700">コミュニケーション・環境適応</td>'+
-              '<td style="border:1px solid #777;padding:8px;text-align:center;font-weight:700">'+esc(rep.evalCommRank)+'</td>'+
-              '<td style="border:1px solid #777;padding:8px;white-space:pre-wrap">'+esc(rep.evalCommText || '−')+'</td>'+
-            '</tr>'+
+            '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">作業精度・手先の器用さ</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalAccuracyRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalAccuracyText || '−')+'</td></tr>'+
+            '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">作業速度・持続力</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalSpeedRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalSpeedText || '−')+'</td></tr>'+
+            '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">自律性・自己管理</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalAutonomyRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalAutonomyText || '−')+'</td></tr>'+
+            '<tr><td style="border:1px solid #777;padding:6px;font-weight:600">コミュニケーション・環境適応</td><td style="border:1px solid #777;padding:6px;text-align:center">'+esc(rep.evalCommRank)+'</td><td style="border:1px solid #777;padding:6px;white-space:pre-wrap">'+esc(rep.evalCommText || '−')+'</td></tr>'+
           '</tbody>'+
         '</table>'+
 
         '<div style="font-weight:700;font-size:14px;margin-bottom:6px">■ 総合所見および今後の支援方針・提案</div>'+
         '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px">'+
-          '<tr>'+
-            '<th style="background:#f0f4f0;border:1px solid #777;padding:8px;width:180px;text-align:center;vertical-align:top">本日の体験利用の総括</th>'+
-            '<td style="border:1px solid #777;padding:8px;white-space:pre-wrap">'+esc(rep.summary || '−')+'</td>'+
-          '</tr>'+
-          '<tr>'+
-            '<th style="background:#f0f4f0;border:1px solid #777;padding:8px;text-align:center;vertical-align:top">今後の支援・ステップアップの<br>方向性提案</th>'+
-            '<td style="border:1px solid #777;padding:8px;white-space:pre-wrap">'+esc(rep.futurePlan || '−')+'</td>'+
-          '</tr>'+
-          (rep.notes ? '<tr><th style="background:#f0f4f0;border:1px solid #777;padding:8px;text-align:center;vertical-align:top">備考・特記事項</th><td style="border:1px solid #777;padding:8px;white-space:pre-wrap">'+esc(rep.notes)+'</td></tr>' : '')+
+          '<tr><td style="border:1px solid #777;padding:10px;white-space:pre-wrap;line-height:1.5">'+
+            '<div style="font-weight:700;margin-bottom:4px">【本日の体験利用の総括】</div>'+
+            esc(rep.summary || '（記載なし）')+'\n\n'+
+            '<div style="font-weight:700;margin-bottom:4px;margin-top:10px">【今後の支援・ステップアップの方向性提案】</div>'+
+            esc(rep.futurePlan || '（記載なし）')+
+          '</td></tr>'+
         '</table>'+
+        (rep.notes ? '<div style="font-size:11px;color:#555;margin-top:6px"><strong>備考：</strong> ' + esc(rep.notes) + '</div>' : '')+
       '</div>'+
     '</div>'+
-    '</div></div>';
+  '</div></div>';
 
   document.getElementById('tr-modal').innerHTML = html;
 }
 
-function handleTrialPreviewFromModal(id){
-  var t = (S.trials || []).find(function(x){ return String(x.id) === String(id); });
-  if(!t) return;
-  var rep = {
-    creator: document.getElementById('tr-creator') ? document.getElementById('tr-creator').value : '',
-    evalAccuracyRank: document.getElementById('tr-eval-accuracy-rank') ? document.getElementById('tr-eval-accuracy-rank').value : '',
-    evalAccuracyText: document.getElementById('tr-eval-accuracy-text') ? document.getElementById('tr-eval-accuracy-text').value : '',
-    evalSpeedRank: document.getElementById('tr-eval-speed-rank') ? document.getElementById('tr-eval-speed-rank').value : '',
-    evalSpeedText: document.getElementById('tr-eval-speed-text') ? document.getElementById('tr-eval-speed-text').value : '',
-    evalAutonomyRank: document.getElementById('tr-eval-autonomy-rank') ? document.getElementById('tr-eval-autonomy-rank').value : '',
-    evalAutonomyText: document.getElementById('tr-eval-autonomy-text') ? document.getElementById('tr-eval-autonomy-text').value : '',
-    evalCommRank: document.getElementById('tr-eval-comm-rank') ? document.getElementById('tr-eval-comm-rank').value : '',
-    evalCommText: document.getElementById('tr-eval-comm-text') ? document.getElementById('tr-eval-comm-text').value : '',
-    summary: document.getElementById('tr-summary') ? document.getElementById('tr-summary').value : '',
-    futurePlan: document.getElementById('tr-future-plan') ? document.getElementById('tr-future-plan').value : '',
-    notes: document.getElementById('tr-notes') ? document.getElementById('tr-notes').value : ''
-  };
-  var rows = [];
-  document.querySelectorAll('#tr-schedule-tbody tr').forEach(function(tr){
-    var timeEl = tr.querySelector('.tr-sched-time');
-    var itemEl = tr.querySelector('.tr-sched-item');
-    var detailEl = tr.querySelector('.tr-sched-detail');
-    if(timeEl || itemEl || detailEl){
-      rows.push({
-        time: timeEl ? timeEl.value : '',
-        item: itemEl ? itemEl.value : '',
-        detail: detailEl ? detailEl.value : ''
-      });
+async function handleTrialPreviewFromModal(id){
+  if(await cConfirm('編集中の入力データを保存してから印刷プレビューを表示しますか？\n\n【OK】: 入力内容を自動保存してプレビュー表示\n【キャンセル】: 保存せずに戻る')){
+    var saved = await saveTrial(id, true);
+    if(saved){
+      openTrialReportModal(saved);
     }
-  });
-  rep.schedule = JSON.stringify(rows);
-  var currentT = Object.assign({}, t, {
-    name: document.getElementById('tr-name') ? document.getElementById('tr-name').value : t.name,
-    type: document.getElementById('tr-type') ? document.getElementById('tr-type').value : t.type,
-    date: document.getElementById('tr-date') ? document.getElementById('tr-date').value : t.date,
-    time: document.getElementById('tr-time') ? document.getElementById('tr-time').value : t.time,
-    bento: document.getElementById('tr-bento') ? document.getElementById('tr-bento').value : t.bento,
-    pickup: document.getElementById('tr-pickup') ? document.getElementById('tr-pickup').value : t.pickup,
-    notes: rep.notes + '\n---REPORT_DATA---\n' + JSON.stringify(rep)
-  });
-  openTrialReportModal(currentT);
+  }
 }
 
-async function saveTrial(id){
-  if(!lockUI()) return;
-  var name = document.getElementById('tr-name') ? document.getElementById('tr-name').value.trim() : '';
-  var date = document.getElementById('tr-date') ? document.getElementById('tr-date').value : '';
-  if(!name || !date){
-    unlockUI();
-    await cAlert('お名前と日付を入力してください');
-    return;
-  }
-  var rows = [];
-  document.querySelectorAll('#tr-schedule-tbody tr').forEach(function(tr){
+async function saveTrial(id, returnSavedObjectOnly){
+  if(!lockUI())return null;
+  var nameEl=document.getElementById('tr-name');
+  var name=nameEl?nameEl.value:'';
+  var typeEl=document.getElementById('tr-type');
+  var type=typeEl?typeEl.value:'';
+  var dateEl=document.getElementById('tr-date');
+  var date=dateEl?dateEl.value:'';
+  var timeEl=document.getElementById('tr-time');
+  var time=timeEl?timeEl.value:'';
+  var bentoEl=document.getElementById('tr-bento');
+  var bento=bentoEl?bentoEl.value:'';
+  var pickupEl=document.getElementById('tr-pickup');
+  var pickup=pickupEl?pickupEl.value:'';
+  var contactEl=document.getElementById('tr-contact');
+  var contact=contactEl?contactEl.value:'';
+  var statusEl=document.getElementById('tr-status');
+  var status=statusEl?statusEl.value:'';
+  
+  var creatorEl=document.getElementById('tr-creator');
+  var creator=creatorEl?creatorEl.value:'';
+  
+  // Collect dynamic schedule table rows
+  var schedRows = [];
+  var trs = document.querySelectorAll('#tr-schedule-tbody tr');
+  trs.forEach(function(tr){
     var timeEl = tr.querySelector('.tr-sched-time');
     var itemEl = tr.querySelector('.tr-sched-item');
     var detailEl = tr.querySelector('.tr-sched-detail');
-    if(timeEl || itemEl || detailEl){
-      rows.push({
-        time: timeEl ? timeEl.value : '',
-        item: itemEl ? itemEl.value : '',
-        detail: detailEl ? detailEl.value : ''
-      });
+    if(timeEl && itemEl && detailEl){
+      var tVal = timeEl.value.trim();
+      var iVal = itemEl.value.trim();
+      var dVal = detailEl.value.trim();
+      if(tVal || iVal || dVal){
+        schedRows.push({ time: tVal, item: iVal, detail: dVal });
+      }
     }
   });
-  var repData = {
-    creator: document.getElementById('tr-creator') ? document.getElementById('tr-creator').value : '',
-    schedule: JSON.stringify(rows),
-    evalAccuracyRank: document.getElementById('tr-eval-accuracy-rank') ? document.getElementById('tr-eval-accuracy-rank').value : '',
-    evalAccuracyText: document.getElementById('tr-eval-accuracy-text') ? document.getElementById('tr-eval-accuracy-text').value : '',
-    evalSpeedRank: document.getElementById('tr-eval-speed-rank') ? document.getElementById('tr-eval-speed-rank').value : '',
-    evalSpeedText: document.getElementById('tr-eval-speed-text') ? document.getElementById('tr-eval-speed-text').value : '',
-    evalAutonomyRank: document.getElementById('tr-eval-autonomy-rank') ? document.getElementById('tr-eval-autonomy-rank').value : '',
-    evalAutonomyText: document.getElementById('tr-eval-autonomy-text') ? document.getElementById('tr-eval-autonomy-text').value : '',
-    evalCommRank: document.getElementById('tr-eval-comm-rank') ? document.getElementById('tr-eval-comm-rank').value : '',
-    evalCommText: document.getElementById('tr-eval-comm-text') ? document.getElementById('tr-eval-comm-text').value : '',
-    summary: document.getElementById('tr-summary') ? document.getElementById('tr-summary').value : '',
-    futurePlan: document.getElementById('tr-future-plan') ? document.getElementById('tr-future-plan').value : ''
-  };
-  var baseNotes = document.getElementById('tr-notes') ? document.getElementById('tr-notes').value.trim() : '';
-  var fullNotes = baseNotes + '\n---REPORT_DATA---\n' + JSON.stringify(repData);
+  var schedule = JSON.stringify(schedRows);
 
-  var obj = {
-    name: name,
-    type: document.getElementById('tr-type') ? document.getElementById('tr-type').value : '見学',
-    status: document.getElementById('tr-status') ? document.getElementById('tr-status').value : '予定',
-    date: date,
-    time: document.getElementById('tr-time') ? document.getElementById('tr-time').value : '',
-    contact: document.getElementById('tr-contact') ? document.getElementById('tr-contact').value : '',
-    bento: document.getElementById('tr-bento') ? document.getElementById('tr-bento').value : 'なし',
-    pickup: document.getElementById('tr-pickup') ? document.getElementById('tr-pickup').value : 'なし',
-    notes: fullNotes
-  };
-  if(id) obj.id = id;
+  var evalAccRankEl=document.getElementById('tr-eval-accuracy-rank');
+  var evalAccuracyRank=evalAccRankEl?evalAccRankEl.value:'';
+  var evalAccTxtEl=document.getElementById('tr-eval-accuracy-text');
+  var evalAccuracyText=evalAccTxtEl?evalAccTxtEl.value:'';
 
-  try {
-    if(id){
-      await gas('updateTrial', obj);
-    } else {
-      await gas('addTrial', obj);
+  var evalSpdRankEl=document.getElementById('tr-eval-speed-rank');
+  var evalSpeedRank=evalSpdRankEl?evalSpdRankEl.value:'';
+  var evalSpdTxtEl=document.getElementById('tr-eval-speed-text');
+  var evalSpeedText=evalSpdTxtEl?evalSpdTxtEl.value:'';
+
+  var evalAutRankEl=document.getElementById('tr-eval-autonomy-rank');
+  var evalAutonomyRank=evalAutRankEl?evalAutRankEl.value:'';
+  var evalAutTxtEl=document.getElementById('tr-eval-autonomy-text');
+  var evalAutonomyText=evalAutTxtEl?evalAutTxtEl.value:'';
+
+  var evalCommRankEl=document.getElementById('tr-eval-comm-rank');
+  var evalCommRank=evalCommRankEl?evalCommRankEl.value:'';
+  var evalCommTxtEl=document.getElementById('tr-eval-comm-text');
+  var evalCommText=evalCommTxtEl?evalCommTxtEl.value:'';
+
+  var summaryEl=document.getElementById('tr-summary');
+  var summary=summaryEl?summaryEl.value:'';
+  var futurePlanEl=document.getElementById('tr-future-plan');
+  var futurePlan=futurePlanEl?futurePlanEl.value:'';
+  var notesEl=document.getElementById('tr-notes');
+  var userNotes=notesEl?notesEl.value:'';
+
+  if(!name||!date){await cAlert('氏名と予定日は必須です');unlockUI();return null;}
+
+  var extraObj={
+    creator:creator,
+    schedule:schedule,
+    evalAccuracyRank:evalAccuracyRank,
+    evalAccuracyText:evalAccuracyText,
+    evalSpeedRank:evalSpeedRank,
+    evalSpeedText:evalSpeedText,
+    evalAutonomyRank:evalAutonomyRank,
+    evalAutonomyText:evalAutonomyText,
+    evalCommRank:evalCommRank,
+    evalCommText:evalCommText,
+    summary:summary,
+    futurePlan:futurePlan
+  };
+
+  var packedNotes=(userNotes?userNotes.trim()+'\n':'')+'---REPORT_DATA---'+JSON.stringify(extraObj);
+
+  var data={
+    name:name,
+    type:type,
+    date:date,
+    time:time,
+    contact:contact,
+    bento:bento,
+    pickup:pickup,
+    status:status,
+    creator:creator,
+    schedule:schedule,
+    evalAccuracyRank:evalAccuracyRank,
+    evalAccuracyText:evalAccuracyText,
+    evalSpeedRank:evalSpeedRank,
+    evalSpeedText:evalSpeedText,
+    evalAutonomyRank:evalAutonomyRank,
+    evalAutonomyText:evalAutonomyText,
+    evalCommRank:evalCommRank,
+    evalCommText:evalCommText,
+    summary:summary,
+    futurePlan:futurePlan,
+    notes:packedNotes
+  };
+
+  try{
+    if(id){data.id=id;await gas('updateTrial',data);}
+    else{var addRes = await gas('addTrial',data); if(addRes&&addRes.id) data.id=addRes.id;}
+    S.trials=await gas('getTrials');
+    if(returnSavedObjectOnly){
+      var updatedObj = S.trials.find(function(x){ return String(x.id) === String(data.id || id); }) || data;
+      return updatedObj;
     }
-    S.trials = await gas('getTrials');
     closeModal('tr-modal');
-    renderTrials(document.getElementById('content'));
-    toast('保存しました');
-  } catch(e) {
-    await cAlert('保存失敗: ' + e);
-  } finally {
+    if(S.tab==='trials')renderTrials(document.getElementById('content'));
+    return data;
+  }catch(e){
+    await cAlert('保存失敗: '+e);
+    return null;
+  }finally{
     unlockUI();
   }
 }
 
-async function delTrial(id){
-  if(!await cConfirm('この見学・体験予定を削除しますか？')) return;
-  if(!lockUI()) return;
-  try {
-    await gas('deleteTrial', id);
-    S.trials = await gas('getTrials');
-    renderTrials(document.getElementById('content'));
-    toast('削除しました');
-  } catch(e) {
-    await cAlert('削除失敗: ' + e);
-  } finally {
-    unlockUI();
-  }
-}
-
-
-
-
+async function delTrial(id){if(!await cConfirm('削除しますか？'))return;try{await gas('deleteTrial',id);S.trials=await gas('getTrials');if(S.tab==='trials')renderTrials(document.getElementById('content'));}catch(e){await cAlert('削除失敗');}}
 
 // ═══ 出欠・日報 ═══
 var attDate=today(),attData=[],dailyData=[];
@@ -7790,19 +7688,8 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
       h+='</div>';
       document.getElementById('e-c').innerHTML=userSelHtml+h;
     }
-}catch(e){
-  var errStr = String(e || '');
-  var isNetErr = errStr.indexOf('Failed to fetch') >= 0 || errStr.indexOf('NetworkError') >= 0 || errStr.indexOf('fetch') >= 0;
-  var errTitle = isNetErr ? '📡 一時的な通信エラーが発生しました' : '⚠️ データの読み込みに失敗しました';
-  var errDesc = isNetErr ? 'インターネット接続が一時的に切断されたか、通信応答待ちに失敗しました。「もう一度読み込む」を押すと再接続されます。' : esc(errStr);
-
-  document.getElementById('e-c').innerHTML = '<div class="card" style="text-align:center;padding:32px 20px;background:#fff8f8;border:1px solid #ffcdd2;max-width:520px;margin:30px auto;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.05)">' +
-    '<div style="font-size:24px;margin-bottom:8px">📡</div>' +
-    '<div style="font-size:16px;font-weight:700;color:#c62828;margin-bottom:8px">' + errTitle + '</div>' +
-    '<div style="font-size:12px;color:var(--sub);margin-bottom:20px;line-height:1.5">' + errDesc + '</div>' +
-    '<button class="bp" onclick="clearCache();loadE()" style="padding:10px 28px;font-size:13px;font-weight:700;border-radius:6px">🔄 もう一度読み込む (再試行)</button>' +
-  '</div>';
-}}
+  }
+}catch(e){document.getElementById('e-c').innerHTML='失敗: '+e;}}
 
 // ═══ 代理受領 計算・保存 ═══
 function renderOneInvoice(u,recs,bc,bd,bentoPrice,yStr,mStr,compName,fName,fNum,fType){
@@ -11770,5 +11657,4 @@ document.addEventListener('touchend', function(e) {
 </script>
 </body>
 </html>
-
 
