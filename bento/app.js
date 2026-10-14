@@ -272,22 +272,39 @@ function addBentoStockLot(bento, qty, expDate, type = 'ARRIVED') {
 function cleanupAutoAttOrders() {
   let modified = false;
   const todayKey = getTodayKey();
+  const fakeAttSyncDates = ['2026-10-05', '2026-10-01', '2026-09-25', '2026-08-19', '2026-08-10', '2026-08-05', '2026-08-03'];
 
-  // dailyOrders から自動生成された偽の ord_att_ 注文データを削除
+  // 1. dailyOrders から出欠連携による自動割り当て注文や偽の ord_att_ 注文データを完全削除
   if (dailyOrders && typeof dailyOrders === 'object') {
     Object.keys(dailyOrders).forEach(dateKey => {
       const dayRecord = dailyOrders[dateKey];
-      if (dayRecord && Array.isArray(dayRecord.orders)) {
-        const originalCount = dayRecord.orders.length;
-        dayRecord.orders = dayRecord.orders.filter(o => {
-          if (!o) return false;
-          const isAttAuto = (o.orderId && String(o.orderId).startsWith('ord_att_')) || (o.id && String(o.id).startsWith('ord_att_'));
-          return !isAttAuto;
-        });
-        if (dayRecord.orders.length !== originalCount) {
-          modified = true;
+      if (dayRecord) {
+        const isAttSync = dayRecord.confirmedAt && String(dayRecord.confirmedAt).includes('出欠連携');
+        if (Array.isArray(dayRecord.orders)) {
+          const originalCount = dayRecord.orders.length;
+          dayRecord.orders = dayRecord.orders.filter(o => {
+            if (!o) return false;
+            const isAttAuto = (o.orderId && String(o.orderId).startsWith('ord_att_')) || (o.id && String(o.id).startsWith('ord_att_'));
+            if (isAttAuto) return false;
+            // 出欠連携日におけるタラトマト（b01）や自動割り当て注文を削除
+            if (isAttSync && (o.bentoId === 'b01' || (o.bentoName && o.bentoName.includes('タラ')))) {
+              return false;
+            }
+            if (fakeAttSyncDates.includes(dateKey) && (o.bentoId === 'b01' || (o.bentoName && o.bentoName.includes('タラ')))) {
+              return false;
+            }
+            return true;
+          });
+          if (dayRecord.orders.length !== originalCount) {
+            modified = true;
+          }
         }
-        if (dateKey === todayKey && dayRecord.orders.length === 0 && dayRecord.status === 'CONFIRMED') {
+
+        // 出欠連携日で注文が0件になった場合は、日別確定データ自体をクリーンアップ
+        if (isAttSync && (!dayRecord.orders || dayRecord.orders.length === 0)) {
+          delete dailyOrders[dateKey];
+          modified = true;
+        } else if (dateKey === todayKey && dayRecord.orders && dayRecord.orders.length === 0 && dayRecord.status === 'CONFIRMED') {
           dayRecord.status = 'DRAFT';
           dayRecord.confirmedAt = null;
           modified = true;
@@ -296,13 +313,18 @@ function cleanupAutoAttOrders() {
     });
   }
 
-  // orderHistory から自動生成された偽の注文ログデータを削除
+  // 2. orderHistory から自動生成された偽の注文ログデータを削除
   if (Array.isArray(orderHistory)) {
     const originalHistCount = orderHistory.length;
     orderHistory = orderHistory.filter(o => {
       if (!o) return false;
       const isAttAuto = (o.id && String(o.id).startsWith('ord_att_')) || (o.orderId && String(o.orderId).startsWith('ord_att_'));
       if (isAttAuto) return false;
+
+      // 過去に出欠連携フォールバックで生成されたタラトマト(b01)の偽ログを削除
+      if (o.bentoId === 'b01' || (o.bentoName && o.bentoName.includes('タラ'))) {
+        if (fakeAttSyncDates.includes(o.dateKey)) return false;
+      }
 
       // 当日のログで、現在porteUsersでそのお弁当を選択していないものを削除（自動作成ログのクリア）
       if (o.dateKey === todayKey) {
@@ -834,8 +856,14 @@ function syncOrderHistoryWithDailyOrders() {
   Object.keys(dailyOrders).forEach(dateKey => {
     const dayRecord = dailyOrders[dateKey];
     if (dayRecord && Array.isArray(dayRecord.orders) && dayRecord.orders.length > 0) {
+      // 出欠連携による自動レコードは履歴台帳には転記しない
+      if (dayRecord.confirmedAt && String(dayRecord.confirmedAt).includes('出欠連携')) return;
+
       dayRecord.orders.forEach(s => {
         if (!s || !s.bentoId) return;
+        if (s.orderId && String(s.orderId).startsWith('ord_att_')) return;
+        if (s.id && String(s.id).startsWith('ord_att_')) return;
+
         const exists = orderHistory.some(ord => ord.dateKey === dateKey && (
           (ord.userId && s.userId && String(ord.userId).trim() === String(s.userId).trim()) ||
           (ord.userName && s.userName && cleanNameForMatch(ord.userName) === cleanNameForMatch(s.userName))
@@ -862,6 +890,8 @@ function syncOrderHistoryWithDailyOrders() {
   // 2. orderHistory -> dailyOrders
   orderHistory.forEach(ord => {
     if (!ord || !ord.dateKey || !ord.bentoId) return;
+    if (ord.orderId && String(ord.orderId).startsWith('ord_att_')) return;
+    if (ord.id && String(ord.id).startsWith('ord_att_')) return;
     const dateKey = ord.dateKey;
     if (!dailyOrders[dateKey]) {
       dailyOrders[dateKey] = {
@@ -1246,35 +1276,37 @@ async function syncMonthlyAttendanceToDailyOrders(targetMonth) {
 
       if (!isBentoPositive(bentoVal, mealVal)) return;
 
-      if (!dailyOrders[dateKey]) {
-        dailyOrders[dateKey] = {
-          status: 'CONFIRMED',
-          confirmedAt: `${dateKey} 12:00 (出欠連携)`,
-          orders: []
-        };
-      }
-
-      if (!dailyOrders[dateKey].orders) dailyOrders[dateKey].orders = [];
-
       const targetUserId = uId || (userMaster ? userMaster.id : uName);
       const targetUserName = uName || (userMaster ? userMaster.name : uId);
 
-      const existingOrder = dailyOrders[dateKey].orders.find(o => 
+      const existingOrder = dailyOrders[dateKey] && Array.isArray(dailyOrders[dateKey].orders) && dailyOrders[dateKey].orders.find(o => 
         (o && o.userId && targetUserId && String(o.userId).trim() === String(targetUserId).trim()) ||
         (o && o.userName && targetUserName && String(o.userName).replace('👔','').trim() === String(targetUserName).replace('👔','').trim())
       );
 
       if (!existingOrder) {
-        // 出欠で明確なお弁当ID/商品名が指定されている場合のみ自動連携（未選択の場合はデフォルト弁当を自動設定しない）
+        // 出欠で明確なお弁当ID/商品名が指定されている場合のみ自動連携（「1食」「あり」等の汎用フラグ時は勝手にお弁当を割り当てない）
         let explicitBento = null;
         if (att.bentoId) {
           explicitBento = bentoMaster.find(b => b.id === att.bentoId);
         }
         if (!explicitBento && bentoVal) {
-          explicitBento = bentoMaster.find(b => b.id === bentoVal || b.name === bentoVal);
+          const genericFlags = ['あり', '必要', 'true', '1', '1食', '2食', '3食', '2', '3', '1個', '2個', '3個', '無料', '体験食', '体験食(無料)', 'あり(無料)'];
+          if (!genericFlags.includes(bentoVal)) {
+            explicitBento = bentoMaster.find(b => b.id === bentoVal || b.name === bentoVal);
+          }
         }
 
         if (explicitBento) {
+          if (!dailyOrders[dateKey]) {
+            dailyOrders[dateKey] = {
+              status: 'CONFIRMED',
+              confirmedAt: `${dateKey} 12:00 (出欠連携)`,
+              orders: []
+            };
+          }
+          if (!Array.isArray(dailyOrders[dateKey].orders)) dailyOrders[dateKey].orders = [];
+
           dailyOrders[dateKey].orders.push({
             orderId: 'ord_att_' + dateKey + '_' + (targetUserId || Math.random().toString(36).substr(2, 5)),
             dateKey: dateKey,

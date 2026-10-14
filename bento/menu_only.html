@@ -828,8 +828,43 @@
       return merged;
     }
 
+    function cleanupAutoAttOrders(dailyOrdersObj) {
+      if (!dailyOrdersObj || typeof dailyOrdersObj !== 'object') return dailyOrdersObj;
+      const fakeAttSyncDates = ['2026-10-05', '2026-10-01', '2026-09-25', '2026-08-19', '2026-08-10', '2026-08-05', '2026-08-03'];
+
+      Object.keys(dailyOrdersObj).forEach(dateKey => {
+        const dayRecord = dailyOrdersObj[dateKey];
+        if (dayRecord) {
+          const isAttSync = dayRecord.confirmedAt && String(dayRecord.confirmedAt).includes('出欠連携');
+          if (Array.isArray(dayRecord.orders)) {
+            dayRecord.orders = dayRecord.orders.filter(o => {
+              if (!o) return false;
+              const isAttAuto = (o.orderId && String(o.orderId).startsWith('ord_att_')) || (o.id && String(o.id).startsWith('ord_att_'));
+              if (isAttAuto) return false;
+              if (isAttSync && (o.bentoId === 'b01' || (o.bentoName && o.bentoName.includes('タラ')))) return false;
+              if (fakeAttSyncDates.includes(dateKey) && (o.bentoId === 'b01' || (o.bentoName && o.bentoName.includes('タラ')))) return false;
+              return true;
+            });
+          }
+          if (isAttSync && (!dayRecord.orders || dayRecord.orders.length === 0)) {
+            delete dailyOrdersObj[dateKey];
+          }
+        }
+      });
+      return dailyOrdersObj;
+    }
+
     function applyDailyOrdersToPorteUsers(dailyOrdersObj, usersArray) {
       if (!dailyOrdersObj || !Array.isArray(usersArray)) return usersArray;
+
+      // 全利用者の本日の選択状態を初期化（前日や無選択状態のキャリーオーバーを防止）
+      usersArray.forEach(u => {
+        normalizeUserData(u);
+        const count = u.bentoCount || 1;
+        u.selectedBentoIds = Array(count).fill('');
+        u.selectedBentoId = '';
+      });
+
       const todayKey = getTodayKey();
       const dayRecord = dailyOrdersObj[todayKey];
       if (!dayRecord || !Array.isArray(dayRecord.orders)) return usersArray;
@@ -905,7 +940,9 @@
               if (parsed && typeof parsed === 'object') {
                 let localOrders = {};
                 try { localOrders = JSON.parse(localStorage.getItem('bento_daily_orders')) || {}; } catch(e){}
+                localOrders = cleanupAutoAttOrders(localOrders);
                 currentDailyOrders = mergeDailyOrders(parsed, localOrders);
+                currentDailyOrders = cleanupAutoAttOrders(currentDailyOrders);
                 localStorage.setItem('bento_daily_orders', JSON.stringify(currentDailyOrders));
               }
             } catch(e) {}
@@ -950,6 +987,8 @@
 
       let localDailyOrders = {};
       try { localDailyOrders = JSON.parse(localStorage.getItem('bento_daily_orders')) || {}; } catch(e){}
+      localDailyOrders = cleanupAutoAttOrders(localDailyOrders);
+      localStorage.setItem('bento_daily_orders', JSON.stringify(localDailyOrders));
       applyDailyOrdersToPorteUsers(localDailyOrders, porteUsers);
 
       syncFromSupabase();
