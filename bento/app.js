@@ -525,11 +525,20 @@ function updateAndSaveDailyOrdersAndHistory() {
 
   const existingConfirmedAt = (dailyOrders[todayKey] && dailyOrders[todayKey].confirmedAt) ? dailyOrders[todayKey].confirmedAt : new Date().toLocaleString('ja-JP');
 
-  dailyOrders[todayKey] = {
-    status: 'CONFIRMED',
-    confirmedAt: existingConfirmedAt,
-    orders: currentOrders
-  };
+  if (currentOrders.length > 0) {
+    dailyOrders[todayKey] = {
+      status: 'CONFIRMED',
+      confirmedAt: existingConfirmedAt,
+      orders: currentOrders
+    };
+  } else {
+    dailyOrders[todayKey] = {
+      status: 'DRAFT',
+      confirmedAt: null,
+      orders: []
+    };
+    orderHistory = orderHistory.filter(h => h.dateKey !== todayKey);
+  }
 
   saveDailyOrders();
 
@@ -1150,44 +1159,14 @@ function unlockDailyOrder() {
 }
 
 function isTodayOrderConfirmed() {
-  const todayKey = getTodayKey();
-  return !!(dailyOrders[todayKey] && dailyOrders[todayKey].status === 'CONFIRMED');
+  return false;
 }
 
 function updateConfirmStatusUI() {
-  const todayKey = getTodayKey();
-  const isConfirmed = isTodayOrderConfirmed();
-  
   const statusEl = document.getElementById('summaryConfirmStatus');
   if (statusEl) {
-    statusEl.textContent = isConfirmed ? '確定済み 🔒' : '未確定 🔓';
-    statusEl.style.color = isConfirmed ? '#2b8a3e' : '#6c757d';
-  }
-
-  const btnTop = document.getElementById('confirmDailyOrderBtn');
-  if (btnTop) {
-    if (isConfirmed) {
-      btnTop.textContent = '✅ 本日注文確定済み (クリックで解除)';
-      btnTop.style.background = 'linear-gradient(135deg, #2b8a3e, #2b8a3e)';
-      btnTop.onclick = unlockDailyOrder;
-    } else {
-      btnTop.textContent = '🔒 本日の注文を確定して実績保存';
-      btnTop.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-      btnTop.onclick = confirmDailyOrder;
-    }
-  }
-
-  const btnCard = document.getElementById('confirmDailyOrderCardBtn');
-  if (btnCard) {
-    if (isConfirmed) {
-      btnCard.textContent = '✅ 確定済み (解除)';
-      btnCard.style.background = '#2b8a3e';
-      btnCard.onclick = unlockDailyOrder;
-    } else {
-      btnCard.textContent = '🔒 注文を確定';
-      btnCard.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-      btnCard.onclick = confirmDailyOrder;
-    }
+    statusEl.textContent = '自動保存中 ⚡';
+    statusEl.style.color = '#2b8a3e';
   }
 }
 
@@ -1696,11 +1675,6 @@ function renderStaffPickerList(searchQuery) {
 }
 
 window.selectStaffOrder = function(staffIdOrName) {
-  if (isTodayOrderConfirmed()) {
-    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「確定を解除」してください。', 'warning');
-    return;
-  }
-
   let userIndex = porteUsers.findIndex(u => u.id === staffIdOrName || u.name === staffIdOrName);
   if (userIndex < 0) {
     const userObj = {
@@ -1804,11 +1778,9 @@ function renderTodaysMenu() {
     }).join(' ');
     if (!userNamesHtml) userNamesHtml = '<span style="color:#adb5bd; font-size:0.85rem; white-space:nowrap !important;">(未選択)</span>';
 
-    const orderBtnHtml = isConfirmedToday
-      ? `<button type="button" class="btn btn-sm btn-outline" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap !important; opacity:0.6; cursor:not-allowed;" disabled title="本日の注文は確定済みです">🔒 確定済み</button>`
-      : (isSoldOut 
-          ? `<button type="button" class="btn btn-sm btn-outline" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap !important;" disabled>完売</button>`
-          : `<button type="button" class="btn btn-sm btn-pop" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap !important;" onclick="quickOrderBento('${item.id}')">注文登録 🍱</button>`);
+    const orderBtnHtml = isSoldOut 
+      ? `<button type="button" class="btn btn-sm btn-outline" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap !important;" disabled>完売</button>`
+      : `<button type="button" class="btn btn-sm btn-pop" style="padding:6px 14px; font-size:0.85rem; font-weight:800; white-space:nowrap !important;" onclick="quickOrderBento('${item.id}')">注文登録 🍱</button>`;
 
     tableHtml += `
       <tr style="border-bottom:1px solid #f1f3f5; background:${index % 2 === 0 ? '#fff' : '#fafafa'};">
@@ -1836,10 +1808,6 @@ function renderTodaysMenu() {
 }
 
 window.quickOrderBento = function(bentoId) {
-  if (isTodayOrderConfirmed()) {
-    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「本日注文確定済み (クリックで解除)」を押して確定を解除してください。', 'warning');
-    return;
-  }
   const item = bentoMaster.find(b => b.id === bentoId);
   if (!item || item.stock <= 0) {
     showToast('在庫がありません', 'info');
@@ -2246,11 +2214,6 @@ window.changeUserBentoCount = function(userIndex, countVal) {
 };
 
 window.assignUserBentoSlot = function(userIndex, slotIndex, newBentoId) {
-  if (isTodayOrderConfirmed()) {
-    showToast('⚠️ 本日の注文は確定済みです。変更する場合は「確定を解除」してください。', 'warning');
-    renderAll();
-    return;
-  }
   const user = porteUsers[userIndex];
   if (!user) return;
   normalizeUserData(user);

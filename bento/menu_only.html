@@ -701,11 +701,19 @@
 
       const existingConfirmedAt = (dailyOrders[todayKey] && dailyOrders[todayKey].confirmedAt) ? dailyOrders[todayKey].confirmedAt : new Date().toLocaleString('ja-JP');
 
-      dailyOrders[todayKey] = {
-        status: 'CONFIRMED',
-        confirmedAt: existingConfirmedAt,
-        orders: currentOrders
-      };
+      if (currentOrders.length > 0) {
+        dailyOrders[todayKey] = {
+          status: 'CONFIRMED',
+          confirmedAt: existingConfirmedAt,
+          orders: currentOrders
+        };
+      } else {
+        dailyOrders[todayKey] = {
+          status: 'DRAFT',
+          confirmedAt: null,
+          orders: []
+        };
+      }
 
       await saveDailyOrdersToSupabase(dailyOrders);
 
