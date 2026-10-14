@@ -501,11 +501,10 @@ function updateAndSaveDailyOrdersAndHistory() {
     }
   });
 
-  const existingStatus = (dailyOrders[todayKey] && dailyOrders[todayKey].status) ? dailyOrders[todayKey].status : 'DRAFT';
-  const existingConfirmedAt = (dailyOrders[todayKey] && dailyOrders[todayKey].confirmedAt) ? dailyOrders[todayKey].confirmedAt : null;
+  const existingConfirmedAt = (dailyOrders[todayKey] && dailyOrders[todayKey].confirmedAt) ? dailyOrders[todayKey].confirmedAt : new Date().toLocaleString('ja-JP');
 
   dailyOrders[todayKey] = {
-    status: existingStatus,
+    status: 'CONFIRMED',
     confirmedAt: existingConfirmedAt,
     orders: currentOrders
   };
@@ -2252,6 +2251,21 @@ window.assignUserBentoSlot = function(userIndex, slotIndex, newBentoId) {
       }
     }
   }
+
+  // 在庫の自動連動：旧選択の在庫を復元し、新選択の在庫を減算(FIFO)
+  if (oldBentoId) {
+    const oldBento = bentoMaster.find(b => b.id === oldBentoId);
+    if (oldBento) {
+      addBentoStockLot(oldBento, 1, getOffsetDateStr(7), 'RESTORED');
+    }
+  }
+  if (newBentoId) {
+    const newBento = bentoMaster.find(b => b.id === newBentoId);
+    if (newBento) {
+      deductBentoStockFIFO(newBento, 1);
+    }
+  }
+  saveMaster();
 
   user.selectedBentoIds[slotIndex] = newBentoId;
   user.selectedBentoId = user.selectedBentoIds[0] || '';
