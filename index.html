@@ -1496,13 +1496,35 @@ function updateAdmAH(){
   var eSch=(u&&u.scheduleEnd)?u.scheduleEnd:'16:00';
   var brk=(document.getElementById('adm-brk')?Number(document.getElementById('adm-brk').value):0);
   var stdHrs=Math.max(0, toMin(eSch)-toMin(sSch)-brk)/60;
-  
+
+  var wtAmVal=document.getElementById('adm-wt')?document.getElementById('adm-wt').value:'';
+  var wtPmVal=document.getElementById('adm-wtp')?document.getElementById('adm-wtp').value:'';
+  var isAmNone=(!wtAmVal || wtAmVal==='none' || wtAmVal==='なし');
+  var isPmNone=(wtPmVal==='none' || wtPmVal==='なし');
+
+  var autoHrs=stdHrs;
+  var autoDesc='(基本サービス提供時間)';
+  if(isAmNone && isPmNone){
+    autoHrs=0;
+    autoDesc='(作業実績なし)';
+  } else if(!isAmNone && isPmNone){
+    autoHrs=stdHrs/2;
+    autoDesc='(午前のみ・午後作業なし)';
+  } else if(isAmNone && !isPmNone){
+    autoHrs=stdHrs/2;
+    autoDesc='(午後のみ・午前作業なし)';
+  }
+
   var customAH=(ahInp&&ahInp.value!=='')?Number(ahInp.value):null;
-  var finalHrs=customAH!==null?customAH:stdHrs;
-  
+  var finalHrs=customAH!==null?customAH:autoHrs;
+
+  if(ahInp){
+    ahInp.placeholder = '自動算定: ' + (Math.round(autoHrs*100)/100) + 'h ' + autoDesc;
+  }
+
   var calcEl=document.getElementById('adm-h-calc');
   if(calcEl){
-    calcEl.textContent=isAbs?'-':(customAH!==null?'工賃算定: '+finalHrs.toFixed(2)+' 時間 (手動調整)' :'工賃算定: '+finalHrs.toFixed(2)+' 時間 (サービス提供時間)');
+    calcEl.textContent=isAbs?'-':(customAH!==null?'工賃算定: '+finalHrs.toFixed(2)+' 時間 (手動調整)' :'工賃算定: '+finalHrs.toFixed(2)+' 時間 '+autoDesc);
   }
 }
 async function openAttDailyM(uid, ds){
@@ -1608,7 +1630,7 @@ async function openAttDailyM(uid, ds){
       '    <div class="grid2">'+
       '      <div class="field">'+
       '        <label>作業(AM)</label>'+
-      '        <select id="adm-wt" style="width:100%">'+
+      '        <select id="adm-wt" style="width:100%" onchange="updateAdmAH()">'+
                  (function(){
                    var amId = (rep&&rep.workTypeId)?rep.workTypeId:(att?att.workTypeId:'');
                    if(!amId) amId = 'none';
@@ -1621,7 +1643,7 @@ async function openAttDailyM(uid, ds){
       '      </div>'+
       '      <div class="field">'+
       '        <label>作業(PM)</label>'+
-      '        <select id="adm-wtp" style="width:100%">'+
+      '        <select id="adm-wtp" style="width:100%" onchange="updateAdmAH()">'+
                  (function(){
                    var pmId = getPmId(rep, att);
                    return '<option value="none" '+(pmId==='none'||pmId==='なし'?'selected':'')+'>なし（作業なし・午前帰宅等）</option>'+
@@ -6406,36 +6428,66 @@ var KAIKIN_BONUS=Number(S.settings.kaikinBonus)||0; // 旧互換用、手当設�
 // 工賃計算: 基本はサービス提供時間（予定時間から休憩を差し引いた時間）。手動調整(actualHours)があればそれを優先
 function calcWage(r,user){
   function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
-  var totalH=0;
-  if(r.actualHours!==undefined && r.actualHours!==null && r.actualHours!==''){
-    totalH=Math.max(0, Number(r.actualHours));
-  } else {
-    var sSch=(user&&user.scheduleStart)?String(user.scheduleStart):(r.scheduleStart?String(r.scheduleStart):'10:00');
-    var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):(r.scheduleEnd?String(r.scheduleEnd):'16:00');
-    var brk=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?Number(r.breakMin):60;
-    var rawMin=Math.max(0, toMin(eSch)-toMin(sSch)-brk);
-    totalH=rawMin/60;
-  }
+  var sSch=(user&&user.scheduleStart)?String(user.scheduleStart):(r.scheduleStart?String(r.scheduleStart):'10:00');
+  var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):(r.scheduleEnd?String(r.scheduleEnd):'16:00');
+  var brk=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?Number(r.breakMin):60;
+  var rawMin=Math.max(0, toMin(eSch)-toMin(sSch)-brk);
+  var baseH=rawMin/60;
+
+  var hasManualAH=(r.actualHours!==undefined && r.actualHours!==null && r.actualHours!=='');
+  var totalH=hasManualAH ? Math.max(0, Number(r.actualHours)) : baseH;
+
   var amId=r.workTypeId||'';
   var pmId=(r.workTypeIdPm!==undefined&&r.workTypeIdPm!==null&&r.workTypeIdPm!=='')?r.workTypeIdPm:(r.workTypeId||'');
-  var wtAm=amId?S.workTypes.find(function(w){return String(w.id)===String(amId);}):null;
-  var wtPm=(pmId&&pmId!=='none'&&pmId!=='なし')?S.workTypes.find(function(w){return String(w.id)===String(pmId);}):null;
-  if(!wtAm&&!wtPm&&S.workTypes.length>0){wtAm=S.workTypes[0];wtPm=S.workTypes[0];}
-  else if(!wtAm&&wtPm){wtAm=wtPm;}
-  else if(wtAm&&!wtPm&&pmId!=='none'&&pmId!=='なし'){wtPm=wtAm;}
-  if(!wtAm&&S.workTypes.length>0){wtAm=S.workTypes[0];}
-  if(!wtAm||(wtPm&&wtAm.id===wtPm.id)||(!wtPm&&(pmId==='none'||pmId==='なし'))){
-    var wt=wtAm||wtPm;
-    var rt=wt?Number(wt.rate):0;
-    var nm=wt?wt.name:'軽作業';
-    return{h:totalH,wage:totalH*rt,items:[{name:nm,h:totalH,rate:rt,wage:totalH*rt}]};
+  var isAmNone=(!amId || amId==='none' || amId==='なし');
+  var isPmNone=(pmId==='none' || pmId==='なし');
+
+  var wtAm=(!isAmNone)?S.workTypes.find(function(w){return String(w.id)===String(amId);}):null;
+  var wtPm=(!isPmNone)?S.workTypes.find(function(w){return String(w.id)===String(pmId);}):null;
+
+  if(!isAmNone && !wtAm && S.workTypes.length>0) wtAm=S.workTypes[0];
+  if(!isPmNone && !wtPm && S.workTypes.length>0) wtPm=S.workTypes[0];
+
+  // パターン1: 両方「なし」（作業実績なし）
+  if(isAmNone && isPmNone){
+    return {h: hasManualAH ? totalH : 0, wage: 0, items: []};
   }
-  var halfH=totalH/2;
-  var rtAm=Number(wtAm.rate)||0,rtPm=Number(wtPm.rate)||0;
-  var items=[];
-  if(halfH>0)items.push({name:wtAm.name,h:halfH,rate:rtAm,wage:halfH*rtAm});
-  if(halfH>0)items.push({name:wtPm.name,h:halfH,rate:rtPm,wage:halfH*rtPm});
-  return{h:totalH,wage:halfH*rtAm+halfH*rtPm,items:items};
+
+  // パターン2: 午前のみ作業（午後「なし」）
+  if(!isAmNone && isPmNone){
+    var effH = hasManualAH ? totalH : (baseH / 2);
+    var wt = wtAm || (S.workTypes.length>0 ? S.workTypes[0] : {name:'軽作業',rate:0});
+    var rt = Number(wt.rate) || 0;
+    return {h: effH, wage: effH * rt, items: [{name: wt.name, h: effH, rate: rt, wage: effH * rt}]};
+  }
+
+  // パターン3: 午後のみ作業（午前「なし」）
+  if(isAmNone && !isPmNone){
+    var effH = hasManualAH ? totalH : (baseH / 2);
+    var wt = wtPm || (S.workTypes.length>0 ? S.workTypes[0] : {name:'軽作業',rate:0});
+    var rt = Number(wt.rate) || 0;
+    return {h: effH, wage: effH * rt, items: [{name: wt.name, h: effH, rate: rt, wage: effH * rt}]};
+  }
+
+  // パターン4: 午前・午後ともに作業あり
+  if(!wtAm && !wtPm && S.workTypes.length>0){ wtAm=S.workTypes[0]; wtPm=S.workTypes[0]; }
+  else if(!wtAm && wtPm) wtAm=wtPm;
+  else if(wtAm && !wtPm) wtPm=wtAm;
+  if(!wtAm && S.workTypes.length>0) wtAm=S.workTypes[0];
+
+  if(!wtAm || !wtPm || String(wtAm.id)===String(wtPm.id)){
+    var wt = wtAm || wtPm;
+    var rt = wt ? Number(wt.rate) : 0;
+    var nm = wt ? wt.name : '軽作業';
+    return {h: totalH, wage: totalH * rt, items: [{name: nm, h: totalH, rate: rt, wage: totalH * rt}]};
+  }
+
+  var halfH = totalH / 2;
+  var rtAm = Number(wtAm.rate)||0, rtPm = Number(wtPm.rate)||0;
+  var items = [];
+  if(halfH > 0) items.push({name: wtAm.name, h: halfH, rate: rtAm, wage: halfH * rtAm});
+  if(halfH > 0) items.push({name: wtPm.name, h: halfH, rate: rtPm, wage: halfH * rtPm});
+  return {h: totalH, wage: halfH * rtAm + halfH * rtPm, items: items};
 }
 
 async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var attRes=await Promise.all([cachedGas('getAttendance',wM),cachedGas('getClosedDays',wM)]);var att=attRes[0],closedDays=attRes[1]||[];var bentoPrice=Number(S.settings.bentoPrice)||100;var data=S.users.map(function(u){
@@ -6971,12 +7023,47 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
     var r = dayInfo.rec || {};
     var st = r.status || (dayInfo.isClosed ? '休館日' : (dayInfo.isSch ? '予定' : '-'));
     var isAtt = ['出席','遅刻','早退'].indexOf(st) >= 0;
-    var stdH = 0;
+
+    // 基本サービス時間（規定の予定提供時間。短縮や半日作業にかかわらず基本時間は保持）
+    var baseH = 0;
+    var suggestedH = 0;
+    var workNoteTag = '';
     if(isAtt){
-      var w = calcWage(r, u);
-      stdH = w.h;
+      function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
+      var sSch = (u && u.scheduleStart) ? String(u.scheduleStart) : (r.scheduleStart ? String(r.scheduleStart) : '10:00');
+      var eSch = (u && u.scheduleEnd) ? String(u.scheduleEnd) : (r.scheduleEnd ? String(r.scheduleEnd) : '16:00');
+      var brk = (r.breakMin !== undefined && r.breakMin !== null && r.breakMin !== '') ? Number(r.breakMin) : ((u && u.breakMin !== undefined) ? Number(u.breakMin) : 60);
+      baseH = Math.max(0, toMin(eSch) - toMin(sSch) - brk) / 60;
+
+      var amId = r.workTypeId || '';
+      var pmId = (r.workTypeIdPm !== undefined && r.workTypeIdPm !== null && r.workTypeIdPm !== '') ? r.workTypeIdPm : (r.workTypeId || '');
+      var isAmNone = (!amId || amId === 'none' || amId === 'なし');
+      var isPmNone = (pmId === 'none' || pmId === 'なし');
+
+      if(isAmNone && isPmNone){
+        suggestedH = 0;
+        workNoteTag = '<span style="font-size:10px;color:#c62828;display:block">（作業なし）</span>';
+      } else if(!isAmNone && isPmNone){
+        suggestedH = baseH / 2;
+        workNoteTag = '<span style="font-size:10px;color:#e65100;display:block">（午前のみ・午後なし）</span>';
+      } else if(isAmNone && !isPmNone){
+        suggestedH = baseH / 2;
+        workNoteTag = '<span style="font-size:10px;color:#e65100;display:block">（午後のみ・午前なし）</span>';
+      } else {
+        suggestedH = baseH;
+      }
     }
-    var curAH = (r.actualHours != null && r.actualHours !== '') ? r.actualHours : '';
+
+    // 工賃算定時間（調整）:
+    // 手動入力値があればそれを優先。未入力でも作業半日（午後なし/午前なし等）で削られた場合は、ひとまずその削った時間（suggestedH）を自動記入してわかりやすく表示する
+    var curAH = '';
+    if(r.actualHours != null && r.actualHours !== ''){
+      curAH = r.actualHours;
+    } else if(isAtt && suggestedH < baseH){
+      curAH = Math.round(suggestedH * 100) / 100;
+    }
+
+    var phText = isAtt ? (Math.round(suggestedH * 100) / 100) : '−';
     var curBonus = r.dailyBonus || 0;
     var curTrans = (r.transportationAllowance != null && r.transportationAllowance !== '') ? r.transportationAllowance : (u.transportationAllowance || 0);
 
@@ -6984,10 +7071,10 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
 
     h += '<tr style="background:' + rowBg + '">' +
       '<td style="font-weight:700">' + dayInfo.day + '日 (' + dayInfo.dwj + ')</td>' +
-      '<td><span style="font-weight:700;color:' + (statusColor[st] || '#555') + '">' + st + '</span></td>' +
-      '<td>' + (isAtt ? stdH.toFixed(1) + 'h' : '−') + '</td>' +
+      '<td><span style="font-weight:700;color:' + (statusColor[st] || '#555') + '">' + st + '</span>' + workNoteTag + '</td>' +
+      '<td>' + (isAtt ? baseH.toFixed(1) + 'h' : '−') + '</td>' +
       '<td>' +
-        '<input type="number" step="0.5" id="adj-ah-' + ds + '" value="' + curAH + '" placeholder="' + (isAtt ? stdH.toFixed(1) : '−') + '" style="width:65px;text-align:right;padding:2px 4px;border:1px solid #ccc;border-radius:4px" ' + (!isAtt ? 'disabled' : '') + '> h' +
+        '<input type="number" step="any" id="adj-ah-' + ds + '" value="' + curAH + '" placeholder="' + phText + '" style="width:65px;text-align:right;padding:2px 4px;border:1px solid #ccc;border-radius:4px" ' + (!isAtt ? 'disabled' : '') + '> h' +
       '</td>' +
       '<td>' +
         '¥ <input type="number" id="adj-b-' + ds + '" value="' + (curBonus || '') + '" placeholder="0" style="width:75px;text-align:right;padding:2px 4px;border:1px solid #ccc;border-radius:4px" ' + (!isAtt ? 'disabled' : '') + '>' +

@@ -740,22 +740,48 @@ function _calcNetH(rec,user){
   var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):(rec.scheduleEnd?String(rec.scheduleEnd):'16:00');
   var brk=(rec.breakMin!==undefined&&rec.breakMin!==null&&rec.breakMin!=='')?Number(rec.breakMin):60;
   var rawMin=Math.max(0, toMin(eSch)-toMin(sSch)-brk);
-  return rawMin/60;
+  var baseH=rawMin/60;
+
+  var amId = rec.workTypeId || '';
+  var pmId = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && rec.workTypeIdPm!=='') ? rec.workTypeIdPm : (rec.workTypeId || '');
+  var isAmNone = (!amId || amId==='none' || amId==='なし');
+  var isPmNone = (pmId==='none' || pmId==='なし');
+
+  if(isAmNone && isPmNone) return 0;
+  if((!isAmNone && isPmNone) || (isAmNone && !isPmNone)) return baseH / 2;
+  return baseH;
 }
 function _findWt(wts,amId,pmId){
   var wtAm=null,wtPm=null;
+  var isAmNone=(!amId || amId==='none' || amId==='なし');
+  var isPmNone=(pmId==='none' || pmId==='なし');
   if(Array.isArray(wts)){
-    for(var w=0;w<wts.length;w++){if(String(wts[w].id)===String(amId))wtAm=wts[w];if(String(wts[w].id)===String(pmId))wtPm=wts[w];}
+    for(var w=0;w<wts.length;w++){
+      if(!isAmNone && String(wts[w].id)===String(amId)) wtAm=wts[w];
+      if(!isPmNone && String(wts[w].id)===String(pmId)) wtPm=wts[w];
+    }
   }
-  if(!wtAm&&!wtPm&&wts&&wts.length>0){wtAm=wts[0];wtPm=wts[0];}
-  else if(!wtAm&&wtPm)wtAm=wtPm;
-  else if(wtAm&&!wtPm&&pmId!=='none'&&pmId!=='なし')wtPm=wtAm;
-  return{am:wtAm,pm:wtPm};
+  if(!isAmNone && !wtAm && wts && wts.length>0) wtAm=wts[0];
+  if(!isPmNone && !wtPm && wts && wts.length>0) wtPm=wts[0];
+  return{am:wtAm,pm:wtPm,isAmNone:isAmNone,isPmNone:isPmNone};
 }
 function _calcRecWage(rec,wts,user){
   var netH=_calcNetH(rec,user);if(netH<=0)return{netH:0,wage:0};
   var pmVal = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && rec.workTypeIdPm!=='') ? rec.workTypeIdPm : rec.workTypeId||'';
   var wt=_findWt(wts,rec.workTypeId||'',pmVal);
+  if(wt.isAmNone && wt.isPmNone) return {netH:netH, wage:0};
+  if(!wt.isAmNone && wt.isPmNone){
+    var rt = wt.am ? Number(wt.am.rate)||0 : 0;
+    return {netH:netH, wage:netH*rt};
+  }
+  if(wt.isAmNone && !wt.isPmNone){
+    var rt = wt.pm ? Number(wt.pm.rate)||0 : 0;
+    return {netH:netH, wage:netH*rt};
+  }
+  if(!wt.am && !wt.pm && wts && wts.length>0){ wt.am=wts[0]; wt.pm=wts[0]; }
+  else if(!wt.am && wt.pm) wt.am=wt.pm;
+  else if(wt.am && !wt.pm) wt.pm=wt.am;
+
   if(!wt.am||!wt.pm||String(wt.am.id)===String(wt.pm.id)){
     var targetWt=wt.am||wt.pm;
     return{netH:netH,wage:netH*(targetWt?Number(targetWt.rate):0)};
