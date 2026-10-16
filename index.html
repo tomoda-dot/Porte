@@ -5254,7 +5254,8 @@ function renderAttMonthlyTbl(){
       if(['出席','遅刻','早退','予定'].indexOf(status)>=0){
         var sTime=r.startTime||user.scheduleStart||'';
         var eTime=r.endTime||user.scheduleEnd||'';
-        var brkMin=Number(r.breakMin)||0;
+        var defBrk=(user&&user.breakMin!==undefined&&user.breakMin!==null&&user.breakMin!=='')?Number(user.breakMin):60;
+        var brkMin=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?Number(r.breakMin):defBrk;
         var brkMark=brkMin>0?'<span title="休憩'+brkMin+'分" style="font-size:10px;margin-left:3px;opacity:.7">☕</span>':'';
         timeDisp=sTime+'〜'+eTime+brkMark;
       }

@@ -218,7 +218,9 @@ async function _del(table,id){var r=await supabase.from(table).delete().eq('id',
 async function _upsertByUserDate(table,obj,idPrefix){
   var r=await supabase.from(table).select('*').eq('userId',obj.userId).eq('date',obj.date);
   if(r.data&&r.data.length>0){
-    obj.id=r.data[0].id;
+    var validId=null;
+    for(var vi=0;vi<r.data.length;vi++){if(r.data[vi].id){validId=r.data[vi].id;break;}}
+    obj.id=validId||_genId(idPrefix);
     if(table==='出欠'){
       for(var i=0;i<r.data.length;i++){
         var existingRow=r.data[i];
@@ -233,10 +235,9 @@ async function _upsertByUserDate(table,obj,idPrefix){
           }
         }
       }
-      if(r.data.length>1){
-        for(var d=1;d<r.data.length;d++){
-          _del(table,r.data[d].id).catch(function(){});
-        }
+      if(r.data.length>1||!validId){
+        await supabase.from(table).delete().eq('userId',obj.userId).eq('date',obj.date).catch(function(){});
+        return _add(table,obj);
       }
     }
     return _update(table,obj);
