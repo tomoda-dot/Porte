@@ -284,10 +284,11 @@ var getBentoCountValue=function(val){
 };
 var userName=function(id){return(S.users.find(function(u){return String(u.id)===String(id);})||{}).name||'?';};
 var wtName=function(id){if(!id)return'-';if(id==='none'||id==='なし')return'なし';return(S.workTypes.find(function(w){return String(w.id)===String(id);})||{}).name||String(id);};
-var getPmId=function(rep,att){
+var getPmId=function(rep,att,user){
   var val=(rep&&rep.workTypeIdPm!==undefined&&rep.workTypeIdPm!==null)?rep.workTypeIdPm:(att&&att.workTypeIdPm!==undefined&&att.workTypeIdPm!==null?att.workTypeIdPm:undefined);
   if(val===undefined||val===null||val===''){
-    var amVal=(rep&&rep.workTypeId)?rep.workTypeId:(att?att.workTypeId:'');
+    if(user&&user.workTypeIdPm) return user.workTypeIdPm;
+    var amVal=(rep&&rep.workTypeId)?rep.workTypeId:(att?att.workTypeId:(user&&user.workTypeId?user.workTypeId:''));
     return(amVal&&amVal!=='none'&&amVal!=='なし')?amVal:'none';
   }
   if(val==='none'||val==='なし')return'none';
@@ -1364,9 +1365,10 @@ async function openCalAttM(uid, ds){
     var results=await Promise.all([cachedGas('getAttendanceByDate',ds),cachedGas('getDailyByDate',ds),cachedGas('getTempByDate',ds)]);
     var atts=results[0],dailies=results[1],tempUsers=results[2]||[];
     var att=atts.find(function(a){return String(a.userId)===String(uid);})||{userId:uid,date:ds,status:'予定',startTime:'',endTime:'',bento:'',pickup:'',notes:''};
-    var dWt=S.workTypes.find(function(w){return w.name==='軽作業';})||S.workTypes[0];
-    var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',content:'',mood:'普通',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
+    var dWt=(u&&u.workTypeId)?(S.workTypes.find(function(w){return String(w.id)===String(u.workTypeId);})||{id:u.workTypeId}):(S.workTypes.find(function(w){return w.name==='軽作業';})||S.workTypes[0]);
+    var dWtPm=(u&&u.workTypeIdPm)?u.workTypeIdPm:(dWt?dWt.id:'');
+    var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',workTypeIdPm:dWtPm,content:'',mood:'普通',notes:''};
     if(u){
       if(!att.bento)att.bento=u.bento||'なし';
       if(!att.pickup)att.pickup=u.pickup||'なし';
@@ -1392,7 +1394,7 @@ async function openCalAttM(uid, ds){
       '</select></div></div>'+
       '<div class="field"><label>工賃算定時間（調整） <span style="font-weight:normal;font-size:11px;color:var(--sub)">※早帰り・延長時に指定</span></label><input type="number" step="0.1" min="0" max="24" id="adm-ah" value="'+(att.actualHours!=null?att.actualHours:'')+'" placeholder="自動算定 (サービス提供時間)" style="width:100%" onchange="updateAdmAH()" oninput="updateAdmAH()"></div>'+
       '<div class="field"><label>備考（変更理由）</label><textarea id="adm-an" rows="2" style="width:100%" placeholder="変更理由や連絡事項を記入...">'+esc(att.notes||'')+'</textarea></div>'+
-      '<div style="display:none"><select id="adm-brk"><option value="'+((att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?att.breakMin:60)+'"></option></select><select id="adm-wt"><option value="'+(rep&&rep.workTypeId?rep.workTypeId:(att&&att.workTypeId?att.workTypeId:(dWt?dWt.id:'')))+'"></option></select><select id="adm-wtp"><option value="'+getPmId(rep,att)+'"></option></select><textarea id="adm-content">'+esc(rep.content||'')+'</textarea><select id="adm-m"><option>'+esc(rep.mood||'普通')+'</option></select><textarea id="adm-dn">'+esc(rep.notes||'')+'</textarea></div>'+
+      '<div style="display:none"><select id="adm-brk"><option value="'+((att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?att.breakMin:60)+'"></option></select><select id="adm-wt"><option value="'+(rep&&rep.workTypeId?rep.workTypeId:(att&&att.workTypeId?att.workTypeId:(dWt?dWt.id:'')))+'"></option></select><select id="adm-wtp"><option value="'+getPmId(rep,att,u)+'"></option></select><textarea id="adm-content">'+esc(rep.content||'')+'</textarea><select id="adm-m"><option>'+esc(rep.mood||'普通')+'</option></select><textarea id="adm-dn">'+esc(rep.notes||'')+'</textarea></div>'+
       '<div style="font-size:11px;color:var(--sub);text-align:right;margin-top:4px" id="adm-h-calc"></div>'+
       '<div class="btns" style="margin-top:14px;border-top:1px solid var(--bdr);padding-top:14px;display:flex;justify-content:space-between;align-items:center">'+
       '  <button style="background:#c62828;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer" onclick="deleteCalAtt(\''+uid+'\',\''+ds+'\')">🗑️ 削除</button>'+
@@ -1530,9 +1532,10 @@ async function openAttDailyM(uid, ds){
     var atts=results[0];
     var dailies=results[1];
     var att=atts.find(function(a){return String(a.userId)===String(uid);})||{userId:uid,date:ds,status:'出席',startTime:'',endTime:'',bento:'',pickup:'',notes:''};
-    var dWt=S.workTypes.find(function(w){return w.name==='軽作業';})||S.workTypes[0];
-    var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',content:'',mood:'普通',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
+    var dWt=(u&&u.workTypeId)?(S.workTypes.find(function(w){return String(w.id)===String(u.workTypeId);})||{id:u.workTypeId}):(S.workTypes.find(function(w){return w.name==='軽作業';})||S.workTypes[0]);
+    var dWtPm=(u&&u.workTypeIdPm)?u.workTypeIdPm:(dWt?dWt.id:'');
+    var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',workTypeIdPm:dWtPm,content:'',mood:'普通',notes:''};
     if(u){
       if(!att.bento)att.bento=u.bento||'なし';
       if(!att.pickup)att.pickup=u.pickup||'なし';
@@ -1627,8 +1630,8 @@ async function openAttDailyM(uid, ds){
       '        <label>作業(AM)</label>'+
       '        <select id="adm-wt" style="width:100%" onchange="updateAdmAH()">'+
                  (function(){
-                   var amId = (rep&&rep.workTypeId)?rep.workTypeId:(att?att.workTypeId:'');
-                   if(!amId) amId = 'none';
+                   var amId = (rep&&rep.workTypeId)?rep.workTypeId:(att&&att.workTypeId?att.workTypeId:(u&&u.workTypeId?u.workTypeId:''));
+                   if(!amId) amId = dWt ? dWt.id : 'none';
                    return '<option value="none" '+(amId==='none'||amId==='なし'?'selected':'')+'>なし（作業なし・午前帰宅等）</option>'+
                    S.workTypes.map(function(w){
                      return'<option value="'+w.id+'"'+(amId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';
@@ -1640,8 +1643,8 @@ async function openAttDailyM(uid, ds){
       '        <label>作業(PM)</label>'+
       '        <select id="adm-wtp" style="width:100%" onchange="updateAdmAH()">'+
                  (function(){
-                   var pmId = getPmId(rep, att);
-                   return '<option value="none" '+(pmId==='none'||pmId==='なし'?'selected':'')+'>なし（作業なし・午前帰宅等）</option>'+
+                   var pmId = getPmId(rep, att, u);
+                   return '<option value="none" '+(pmId==='none'||pmId==='なし'?'selected':'')+'>なし（作業なし・午後帰宅等）</option>'+
                    S.workTypes.map(function(w){
                      return'<option value="'+w.id+'"'+(pmId===w.id?' selected':'')+'>'+esc(w.name)+'</option>';
                    }).join('');
@@ -2293,6 +2296,18 @@ function openUserModal(u, isTabSwitch){
     '</select></div></div>'+
     '<div class="grid2"><div class="field"><label>契約時間（開始） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cstart" value="'+(d.contractStart||'09:10')+'" style="width:100%"></div>'+
     '<div class="field"><label>契約時間（終了） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cend" value="'+(d.contractEnd||'16:30')+'" style="width:100%"></div></div>'+
+    '<div class="grid2" style="margin-top:8px">'+
+    '  <div class="field"><label>標準作業(AM) <span style="font-size:10px;color:var(--sub);font-weight:400">※日報初期値・昇給管理</span></label><select id="uf-wt" style="width:100%">'+
+    '    <option value=""'+(!d.workTypeId?' selected':'')+'>未設定（デフォルト：軽作業）</option>'+
+    '    <option value="none"'+(d.workTypeId==='none'||d.workTypeId==='なし'?' selected':'')+'>なし（午前作業なし）</option>'+
+         (S.workTypes||[]).map(function(w){return'<option value="'+esc(w.id)+'"'+(String(d.workTypeId)===String(w.id)?' selected':'')+'>'+esc(w.name)+' (¥'+Number(w.rate||0).toLocaleString()+'/h)</option>';}).join('')+
+    '  </select></div>'+
+    '  <div class="field"><label>標準作業(PM) <span style="font-size:10px;color:var(--sub);font-weight:400">※日報初期値・昇給管理</span></label><select id="uf-wtp" style="width:100%">'+
+    '    <option value=""'+(!d.workTypeIdPm?' selected':'')+'>未設定（AMと同じ / 軽作業）</option>'+
+    '    <option value="none"'+(d.workTypeIdPm==='none'||d.workTypeIdPm==='なし'?' selected':'')+'>なし（午後作業なし）</option>'+
+         (S.workTypes||[]).map(function(w){return'<option value="'+esc(w.id)+'"'+(String(d.workTypeIdPm)===String(w.id)?' selected':'')+'>'+esc(w.name)+' (¥'+Number(w.rate||0).toLocaleString()+'/h)</option>';}).join('')+
+    '  </select></div>'+
+    '</div>'+
     '<div class="grid3" style="margin-top:8px"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%">'+renderBentoOptions(d.bento)+'</select></div>'+
     '<div class="field"><label>お弁当支払方法</label><select id="uf-bento-pay" style="width:100%"><option value="工賃払い"'+(d.bentoPaymentMethod==='工賃払い'||!d.bentoPaymentMethod?' selected':'')+'>工賃払い</option><option value="当日"'+(d.bentoPaymentMethod==='当日'?' selected':'')+'>当日払い</option><option value="月末締め翌月払い"'+(d.bentoPaymentMethod==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option></select></div>'+
     '<div class="field"><label>送迎</label><select id="uf-pickup" style="width:100%">'+
@@ -3841,6 +3856,7 @@ function collectCurrentUserData(){
     enrollDate:'uf-enroll',endDate:'uf-edate',endReason:'uf-endreason',
     scheduleStart:'uf-tstart',scheduleEnd:'uf-tend',
     breakMin:'uf-brk',
+    workTypeId:'uf-wt',workTypeIdPm:'uf-wtp',
     contractStart:'uf-cstart',contractEnd:'uf-cend',
     bento:'uf-bento',bentoPaymentMethod:'uf-bento-pay',pickup:'uf-pickup',notes:'uf-notes',
     afterCarePlan:'uf-aftercare',afterCareOrg:'uf-afterorg',
@@ -3979,6 +3995,8 @@ async function saveUser(id){
     scheduleDays:hasDays?days.join(','):(existing.scheduleDays||''),
     scheduleStart:gv('uf-tstart',existing.scheduleStart||'10:00'),scheduleEnd:gv('uf-tend',existing.scheduleEnd||'16:00'),
     breakMin:gv('uf-brk',existing.breakMin!==undefined&&existing.breakMin!==null?existing.breakMin:'60'),
+    workTypeId:gv('uf-wt',existing.workTypeId||''),
+    workTypeIdPm:gv('uf-wtp',existing.workTypeIdPm||''),
     contractStart:gv('uf-cstart',existing.contractStart||'09:10'),contractEnd:gv('uf-cend',existing.contractEnd||'16:30'),
     bento:gv('uf-bento',existing.bento||'なし'),bentoPaymentMethod:gv('uf-bento-pay',existing.bentoPaymentMethod||'工賃払い'),pickup:gv('uf-pickup',existing.pickup||'なし'),
     transportationAllowance:Number(gv('uf-trans-allowance',existing.transportationAllowance||0))||0,

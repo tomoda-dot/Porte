@@ -294,6 +294,8 @@ async function gas(fn){
         if(u.contractStart===undefined||u.contractStart===null||u.contractStart==='') u.contractStart=_uSet['contractStart_'+u.id]||'09:10';
         if(u.contractEnd===undefined||u.contractEnd===null||u.contractEnd==='') u.contractEnd=_uSet['contractEnd_'+u.id]||'16:30';
         if(u.breakMin===undefined||u.breakMin===null||u.breakMin==='') u.breakMin=_uSet['breakMin_'+u.id]||'60';
+        if(u.workTypeId===undefined||u.workTypeId===null||u.workTypeId==='') u.workTypeId=_uSet['workTypeId_'+u.id]||'';
+        if(u.workTypeIdPm===undefined||u.workTypeIdPm===null||u.workTypeIdPm==='') u.workTypeIdPm=_uSet['workTypeIdPm_'+u.id]||'';
         if(!u.contacts && _uSet['userContacts_'+u.id]) u.contacts=_uSet['userContacts_'+u.id];
         if(!u.addresses && _uSet['userAddresses_'+u.id]) u.addresses=_uSet['userAddresses_'+u.id];
         if(!u.relatedOrgs && _uSet['userRelatedOrgs_'+u.id]) u.relatedOrgs=_uSet['userRelatedOrgs_'+u.id];
@@ -305,6 +307,8 @@ async function gas(fn){
       if(a1.contractStart)await _updateSetting('contractStart_'+a1.id,a1.contractStart);
       if(a1.contractEnd)await _updateSetting('contractEnd_'+a1.id,a1.contractEnd);
       if(a1.breakMin!==undefined)await _updateSetting('breakMin_'+a1.id,String(a1.breakMin));
+      if(a1.workTypeId!==undefined)await _updateSetting('workTypeId_'+a1.id,String(a1.workTypeId||''));
+      if(a1.workTypeIdPm!==undefined)await _updateSetting('workTypeIdPm_'+a1.id,String(a1.workTypeIdPm||''));
       if(a1.contacts!==undefined)await _updateSetting('userContacts_'+a1.id,typeof a1.contacts==='string'?a1.contacts:JSON.stringify(a1.contacts));
       if(a1.addresses!==undefined)await _updateSetting('userAddresses_'+a1.id,typeof a1.addresses==='string'?a1.addresses:JSON.stringify(a1.addresses));
       if(a1.relatedOrgs!==undefined)await _updateSetting('userRelatedOrgs_'+a1.id,typeof a1.relatedOrgs==='string'?a1.relatedOrgs:JSON.stringify(a1.relatedOrgs));
@@ -314,6 +318,8 @@ async function gas(fn){
       if(a1.contractStart)await _updateSetting('contractStart_'+a1.id,a1.contractStart);
       if(a1.contractEnd)await _updateSetting('contractEnd_'+a1.id,a1.contractEnd);
       if(a1.breakMin!==undefined)await _updateSetting('breakMin_'+a1.id,String(a1.breakMin));
+      if(a1.workTypeId!==undefined)await _updateSetting('workTypeId_'+a1.id,String(a1.workTypeId||''));
+      if(a1.workTypeIdPm!==undefined)await _updateSetting('workTypeIdPm_'+a1.id,String(a1.workTypeIdPm||''));
       if(a1.contacts!==undefined)await _updateSetting('userContacts_'+a1.id,typeof a1.contacts==='string'?a1.contacts:JSON.stringify(a1.contacts));
       if(a1.addresses!==undefined)await _updateSetting('userAddresses_'+a1.id,typeof a1.addresses==='string'?a1.addresses:JSON.stringify(a1.addresses));
       if(a1.relatedOrgs!==undefined)await _updateSetting('userRelatedOrgs_'+a1.id,typeof a1.relatedOrgs==='string'?a1.relatedOrgs:JSON.stringify(a1.relatedOrgs));
