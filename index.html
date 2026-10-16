@@ -7,17 +7,12 @@
 <title>就労継続支援B型 管理ソフト「Porte」</title>
 <script>
 (function() {
-  var APP_VER = '20260925_v12';
   try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('porte_ver', APP_VER);
-    }
-    if (typeof location !== 'undefined' && location.search.indexOf('v=' + APP_VER) < 0) {
-      var newSearch = location.search ? (location.search + '&v=' + APP_VER) : ('?v=' + APP_VER);
-      if (location.search.indexOf('v=') >= 0) {
-        newSearch = location.search.replace(/v=[^&]+/, 'v=' + APP_VER);
-      }
-      location.replace(location.pathname + newSearch + location.hash);
+    // 既存のブックマーク等で ?v=... が付いている場合はアドレスバーから綺麗に除去
+    if (typeof history !== 'undefined' && history.replaceState && location.search && location.search.indexOf('v=') >= 0) {
+      var cleanSearch = location.search.replace(/([?&])v=[^&]+(&|$)/, '$1').replace(/[?&]$/, '');
+      var cleanUrl = location.pathname + cleanSearch + location.hash;
+      history.replaceState(null, '', cleanUrl);
     }
   } catch(e) {}
 })();
@@ -146,10 +141,10 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-<script src="supabase-lib.js?v=20260925_v12"></script>
-<script src="supabase-config.js?v=20260925_v12"></script>
-<script src="kokuho-receipt-generator.js?v=20260925_v12"></script>
-<script src="supabase-adapter.js?v=20260925_v12"></script>
+<script src="supabase-lib.js?v=20261016"></script>
+<script src="supabase-config.js?v=20261016"></script>
+<script src="kokuho-receipt-generator.js?v=20261016"></script>
+<script src="supabase-adapter.js?v=20261016"></script>
 </head>
 <body>
 <div id="app" class="loading"><div style="font-size:36px">🏢</div><div class="spin" style="margin:12px auto"></div><div>システムを起動中...</div></div>
