@@ -755,6 +755,14 @@ function _calcNetH(rec,user){
   var isPmNone = (pmId==='none' || pmId==='なし');
 
   if(isAmNone && isPmNone) return 0;
+
+  var sMin = toMin(sSch), eMin = toMin(eSch);
+  var isAmOnlyUser = (eMin <= 12 * 60 + 30);
+  var isPmOnlyUser = (sMin >= 12 * 60 + 30);
+
+  if(isAmOnlyUser) return isAmNone ? 0 : baseH;
+  if(isPmOnlyUser) return isPmNone ? 0 : baseH;
+
   if((!isAmNone && isPmNone) || (isAmNone && !isPmNone)) return baseH / 2;
   return baseH;
 }

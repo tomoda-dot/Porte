@@ -1494,6 +1494,10 @@ function updateAdmAH(){
   var brk=(document.getElementById('adm-brk')?Number(document.getElementById('adm-brk').value):0);
   var stdHrs=Math.max(0, toMin(eSch)-toMin(sSch)-brk)/60;
 
+  var sMin=toMin(sSch), eMin=toMin(eSch);
+  var isAmOnlyUser=(eMin <= 12 * 60 + 30);
+  var isPmOnlyUser=(sMin >= 12 * 60 + 30);
+
   var wtAmVal=document.getElementById('adm-wt')?document.getElementById('adm-wt').value:'';
   var wtPmVal=document.getElementById('adm-wtp')?document.getElementById('adm-wtp').value:'';
   var isAmNone=(!wtAmVal || wtAmVal==='none' || wtAmVal==='なし');
@@ -1504,6 +1508,12 @@ function updateAdmAH(){
   if(isAmNone && isPmNone){
     autoHrs=0;
     autoDesc='(作業実績なし)';
+  } else if(isAmOnlyUser){
+    if(isAmNone){ autoHrs=0; autoDesc='(作業実績なし)'; }
+    else { autoHrs=stdHrs; autoDesc='(基本サービス提供時間)'; }
+  } else if(isPmOnlyUser){
+    if(isPmNone){ autoHrs=0; autoDesc='(作業実績なし)'; }
+    else { autoHrs=stdHrs; autoDesc='(基本サービス提供時間)'; }
   } else if(!isAmNone && isPmNone){
     autoHrs=stdHrs/2;
     autoDesc='(午前のみ・午後作業なし)';
@@ -6462,12 +6472,36 @@ function calcWage(r,user){
   if(!isAmNone && !wtAm && S.workTypes.length>0) wtAm=S.workTypes[0];
   if(!isPmNone && !wtPm && S.workTypes.length>0) wtPm=S.workTypes[0];
 
+  var sMin = toMin(sSch), eMin = toMin(eSch);
+  var isAmOnlyUser = (eMin <= 12 * 60 + 30);
+  var isPmOnlyUser = (sMin >= 12 * 60 + 30);
+
   // パターン1: 両方「なし」（作業実績なし）
   if(isAmNone && isPmNone){
     return {h: hasManualAH ? totalH : 0, wage: 0, items: []};
   }
 
-  // パターン2: 午前のみ作業（午後「なし」）
+  // 午前のみ利用の利用者の場合（午後なしでも半減させず全額）
+  if(isAmOnlyUser){
+    if(isAmNone){
+      return {h: hasManualAH ? totalH : 0, wage: 0, items: []};
+    }
+    var wt = wtAm || (S.workTypes.length>0 ? S.workTypes[0] : {name:'軽作業',rate:0});
+    var rt = Number(wt.rate) || 0;
+    return {h: totalH, wage: totalH * rt, items: [{name: wt.name, h: totalH, rate: rt, wage: totalH * rt}]};
+  }
+
+  // 午後のみ利用の利用者の場合（午前なしでも半減させず全額）
+  if(isPmOnlyUser){
+    if(isPmNone){
+      return {h: hasManualAH ? totalH : 0, wage: 0, items: []};
+    }
+    var wt = wtPm || (S.workTypes.length>0 ? S.workTypes[0] : {name:'軽作業',rate:0});
+    var rt = Number(wt.rate) || 0;
+    return {h: totalH, wage: totalH * rt, items: [{name: wt.name, h: totalH, rate: rt, wage: totalH * rt}]};
+  }
+
+  // パターン2: 終日利用者が午前のみ作業（午後「なし」）
   if(!isAmNone && isPmNone){
     var effH = hasManualAH ? totalH : (baseH / 2);
     var wt = wtAm || (S.workTypes.length>0 ? S.workTypes[0] : {name:'軽作業',rate:0});
@@ -6475,7 +6509,7 @@ function calcWage(r,user){
     return {h: effH, wage: effH * rt, items: [{name: wt.name, h: effH, rate: rt, wage: effH * rt}]};
   }
 
-  // パターン3: 午後のみ作業（午前「なし」）
+  // パターン3: 終日利用者が午後のみ作業（午前「なし」）
   if(isAmNone && !isPmNone){
     var effH = hasManualAH ? totalH : (baseH / 2);
     var wt = wtPm || (S.workTypes.length>0 ? S.workTypes[0] : {name:'軽作業',rate:0});
@@ -7054,9 +7088,27 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
       var isAmNone = (!amId || amId === 'none' || amId === 'なし');
       var isPmNone = (pmId === 'none' || pmId === 'なし');
 
+      var sMin = toMin(sSch), eMin = toMin(eSch);
+      var isAmOnlyUser = (eMin <= 12 * 60 + 30);
+      var isPmOnlyUser = (sMin >= 12 * 60 + 30);
+
       if(isAmNone && isPmNone){
         suggestedH = 0;
         workNoteTag = '<span style="font-size:10px;color:#c62828;display:block">（作業なし）</span>';
+      } else if(isAmOnlyUser){
+        if(isAmNone){
+          suggestedH = 0;
+          workNoteTag = '<span style="font-size:10px;color:#c62828;display:block">（作業なし）</span>';
+        } else {
+          suggestedH = baseH;
+        }
+      } else if(isPmOnlyUser){
+        if(isPmNone){
+          suggestedH = 0;
+          workNoteTag = '<span style="font-size:10px;color:#c62828;display:block">（作業なし）</span>';
+        } else {
+          suggestedH = baseH;
+        }
       } else if(!isAmNone && isPmNone){
         suggestedH = baseH / 2;
         workNoteTag = '<span style="font-size:10px;color:#e65100;display:block">（午前のみ・午後なし）</span>';
