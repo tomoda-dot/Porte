@@ -7508,32 +7508,38 @@ function getFiscalYear(ym){var y=Number(ym.slice(0,4)),m=Number(ym.slice(5,7));r
 async function renderExport(c){
   var fy=getFiscalYear(eM);
   var tabs=[
+    // 📦 国保連請求・伝送 (0..1)
     ['kokuhoReceipt','📦','国保連レセプト(CSV)'],
+    // 📋 記録・集計 (1..6)
     ['serviceRecord','📝','提供実績記録票'],
     ['attendance','📋','勤怠一覧'],
     ['workSummary','🔧','作業別集計表'],
     ['utilization','📈','稼働率'],
+    ['proxyReceipt','📄','代理受領書'],
+    // 💰 工賃 (6..11)
     ['monthly','📊','月次工賃明細'],
     ['wageDetail','💰','工賃明細書（個人別）'],
-    ['annualDetail','📑','年度工賃支払明細書'],
+    ['receipt','🧾','工賃領収書'],
     ['envelopePrint','✉️','給料袋印刷（角8）'],
+    ['annualDetail','📑','年度工賃支払明細書'],
+    // 🧾 実費・請求領収 (11..14)
     ['bentoSummary','🍱','昼食利用集計表'],
     ['invoice','🧾','請求書'],
-    ['receipt','🧾','工賃領収書'],
-    ['bentoReceipt','🍱','昼食代領収書'],
-    ['proxyReceipt','📄','代理受領書']
+    ['bentoReceipt','🍱','昼食代領収書']
   ];
+
+  var groups=[
+    {id:'kokuho', label:'国保連請求・伝送', icon:'📦', items:tabs.slice(0,1)},
+    {id:'record', label:'記録・集計', icon:'📋', items:tabs.slice(1,6)},
+    {id:'wage',   label:'工賃', icon:'💰', items:tabs.slice(6,11)},
+    {id:'billing',label:'実費・請求領収', icon:'🧾', items:tabs.slice(11)}
+  ];
+
   if(!eT||eT==='menu'){
     // メニュー画面
-    var groups=[
-      {label:'📦 国保連請求・伝送',items:tabs.slice(0,1)},
-      {label:'📋 記録・集計',items:tabs.slice(1,5)},
-      {label:'💰 工賃',items:tabs.slice(5,10)},
-      {label:'🧾 請求・受領',items:tabs.slice(10)}
-    ];
     var menuH='<div class="hd-row"><h2>📄 帳票出力</h2></div>';
     groups.forEach(function(g){
-      menuH+='<div style="font-size:12px;color:var(--sub);font-weight:600;margin:40px 0 10px;padding-left:2px">'+g.label+'</div>';
+      menuH+='<div style="font-size:12px;color:var(--sub);font-weight:600;margin:40px 0 10px;padding-left:2px">'+g.icon+' '+g.label+'</div>';
       menuH+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">';
       g.items.forEach(function(t){
         menuH+='<button onclick="eT=\''+t[0]+'\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">'+t[1]+' '+t[2]+'</button>';
@@ -7554,14 +7560,6 @@ async function renderExport(c){
   if(eT==='incidents'){renderIncidents(c);return;}
   if(eT==='complaints'){renderComplaints(c);return;}
   if(eT==='training'){renderTraining(c);return;}
-
-  // 帳票グループ定義
-  var groups=[
-    {id:'kokuho', label:'国保連請求', icon:'📦', items:tabs.slice(0,1)},
-    {id:'record', label:'記録・集計', icon:'📋', items:tabs.slice(1,5)},
-    {id:'wage',   label:'工賃',     icon:'💰', items:tabs.slice(5,10)},
-    {id:'billing',label:'請求・受領', icon:'🧾', items:tabs.slice(10)}
-  ];
 
   var curGroup = groups.find(function(g){
     return g.items.some(function(item){ return item[0] === eT; });
