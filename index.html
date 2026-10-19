@@ -7573,7 +7573,8 @@ async function renderExport(c){
   // 大分類タブの生成
   var groupTabsH = groups.map(function(g){
     var isGrpActive = (exportNavMode !== 'all' && g.id === curGroup.id);
-    return '<button type="button" onclick="exportNavMode=\'category\';eT=\'' + g.items[0][0] + '\';renderExport(document.getElementById(\'content\'))" ' +
+    var targetET = isGrpActive ? eT : g.items[0][0];
+    return '<button type="button" onclick="exportNavMode=\'category\';eT=\'' + targetET + '\';renderExport(document.getElementById(\'content\'))" ' +
       'style="padding:5px 12px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s;' +
       (isGrpActive ? 'border:1.5px solid var(--pri);background:var(--pri);color:#fff;' : 'border:1px solid #d5cec5;background:#fff;color:#555;') + '" ' +
       'onmouseover="if(!' + isGrpActive + '){this.style.background=\'#f3eee8\';}" onmouseout="if(!' + isGrpActive + '){this.style.background=\'#fff\';}">' +
@@ -7708,7 +7709,16 @@ async function downloadKokuhoReceiptCSV(){
   }
 }
 
-async function loadE(){var fn=S.settings.facilityName||'事業所';try{
+var _loadESeq = 0;
+async function loadE(){
+  var mySeq = ++_loadESeq;
+  var myET = eT;
+  var myEM = eM;
+  var isCurrent = function(){
+    return (mySeq === _loadESeq) && (eT === myET);
+  };
+  var fn = S.settings.facilityName || '事業所';
+  try{
   if(eT==='kokuhoReceipt'){
     var fNum=S.settings.facilityNumber||'未設定';
     var stRatio=S.settings.staffRatio||'7.5:1';
@@ -7718,6 +7728,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var mealAdd=S.settings.mealAddition||'あり';
     var twStaff=S.settings.targetWageStaff||'なし';
 
+    if(!isCurrent()) return;
     document.getElementById('e-c').innerHTML=
       '<div class="card" style="max-width:760px;margin:0 auto;padding:24px">'+
       '<div class="card-hd"><span class="card-t" style="font-size:16px">📦 国保連伝送用レセプトCSV出力</span></div>'+
@@ -7785,6 +7796,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     showLoading('e-c','月次明細を集計中...');
     var attRes=await Promise.all([cachedGas('getAttendance',eM),cachedGas('getClosedDays',eM)]);var att=attRes[0],closedDays=attRes[1]||[];
+    if(!isCurrent()) return;
     var _useNew=getAllowances().filter(function(a){return a.enabled!==false;}).length>0;
     var d=S.users.map(function(u){
       var r=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
@@ -7800,6 +7812,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var grandBonus=d.reduce(function(s,x){return s+x.bonus;},0);
     var grandBento=d.reduce(function(s,x){return s+x.bd;},0);
     var grandTotal=d.reduce(function(s,x){return s+Math.round(x.total);},0);
+    if(!isCurrent()) return;
     document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">'+fmtMonth(eM)+' 工賃明細書</span></div><p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'　　手当設定準拠　　弁当代: ¥'+bentoPrice.toLocaleString()+'/食</p>'+
       '<table><thead><tr><th>No.</th><th>氏名</th><th>日数</th><th>時間</th><th style="text-align:right">工賃</th><th style="text-align:center">皆勤</th><th style="text-align:right">手当</th><th style="text-align:right">弁当代</th><th style="text-align:right">合計</th></tr></thead><tbody>'+
       d.map(function(x,i){return'<tr><td>'+(i+1)+'</td><td>'+esc(x.n)+'</td><td>'+x.d+'日</td><td>'+x.h.toFixed(1)+'h</td><td style="text-align:right">¥'+Math.round(x.w).toLocaleString()+'</td><td style="text-align:center">'+(x.kk?'🏆':'−')+'</td><td style="text-align:right">'+(x.bonus>0?'¥'+x.bonus.toLocaleString():'−')+'</td><td style="text-align:right;color:#c00">'+(x.bd>0?'-¥'+x.bd.toLocaleString():'−')+'</td><td style="text-align:right;font-weight:700">¥'+Math.round(x.total).toLocaleString()+'</td></tr>';}).join('')+
@@ -7810,6 +7823,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var fy2=selFY?Number(selFY.value):getFiscalYear(eM);
     showLoading('e-c','年度工賃を集計中（12ヶ月分）...');
     var data=await gas('getAnnualWageDetail',String(fy2));
+    if(!isCurrent()) return;
     var mLabels=['4月','5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月'];
     // 月合計行
     var mt=data.monthTotals;
@@ -7855,6 +7869,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
       tr+='<td style="text-align:right;font-weight:700">'+u.totalWage.toLocaleString()+'</td></tr>';
       return tr;
     }).join('');
+    if(!isCurrent()) return;
     document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">'+fy2+'年度 工賃支払明細書</span></div>'+
       '<p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'</p>'+
       '<div style="overflow:auto"><table style="font-size:12px;white-space:nowrap"><thead>'+hdr1+hdr2+hdr3+'</thead><tbody>'+totRow+uRows+'</tbody></table></div>';
@@ -7862,11 +7877,13 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     // 勤怠一覧
     showLoading('e-c','データを集計中...');
     var aData=await gas('getAttendanceList',eM);
+    if(!isCurrent()) return;
     var aList=aData.users;
     var aBentoPrice=aData.bentoPrice;
     function minToHM(m){var h=Math.floor(m/60);var mm=m%60;return h+':'+String(mm).padStart(2,'0');}
     var gDays=0,gWork=0,gBreak=0,gNet=0,gBonus=0,gWage=0,gBento=0,gTotal=0;
     aList.forEach(function(x){gDays+=x.days;gWork+=x.workMin;gBreak+=x.breakMin;gNet+=x.netMin;gBonus+=x.bonus;gWage+=x.wage;gBento+=x.bentoDed;gTotal+=x.total;});
+    if(!isCurrent()) return;
     document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">勤怠状況一覧（'+fmtMonth(eM)+'）</span></div>'+
       '<p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'　　弁当代: ¥'+aBentoPrice.toLocaleString()+'/食</p>'+
       '<div style="overflow:auto"><table style="font-size:12px;white-space:nowrap"><thead><tr>'+
@@ -7896,6 +7913,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     // 作業別集計表
     showLoading('e-c','データを集計中...');
     var ws=await gas('getWorkTypeSummary',eM);
+    if(!isCurrent()) return;
     var dim=ws.daysInMonth;
     // タブ切替
     var wsMode=window._wsMode||'wage';
@@ -7957,6 +7975,7 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     bodyHtml+='<td style="text-align:right">'+(wsMode==='wage'?gt2.toLocaleString():gt2.toFixed(2))+'</td>';
     bodyHtml+='<td style="text-align:right">'+ws.grandWorkCount+'</td>';
     bodyHtml+='<td style="text-align:right">'+(wsMode==='wage'?ga.toLocaleString():ga.toFixed(2))+'</td></tr>';
+    if(!isCurrent()) return;
     document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">作業別集計表（'+(wsMode==='wage'?'工賃':'稼働時間')+'）　'+fmtMonth(eM)+'</span></div>'+
       '<p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'</p>'+tabHtml+
       '<div style="overflow:auto"><table style="font-size:12px;white-space:nowrap;border-collapse:collapse"><thead>'+hdrD+hdrW+'</thead><tbody>'+bodyHtml+'</tbody></table></div>';
@@ -7965,9 +7984,11 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     if(!window._wdData||window._wdMonth!==eM){
       showLoading('e-c','データを集計中...');
       var wd=await gas('getWageDetailPerUser',eM);
+      if(!isCurrent()) return;
       window._wdData=wd;window._wdMonth=eM;window._wdFn=fn;
     }
     var wd=window._wdData;
+    if(!isCurrent()) return;
     if(wd.users.length===0){
       document.getElementById('e-c').innerHTML='<p style="color:var(--sub);text-align:center;padding:30px">この月の出勤データがありません</p>';
     } else {
@@ -7978,9 +7999,11 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     if(!window._wdData||window._wdMonth!==eM){
       showLoading('e-c','データを集計中...');
       var wd=await gas('getWageDetailPerUser',eM);
+      if(!isCurrent()) return;
       window._wdData=wd;window._wdMonth=eM;window._wdFn=fn;
     }
     var wd=window._wdData;
+    if(!isCurrent()) return;
     if(wd.users.length===0){
       document.getElementById('e-c').innerHTML='<p style="color:var(--sub);text-align:center;padding:30px">この月の出勤データがありません</p>';
     } else {
@@ -7991,9 +8014,11 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     if(!window._srData||window._srMonth!==eM){
       showLoading('e-c','データを集計中...');
       var sr=await gas('getServiceRecordData',eM);
+      if(!isCurrent()) return;
       window._srData=sr;window._srMonth=eM;
     }
     var sr=window._srData;
+    if(!isCurrent()) return;
     if(sr.users.length===0){
       document.getElementById('e-c').innerHTML='<p style="color:var(--sub);text-align:center;padding:30px">この月の出勤データがありません</p>';
     } else {
@@ -8002,10 +8027,12 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
   } else if(eT==='utilization'){
     showLoading('e-c','稼働率を集計中（15ヶ月分）...');
     var ud=await gas('getUtilizationData',eM);
+    if(!isCurrent()) return;
     renderUtilization(ud);
   } else if(eT==='bentoSummary'){
     showLoading('e-c','昼食利用データを集計中...');
     var att=await cachedGas('getAttendance',eM);
+    if(!isCurrent()) return;
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     var ym=eM.split('-');var yStr=ym[0];var mStr=parseInt(ym[1]);
     var fn=S.settings.facilityName||'事業所';
@@ -8102,25 +8129,36 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     h += '</tr></tfoot></table></div>';
     h += '</div>';
 
+    if(!isCurrent()) return;
     document.getElementById('e-c').innerHTML=h;
   } else if(eT==='invoice'||eT==='receipt'||eT==='bentoReceipt'||eT==='proxyReceipt'){
     var activeUsers=S.users.slice().sort(function(a,b){var ae=a.userStatus==='利用終了'?1:0;var be=b.userStatus==='利用終了'?1:0;return ae-be;});
+    var uid=window._eUid||'';
+    if(!uid && activeUsers.length > 0){
+      uid = activeUsers[0].id;
+      window._eUid = uid;
+    }
     var userSelHtml='<div class="no-print" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">';
     userSelHtml+='<select id="eU-sel" onchange="window._eUid=this.value;loadE()" style="padding:5px 10px;font-size:13px;border:1px solid #ccc;border-radius:6px">';
     userSelHtml+='<option value="">利用者を選択</option>';
     activeUsers.forEach(function(u){
       var lbl=esc(u.name)+(u.userStatus==='利用終了'?' (終了)':'');
-      userSelHtml+='<option value="'+u.id+'"'+(window._eUid===u.id?' selected':'')+'>'+lbl+'</option>';
+      userSelHtml+='<option value="'+u.id+'"'+(uid===u.id?' selected':'')+'>'+lbl+'</option>';
     });
     userSelHtml+='</select>';
     userSelHtml+='<button class="bp" onclick="window.print()" style="font-size:11px;padding:3px 10px">🖨 この利用者を印刷</button>';
     userSelHtml+='<button class="bg" onclick="printAllIRP()" style="font-size:11px;padding:3px 10px">🖨 全員分を印刷</button>';
     userSelHtml+='</div>';
-    var uid=window._eUid||'';
-    if(!uid){document.getElementById('e-c').innerHTML=userSelHtml+'<div style="text-align:center;padding:40px;color:var(--sub)">利用者を選択してください</div>';return;}
+
+    if(!uid){
+      if(!isCurrent()) return;
+      document.getElementById('e-c').innerHTML=userSelHtml+'<div style="text-align:center;padding:40px;color:var(--sub)">利用者を選択してください</div>';
+      return;
+    }
     showLoading('e-c','データを読み込み中...');
     var u=S.users.find(function(x){return x.id===uid;});
     var att=await cachedGas('getAttendance',eM);
+    if(!isCurrent()) return;
     var bentoPrice=Number(S.settings.bentoPrice)||100;
     var recs=att.filter(function(a){return String(a.userId)===uid&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
     var tW=0,tH=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
@@ -8156,6 +8194,8 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
     var compName=S.settings.companyName||'';
     var fType=S.settings.facilityType||'就労継続支援B型';
 
+    if(!isCurrent()) return;
+
     if(eT==='invoice'){
       document.getElementById('e-c').innerHTML=userSelHtml+renderOneInvoice(u,recs,bcNext,bdNext,bentoPrice,yStr,mStr,compName,fName,fNum,fType);
 
@@ -8179,12 +8219,14 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
       var rdY2=emM===12?emY+1:emY;var rdM2=emM===12?1:emM+1;
       var rdYM=rdY2+'-'+(rdM2<10?'0'+rdM2:rdM2);
       var rdClosed=[];try{rdClosed=await gas('getClosedDays',rdYM);}catch(e){}
+      if(!isCurrent()) return;
       var rdDt=new Date(rdY2,rdM2-1,15);
       while(rdDt.getDay()===0||rdDt.getDay()===6||rdClosed.indexOf(rdDt.toISOString().slice(0,10))>=0)rdDt.setDate(rdDt.getDate()+1);
       var defRY=rdDt.getFullYear();var defRM=rdDt.getMonth()+1;var defRD=rdDt.getDate();
 
       // 既存レコード取得
       var prRecs=[];try{prRecs=await gas('getProxyReceipts',serviceYM);}catch(e){}
+      if(!isCurrent()) return;
       var pr=null;for(var pi=0;pi<prRecs.length;pi++){if(prRecs[pi].userId===uid){pr=prRecs[pi];break;}}
 
       // copay解析(ユーザー情報から)
@@ -8249,10 +8291,13 @@ async function loadE(){var fn=S.settings.facilityName||'事業所';try{
       h+='<div class="no-print" style="display:flex;gap:8px;justify-content:center;margin:16px 0"><button class="bp" id="pr-save-btn" onclick="saveProxy()" style="padding:10px 36px;font-size:14px;font-weight:700">💾 保存</button></div>';
       if(pr){h+='<div class="no-print" style="text-align:center;font-size:11px;color:var(--sub)">✅ 保存済データを表示中</div>';}
       h+='</div>';
+      if(!isCurrent()) return;
       document.getElementById('e-c').innerHTML=userSelHtml+h;
     }
   }
-}catch(e){document.getElementById('e-c').innerHTML='失敗: '+e;}}
+}catch(e){
+  if(isCurrent()) document.getElementById('e-c').innerHTML='失敗: '+e;
+}}
 
 // ═══ 代理受領 計算・保存 ═══
 function renderOneInvoice(u,recs,bc,bd,bentoPrice,yStr,mStr,compName,fName,fNum,fType){
