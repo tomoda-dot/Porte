@@ -7258,7 +7258,7 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
         '<span style="font-size:16px;font-weight:700;color:var(--pri)">' + esc(u.name) + ' 様</span> ' +
         '<span style="font-size:12px;color:var(--sub)">（' + fmtMonth(adjM) + ' 時間・手当・交通費調整）</span>' +
       '</div>' +
-      '<button class="bp" onclick="saveUserWageAdjustments(\'' + u.id + '\')" style="font-size:14px;padding:8px 20px;font-weight:700">💾 調整内容を一括保存</button>' +
+      '<button class="bp" id="wage-adj-save-btn" onclick="saveUserWageAdjustments(\'' + u.id + '\')" style="font-size:14px;padding:8px 20px;font-weight:700">💾 調整内容を一括保存</button>' +
     '</div>' +
     '<p style="font-size:11px;color:var(--sub);margin-bottom:12px">※工賃算定時間（actualHours）、特別手当（dailyBonus）、交通費現金支給額（transportationAllowance）を日別に調整できます。</p>' +
     '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr style="background:#f5f0ea">' +
@@ -7319,18 +7319,15 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
       }
     }
 
-    // 工賃算定時間（調整）:
-    // 手動入力値があればそれを優先。未入力でも作業半日（午後なし/午前なし等）で削られた場合は、ひとまずその削った時間（suggestedH）を自動記入してわかりやすく表示する
-    var curAH = '';
-    if(r.actualHours != null && r.actualHours !== ''){
-      curAH = r.actualHours;
-    } else if(isAtt && suggestedH < baseH){
-      curAH = Math.round(suggestedH * 100) / 100;
-    }
-
+    // 工賃算定時間（調整）: 手動設定値がある場合はそれを表示
+    var hasManualAH = (r.actualHours !== undefined && r.actualHours !== null && r.actualHours !== '');
+    var curAH = hasManualAH ? r.actualHours : '';
     var phText = isAtt ? (Math.round(suggestedH * 100) / 100) : '−';
-    var curBonus = r.dailyBonus || 0;
+    var curBonus = r.dailyBonus || '';
     var curTrans = (r.transportationAllowance != null && r.transportationAllowance !== '') ? r.transportationAllowance : (u.transportationAllowance || 0);
+
+    var ahStyle = hasManualAH ? 'border:1.5px solid var(--pri);background:#eef7ee;font-weight:700;color:var(--pri);' : 'border:1px solid #ccc;background:#fff;';
+    var ahBadge = hasManualAH ? '<span style="font-size:9.5px;color:var(--pri);font-weight:700;display:block;line-height:1.2;margin-top:2px">●調整中</span>' : '';
 
     var rowBg = dayInfo.dwj === '日' ? '#fff0f0' : (dayInfo.dwj === '土' ? '#f0f8ff' : '#fff');
 
@@ -7339,7 +7336,7 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
       '<td><span style="font-weight:700;color:' + (statusColor[st] || '#555') + '">' + st + '</span>' + workNoteTag + '</td>' +
       '<td>' + (isAtt ? baseH.toFixed(1) + 'h' : '−') + '</td>' +
       '<td>' +
-        '<input type="number" step="any" id="adj-ah-' + ds + '" value="' + curAH + '" placeholder="' + phText + '" style="width:65px;text-align:right;padding:2px 4px;border:1px solid #ccc;border-radius:4px" ' + (!isAtt ? 'disabled' : '') + '> h' +
+        '<input type="number" step="any" id="adj-ah-' + ds + '" value="' + curAH + '" placeholder="' + phText + '" style="width:65px;text-align:right;padding:2px 4px;border-radius:4px;' + ahStyle + '" ' + (!isAtt ? 'disabled' : '') + '> h' + ahBadge +
       '</td>' +
       '<td>' +
         '¥ <input type="number" id="adj-b-' + ds + '" value="' + (curBonus || '') + '" placeholder="0" style="width:75px;text-align:right;padding:2px 4px;border:1px solid #ccc;border-radius:4px" ' + (!isAtt ? 'disabled' : '') + '>' +
@@ -7358,7 +7355,22 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
 async function saveUserWageAdjustments(userId){
   var u = S.users.find(function(x){ return String(x.id) === String(userId); });
   if(!u) return;
-  if(!lockUI()) return;
+  var btn = document.getElementById('wage-adj-save-btn');
+  if(!lockUI('工賃調整を保存中...')) return;
+  if(btn){
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+    btn.style.cursor = 'wait';
+    btn.innerHTML = '<span class="spin" style="display:inline-block;width:13px;height:13px;margin-right:6px;vertical-align:middle;border-width:2px"></span> 保存中...';
+  }
+  var resetBtn = function(){
+    if(btn){
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+      btn.innerHTML = '💾 調整内容を一括保存';
+    }
+  };
 
   try {
     var year = Number(adjM.split('-')[0]), month = Number(adjM.split('-')[1]);
@@ -7371,25 +7383,45 @@ async function saveUserWageAdjustments(userId){
       var ahInp = document.getElementById('adj-ah-' + ds);
       if(!ahInp || ahInp.disabled) continue;
 
-      var ahVal = ahInp.value !== '' ? Number(ahInp.value) : null;
+      var ahVal = (ahInp.value !== '' && !isNaN(Number(ahInp.value))) ? Number(ahInp.value) : null;
       var bonusVal = Number(document.getElementById('adj-b-' + ds).value) || 0;
       var transVal = Number(document.getElementById('adj-t-' + ds).value) || 0;
       var notesVal = document.getElementById('adj-n-' + ds).value;
 
       var existingRec = attList.find(function(a){ return String(a.userId) === String(u.id) && String(a.date) === ds; });
 
-      if(existingRec){
-        existingRec.actualHours = ahVal;
-        existingRec.dailyBonus = bonusVal;
-        existingRec.transportationAllowance = transVal;
-        existingRec.notes = notesVal;
-        await gas('upsertAttendance', existingRec);
-      }
+      var targetRec = existingRec ? Object.assign({}, existingRec) : {
+        userId: u.id,
+        date: ds,
+        status: '出席',
+        startTime: u.scheduleStart || '10:00',
+        endTime: u.scheduleEnd || '16:00',
+        breakMin: u.breakMin != null ? Number(u.breakMin) : 60,
+        workTypeId: u.workTypeId || '',
+        workTypeIdPm: u.workTypeIdPm || u.workTypeId || '',
+        bento: u.bento || 'なし',
+        pickup: u.pickup || 'なし'
+      };
+
+      targetRec.actualHours = ahVal;
+      targetRec.dailyBonus = bonusVal;
+      targetRec.transportationAllowance = transVal;
+      targetRec.notes = notesVal;
+      await gas('upsertAttendance', targetRec);
     }
     clearCache('getAttendance');
+    clearCache('getDaily');
+    clearCache('getAttendanceByDate');
+    clearCache('getDailyByDate');
+    S.calAtt = null;
     toast('✅ 調整内容を保存しました！');
-    loadWageAdjustments();
-  } catch(e) { await cAlert('保存失敗: ' + e); } finally { unlockUI(); }
+    await loadWageAdjustments();
+  } catch(e) {
+    await cAlert('保存失敗: ' + e);
+  } finally {
+    resetBtn();
+    unlockUI();
+  }
 }
 
 // ═══ 帳票 ═══

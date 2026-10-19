@@ -154,13 +154,27 @@ function _dedupAttendanceRows(rows){
   return result;
 }
 
-// 時刻フィールドをHH:mm形式にパディング＆時刻フィールド相互補完
+// 時刻フィールドをHH:mm形式にパディング＆時刻フィールド相互補完＆出欠調整メタデータ復元
 function _padTimes(row){
   if(row){
     if(!row.startTime && (row.in || row.clockIn)) row.startTime = row.in || row.clockIn;
     if(!row.endTime && (row.out || row.clockOut)) row.endTime = row.out || row.clockOut;
     if(!row.in && row.startTime) row.in = row.startTime;
     if(!row.out && row.endTime) row.out = row.endTime;
+
+    // 出欠レコードの工賃調整メタデータ（actualHours, dailyBonus, transportationAllowance）をnotesから復元
+    if(row.notes && typeof row.notes === 'string' && row.notes.indexOf('<!--ADJ:') >= 0){
+      var adjMatch = row.notes.match(/<!--ADJ:(.*?)-->/);
+      if(adjMatch){
+        try{
+          var adjObj = JSON.parse(adjMatch[1]);
+          if(adjObj.ah !== undefined) row.actualHours = adjObj.ah;
+          if(adjObj.b !== undefined) row.dailyBonus = adjObj.b;
+          if(adjObj.t !== undefined) row.transportationAllowance = adjObj.t;
+        }catch(e){}
+        row.notes = row.notes.replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
+      }
+    }
   }
   var timeFields=['startTime','endTime','scheduleStart','scheduleEnd','contractStart','contractEnd','departTime','arriveTime','in','out'];
   for(var i=0;i<timeFields.length;i++){
@@ -181,8 +195,27 @@ function _padTimes(row){
   return row;
 }
 
+// 出欠レコードの工賃調整メタデータ（actualHours, dailyBonus, transportationAllowance）をnotes末尾にエンコード
+function _encodeAttendanceAdj(obj){
+  if(!obj) return;
+  var hasAdj = (obj.actualHours !== undefined && obj.actualHours !== null && obj.actualHours !== '') ||
+               (obj.dailyBonus !== undefined && obj.dailyBonus !== null && Number(obj.dailyBonus) !== 0) ||
+               (obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0);
+  var rawNotes = String(obj.notes || '').replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
+  if(hasAdj){
+    var adjData = {};
+    if(obj.actualHours !== undefined && obj.actualHours !== null && obj.actualHours !== '') adjData.ah = Number(obj.actualHours);
+    if(obj.dailyBonus !== undefined && obj.dailyBonus !== null && Number(obj.dailyBonus) !== 0) adjData.b = Number(obj.dailyBonus);
+    if(obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0) adjData.t = Number(obj.transportationAllowance);
+    obj.notes = (rawNotes ? rawNotes + ' ' : '') + '<!--ADJ:' + JSON.stringify(adjData) + '-->';
+  } else {
+    obj.notes = rawNotes;
+  }
+}
+
 // 追加（不明カラム自動除去リトライ付き）
 async function _add(table,obj){
+  if(table==='出欠') _encodeAttendanceAdj(obj);
   var safe=await _filterCols(table,obj);
   for(var retry=0;retry<10;retry++){
     var r=await supabase.from(table).insert([safe]).select();
@@ -198,6 +231,7 @@ async function _add(table,obj){
 
 // 更新（不明カラム自動除去リトライ付き）
 async function _update(table,obj){
+  if(table==='出欠') _encodeAttendanceAdj(obj);
   var id=obj.id;var safe=await _filterCols(table,obj);
   for(var retry=0;retry<10;retry++){
     var r=await supabase.from(table).update(safe).eq('id',id).select();
@@ -217,6 +251,9 @@ async function _del(table,id){var r=await supabase.from(table).delete().eq('id',
 // Upsert（userId+dateで既存チェック＆出欠は重複排除・既存時刻情報非上書き統合）
 async function _upsertByUserDate(table,obj,idPrefix){
   var r=await supabase.from(table).select('*').eq('userId',obj.userId).eq('date',obj.date);
+  if(table==='出欠'){
+    _encodeAttendanceAdj(obj);
+  }
   if(r.data&&r.data.length>0){
     var validId=null;
     for(var vi=0;vi<r.data.length;vi++){if(r.data[vi].id){validId=r.data[vi].id;break;}}
@@ -229,7 +266,8 @@ async function _upsertByUserDate(table,obj,idPrefix){
           var keyName=keys[k];
           var exVal=existingRow[keyName];
           if(exVal!==null&&exVal!==undefined&&exVal!==''&&exVal!=='-'){
-            if(obj[keyName]===undefined||obj[keyName]===null||obj[keyName]===''){
+            // objにキー自体が渡されていない場合のみ既存値で補完（明示的にnullや空文字で更新する場合は保持）
+            if(obj[keyName]===undefined){
               obj[keyName]=exVal;
             }
           }
