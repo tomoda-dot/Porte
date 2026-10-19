@@ -9170,26 +9170,47 @@ function _isStaffActive(s,ym){
   var name = String(s.name || '').toLowerCase();
   if (lid === 'administrator' || name === 'administrator') return false;
 
+  // システムから完全に削除・非表示とされたデータは常に除外
   var st = String(s.status || s.userStatus || '').trim();
-  if (['退職', '退職済', '離職', '無効', '非表示', '利用終了', '退所'].indexOf(st) >= 0) return false;
-  if (s.isRetired === true || s.isArchived === true || s.active === false) return false;
+  if (['無効', '非表示', '削除'].indexOf(st) >= 0) return false;
+  if (s.isArchived === true || s.active === false) return false;
 
+  // 1. 年月が指定されている場合（シフト管理、勤怠実績、タイムカード等の履歴表示）
+  if (ym) {
+    var checkParts = String(ym).slice(0, 7).split('-');
+    var checkYM = parseInt(checkParts[0]) * 100 + parseInt(checkParts[1]);
+
+    // 入職前チェック：入職年月より前なら非表示
+    if (s.startDate) {
+      var stParts = String(s.startDate).slice(0, 7).split('-');
+      var stYM = parseInt(stParts[0]) * 100 + parseInt(stParts[1]);
+      if (checkYM < stYM) return false;
+    }
+
+    // 退職後チェック：退職日がある場合、退職年月より後なら非表示
+    if (s.endDate) {
+      var endParts = String(s.endDate).slice(0, 7).split('-');
+      var endYM = parseInt(endParts[0]) * 100 + parseInt(endParts[1]);
+      if (checkYM > endYM) return false;
+    } else {
+      // 退職日未入力だが退職ステータスがついている場合は非表示
+      if (['退職', '退職済', '離職', '利用終了', '退所'].indexOf(st) >= 0 || s.isRetired === true) {
+        return false;
+      }
+    }
+
+    // 該当年月の期間内であればアクティブとして表示
+    return true;
+  }
+
+  // 2. ymが指定されていない場合（＝現在時点のアクティブ判定：ログイン、新規担当者選択など）
+  if (['退職', '退職済', '離職', '利用終了', '退所'].indexOf(st) >= 0) return false;
+  if (s.isRetired === true) return false;
   var td = today();
   if (s.endDate && s.endDate <= td) return false;
+  if (s.startDate && s.startDate > td) return false;
 
-  // 入職前チェック
-  if(s.startDate){
-    var stParts=s.startDate.split('-');var stYM=parseInt(stParts[0])*100+parseInt(stParts[1]);
-    var checkParts=ym?ym.split('-'):[new Date().getFullYear().toString(),(new Date().getMonth()+1).toString()];
-    var checkYM=parseInt(checkParts[0])*100+parseInt(checkParts[1]);
-    if(checkYM<stYM)return false;
-  }
-  // 退職後チェック
-  if(!s.endDate)return true;
-  var endParts=s.endDate.split('-');var endYM=parseInt(endParts[0])*100+parseInt(endParts[1]);
-  var checkParts2=ym?ym.split('-'):[new Date().getFullYear().toString(),(new Date().getMonth()+1).toString()];
-  var checkYM2=parseInt(checkParts2[0])*100+parseInt(checkParts2[1]);
-  return checkYM2<=endYM;
+  return true;
 }
 function renderSTbl(){
   var thisYM=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
