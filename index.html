@@ -7260,9 +7260,9 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
       '</div>' +
       '<button class="bp" id="wage-adj-save-btn" onclick="saveUserWageAdjustments(\'' + u.id + '\')" style="font-size:14px;padding:8px 20px;font-weight:700">💾 調整内容を一括保存</button>' +
     '</div>' +
-    '<p style="font-size:11px;color:var(--sub);margin-bottom:12px">※工賃算定時間は「＋」「−」ボタンまたはスピンボタン・キーボードで日別に微調整できます。<br>※通常時間（例: 4.5h）と異なる日のみ「●調整中」と記録されます。元の時間に戻すか空欄（またはダブルクリック）で調整を解除できます。</p>' +
+    '<p style="font-size:11px;color:var(--sub);margin-bottom:12px">※工賃算定時間はスピンボタン（▲▼）またはキーボードで日別に微調整できます。<br>※通常時間（例: 4.5h）と異なる日のみ「●調整中」と記録されます。元の時間に戻すか空欄（またはダブルクリック）で調整を解除できます。</p>' +
     '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr style="background:#f5f0ea">' +
-    '<th>日付</th><th>出欠</th><th>基本サービス時間</th><th style="min-width:160px">工賃算定時間（調整）</th><th style="width:120px">特別手当 (円)</th><th style="width:120px">交通費 (現金/円)</th><th>備考</th>' +
+    '<th>日付</th><th>出欠</th><th>基本サービス時間</th><th style="width:130px">工賃算定時間（調整）</th><th style="width:120px">特別手当 (円)</th><th style="width:120px">交通費 (現金/円)</th><th>備考</th>' +
     '</tr></thead><tbody>';
 
   daysList.forEach(function(dayInfo){
@@ -7336,12 +7336,7 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
       '<td><span style="font-weight:700;color:' + (statusColor[st] || '#555') + '">' + st + '</span>' + workNoteTag + '</td>' +
       '<td>' + (isAtt ? baseH.toFixed(1) + 'h' : '−') + '</td>' +
       '<td>' +
-        '<div style="display:inline-flex;align-items:center;gap:3px">' +
-          '<button type="button" class="btn-sub" onclick="stepWageAh(\'adj-ah-' + ds + '\', -0.5)" style="width:22px;height:24px;padding:0;line-height:22px;font-size:12px;font-weight:700;border:1px solid #ccc;border-radius:3px;background:#f8f9fa;cursor:pointer" title="30分減らす" ' + (!isAtt ? 'disabled' : '') + '>−</button>' +
-          '<input type="number" step="0.5" min="0" max="24" id="adj-ah-' + ds + '" data-ds="' + ds + '" data-default="' + sH + '" value="' + curAH + '" placeholder="' + phText + '" oninput="onWageAhChange(this)" onmousedown="onWageAhMouseDown(event, this)" onkeydown="onWageAhKeyDown(event, this)" ondblclick="resetWageAh(this)" title="上下ボタンまたは左右の＋−で変更。ダブルクリックで通常時間に戻す" style="width:56px;text-align:right;padding:2px 4px;border-radius:4px;' + ahStyle + '" ' + (!isAtt ? 'disabled' : '') + '>' +
-          '<button type="button" class="btn-sub" onclick="stepWageAh(\'adj-ah-' + ds + '\', +0.5)" style="width:22px;height:24px;padding:0;line-height:22px;font-size:12px;font-weight:700;border:1px solid #ccc;border-radius:3px;background:#f8f9fa;cursor:pointer" title="30分増やす" ' + (!isAtt ? 'disabled' : '') + '>＋</button>' +
-          '<span style="font-size:11px;color:#555">h</span>' +
-        '</div>' +
+        '<input type="number" step="0.5" min="0" max="24" id="adj-ah-' + ds + '" data-ds="' + ds + '" data-default="' + sH + '" value="' + curAH + '" placeholder="' + phText + '" oninput="onWageAhChange(this)" onmousedown="onWageAhMouseDown(event, this)" onkeydown="onWageAhKeyDown(event, this)" ondblclick="resetWageAh(this)" title="スピンボタンまたはキーボードで変更。ダブルクリックで通常時間に戻す" style="width:65px;text-align:right;padding:2px 4px;border-radius:4px;' + ahStyle + '" ' + (!isAtt ? 'disabled' : '') + '> h' +
         '<div id="adj-ah-badge-' + ds + '" style="font-size:9.5px;color:var(--pri);font-weight:700;line-height:1.2;margin-top:2px;' + (hasManualAH ? '' : 'display:none;') + '">●調整中</div>' +
       '</td>' +
       '<td>' +
@@ -7390,18 +7385,6 @@ function onWageAhChange(inp){
     inp.style.color = '#333';
     if(badgeEl) badgeEl.style.display = 'none';
   }
-}
-
-function stepWageAh(inpId, delta){
-  var inp = document.getElementById(inpId);
-  if(!inp || inp.disabled) return;
-  var defaultVal = Number(inp.dataset.default || 0);
-  var curVal = (inp.value !== '' && !isNaN(Number(inp.value))) ? Number(inp.value) : defaultVal;
-  var nextVal = Math.round((curVal + delta) * 100) / 100;
-  if(nextVal < 0) nextVal = 0;
-  if(nextVal > 24) nextVal = 24;
-  inp.value = nextVal;
-  onWageAhChange(inp);
 }
 
 function resetWageAh(inp){
