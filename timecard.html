@@ -98,11 +98,7 @@ function _dow(){return['日','月','火','水','木','金','土'][new Date().get
 function _genId(p){return p+new Date().getTime()+Math.random().toString(36).substr(2,5);}
 
 function _detectShift(startTime){
-  if(!startTime)return'';
-  var p=startTime.split(':');var h=parseInt(p[0]),m=parseInt(p[1]||0);var min=h*60+m;
-  if(min<=510)return'早番';
-  if(min<=570)return'日勤';
-  return'遅番';
+  return '日勤';
 }
 function _shiftColor(s){return s==='早番'?'#ff9800':(s==='日勤'?'#2e7d32':(s==='遅番'?'#1565c0':'#999'));}
 function _shiftBg(s){return s==='早番'?'#fff3e0':(s==='日勤'?'#e8f5e9':(s==='遅番'?'#e3f2fd':'#f5f5f5'));}
@@ -156,10 +152,16 @@ async function getTimecardUsers(){
 
 // --- スタッフモード ---
 async function getStaffTimecard(){
-  var r1=await sb.from('スタッフ').select('*');var staff=r1.data||[];
   var today2=_today();var dow2=_dow();
   var thisYM=today2.substring(0,7);
-  var r2=await sb.from('スタッフ出欠').select('*').eq('date',today2);var att=r2.data||[];
+  var p=await Promise.all([
+    sb.from('スタッフ').select('*'),
+    sb.from('スタッフ出欠').select('*').eq('date',today2),
+    sb.from('シフト').select('*').eq('date',today2)
+  ]);
+  var staff=p[0].data||[];
+  var att=p[1].data||[];
+  var shifts=p[2].data||[];
   var result=[];
   staff.forEach(function(s){
     if(!s)return;
@@ -169,11 +171,14 @@ async function getStaffTimecard(){
     if(s.startDate&&s.startDate>today2)return;
     if(s.endDate&&s.endDate<today2)return;
     var rec=null;att.forEach(function(a){if(String(a.staffId)===String(s.id))rec=a;});
-    var shift=rec&&rec.startTime?_detectShift(rec.startTime):'';
+    var shRec=null;shifts.forEach(function(sh){if(String(sh.staffId)===String(s.id))shRec=sh;});
+    var plannedShift=(shRec&&shRec.pattern&&shRec.pattern!=='休')?shRec.pattern:'日勤';
+    var shift=(rec&&rec.shift)?rec.shift:plannedShift;
     result.push({id:s.id,name:s.name,role:s.role||s.position||'',
       clockedIn:rec&&rec.startTime?true:false,
       clockedOut:rec&&rec.endTime?true:false,
-      startTime:rec?rec.startTime:'',endTime:rec?rec.endTime:'',shift:shift});
+      startTime:rec?rec.startTime:'',endTime:rec?rec.endTime:'',shift:shift,
+      plannedShift:plannedShift});
   });
   return{staff:result,date:today2,dow:dow2};
 }
@@ -182,7 +187,9 @@ async function staffClockIn(staffId){
   var today2=_today();var now=_now();
   var r=await sb.from('スタッフ出欠').select('*').eq('staffId',staffId).eq('date',today2).limit(1);
   var existing=(r.data&&r.data.length>0)?r.data[0]:null;
-  var shift=_detectShift(now);
+  var rShift=await sb.from('シフト').select('pattern').eq('staffId',staffId).eq('date',today2).limit(1);
+  var planned=(rShift.data&&rShift.data.length>0&&rShift.data[0].pattern&&rShift.data[0].pattern!=='休')?rShift.data[0].pattern:'日勤';
+  var shift=(existing&&existing.shift)?existing.shift:planned;
   if(existing){
     await sb.from('スタッフ出欠').update({startTime:now,shift:shift}).eq('id',existing.id);
   }else{

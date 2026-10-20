@@ -9507,13 +9507,87 @@ function _staffRow(s,isRetired){
     '<td>'+cnt+'名</td></tr>';
 }
 
+// ═══ 常勤換算の計算（月末見込み型＋例外判定：途中入職・退職・無給欠勤・休職） ═══
+function calcStaffFTE(s, d, ym, dim, shiftRaw, dateMap, plUsages, todayStr) {
+  var STANDARD_HOURS = 160;
+  var isFullTime = (s.employment === '正社員' || s.employment === '常勤' || (s.employment && s.employment.indexOf('常勤') >= 0 && s.employment.indexOf('非常勤') < 0));
+
+  // 1. 実績・有給なし（休職判定）
+  var hasNoWork = (d.days === 0 && (d.plUsed || 0) === 0);
+  if (hasNoWork && todayStr >= ym + '-05') {
+    return { fte: 0, reason: '実績なし(休職)' };
+  }
+
+  // 2. 途中入職・途中退職の按分比率
+  var inMonthRatio = 1.0;
+  var ratioReason = '';
+  if (s.startDate && s.startDate.indexOf(ym) === 0) {
+    var stDay = parseInt(s.startDate.split('-')[2], 10);
+    if (stDay > 1) {
+      inMonthRatio = Math.min(inMonthRatio, (dim - stDay + 1) / dim);
+      ratioReason = '途中入職';
+    }
+  }
+  if (s.endDate && s.endDate.indexOf(ym) === 0) {
+    var endDay = parseInt(s.endDate.split('-')[2], 10);
+    if (endDay < dim) {
+      inMonthRatio = Math.min(inMonthRatio, endDay / dim);
+      ratioReason = ratioReason ? '途中入退職' : '途中退職';
+    }
+  }
+
+  // 3. 無給欠勤のチェック（過去〜前日までのシフト勤務予定日で、打刻がなく有給も申請されていない日）
+  var absentDays = 0;
+  (shiftRaw || []).forEach(function(sh) {
+    if (String(sh.staffId) === String(s.id) && sh.date && sh.pattern && sh.pattern !== '休' && sh.pattern !== '公休') {
+      if (sh.date.indexOf(ym) === 0 && sh.date < todayStr) {
+        var hasAtt = dateMap && dateMap[sh.date] && dateMap[sh.date].startTime;
+        var hasPL = (plUsages || []).some(function(u) { return u.date === sh.date && Number(u.days) > 0; });
+        if (!hasAtt && !hasPL) {
+          absentDays++;
+        }
+      }
+    }
+  });
+
+  if (isFullTime) {
+    // ── 常勤（正社員） ──
+    var baseFte = 1.0 * inMonthRatio;
+    if (absentDays > 0) {
+      baseFte = Math.max(0, (STANDARD_HOURS * inMonthRatio - absentDays * 8) / STANDARD_HOURS);
+    }
+    var fteVal = Math.round(baseFte * 100) / 100;
+    var note = ratioReason || (absentDays > 0 ? ('欠勤' + absentDays + '日') : '');
+    return { fte: fteVal, reason: note };
+  } else {
+    // ── 非常勤・パート ──
+    var planDays = d.planDays || 0;
+    var estHours = 0;
+    if (planDays > 0) {
+      var effDays = Math.max(0, planDays - absentDays);
+      estHours = effDays * 8;
+    } else {
+      estHours = d.netH || 0;
+    }
+    var fteVal2 = Math.min(1.0, Math.round(estHours / STANDARD_HOURS * 100) / 100);
+    var note2 = ratioReason || (absentDays > 0 ? ('欠勤' + absentDays + '日') : '');
+    return { fte: fteVal2, reason: note2 };
+  }
+}
+
 async function renderStaffAttendance(){
   var el=document.getElementById('staff-content');
   el.innerHTML='<div class="loading-center"><div class="spin"></div></div>';
   try{
-    var att=await gas('getStaffAttendance',_staffYM);
-    // シフトデータも取得（勤怠欄に予定表示用）
-    var shiftRaw=await gas('getShiftData',_staffYM).catch(function(){return[];});
+    var attRes=await Promise.all([
+      gas('getStaffAttendance',_staffYM),
+      gas('getClosedDays',_staffYM).catch(function(){return[];}),
+      gas('getShiftData',_staffYM).catch(function(){return[];})
+    ]);
+    var att=attRes[0]||[];
+    var closedDays=attRes[1]||[];
+    var shiftRaw=attRes[2]||[];
+
     var shiftMap={};
     (shiftRaw||[]).forEach(function(r){
       if(!shiftMap[r.staffId])shiftMap[r.staffId]={};
@@ -9522,6 +9596,8 @@ async function renderStaffAttendance(){
     var patsForAtt=getShiftPatterns();
     var ym=_staffYM;var parts=ym.split('-');var y=parseInt(parts[0]),m=parseInt(parts[1]);
     var dim=new Date(y,m,0).getDate();var dowNames=['日','月','火','水','木','金','土'];
+    var closedInMonth=(closedDays||[]).filter(function(d){return d&&(d.indexOf(ym)===0||d.indexOf(y+'-'+String(m).padStart(2,'0'))===0);});
+    var openDays=Math.max(0, dim - closedInMonth.length);
     var STANDARD_HOURS=160;
     var _activeStaff=S.staff.filter(function(s){return _isStaffActive(s,ym);});
 
@@ -9529,7 +9605,7 @@ async function renderStaffAttendance(){
     h+='<button class="bg" onclick="var p=_staffYM.split(\'-\');var nm=parseInt(p[1])-1;var ny=parseInt(p[0]);if(nm<1){nm=12;ny--}_staffYM=ny+\'-\'+String(nm).padStart(2,\'0\');renderStaffAttendance()" style="padding:4px 10px">◀</button>';
     h+='<span style="font-size:16px;font-weight:700">'+y+'年'+m+'月</span>';
     h+='<button class="bg" onclick="var p=_staffYM.split(\'-\');var nm=parseInt(p[1])+1;var ny=parseInt(p[0]);if(nm>12){nm=1;ny++}_staffYM=ny+\'-\'+String(nm).padStart(2,\'0\');renderStaffAttendance()" style="padding:4px 10px">▶</button>';
-    h+='<span style="font-size:12px;color:var(--sub)">常勤所定: '+STANDARD_HOURS+'h/月 / 日8h超・週40h超で時間外</span>';
+    h+='<span style="font-size:12px;color:var(--sub)">当月開所: <b>'+openDays+'日</b> (MAX勤務日数) / 常勤所定: '+STANDARD_HOURS+'h/月 / 日8h超・週40h超で時間外</span>';
     h+='<button class="ba" onclick="dlStaffAttCSV()" style="font-size:12px;margin-left:auto">📥 CSV出力（行政書士用）</button>';
     h+='</div>';
 
@@ -9542,11 +9618,22 @@ async function renderStaffAttendance(){
       var days=0,workMin=0,breakMin2=0,otMin=0;
       // 週単位残業チェック用
       var weekMinMap={};
+      // 日付ごとに一意化（実日数集計・重複防止）
+      var dateMap={};
       recs.forEach(function(r){
-        if(!r.startTime||!r.endTime)return;
-        days++;
-        var sp=r.startTime.split(':'),ep=r.endTime.split(':');
+        if(!r.date)return;
+        if(!dateMap[r.date] || (!dateMap[r.date].endTime && r.endTime)){
+          dateMap[r.date]=r;
+        }
+      });
+      Object.keys(dateMap).sort().forEach(function(dtStr){
+        var r=dateMap[dtStr];
+        if(!r.startTime)return;
+        days++; // 実日数として1日加算
+        var sp=r.startTime.split(':');
+        var ep=r.endTime?r.endTime.split(':'):['18','00'];
         var grossMin=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1]);
+        if(grossMin<0) grossMin=0;
         var bMin=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?parseInt(r.breakMin):60;
         var netMin=Math.max(0,grossMin-bMin);
         workMin+=grossMin;breakMin2+=bMin;
@@ -9568,28 +9655,42 @@ async function renderStaffAttendance(){
       var netMin2=Math.max(0,workMin-breakMin2);
       var totalH2=Math.round(netMin2/60*100)/100;
       var otH=Math.round((otMin+weekOTMin)/60*100)/100;
-      var fte2=Math.round(totalH2/STANDARD_HOURS*100)/100;
       // 有給取得日数・残日数
       var plUsages=(_plUsages&&_plUsages[s.id])||[];
       var plThisMonth=plUsages.filter(function(u){return(u.date||'').indexOf(ym)===0;});
       var plUsedDays=plThisMonth.reduce(function(sum,u){return sum+(Number(u.days)||0);},0);
       var plGrants=generateGrantHistory(s);
       var plBalance=calcPaidLeaveBalance(plGrants,plUsages);
+      // シフト予定日数の集計（休み以外の勤務予定日数）
+      var planDateMap={};
+      (shiftRaw||[]).forEach(function(sh){
+        if(String(sh.staffId)===String(s.id)&&sh.date&&sh.pattern&&sh.pattern!=='休'&&sh.pattern!=='公休'){
+          planDateMap[sh.date]=true;
+        }
+      });
+      var planDays=Object.keys(planDateMap).length;
+
+      // 常勤換算（月末見込み型＋例外自動控除）
+      var tdStr=today();
+      var fteInfo=calcStaffFTE(s, {days:days, planDays:planDays, netH:totalH2, plUsed:plUsedDays}, ym, dim, shiftRaw, dateMap, plUsages, tdStr);
+
       summaryData.push({
-        s:s,days:days,
+        s:s,planDays:planDays,days:days,
         workH:Math.round(workMin/60*100)/100,
         breakH:Math.round(breakMin2/60*100)/100,
         netH:totalH2,otH:otH,
-        fte:fte2,plUsed:plUsedDays,plBalance:plBalance
+        fte:fteInfo.fte,
+        fteReason:fteInfo.reason,
+        plUsed:plUsedDays,plBalance:plBalance
       });
     });
 
     // 常勤換算サマリーテーブル
     h+='<div class="card" style="overflow-x:auto;margin-bottom:16px">';
-    h+='<div style="font-size:11px;color:var(--sub);margin-bottom:8px">※時間外＝1日8h超＋週40h超の合算（概算）</div>';
+    h+='<div style="font-size:11px;color:var(--sub);margin-bottom:8px">※常勤換算＝月末見込み値（常勤1.0基準。有休算入、無給欠勤・途中入退職・休職は自動控除） / 時間外＝1日8h超＋週40h超の合算（概算）</div>';
     h+='<table><thead><tr>';
     h+='<th>氏名</th><th>雇用形態</th><th>役職</th>';
-    h+='<th style="text-align:right">出勤日数</th>';
+    h+='<th style="text-align:right">出勤日数（予定日数）</th>';
     h+='<th style="text-align:right">総労働時間</th>';
     h+='<th style="text-align:right">休憩時間</th>';
     h+='<th style="text-align:right">実働時間</th>';
@@ -9600,29 +9701,31 @@ async function renderStaffAttendance(){
     h+='</tr></thead><tbody>';
     summaryData.forEach(function(d){
       var fteColor=d.fte>=1?'var(--grn)':(d.fte>=0.5?'#ff9800':'#c62828');
+      var fteDisp=d.fte;
+      if(d.fteReason){
+        var rCol=d.fteReason.indexOf('欠勤')>=0?'#c62828':'var(--sub)';
+        fteDisp+=' <span style="font-size:10px;font-weight:normal;color:'+rCol+'">('+esc(d.fteReason)+')</span>';
+      }
       h+='<tr>';
       h+='<td style="font-weight:600">'+esc(d.s.name)+'</td>';
       h+='<td style="font-size:11px">'+esc(d.s.employment||'-')+'</td>';
       h+='<td style="font-size:11px">'+esc(d.s.role||'-')+'</td>';
-      h+='<td style="text-align:right">'+d.days+'日</td>';
+      h+='<td style="text-align:right"><span style="font-weight:700">'+d.days+'日</span> <span style="font-size:11px;color:var(--sub)">('+d.planDays+'日)</span></td>';
       h+='<td style="text-align:right">'+d.workH+'h</td>';
       h+='<td style="text-align:right">'+d.breakH+'h</td>';
       h+='<td style="text-align:right">'+d.netH+'h</td>';
       h+='<td style="text-align:right;color:'+(d.otH>0?'#c62828':'var(--sub)')+'">'+d.otH+'h</td>';
-      h+='<td style="text-align:right;font-weight:700;color:'+fteColor+'">'+d.fte+'</td>';
+      h+='<td style="text-align:right;font-weight:700;color:'+fteColor+'">'+fteDisp+'</td>';
       h+='<td style="text-align:right">'+(d.plUsed>0?d.plUsed+'日':'-')+'</td>';
       h+='<td style="text-align:right">'+d.plBalance+'日</td>';
       h+='</tr>';
     });
     // 合計行
-    var ttlDays=summaryData.reduce(function(s,d){return s+d.days;},0);
-    var ttlNet=Math.round(summaryData.reduce(function(s,d){return s+d.netH;},0)*100)/100;
     var ttlOT=Math.round(summaryData.reduce(function(s,d){return s+d.otH;},0)*100)/100;
     h+='<tr style="font-weight:700;background:var(--bg)">';
-    h+='<td colspan="3">合計</td>';
-    h+='<td style="text-align:right">'+ttlDays+'日</td>';
-    h+='<td></td><td></td>';
-    h+='<td style="text-align:right">'+ttlNet+'h</td>';
+    h+='<td colspan="3">合計（営業日）</td>';
+    h+='<td style="text-align:right;font-weight:700">'+openDays+'日</td>';
+    h+='<td></td><td></td><td></td>';
     h+='<td style="text-align:right;color:'+(ttlOT>0?'#c62828':'var(--sub)')+'">'+ttlOT+'h</td>';
     h+='<td colspan="3"></td></tr>';
     h+='</tbody></table></div>';
@@ -9703,27 +9806,55 @@ async function dlStaffAttCSV(){
     }
   }
 
-  var att=await gas('getStaffAttendance',ym);
+  var attRes=await Promise.all([
+    gas('getStaffAttendance',ym),
+    gas('getClosedDays',ym).catch(function(){return[];}),
+    gas('getShiftData',ym).catch(function(){return[];})
+  ]);
+  var att=attRes[0],closedDays=attRes[1]||[],shiftRaw=attRes[2]||[];
+  var closedInMonth=(closedDays||[]).filter(function(d){return d&&(d.indexOf(ym)===0||d.indexOf(y+'-'+String(m).padStart(2,'0'))===0);});
+  var dim=new Date(y,m,0).getDate();
+  var openDays=Math.max(0, dim - closedInMonth.length);
   var STANDARD_HOURS=160;
 
   var rows=[];
   rows.push(['対象年月',y+'年'+m+'月']);
+  rows.push(['当月営業日数',openDays+'日']);
   rows.push(['出力日',today().replace(/-/g,'/')]);
   rows.push(['']);
-  rows.push(['氏名','雇用形態','役職','入職日','出勤日数',
+  rows.push(['氏名','雇用形態','役職','入職日','出勤日数（予定日数）',
     '総労働時間(h)','休憩時間(h)','実働時間(h)','時間外(h)','常勤換算',
     '有給取得(当月)','有給残日数','備考']);
 
+  var totalCsvGross=0, totalCsvBreak=0, totalCsvNet=0, totalCsvOT=0, totalCsvFte=0;
   activeStaff.forEach(function(s){
+    var planDateMap={};
+    (shiftRaw||[]).forEach(function(sh){
+      if(String(sh.staffId)===String(s.id)&&sh.date&&sh.pattern&&sh.pattern!=='休'&&sh.pattern!=='公休'){
+        planDateMap[sh.date]=true;
+      }
+    });
+    var planDays=Object.keys(planDateMap).length;
+
     var recs=att.filter(function(a){return String(a.staffId)===String(s.id);});
     var stdHPerDay=8;
     var days=0,workMin=0,bkMin=0,otMin=0;
     var weekMinMap={};
+    var dateMap={};
     recs.forEach(function(r){
-      if(!r.startTime||!r.endTime)return;
+      if(!r.date)return;
+      if(!dateMap[r.date] || (!dateMap[r.date].endTime && r.endTime)){
+        dateMap[r.date]=r;
+      }
+    });
+    Object.keys(dateMap).sort().forEach(function(dtStr){
+      var r=dateMap[dtStr];
+      if(!r.startTime)return;
       days++;
-      var sp=r.startTime.split(':'),ep=r.endTime.split(':');
+      var sp=r.startTime.split(':');
+      var ep=r.endTime?r.endTime.split(':'):['18','00'];
       var grossMin=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1]);
+      if(grossMin<0) grossMin=0;
       var bMin=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?parseInt(r.breakMin):60;
       var netMin=Math.max(0,grossMin-bMin);
       workMin+=grossMin;bkMin+=bMin;
@@ -9739,18 +9870,25 @@ async function dlStaffAttCSV(){
     var netMin2=Math.max(0,workMin-bkMin);
     var netH=Math.round(netMin2/60*100)/100;
     var otH=Math.round((otMin+weekOT)/60*100)/100;
-    var fte=Math.round(netH/STANDARD_HOURS*100)/100;
     var plUsages=(_plUsages&&_plUsages[s.id])||[];
     var plThisMonth=plUsages.filter(function(u){return(u.date||'').indexOf(ym)===0;});
     var plUsed=plThisMonth.reduce(function(sum,u){return sum+(Number(u.days)||0);},0);
     var plGrants=generateGrantHistory(s);
     var plBal=calcPaidLeaveBalance(plGrants,plUsages);
+    var tdStr=today();
+    var fteInfo=calcStaffFTE(s, {days:days, planDays:planDays, netH:netH, plUsed:plUsed}, ym, dim, shiftRaw, dateMap, plUsages, tdStr);
+    var fte=fteInfo.fte;
+    totalCsvGross+=Math.round(workMin/60*100)/100;
+    totalCsvBreak+=Math.round(bkMin/60*100)/100;
+    totalCsvNet+=netH;
+    totalCsvOT+=otH;
+    totalCsvFte+=fte;
     rows.push([
       s.name,
       s.employment||'',
       s.role||'',
       fmtDate(s.startDate),
-      days,
+      days + '日 (' + planDays + '日)',
       Math.round(workMin/60*100)/100,
       Math.round(bkMin/60*100)/100,
       netH,
@@ -9758,25 +9896,46 @@ async function dlStaffAttCSV(){
       fte,
       plUsed||0,
       plBal,
-      ''
+      fteInfo.reason||''
     ]);
   });
+  rows.push([
+    '合計（営業日）',
+    '',
+    '',
+    '',
+    openDays + '日',
+    '',
+    '',
+    '',
+    Math.round(totalCsvOT*100)/100,
+    '',
+    '',
+    '',
+    ''
+  ]);
 
   // 日別明細も追加
   rows.push(['']);
   rows.push(['── 日別明細 ──']);
   rows.push(['日付','曜日','氏名','出勤時刻','退勤時刻','休憩(分)','実働時間(h)','シフト']);
   var dowNames2=['日','月','火','水','木','金','土'];
+  var seenDailyKeys={};
   att.forEach(function(r){
-    if(!r.startTime||!r.endTime)return;
+    if(!r.startTime||!r.date)return;
+    var k=String(r.staffId)+'_'+r.date;
+    if(seenDailyKeys[k])return;
+    seenDailyKeys[k]=true;
     var s=S.staff.find(function(x){return String(x.id)===String(r.staffId);});
     var sName=s?s.name:'';
-    var sp=r.startTime.split(':'),ep=r.endTime.split(':');
+    var sp=r.startTime.split(':');
+    var ep=r.endTime?r.endTime.split(':'):['18','00'];
     var grossMin=parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1]);
+    if(grossMin<0) grossMin=0;
     var bMin=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?parseInt(r.breakMin):60;
     var netH2=Math.round(Math.max(0,grossMin-bMin)/60*100)/100;
     var dow=dowNames2[new Date(r.date).getDay()];
-    rows.push([fmtDate(r.date),dow,sName,r.startTime,r.endTime,bMin,netH2,r.shift||'']);
+    rows.push([fmtDate(r.date),dow,sName,r.startTime,r.endTime||'',bMin,netH2,r.shift||'']);
   });
 
   var csv=rows.map(function(row){
@@ -9808,7 +9967,13 @@ function printStaffAtt(){
   html+='<' + 'script>window.onload=function(){setTimeout(function(){window.print();},300);};</' + 'script></body></html>';
   w.document.write(html);w.document.close();
 }
-function _detectShift(t){if(!t)return'';var p=t.split(':');var min=parseInt(p[0])*60+parseInt(p[1]||0);if(min<=510)return'早番';if(min<=570)return'日勤';return'遅番';}
+function _detectShift(t, staffId, date){
+  if(staffId && date && window._shiftData && window._shiftData[staffId] && window._shiftData[staffId][date]){
+    var p = window._shiftData[staffId][date];
+    if(p && p !== '休') return p;
+  }
+  return '日勤';
+}
 
 function editStaffAtt(staffId,staffName,date){
   var h='<div class="overlay" onclick="closeModal(\'st-modal\')"><div class="modal" style="width:380px" onclick="event.stopPropagation()"><div class="modal-hd"><h3>打刻編集</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>';
@@ -9828,12 +9993,18 @@ function editStaffAtt(staffId,staffName,date){
 async function saveStaffAtt(staffId,date){
   var startTime=document.getElementById('sea-start').value;var endTime=document.getElementById('sea-end').value;var breakMin=document.getElementById('sea-break').value;
   if(!startTime){await cAlert('出勤時間を入力してください');return;}
-  var shift=_detectShift(startTime);
+  var planned=(window._shiftData&&window._shiftData[staffId]&&window._shiftData[staffId][date])||'';
+  if(!planned||planned==='休')planned='日勤';
+  var shift=planned;
   if(!lockUI())return;
   try{
-    var r=await supabase.from('スタッフ出欠').select('id').eq('staffId',staffId).eq('date',date).limit(1);
-    if(r.data&&r.data.length>0){await supabase.from('スタッフ出欠').update({startTime:startTime,endTime:endTime||null,breakMin:breakMin,shift:shift}).eq('id',r.data[0].id);}
-    else{await supabase.from('スタッフ出欠').insert([{id:_genId('sa'),staffId:staffId,date:date,startTime:startTime,endTime:endTime||null,breakMin:breakMin,shift:shift}]);}
+    var r=await supabase.from('スタッフ出欠').select('id,shift').eq('staffId',staffId).eq('date',date).limit(1);
+    if(r.data&&r.data.length>0){
+      shift=r.data[0].shift||planned;
+      await supabase.from('スタッフ出欠').update({startTime:startTime,endTime:endTime||null,breakMin:breakMin,shift:shift}).eq('id',r.data[0].id);
+    }else{
+      await supabase.from('スタッフ出欠').insert([{id:_genId('sa'),staffId:staffId,date:date,startTime:startTime,endTime:endTime||null,breakMin:breakMin,shift:shift}]);
+    }
     toast('✅ 保存しました');closeModal('st-modal');renderStaffAttendance();
   }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
 }
@@ -11942,6 +12113,7 @@ async function autoApplyTodayShift(){
         shift:sh.pattern
       });
       applied++;
+      allExisting.push({staffId:sh.staffId, date:sh.date, startTime:startTime2});
     }catch(e){}
   }
   if(applied>0){
