@@ -9507,12 +9507,12 @@ function _staffRow(s,isRetired){
     '<td>'+cnt+'名</td></tr>';
 }
 
-// ═══ 常勤換算の計算（月末見込み型＋例外判定：途中入職・退職・無給欠勤・休職） ═══
+// ═══ 常勤換算の計算（常勤は原則1.0／途中入職・退職・休職のみ例外判定） ═══
 function calcStaffFTE(s, d, ym, dim, shiftRaw, dateMap, plUsages, todayStr) {
   var STANDARD_HOURS = 160;
   var isFullTime = (s.employment === '正社員' || s.employment === '常勤' || (s.employment && s.employment.indexOf('常勤') >= 0 && s.employment.indexOf('非常勤') < 0));
 
-  // 1. 実績・有給なし（休職判定）
+  // 1. 実績・有給なし（休職判定：当月出勤も有給もゼロ）
   var hasNoWork = (d.days === 0 && (d.plUsed || 0) === 0);
   if (hasNoWork && todayStr >= ym + '-05') {
     return { fte: 0, reason: '実績なし(休職)' };
@@ -9536,42 +9536,24 @@ function calcStaffFTE(s, d, ym, dim, shiftRaw, dateMap, plUsages, todayStr) {
     }
   }
 
-  // 3. 無給欠勤のチェック（過去〜前日までのシフト勤務予定日で、打刻がなく有給も申請されていない日）
-  var absentDays = 0;
-  (shiftRaw || []).forEach(function(sh) {
-    if (String(sh.staffId) === String(s.id) && sh.date && sh.pattern && sh.pattern !== '休' && sh.pattern !== '公休') {
-      if (sh.date.indexOf(ym) === 0 && sh.date < todayStr) {
-        var hasAtt = dateMap && dateMap[sh.date] && dateMap[sh.date].startTime;
-        var hasPL = (plUsages || []).some(function(u) { return u.date === sh.date && Number(u.days) > 0; });
-        if (!hasAtt && !hasPL) {
-          absentDays++;
-        }
-      }
-    }
-  });
-
   if (isFullTime) {
     // ── 常勤（正社員） ──
-    var baseFte = 1.0 * inMonthRatio;
-    if (absentDays > 0) {
-      baseFte = Math.max(0, (STANDARD_HOURS * inMonthRatio - absentDays * 8) / STANDARD_HOURS);
-    }
-    var fteVal = Math.round(baseFte * 100) / 100;
-    var note = ratioReason || (absentDays > 0 ? ('欠勤' + absentDays + '日') : '');
-    return { fte: fteVal, reason: note };
+    // 行政ルール上、単発の欠勤があっても常勤契約であれば常に 1.0
+    // （月途中の入退職がある場合のみ在籍期間で按分）
+    var fteVal = Math.round(1.0 * inMonthRatio * 100) / 100;
+    return { fte: fteVal, reason: ratioReason };
   } else {
     // ── 非常勤・パート ──
-    var planDays = d.planDays || 0;
-    var estHours = 0;
-    if (planDays > 0) {
-      var effDays = Math.max(0, planDays - absentDays);
-      estHours = effDays * 8;
+    // 過去月または月末なら実働時間ベース、月途中なら予定時間ベース
+    var hours = 0;
+    var isPastMonth = ym < todayStr.slice(0, 7);
+    if (isPastMonth || !d.planDays) {
+      hours = d.netH || 0;
     } else {
-      estHours = d.netH || 0;
+      hours = d.planDays * 8;
     }
-    var fteVal2 = Math.min(1.0, Math.round(estHours / STANDARD_HOURS * 100) / 100);
-    var note2 = ratioReason || (absentDays > 0 ? ('欠勤' + absentDays + '日') : '');
-    return { fte: fteVal2, reason: note2 };
+    var fteVal2 = Math.min(1.0, Math.round(hours / STANDARD_HOURS * inMonthRatio * 100) / 100);
+    return { fte: fteVal2, reason: ratioReason };
   }
 }
 
@@ -9687,7 +9669,7 @@ async function renderStaffAttendance(){
 
     // 常勤換算サマリーテーブル
     h+='<div class="card" style="overflow-x:auto;margin-bottom:16px">';
-    h+='<div style="font-size:11px;color:var(--sub);margin-bottom:8px">※常勤換算＝月末見込み値（常勤1.0基準。有休算入、無給欠勤・途中入退職・休職は自動控除） / 時間外＝1日8h超＋週40h超の合算（概算）</div>';
+    h+='<div style="font-size:11px;color:var(--sub);margin-bottom:8px">※常勤換算＝常勤（正社員）は原則1.0（途中入退職・休職は除外/日割り）。非常勤は実働/予定時間に応じた換算値 / 時間外＝1日8h超＋週40h超の合算（概算）</div>';
     h+='<table><thead><tr>';
     h+='<th>氏名</th><th>雇用形態</th><th>役職</th>';
     h+='<th style="text-align:right">出勤日数（予定日数）</th>';
