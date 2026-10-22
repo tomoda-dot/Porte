@@ -6053,7 +6053,7 @@ function renderRouteCards(){
     var uNames=(r.userNames||'').split(',').filter(function(x){return x;});
     var uIds=(r.userIds||'').split(',').filter(function(x){return x;});
     var patLabel=r.pattern==='morning'?'🌅 朝（お迎え）':'🌆 夕（送り）';
-    var mapsLink=r.mapsUrl||'';
+    var mapsLink=buildMapsUrl(r)||r.mapsUrl||'';
 
     return'<div class="card" style="border-left:4px solid '+(r.pattern==='morning'?'var(--acc)':'#1565c0')+'">'+
       '<div class="card-hd"><span class="card-t">'+patLabel+' — '+(v.name||'車両未設定')+'</span>'+
@@ -6205,20 +6205,25 @@ async function saveNewRoute(doCalc){
 }
 
 function buildMapsUrl(r){
-  var base='https://www.google.com/maps/dir/';
   var fac = (r && r.facilityAddress && String(r.facilityAddress).trim()!=='undefined') ? r.facilityAddress : ((S.settings && (S.settings.facilityAddress || S.settings.address)) || '大阪府豊中市小曽根1丁目10-23');
-  var parts=[encodeURIComponent(fac)];
   var users = (r && r.orderedUsers) || [];
   if(users.length === 0 && r && r.userIds) {
     var ids = (r.userIds||'').split(',').filter(Boolean);
     users = ids.map(function(id){ return S.users.find(function(u){ return u.id===id; }) || {}; });
   }
+  var waypoints = [];
   users.forEach(function(u){
     var a = getUserRawAddressForRoute(u, r ? r.pattern : 'morning');
-    if(a && String(a).trim()!=='undefined') parts.push(encodeURIComponent(a));
+    if(a && String(a).trim()!=='undefined' && a.trim()!=='') waypoints.push(encodeURIComponent(a.trim()));
   });
-  parts.push(encodeURIComponent(fac));
-  return base+parts.join('/');
+  var base = 'https://www.google.com/maps/dir/?api=1';
+  var origin = encodeURIComponent(String(fac).trim());
+  var dest = encodeURIComponent(String(fac).trim());
+  var url = base + '&origin=' + origin + '&destination=' + dest + '&travelmode=driving&avoid=tolls,highways';
+  if(waypoints.length > 0) {
+    url += '&waypoints=' + waypoints.join('%7C');
+  }
+  return url;
 }
 
 // ─── ルート再計算 ───
@@ -6448,7 +6453,8 @@ function printSingleRoute(idx){
   });
   h+=' → 🏢 事業所</div>';
 
-  if(r.mapsUrl){h+='<div style="display:flex;align-items:center;gap:15px;margin-bottom:12px;padding:8px;background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1)"><img src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&ecc=L&data='+encodeURIComponent(r.mapsUrl)+'" style="width:180px;height:180px;border:1px solid #ccc;border-radius:4px"><div style="font-size:12px;color:#444;line-height:1.6"><b>📱 スマホでQRを読み取ると<br>Googleマップでルートを確認できます</b><br><br><span style="color:#666;font-size:11px">※うまく読み込めない場合は、<br>スマホを少し離して明るい場所で<br>お試しください。</span></div></div>';}
+  var printMapsUrl=buildMapsUrl(r)||r.mapsUrl||'';
+  if(printMapsUrl){h+='<div style="display:flex;align-items:center;gap:15px;margin-bottom:12px;padding:8px;background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1)"><img src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&ecc=L&data='+encodeURIComponent(printMapsUrl)+'" style="width:180px;height:180px;border:1px solid #ccc;border-radius:4px"><div style="font-size:12px;color:#444;line-height:1.6"><b>📱 スマホでQRを読み取ると<br>Googleマップでルートを確認できます</b><br><br><span style="color:#666;font-size:11px">※うまく読み込めない場合は、<br>スマホを少し離して明るい場所で<br>お試しください。</span></div></div>';}
 
   h+='<table><thead><tr><th style="width:40px">順</th><th>氏名</th><th>住所</th><th>連絡先</th><th class="check-col">乗車✓</th><th class="check-col">降車✓</th><th style="width:80px">備考</th></tr></thead><tbody>';
   names.forEach(function(name,i){
@@ -6550,9 +6556,10 @@ async function printRoutesByPattern(pattern){
 
     // QRコード + テーブルを横並びに配置
     var qrHtml='';
-    if(r.mapsUrl){
+    var qrMapsUrl=buildMapsUrl(r)||r.mapsUrl||'';
+    if(qrMapsUrl){
       qrHtml='<div style="flex-shrink:0;text-align:center;padding-top:4px">'+
-        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=L&data='+encodeURIComponent(r.mapsUrl)+'" style="width:100px;height:100px;border:1px solid #ccc;border-radius:4px">'+
+        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=L&data='+encodeURIComponent(qrMapsUrl)+'" style="width:100px;height:100px;border:1px solid #ccc;border-radius:4px">'+
         '<div style="font-size:8px;color:#888;margin-top:2px">📱 MAP</div></div>';
     }
     printHtml+='<div style="display:flex;gap:8px;align-items:flex-start">';

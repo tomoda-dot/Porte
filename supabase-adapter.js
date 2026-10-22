@@ -632,15 +632,20 @@ function _getUserRawAddressForRoute(u, pattern){
 }
 
 function _buildMapsUrl(facilityAddr,users,pattern){
-  var base='https://www.google.com/maps/dir/';
   var fac = (facilityAddr && String(facilityAddr).trim()!=='undefined') ? facilityAddr : '大阪府豊中市小曽根1丁目10-23';
-  var parts=[encodeURIComponent(fac)];
+  var waypoints = [];
   for(var i=0;i<users.length;i++){
     var a = _getUserRawAddressForRoute(users[i], pattern);
-    if(a && String(a).trim()!=='undefined') parts.push(encodeURIComponent(a));
+    if(a && String(a).trim()!=='undefined' && a.trim()!=='') waypoints.push(encodeURIComponent(a.trim()));
   }
-  parts.push(encodeURIComponent(fac));
-  return base+parts.join('/');
+  var base = 'https://www.google.com/maps/dir/?api=1';
+  var origin = encodeURIComponent(String(fac).trim());
+  var dest = encodeURIComponent(String(fac).trim());
+  var url = base + '&origin=' + origin + '&destination=' + dest + '&travelmode=driving&avoid=tolls,highways';
+  if(waypoints.length > 0) {
+    url += '&waypoints=' + waypoints.join('%7C');
+  }
+  return url;
 }
 
 function _estimateRouteMinutes(ordered) {
