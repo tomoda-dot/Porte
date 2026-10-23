@@ -11336,6 +11336,21 @@ function renderSettings(c){
       '<p style="font-size:11px;color:var(--sub);margin-bottom:8px">送迎で使用する車両を登録します。</p>'+
       '<table><thead><tr><th>車両名</th><th>種類</th><th>定員</th><th>備考</th><th>操作</th></tr></thead><tbody id="vh-tb"></tbody></table>',false)+'<div id="vh-modal"></div>'+
     (admin ? settingsSection('s-shift-pat','📆','勤務パターン管理',
+      '<div style="background:'+(S.settings.shiftAutoApply==='off'?'#fff8f8':'#f4f8f4')+';border:1px solid '+(S.settings.shiftAutoApply==='off'?'#f5c6cb':'#c3e6cb')+';border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'+
+        '<div>'+
+          '<div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">'+
+            '⏰ シフトからの自動打刻（打刻忘れ防止）: '+
+            '<span style="font-weight:800;color:'+(S.settings.shiftAutoApply==='off'?'#c62828':'#2e7d32')+'">'+(S.settings.shiftAutoApply==='off'?'OFF（停止中）':'ON（自動補完 有効）')+'</span>'+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--sub);margin-top:2px">'+
+            'ONの場合、未打刻の過去日に対してシフトの所定勤務時間（例: 09:00〜18:00）で自動的に出退勤が補完されます。'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:inline-flex;gap:4px;background:#e9ecef;padding:3px;border-radius:6px">'+
+          '<button type="button" onclick="setShiftAutoApply(\'on\')" style="font-size:12px;padding:5px 14px;border:none;border-radius:4px;cursor:pointer;font-weight:700;transition:all .15s;'+(S.settings.shiftAutoApply!=='off'?'background:#2e7d32;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2)':'background:transparent;color:#555')+'">ON</button>'+
+          '<button type="button" onclick="setShiftAutoApply(\'off\')" style="font-size:12px;padding:5px 14px;border:none;border-radius:4px;cursor:pointer;font-weight:700;transition:all .15s;'+(S.settings.shiftAutoApply==='off'?'background:#c62828;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2)':'background:transparent;color:#555')+'">OFF</button>'+
+        '</div>'+
+      '</div>'+
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="bp" onclick="openShiftPatternModal()" style="font-size:12px">＋ 追加</button></div>'+
       '<p style="font-size:11px;color:var(--sub);margin-bottom:8px">シフト作成で使用する勤務パターンを登録します。</p>'+
       '<table><thead><tr><th>パターン名</th><th>始業</th><th>終業</th><th>休憩</th><th>色</th><th>操作</th></tr></thead><tbody id="sp-tb"></tbody></table>',false)+'<div id="sp-modal"></div>' : '')+
@@ -11637,6 +11652,22 @@ async function rejectCR(reqId){
 }
 
 // ═══ 勤務パターン管理 ═══
+async function setShiftAutoApply(val){
+  if((S.settings.shiftAutoApply||'on')===val)return;
+  if(!lockUI())return;
+  try{
+    await gas('saveSetting','shiftAutoApply',val);
+    S.settings.shiftAutoApply=val;
+    toast(val==='off'?'⏸️ シフト自動打刻を「OFF」に設定しました':'✅ シフト自動打刻を「ON」に設定しました');
+    _settingsOpenSections['s-shift-pat']=true;
+    renderSettings(document.getElementById('content'));
+  }catch(e){
+    await cAlert('設定保存に失敗しました: '+e);
+  }finally{
+    unlockUI();
+  }
+}
+
 function getShiftPatterns(){
   try{return JSON.parse(S.settings.shiftPatterns||'[]');}catch(e){return[];}
 }
