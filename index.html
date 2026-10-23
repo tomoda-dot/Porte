@@ -319,11 +319,16 @@ var getBentoCountValue=function(val){
 };
 var userName=function(id){return(S.users.find(function(u){return String(u.id)===String(id);})||{}).name||'?';};
 var wtName=function(id){if(!id)return'-';if(id==='none'||id==='なし')return'なし';return(S.workTypes.find(function(w){return String(w.id)===String(id);})||{}).name||String(id);};
-var getPmId=function(rep,att,user){
-  var val=(rep&&rep.workTypeIdPm!==undefined&&rep.workTypeIdPm!==null)?rep.workTypeIdPm:(att&&att.workTypeIdPm!==undefined&&att.workTypeIdPm!==null?att.workTypeIdPm:undefined);
+var getPmId=function(rep,att,user,dateStr){
+  var val=(rep&&rep.workTypeIdPm!==undefined&&rep.workTypeIdPm!==null&&rep.workTypeIdPm!=='')?rep.workTypeIdPm:((att&&att.workTypeIdPm!==undefined&&att.workTypeIdPm!==null&&att.workTypeIdPm!=='')?att.workTypeIdPm:undefined);
   if(val===undefined||val===null||val===''){
-    if(user&&user.workTypeIdPm) return user.workTypeIdPm;
-    var amVal=(rep&&rep.workTypeId)?rep.workTypeId:(att?att.workTypeId:(user&&user.workTypeId?user.workTypeId:''));
+    var targetDate = dateStr || (rep&&rep.date) || (att&&att.date) || (typeof today==='function'?today():'');
+    var u = user || (rep&&rep.userId ? S.users.find(function(x){return String(x.id)===String(rep.userId);}) : (att&&att.userId ? S.users.find(function(x){return String(x.id)===String(att.userId);}) : null));
+    var eff = (u && typeof getUserScheduleForDate==='function' && targetDate) ? getUserScheduleForDate(u, targetDate) : u;
+    if(eff && eff.workTypeIdPm !== undefined && eff.workTypeIdPm !== null && eff.workTypeIdPm !== '') {
+      return (eff.workTypeIdPm==='none'||eff.workTypeIdPm==='なし') ? 'none' : eff.workTypeIdPm;
+    }
+    var amVal=(rep&&rep.workTypeId)?rep.workTypeId:(att?att.workTypeId:(eff&&eff.workTypeId?eff.workTypeId:''));
     return(amVal&&amVal!=='none'&&amVal!=='なし')?amVal:'none';
   }
   if(val==='none'||val==='なし')return'none';
@@ -1479,11 +1484,11 @@ async function openCalAttM(uid, ds){
     var atts=results[0],dailies=results[1],tempUsers=results[2]||[];
     var att=atts.find(function(a){return String(a.userId)===String(uid);})||{userId:uid,date:ds,status:'予定',startTime:'',endTime:'',bento:'',pickup:'',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
-    var dWt=(u&&u.workTypeId)?(S.workTypes.find(function(w){return String(w.id)===String(u.workTypeId);})||{id:u.workTypeId}):(S.workTypes.find(function(w){return w.name==='軽作業';})||S.workTypes[0]);
-    var dWtPm=(u&&u.workTypeIdPm)?u.workTypeIdPm:(dWt?dWt.id:'');
+    var sc=(u && typeof getUserScheduleForDate==='function')?getUserScheduleForDate(u,ds):(u||{});
+    var dWt=(sc&&sc.workTypeId)?(S.workTypes.find(function(w){return String(w.id)===String(sc.workTypeId);})||{id:sc.workTypeId}):(S.workTypes.find(function(w){return w.name==='軽作業';})||S.workTypes[0]);
+    var dWtPm=(sc&&sc.workTypeIdPm)?sc.workTypeIdPm:(dWt?dWt.id:'');
     var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',workTypeIdPm:dWtPm,content:'',mood:'普通',notes:''};
     if(u){
-      var sc=getUserScheduleForDate(u,ds);
       if(!att.bento)att.bento=sc.bento||'なし';
       if(!att.pickup)att.pickup=sc.pickup||'なし';
     }
@@ -5662,7 +5667,7 @@ async function renderAttTbl(){
       }
       var nameLabel=esc(u.name)+(isTemp?' <span style="font-size:9px;color:var(--acc)">臨時</span>':'');
       var amId=(rep&&rep.workTypeId)?rep.workTypeId:(r?r.workTypeId:'');
-      var pmId=getPmId(rep,r);
+      var pmId=getPmId(rep,r,u,attDate);
       var wtDispAm=(r||rep)?esc(wtName(amId)):'-';
       var wtDispPm=(r||rep)?esc(wtName(pmId)):'-';
       var bIcon='-',pIcon='-';
@@ -5833,7 +5838,7 @@ function renderAttMonthlyTbl(){
     var isAbLine=['欠席','体調不良','通院'].indexOf(status)>=0;
     if((rep || r) && status!=='調整休'){
       var amId=(rep&&rep.workTypeId)?rep.workTypeId:(r?r.workTypeId:'');
-      var pmId=getPmId(rep,r);
+      var pmId=getPmId(rep,r,user,ds);
       wtDispAm=wtName(amId);
       wtDispPm=wtName(pmId);
       if(isAbLine){
@@ -5942,7 +5947,12 @@ async function bulkPresent(){
   var sch=activeUsers.filter(function(u){var sc=getUserScheduleForDate(u,attDate);return sc.scheduleDays&&sc.scheduleDays.indexOf(dwj)>=0&&rec.indexOf(u.id)<0;});if(sch.length===0){await cAlert('対象者なし');return;}if(!await cConfirm(sch.length+'名を一括出席にしますか？'))return;
   var dWt = S.workTypes.find(function(w){return w.name==='軽作業';}) || S.workTypes[0];
   var wtId = dWt ? dWt.id : '';
-  var recs=sch.map(function(u){var sc=getUserScheduleForDate(u,attDate);var brk=(sc&&sc.breakMin!==undefined&&sc.breakMin!==null&&sc.breakMin!=='')?Number(sc.breakMin):60;return{userId:u.id,date:attDate,status:'出席',startTime:sc.scheduleStart||'10:00',endTime:sc.scheduleEnd||'16:00',workTypeId:sc.workTypeId||wtId,workTypeIdPm:sc.workTypeIdPm||wtId,breakMin:brk,notes:''};});
+  var recs=sch.map(function(u){
+    var sc=getUserScheduleForDate(u,attDate);
+    var brk=(sc&&sc.breakMin!==undefined&&sc.breakMin!==null&&sc.breakMin!=='')?Number(sc.breakMin):60;
+    var pmVal=(sc&&sc.workTypeIdPm!==undefined&&sc.workTypeIdPm!==null&&sc.workTypeIdPm!=='')?sc.workTypeIdPm:(sc.workTypeId||wtId);
+    return{userId:u.id,date:attDate,status:'出席',startTime:sc.scheduleStart||'10:00',endTime:sc.scheduleEnd||'16:00',workTypeId:sc.workTypeId||wtId,workTypeIdPm:pmVal,breakMin:brk,notes:''};
+  });
   if(!lockUI())return;try{await gas('bulkAddAttendance',recs);S.dashboard=null;clearCache('getAttendance');clearCache('getAttendanceByDate');loadAtt();}catch(e){await cAlert('失敗');}
 }
 
