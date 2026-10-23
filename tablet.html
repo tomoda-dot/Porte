@@ -593,7 +593,8 @@ function isScheduledToday(user, date){
   if(att && (att.status==='調整休'||att.status==='欠席'||att.status==='体調不良'||att.status==='通院')){
     return false;
   }
-  var sd=(user.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var sc=(typeof getUserScheduleForDate==='function')?getUserScheduleForDate(user,date):user;
+  var sd=(sc.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
   if(sd.length===0)return false;
   var dow=['日','月','火','水','木','金','土'][new Date(date).getDay()];
   return sd.indexOf(dow)>=0;

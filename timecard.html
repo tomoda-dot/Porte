@@ -103,6 +103,30 @@ function _detectShift(startTime){
 function _shiftColor(s){return s==='早番'?'#ff9800':(s==='日勤'?'#2e7d32':(s==='遅番'?'#1565c0':'#999'));}
 function _shiftBg(s){return s==='早番'?'#fff3e0':(s==='日勤'?'#e8f5e9':(s==='遅番'?'#e3f2fd':'#f5f5f5'));}
 
+function getUserScheduleForDate(user, dateStr) {
+  if (!user) return {};
+  var def = {
+    scheduleDays: user.scheduleDays || '',
+    scheduleStart: user.scheduleStart || '10:00',
+    scheduleEnd: user.scheduleEnd || '16:00',
+    bento: user.bento || 'なし',
+    pickup: user.pickup || 'なし'
+  };
+  var hist = user.scheduleHistory;
+  if (typeof hist === 'string' && hist.trim()) {
+    try { hist = JSON.parse(hist); } catch(e) { hist = null; }
+  }
+  if (!hist || !Array.isArray(hist) || hist.length === 0) return def;
+  var target = (typeof dateStr === 'string' && dateStr.length >= 10) ? dateStr.slice(0, 10) : new Date().toISOString().slice(0, 10);
+  var sorted = hist.slice().filter(function(item){ return item && typeof item === 'object'; }).sort(function(a, b){
+    return (b.startDate || '1970-01-01').localeCompare(a.startDate || '1970-01-01');
+  });
+  for (var i = 0; i < sorted.length; i++) {
+    var sDate = sorted[i].startDate || '1970-01-01';
+    if (target >= sDate) return Object.assign({}, def, sorted[i]);
+  }
+  return Object.assign({}, def, sorted[sorted.length - 1]);
+}
 // --- 利用者モード ---
 async function getTimecardUsers(){
   var today2=_today();var dow2=_dow();var ym=today2.substring(0,7);
@@ -132,12 +156,13 @@ async function getTimecardUsers(){
     var rec=null;att.forEach(function(a){if(String(a.userId)===String(u.id))rec=a;});
 
     var isOffStatus=rec&&['欠席','体調不良','通院','調整休','お休み','公休','無断欠席'].indexOf(rec.status)>=0;
-    var dayMatch=u.scheduleDays&&u.scheduleDays.indexOf(dow2)>=0;
+    var sc=getUserScheduleForDate(u,today2);
+    var dayMatch=sc.scheduleDays&&sc.scheduleDays.indexOf(dow2)>=0;
     var isTemp=tempUids.indexOf(String(u.id))>=0;
     var isScheduled=!isTodayClosed&&!isOffStatus&&(dayMatch||isTemp);
 
     result.push({id:u.id,name:u.name,furigana:u.furigana||'',
-      scheduleStart:u.scheduleStart||'10:00',scheduleEnd:u.scheduleEnd||'16:00',
+      scheduleStart:sc.scheduleStart||'10:00',scheduleEnd:sc.scheduleEnd||'16:00',
       bento:u.bento||'なし',pickup:u.pickup||'なし',
       isScheduled:isScheduled,
       isTemp:isTemp,

@@ -761,7 +761,7 @@ async function renderDashboard(c){
   var _sess=getSession()||{};
   var offIds=att.filter(function(a){return a.status==='調整休';}).map(function(a){return a.userId;});
   var abIds=att.filter(function(a){return['欠席','体調不良','通院'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
-  var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;});
+  var sch=activeUsers.filter(function(u){var sc=getUserScheduleForDate(u,d);return sc.scheduleDays&&sc.scheduleDays.indexOf(dwj)>=0;});
   
   var bc=0,pc=0;
   var todayTempIds=todayTemp.map(function(t){return t.userId;});
@@ -771,8 +771,9 @@ async function renderDashboard(c){
   plannedIds.forEach(function(uid){
     var u=S.users.find(function(x){return x.id===uid;});if(!u)return;
     var r=att.find(function(a){return a.userId===uid;});
-    var curB=(r&&r.bento)?r.bento:u.bento;
-    var curP=(r&&r.pickup)?r.pickup:u.pickup;
+    var sc=getUserScheduleForDate(u,d);
+    var curB=(r&&r.bento)?r.bento:sc.bento;
+    var curP=(r&&r.pickup)?r.pickup:sc.pickup;
     var bCnt=getBentoCountValue(curB); if(bCnt>0) bc+=bCnt;
     if(curP && curP !== 'なし' && curP !== '0' && curP !== 'false') pc++;
   });
@@ -826,7 +827,8 @@ async function renderDashboard(c){
       if(monthClosed.indexOf(ds2)>=0) continue;
       var ddw=new Date(cmYr,cmMo-1,dd).getDay();
       var ddwj=['日','月','火','水','木','金','土'][ddw];
-      if(u.scheduleDays&&u.scheduleDays.indexOf(ddwj)>=0){
+      var sc2=getUserScheduleForDate(u,ds2);
+      if(sc2.scheduleDays&&sc2.scheduleDays.indexOf(ddwj)>=0){
         var rCheck=monthAtt.find(function(a){return String(a.userId)===String(u.id)&&String(a.date)===ds2;});
         // 調整休以外の全ての予定・出席・通常欠席は受給者証上限カウントに含める
         if(!rCheck||rCheck.status!=='調整休'){
@@ -1189,7 +1191,7 @@ async function renderCalendar(c){
     var dayTemp=(tempRecs||[]).filter(function(t){return String(t.date)===ds;});
     var abIds=da.filter(function(a){return ['欠席','体調不良','通院'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
     var offIds=da.filter(function(a){return a.status==='調整休';}).map(function(a){return a.userId;});
-    var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;});
+    var sch=activeUsers.filter(function(u){var sc=getUserScheduleForDate(u,ds);return sc.scheduleDays&&sc.scheduleDays.indexOf(dwj)>=0;});
     var rawDayIds=Array.from(new Set(sch.map(function(u){return u.id;}).concat(da.map(function(a){return a.userId;})).concat(dayTemp.map(function(t){return t.userId;}))));
     var allDayIds=rawDayIds.filter(function(uid){return offIds.indexOf(uid)<0;});
     var bc=0,pc=0;
@@ -1197,8 +1199,9 @@ async function renderCalendar(c){
       if(abIds.indexOf(uid)>=0)return;
       var u=S.users.find(function(x){return x.id===uid;});if(!u)return;
       var r=da.find(function(a){return a.userId===uid;});
-      var curB=(r&&r.bento)?r.bento:u.bento;
-      var curP=(r&&r.pickup)?r.pickup:u.pickup;
+      var sc=getUserScheduleForDate(u,ds);
+      var curB=(r&&r.bento)?r.bento:sc.bento;
+      var curP=(r&&r.pickup)?r.pickup:sc.pickup;
       var bCnt=getBentoCountValue(curB); if(bCnt>0) bc+=bCnt;
       if(isPickupUser(curP))pc++;
     });
@@ -1225,7 +1228,7 @@ async function renderCalendar(c){
     if(closedDays.indexOf(ds2)>=0)continue;
     var dw2=new Date(calY,calM-1,d2).getDay(),dwj2=['日','月','火','水','木','金','土'][dw2];
     var activeOnDay=S.users.filter(function(u){return isUserActive(u,ds2);});
-    var sc=activeOnDay.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj2)>=0;});
+    var sc=activeOnDay.filter(function(u){var scu=getUserScheduleForDate(u,ds2);return scu.scheduleDays&&scu.scheduleDays.indexOf(dwj2)>=0;});
     var da2=att.filter(function(a){return String(a.date)===ds2;});
     var dt2=(tempRecs||[]).filter(function(t){return String(t.date)===ds2;});
     var abIds2=da2.filter(function(a){return ['欠席','体調不良','通院'].indexOf(a.status)>=0;}).map(function(a){return a.userId;});
@@ -1237,8 +1240,9 @@ async function renderCalendar(c){
       if(abIds2.indexOf(uid)>=0) return;
       var u=S.users.find(function(x){return x.id===uid;}); if(!u)return;
       var r=da2.find(function(a){return a.userId===uid;});
-      var curB2=(r&&r.bento)?r.bento:u.bento;
-      var curP2=(r&&r.pickup)?r.pickup:u.pickup;
+      var scu2=getUserScheduleForDate(u,ds2);
+      var curB2=(r&&r.bento)?r.bento:scu2.bento;
+      var curP2=(r&&r.pickup)?r.pickup:scu2.pickup;
       var bCnt2=getBentoCountValue(curB2); if(bCnt2>0) tB+=bCnt2;
       if(isPickupUser(curP2)) tP++;
     });
@@ -1256,7 +1260,8 @@ function openTempAddModal(ds){
   var allIds=[];
   S.users.forEach(function(u){
     if(!isUserActive(u,ds))return;
-    if(u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0){allIds.push(u.id);return;}
+    var scu3=getUserScheduleForDate(u,ds);
+    if(scu3.scheduleDays&&scu3.scheduleDays.indexOf(dwj)>=0){allIds.push(u.id);return;}
   });
   (calExtraIds||[]).forEach(function(id){if(allIds.indexOf(id)<0)allIds.push(id);});
   var candidates=S.users.filter(function(u){return isUserActive(u,ds)&&allIds.indexOf(u.id)<0;});
@@ -1411,7 +1416,8 @@ function renderDD(ds){
   var rows=allIds.map(function(uid){
     var u=S.users.find(function(u){return u.id===uid;});if(!u)return'';
     var r=da.find(function(a){return a.userId===u.id;});
-    var isSch = u.scheduleDays && u.scheduleDays.indexOf(dwj) >= 0;
+    var sc = getUserScheduleForDate(u, ds);
+    var isSch = sc.scheduleDays && sc.scheduleDays.indexOf(dwj) >= 0;
     var isTmp = calExtraIds.indexOf(uid) >= 0 || (!isSch && (r || (S.calTemp||[]).some(function(t){ return t.userId === uid && String(t.date) === ds; })));
     var tmpRec=(S.calTemp||[]).find(function(t){return t.userId===uid&&String(t.date)===ds;});
     var hasAttRecord=!!r;
@@ -1427,7 +1433,7 @@ function renderDD(ds){
       stLabel = '<span style="color:var(--acc);font-size:11px;font-weight:700">臨時</span>';
     }
     var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
-    var sTime=(r&&r.startTime)?r.startTime:(isTmp?'':u.scheduleStart||'');
+    var sTime=(r&&r.startTime)?r.startTime:(isTmp?'':sc.scheduleStart||'');
     var eTime=(r&&r.endTime)?r.endTime:(isTmp?'':u.scheduleEnd||'');
     var sDiff=r&&r.startTime&&hasTimeDiff15(r.startTime,u.scheduleStart);
     var eDiff=r&&r.endTime&&hasTimeDiff15(r.endTime,u.scheduleEnd);
@@ -1470,8 +1476,9 @@ async function openCalAttM(uid, ds){
     var dWtPm=(u&&u.workTypeIdPm)?u.workTypeIdPm:(dWt?dWt.id:'');
     var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',workTypeIdPm:dWtPm,content:'',mood:'普通',notes:''};
     if(u){
-      if(!att.bento)att.bento=u.bento||'なし';
-      if(!att.pickup)att.pickup=u.pickup||'なし';
+      var sc=getUserScheduleForDate(u,ds);
+      if(!att.bento)att.bento=sc.bento||'なし';
+      if(!att.pickup)att.pickup=sc.pickup||'なし';
     }
     var tmpRec=tempUsers.find(function(t){return String(t.userId)===String(uid);});
     var isTemp=!!tmpRec;
@@ -1674,7 +1681,7 @@ async function openAttDailyM(uid, ds){
     // 当日の予定者リスト（左パネル用）
     var _dp=ds.split('-'),_dw=new Date(Number(_dp[0]),Number(_dp[1])-1,Number(_dp[2])).getDay();
     var _dwj=['日','月','火','水','木','金','土'][_dw];
-    var schUsers=S.users.filter(function(x){return isUserActive(x,ds)&&x.scheduleDays&&x.scheduleDays.indexOf(_dwj)>=0;});
+    var schUsers=S.users.filter(function(x){var sc=getUserScheduleForDate(x,ds);return isUserActive(x,ds)&&sc.scheduleDays&&sc.scheduleDays.indexOf(_dwj)>=0;});
     // 出欠記録のある利用者も含める
     var attUids=atts.map(function(a){return a.userId;});
     // 臨時利用者も含める
@@ -2327,6 +2334,246 @@ function collectUserContacts(){
   return list;
 }
 
+
+// ================= SCHEDULE HISTORY / RESERVATION MODAL LOGIC =================
+function parseUserSchedulePeriods(u) {
+  if (!u) return [];
+  var raw = u.scheduleHistory;
+  var list = [];
+  if (typeof raw === 'string' && raw.trim()) {
+    try { list = JSON.parse(raw); } catch(e) { list = []; }
+  } else if (Array.isArray(raw)) {
+    list = raw.slice();
+  }
+  if (!list || !Array.isArray(list) || list.length === 0) {
+    list = [{
+      startDate: u.enrollDate || '',
+      scheduleDays: u.scheduleDays || '',
+      scheduleStart: u.scheduleStart || '10:00',
+      scheduleEnd: u.scheduleEnd || '16:00',
+      breakMin: (u.breakMin !== undefined && u.breakMin !== null && u.breakMin !== '') ? String(u.breakMin) : '60',
+      contractStart: u.contractStart || '09:10',
+      contractEnd: u.contractEnd || '16:30',
+      workTypeId: u.workTypeId || '',
+      workTypeIdPm: u.workTypeIdPm || '',
+      bento: u.bento || 'なし',
+      bentoPaymentMethod: u.bentoPaymentMethod || '工賃払い',
+      pickup: u.pickup || 'なし',
+      transportationAllowance: Number(u.transportationAllowance || 0)
+    }];
+  }
+  list.sort(function(a, b) {
+    return (b.startDate || '1970-01-01').localeCompare(a.startDate || '1970-01-01');
+  });
+  return list;
+}
+
+function findDefaultSchedulePeriodIndex(periods) {
+  if (!periods || periods.length === 0) return 0;
+  var todayDate = today();
+  for (var i = 0; i < periods.length; i++) {
+    var sd = periods[i].startDate || '1970-01-01';
+    if (sd <= todayDate) return i;
+  }
+  return 0;
+}
+
+function getEffectiveSchedulePeriod(periods) {
+  if (!periods || periods.length === 0) return null;
+  var todayDate = today();
+  for (var i = 0; i < periods.length; i++) {
+    var sd = periods[i].startDate || '1970-01-01';
+    if (sd <= todayDate) return periods[i];
+  }
+  return periods[periods.length - 1];
+}
+
+function renderSchedulePeriodsBar() {
+  var container = document.getElementById('ue-sch-periods-container');
+  if (!container) return;
+  var todayDate = today();
+  var periods = window._ueSchedulePeriods || [];
+  var actIdx = window._ueActivePeriodIndex || 0;
+
+  var currentAppliedIdx = -1;
+  for (var i = 0; i < periods.length; i++) {
+    var sd = periods[i].startDate || '1970-01-01';
+    if (sd <= todayDate) {
+      currentAppliedIdx = i;
+      break;
+    }
+  }
+  if (currentAppliedIdx === -1 && periods.length > 0) {
+    currentAppliedIdx = periods.length - 1;
+  }
+
+  var html = '<div style="background:#f9f7f4;border:1.5px solid #d7ccc8;border-radius:10px;padding:10px 14px;margin-bottom:14px;">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">' +
+      '<div style="font-size:12px;font-weight:700;color:var(--pri);display:flex;align-items:center;gap:6px">' +
+        '<span>🗓️ スケジュール適用世代・履歴一覧</span>' +
+        '<span style="font-size:11px;font-weight:normal;color:var(--sub)">（タブをクリックして各期間の内容を編集）</span>' +
+      '</div>' +
+      '<button type="button" class="bp" onclick="addSchedulePeriodPrompt()" style="font-size:11px;padding:3px 10px;font-weight:700;box-shadow:none">' +
+        '＋ 新しい適用開始日を追加' +
+      '</button>' +
+    '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
+
+  periods.forEach(function(p, idx){
+    var isSel = (idx === actIdx);
+    var sd = p.startDate || '初期設定';
+    var isCurrent = (idx === currentAppliedIdx);
+    var isFuture = (p.startDate && p.startDate > todayDate);
+    var badgeLabel = isFuture ? '予約中' : (isCurrent ? '現在適用中' : '過去履歴');
+    var badgeBg = isFuture ? '#e3f2fd' : (isCurrent ? '#e8f5e9' : '#f5f5f5');
+    var badgeColor = isFuture ? '#1565c0' : (isCurrent ? '#2e7d32' : '#757575');
+
+    html += '<button type="button" onclick="switchSchedulePeriod(' + idx + ')" style="' +
+      'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;' +
+      'font-size:12px;font-weight:' + (isSel ? '800' : '600') + ';cursor:pointer;' +
+      'border:2px solid ' + (isSel ? 'var(--pri)' : '#d7ccc8') + ';' +
+      'background:' + (isSel ? '#5d4037' : '#fff') + ';' +
+      'color:' + (isSel ? '#fff' : '#444') + ';' +
+      'box-shadow:' + (isSel ? '0 2px 6px rgba(93,64,55,0.2)' : 'none') + '">' +
+      '<span>' + esc(sd) + '〜</span>' +
+      '<span style="font-size:10px;padding:1px 6px;border-radius:10px;background:' + (isSel ? 'rgba(255,255,255,0.25)' : badgeBg) + ';color:' + (isSel ? '#fff' : badgeColor) + ';font-weight:700">' + badgeLabel + '</span>' +
+      '</button>';
+  });
+
+  html += '</div>';
+
+  var cur = periods[actIdx] || {};
+  var isCurFuture = (cur.startDate && cur.startDate > todayDate);
+  var isCurApplied = (actIdx === currentAppliedIdx);
+  var statusBadge = isCurFuture ? '<span class="badge" style="background:#1565c0;font-size:11px">📅 ' + esc(cur.startDate) + ' から適用予定（予約）</span>' :
+                    (isCurApplied ? '<span class="badge" style="background:#2e7d32;font-size:11px">✅ 現在このスケジュールが適用されています</span>' :
+                                    '<span class="badge" style="background:#757575;font-size:11px">📁 過去のスケジュール履歴</span>');
+
+  html += '<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #e0d6cf;flex-wrap:wrap">' +
+    '<div style="display:flex;align-items:center;gap:6px">' +
+      '<label style="font-size:12px;font-weight:700;color:var(--pri)">編集中の適用開始日:</label>' +
+      '<input type="date" id="sch-current-start-date" value="' + esc(cur.startDate || '') + '" style="font-size:12px;padding:3px 8px;border:1px solid #ccc;border-radius:4px" onchange="updateCurrentPeriodStartDate(this.value)">' +
+    '</div>' +
+    statusBadge +
+    (periods.length > 1 ? '<button type="button" class="btn btn-sub btn-sm" onclick="deleteCurrentPeriodPrompt()" style="margin-left:auto;font-size:11px;color:var(--red);border-color:#ffcdd2;padding:3px 10px">🗑️ この期間を削除</button>' : '') +
+    '</div></div>';
+
+  container.innerHTML = html;
+}
+
+function switchSchedulePeriod(targetIndex) {
+  saveCurrentPeriodFormValues();
+  window._ueActivePeriodIndex = targetIndex;
+  applyPeriodValuesToForm(window._ueSchedulePeriods[targetIndex]);
+  renderSchedulePeriodsBar();
+}
+
+function saveCurrentPeriodFormValues() {
+  if (!window._ueSchedulePeriods || !window._ueSchedulePeriods[window._ueActivePeriodIndex]) return;
+  var cur = window._ueSchedulePeriods[window._ueActivePeriodIndex];
+  var days = [];
+  document.querySelectorAll('.uf-day').forEach(function(cb){ if(cb.checked) days.push(cb.value); });
+  if (document.querySelectorAll('.uf-day').length > 0) cur.scheduleDays = days.join(',');
+  function gv(id, def){ var el = document.getElementById(id); return el ? el.value : (def !== undefined ? def : ''); }
+  cur.scheduleStart = gv('uf-tstart', cur.scheduleStart || '10:00');
+  cur.scheduleEnd = gv('uf-tend', cur.scheduleEnd || '16:00');
+  cur.breakMin = gv('uf-brk', cur.breakMin !== undefined ? cur.breakMin : '60');
+  cur.contractStart = gv('uf-cstart', cur.contractStart || '09:10');
+  cur.contractEnd = gv('uf-cend', cur.contractEnd || '16:30');
+  cur.workTypeId = gv('uf-wt', cur.workTypeId || '');
+  cur.workTypeIdPm = gv('uf-wtp', cur.workTypeIdPm || '');
+  cur.bento = gv('uf-bento', cur.bento || 'なし');
+  cur.bentoPaymentMethod = gv('uf-bento-pay', cur.bentoPaymentMethod || '工賃払い');
+  cur.pickup = gv('uf-pickup', cur.pickup || 'なし');
+  cur.transportationAllowance = Number(gv('uf-trans-allowance', cur.transportationAllowance || 0)) || 0;
+}
+
+function applyPeriodValuesToForm(period) {
+  if (!period) return;
+  var schDays = (period.scheduleDays || '').split(',');
+  document.querySelectorAll('.uf-day').forEach(function(cb){
+    cb.checked = (schDays.indexOf(cb.value) >= 0);
+  });
+  function sv(id, val){ var el = document.getElementById(id); if (el && val !== undefined && val !== null) el.value = val; }
+  sv('uf-tstart', period.scheduleStart || '10:00');
+  sv('uf-tend', period.scheduleEnd || '16:00');
+  sv('uf-brk', (period.breakMin !== undefined && period.breakMin !== null && period.breakMin !== '') ? String(period.breakMin) : '60');
+  sv('uf-cstart', period.contractStart || '09:10');
+  sv('uf-cend', period.contractEnd || '16:30');
+  sv('uf-wt', period.workTypeId || '');
+  sv('uf-wtp', period.workTypeIdPm || '');
+  sv('uf-bento', period.bento || 'なし');
+  sv('uf-bento-pay', period.bentoPaymentMethod || '工賃払い');
+  sv('uf-pickup', period.pickup || 'なし');
+  sv('uf-trans-allowance', period.transportationAllowance != null ? period.transportationAllowance : 0);
+  var sdInput = document.getElementById('sch-current-start-date');
+  if (sdInput) sdInput.value = period.startDate || '';
+}
+
+function addSchedulePeriodPrompt() {
+  saveCurrentPeriodFormValues();
+  var now = new Date();
+  var nextM = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  var defDate = nextM.getFullYear() + '-' + String(nextM.getMonth() + 1).padStart(2, '0') + '-01';
+  var inputDate = prompt('いつから新しいスケジュールを適用しますか？\n日付を「YYYY-MM-DD」形式で入力してください（例: 2026-11-02）', defDate);
+  if (!inputDate || !inputDate.trim()) return;
+  var sDate = inputDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(sDate)) {
+    alert('日付は「YYYY-MM-DD」形式で入力してください（例: 2026-11-02）');
+    return;
+  }
+  var exists = (window._ueSchedulePeriods || []).some(function(p){ return p.startDate === sDate; });
+  if (exists) {
+    alert(sDate + ' からのスケジュールは既に登録されています。該当のタブを選択して編集してください。');
+    return;
+  }
+  var cur = (window._ueSchedulePeriods && window._ueSchedulePeriods[window._ueActivePeriodIndex]) ? window._ueSchedulePeriods[window._ueActivePeriodIndex] : {};
+  var newPeriod = Object.assign({}, cur, { startDate: sDate });
+  window._ueSchedulePeriods.push(newPeriod);
+  window._ueSchedulePeriods.sort(function(a, b){
+    return (b.startDate || '1970-01-01').localeCompare(a.startDate || '1970-01-01');
+  });
+  window._ueActivePeriodIndex = window._ueSchedulePeriods.findIndex(function(p){ return p.startDate === sDate; });
+  applyPeriodValuesToForm(window._ueSchedulePeriods[window._ueActivePeriodIndex]);
+  renderSchedulePeriodsBar();
+  alert(sDate + ' からのスケジュール枠を作成しました！\n曜日や利用時間、送迎・お弁当などを編集し、右上の「💾 登録」ボタンを押して保存してください。');
+}
+
+function deleteCurrentPeriodPrompt() {
+  if (!window._ueSchedulePeriods || window._ueSchedulePeriods.length <= 1) {
+    alert('スケジュール期間が1つのみのため削除できません。');
+    return;
+  }
+  var cur = window._ueSchedulePeriods[window._ueActivePeriodIndex];
+  var sDate = cur.startDate || '初期設定';
+  if (!confirm('「' + sDate + '〜」のスケジュール設定を削除しますか？\n※この操作は右上の「💾 登録」を押すまで確定されません。')) return;
+  window._ueSchedulePeriods.splice(window._ueActivePeriodIndex, 1);
+  window._ueActivePeriodIndex = Math.max(0, window._ueActivePeriodIndex - 1);
+  applyPeriodValuesToForm(window._ueSchedulePeriods[window._ueActivePeriodIndex]);
+  renderSchedulePeriodsBar();
+}
+
+function updateCurrentPeriodStartDate(newDate) {
+  if (!newDate || !/^\d{4}-\d{2}-\d{2}$/.test(newDate)) return;
+  var cur = window._ueSchedulePeriods[window._ueActivePeriodIndex];
+  if (!cur) return;
+  var dup = window._ueSchedulePeriods.some(function(p, i){
+    return i !== window._ueActivePeriodIndex && p.startDate === newDate;
+  });
+  if (dup) {
+    alert('その日付のスケジュールは既に存在します。');
+    var el = document.getElementById('sch-current-start-date');
+    if (el) el.value = cur.startDate || '';
+    return;
+  }
+  cur.startDate = newDate;
+  window._ueSchedulePeriods.sort(function(a, b){
+    return (b.startDate || '1970-01-01').localeCompare(a.startDate || '1970-01-01');
+  });
+  window._ueActivePeriodIndex = window._ueSchedulePeriods.indexOf(cur);
+  renderSchedulePeriodsBar();
+}
+
 function openUserModal(u, isTabSwitch){
   var d=u||{name:'',furigana:'',birthdate:'',gender:'男性',disability:'',serviceType:'就労B型',staffId:'',
     prefecture:'大阪府',city:'',address:'',contact:'',contact2:'',contact3:'',emergencyContact:'',emergencyPhone:'',
@@ -2342,7 +2589,14 @@ function openUserModal(u, isTabSwitch){
     if(d.contact3)d.contact3=_fixPhone(d.contact3);
     if(d.emergencyPhone)d.emergencyPhone=_fixPhone(d.emergencyPhone);
   }
-  var isEdit=!!d.id;var schDays=(d.scheduleDays||'').split(',');
+  var isEdit=!!d.id;
+  if(!isTabSwitch || !window._ueSchedulePeriods || window._ueSchedulePeriodsUserId !== d.id){
+    window._ueSchedulePeriods = parseUserSchedulePeriods(d);
+    window._ueSchedulePeriodsUserId = d.id;
+    window._ueActivePeriodIndex = findDefaultSchedulePeriodIndex(window._ueSchedulePeriods);
+  }
+  var activePeriod = (window._ueSchedulePeriods && window._ueSchedulePeriods[window._ueActivePeriodIndex]) || d;
+  var schDays=(activePeriod.scheduleDays||'').split(',');
   var ueTab=window._ueTab||'basic';
 
   // 左サイドバー（利用者リスト）
@@ -2493,39 +2747,46 @@ function openUserModal(u, isTabSwitch){
     '<div class="grid2"><div class="field"><label>終了理由</label><input id="uf-endreason" value="'+esc(d.endReason||'')+'" placeholder="例：一般就労移行、体調不良など" style="width:100%"></div><div></div></div></div>';
 
   // スケジュール
-  html+='<div class="card" style="margin-bottom:12px"><div class="section-title" style="margin-top:0">利用スケジュール</div>'+
+  html+='<div class="card" style="margin-bottom:12px">'+
+    '<div class="section-title" style="margin-top:0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'+
+      '<span>利用スケジュール</span>'+
+      '<button type="button" class="bg" onclick="addSchedulePeriodPrompt()" style="font-size:11px;padding:3px 10px;font-weight:700;color:var(--pri);border-color:var(--pri);cursor:pointer">'+
+        '📅 変更予定日を追加してスケジュールを予約'+
+      '</button>'+
+    '</div>'+
+    '<div id="ue-sch-periods-container"></div>'+
     '<div class="field"><label>利用日（曜日）</label><div style="display:flex;flex-wrap:wrap;gap:2px">'+DAYS_JP.map(function(day){return'<label class="day-check"><input type="checkbox" class="uf-day" value="'+day+'"'+(schDays.indexOf(day)>=0?' checked':'')+'>'+day+'</label>';}).join('')+'</div></div>'+
-    '<div class="grid3" style="margin-bottom:8px"><div class="field"><label>利用時間（開始） <span style="font-size:10px;color:var(--sub);font-weight:400">※工賃計算で使用</span></label><input type="time" id="uf-tstart" value="'+(d.scheduleStart||'10:00')+'" style="width:100%"></div>'+
-    '<div class="field"><label>利用時間（終了） <span style="font-size:10px;color:var(--sub);font-weight:400">※工賃計算で使用</span></label><input type="time" id="uf-tend" value="'+(d.scheduleEnd||'16:00')+'" style="width:100%"></div>'+
+    '<div class="grid3" style="margin-bottom:8px"><div class="field"><label>利用時間（開始） <span style="font-size:10px;color:var(--sub);font-weight:400">※工賃計算で使用</span></label><input type="time" id="uf-tstart" value="'+(activePeriod.scheduleStart||'10:00')+'" style="width:100%"></div>'+
+    '<div class="field"><label>利用時間（終了） <span style="font-size:10px;color:var(--sub);font-weight:400">※工賃計算で使用</span></label><input type="time" id="uf-tend" value="'+(activePeriod.scheduleEnd||'16:00')+'" style="width:100%"></div>'+
     '<div class="field"><label>標準休憩時間</label><select id="uf-brk" style="width:100%">'+
     [['60','60分（標準）'],['0','なし（0分）'],['30','30分'],['45','45分']].map(function(opt){
-      var curVal=(d&&d.breakMin!==undefined&&d.breakMin!==null&&d.breakMin!=='')?String(d.breakMin):'60';
+      var curVal=(activePeriod&&activePeriod.breakMin!==undefined&&activePeriod.breakMin!==null&&activePeriod.breakMin!=='')?String(activePeriod.breakMin):'60';
       return'<option value="'+opt[0]+'"'+(curVal===opt[0]?' selected':'')+'>'+opt[1]+'</option>';
     }).join('')+
     '</select></div></div>'+
-    '<div class="grid2"><div class="field"><label>契約時間（開始） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cstart" value="'+(d.contractStart||'09:10')+'" style="width:100%"></div>'+
-    '<div class="field"><label>契約時間（終了） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cend" value="'+(d.contractEnd||'16:30')+'" style="width:100%"></div></div>'+
+    '<div class="grid2"><div class="field"><label>契約時間（開始） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cstart" value="'+(activePeriod.contractStart||'09:10')+'" style="width:100%"></div>'+
+    '<div class="field"><label>契約時間（終了） <span style="font-size:10px;color:var(--sub);font-weight:400">※送迎時間で使用</span></label><input type="time" id="uf-cend" value="'+(activePeriod.contractEnd||'16:30')+'" style="width:100%"></div></div>'+
     '<div class="grid2" style="margin-top:8px">'+
     '  <div class="field"><label>標準作業(AM) <span style="font-size:10px;color:var(--sub);font-weight:400">※日報初期値・昇給管理</span></label><select id="uf-wt" style="width:100%">'+
-    '    <option value=""'+(!d.workTypeId?' selected':'')+'>未設定（デフォルト：軽作業）</option>'+
-    '    <option value="none"'+(d.workTypeId==='none'||d.workTypeId==='なし'?' selected':'')+'>なし（午前作業なし）</option>'+
-         (S.workTypes||[]).map(function(w){return'<option value="'+esc(w.id)+'"'+(String(d.workTypeId)===String(w.id)?' selected':'')+'>'+esc(w.name)+' (¥'+Number(w.rate||0).toLocaleString()+'/h)</option>';}).join('')+
+    '    <option value=""'+(!activePeriod.workTypeId?' selected':'')+'>未設定（デフォルト：軽作業）</option>'+
+    '    <option value="none"'+(activePeriod.workTypeId==='none'||activePeriod.workTypeId==='なし'?' selected':'')+'>なし（午前作業なし）</option>'+
+         (S.workTypes||[]).map(function(w){return'<option value="'+esc(w.id)+'"'+(String(activePeriod.workTypeId)===String(w.id)?' selected':'')+'>'+esc(w.name)+' (¥'+Number(w.rate||0).toLocaleString()+'/h)</option>';}).join('')+
     '  </select></div>'+
     '  <div class="field"><label>標準作業(PM) <span style="font-size:10px;color:var(--sub);font-weight:400">※日報初期値・昇給管理</span></label><select id="uf-wtp" style="width:100%">'+
-    '    <option value=""'+(!d.workTypeIdPm?' selected':'')+'>未設定（AMと同じ / 軽作業）</option>'+
-    '    <option value="none"'+(d.workTypeIdPm==='none'||d.workTypeIdPm==='なし'?' selected':'')+'>なし（午後作業なし）</option>'+
-         (S.workTypes||[]).map(function(w){return'<option value="'+esc(w.id)+'"'+(String(d.workTypeIdPm)===String(w.id)?' selected':'')+'>'+esc(w.name)+' (¥'+Number(w.rate||0).toLocaleString()+'/h)</option>';}).join('')+
+    '    <option value=""'+(!activePeriod.workTypeIdPm?' selected':'')+'>未設定（AMと同じ / 軽作業）</option>'+
+    '    <option value="none"'+(activePeriod.workTypeIdPm==='none'||activePeriod.workTypeIdPm==='なし'?' selected':'')+'>なし（午後作業なし）</option>'+
+         (S.workTypes||[]).map(function(w){return'<option value="'+esc(w.id)+'"'+(String(activePeriod.workTypeIdPm)===String(w.id)?' selected':'')+'>'+esc(w.name)+' (¥'+Number(w.rate||0).toLocaleString()+'/h)</option>';}).join('')+
     '  </select></div>'+
     '</div>'+
-    '<div class="grid3" style="margin-top:8px"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%">'+renderBentoOptions(d.bento)+'</select></div>'+
-    '<div class="field"><label>お弁当支払方法</label><select id="uf-bento-pay" style="width:100%"><option value="工賃払い"'+(d.bentoPaymentMethod==='工賃払い'||!d.bentoPaymentMethod?' selected':'')+'>工賃払い</option><option value="当日"'+(d.bentoPaymentMethod==='当日'?' selected':'')+'>当日払い</option><option value="月末締め翌月払い"'+(d.bentoPaymentMethod==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option></select></div>'+
+    '<div class="grid3" style="margin-top:8px"><div class="field"><label>お弁当</label><select id="uf-bento" style="width:100%">'+renderBentoOptions(activePeriod.bento)+'</select></div>'+
+    '<div class="field"><label>お弁当支払方法</label><select id="uf-bento-pay" style="width:100%"><option value="工賃払い"'+(activePeriod.bentoPaymentMethod==='工賃払い'||!activePeriod.bentoPaymentMethod?' selected':'')+'>工賃払い</option><option value="当日"'+(activePeriod.bentoPaymentMethod==='当日'?' selected':'')+'>当日払い</option><option value="月末締め翌月払い"'+(activePeriod.bentoPaymentMethod==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option></select></div>'+
     '<div class="field"><label>送迎</label><select id="uf-pickup" style="width:100%">'+
-      '<option value="なし"'+(d.pickup==='なし'||!d.pickup?' selected':'')+'>なし</option>'+
-      '<option value="往復"'+(d.pickup==='往復'||d.pickup==='あり'||d.pickup==='必要'?' selected':'')+'>往復</option>'+
-      '<option value="往路"'+(d.pickup==='往路'||d.pickup==='行き'?' selected':'')+'>往路（行きのみ）</option>'+
-      '<option value="復路"'+(d.pickup==='復路'||d.pickup==='帰り'?' selected':'')+'>復路（帰りのみ）</option>'+
+      '<option value="なし"'+(activePeriod.pickup==='なし'||!activePeriod.pickup?' selected':'')+'>なし</option>'+
+      '<option value="往復"'+(activePeriod.pickup==='往復'||activePeriod.pickup==='あり'||activePeriod.pickup==='必要'?' selected':'')+'>往復</option>'+
+      '<option value="往路"'+(activePeriod.pickup==='往路'||activePeriod.pickup==='行き'?' selected':'')+'>往路（行きのみ）</option>'+
+      '<option value="復路"'+(activePeriod.pickup==='復路'||activePeriod.pickup==='帰り'?' selected':'')+'>復路（帰りのみ）</option>'+
     '</select></div></div>'+
-    '<div class="grid2" style="margin-top:8px"><div class="field"><label>交通費支給額（1日あたり/円） <span style="font-size:10px;color:var(--sub);font-weight:400">※現金支給</span></label><input type="number" id="uf-trans-allowance" value="'+(d.transportationAllowance!=null?d.transportationAllowance:0)+'" placeholder="例: 200" style="width:100%"></div><div></div></div></div>';
+    '<div class="grid2" style="margin-top:8px"><div class="field"><label>交通費支給額（1日あたり/円） <span style="font-size:10px;color:var(--sub);font-weight:400">※現金支給</span></label><input type="number" id="uf-trans-allowance" value="'+(activePeriod.transportationAllowance!=null?activePeriod.transportationAllowance:0)+'" placeholder="例: 200" style="width:100%"></div><div></div></div></div>';
 
   // 利用後の進路（基本情報内）
   html+='<div class="card" style="margin-bottom:12px"><div class="section-title" style="margin-top:0">利用後の進路</div>'+
@@ -2605,6 +2866,9 @@ function openUserModal(u, isTabSwitch){
 
   document.getElementById('content').innerHTML=html;
   window._ueCurrentData=d;
+  if(ueTab==='basic'){
+    renderSchedulePeriodsBar();
+  }
   if(!isTabSwitch){
     window._ueInitialSnapshot=JSON.stringify(collectCurrentUserData());
   }
@@ -4113,6 +4377,26 @@ function collectCurrentUserData(){
       d.emergencyPhone = kazoku ? kazoku.phone : '';
     }
   }
+  // スケジュール期間データの同期
+  if(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0){
+    saveCurrentPeriodFormValues();
+    d.scheduleHistory = JSON.stringify(window._ueSchedulePeriods);
+    var eff = getEffectiveSchedulePeriod(window._ueSchedulePeriods);
+    if(eff){
+      d.scheduleDays = eff.scheduleDays || '';
+      d.scheduleStart = eff.scheduleStart || '10:00';
+      d.scheduleEnd = eff.scheduleEnd || '16:00';
+      d.breakMin = (eff.breakMin !== undefined && eff.breakMin !== null && eff.breakMin !== '') ? String(eff.breakMin) : '60';
+      d.contractStart = eff.contractStart || '09:10';
+      d.contractEnd = eff.contractEnd || '16:30';
+      d.workTypeId = eff.workTypeId || '';
+      d.workTypeIdPm = eff.workTypeIdPm || '';
+      d.bento = eff.bento || 'なし';
+      d.bentoPaymentMethod = eff.bentoPaymentMethod || '工賃払い';
+      d.pickup = eff.pickup || 'なし';
+      d.transportationAllowance = Number(eff.transportationAllowance || 0);
+    }
+  }
   return d;
 }
 
@@ -4209,6 +4493,7 @@ async function saveUser(id){
     contractStart:gv('uf-cstart',existing.contractStart||'09:10'),contractEnd:gv('uf-cend',existing.contractEnd||'16:30'),
     bento:gv('uf-bento',existing.bento||'なし'),bentoPaymentMethod:gv('uf-bento-pay',existing.bentoPaymentMethod||'工賃払い'),pickup:gv('uf-pickup',existing.pickup||'なし'),
     transportationAllowance:Number(gv('uf-trans-allowance',existing.transportationAllowance||0))||0,
+    scheduleHistory:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0) ? JSON.stringify(window._ueSchedulePeriods) : (existing.scheduleHistory || ''),
     notes:gv('uf-notes',existing.notes||''),
     afterCarePlan:gv('uf-aftercare',existing.afterCarePlan||''),afterCareOrg:gv('uf-afterorg',existing.afterCareOrg||''),
     relatedOrgs:document.getElementById('rel-org-body')?JSON.stringify(collectRelOrgs()):(existing.relatedOrgs||''),
@@ -5334,7 +5619,8 @@ async function renderAttTbl(){
     if(!isUserActive(u,attDate))return false;
     var r=attData.find(function(a){return String(a.userId)===String(u.id);});
     if(r&&r.status==='調整休')return false;
-    var isScheduled=u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;
+    var sc=getUserScheduleForDate(u,attDate);
+    var isScheduled=sc.scheduleDays&&sc.scheduleDays.indexOf(dwj)>=0;
     var hasRecord=attData.some(function(a){return String(a.userId)===String(u.id);});
     var isTemp=tempUids.indexOf(u.id)>=0;
     return isScheduled||hasRecord||isTemp;
@@ -5345,7 +5631,8 @@ async function renderAttTbl(){
       var rep=dailyData.find(function(d){return String(d.userId)===String(u.id);});
       var h=r?calcH(r.startTime,r.endTime):0;
       var status=r?r.status:'未記録';
-      var isTemp=tempUids.indexOf(u.id)>=0||(r && !(u.scheduleDays && u.scheduleDays.indexOf(dwj)>=0));
+      var sc=getUserScheduleForDate(u,attDate);
+      var isTemp=tempUids.indexOf(u.id)>=0||(r && !(sc.scheduleDays && sc.scheduleDays.indexOf(dwj)>=0));
       var stLabel = '<span style="color:var(--sub);font-size:11px">-</span>';
       if(r && r.status !== '調整休'){
         var bHtml = '<span class="badge" style="background:'+(statusColor[r.status]||'#888')+'">'+esc(r.status)+'</span>';
@@ -5361,8 +5648,9 @@ async function renderAttTbl(){
       var wtDispAm=(r||rep)?esc(wtName(amId)):'-';
       var wtDispPm=(r||rep)?esc(wtName(pmId)):'-';
       var bIcon='-',pIcon='-';
-      var curB=r?(r.bento||u.bento):u.bento;
-      var curP=r?(r.pickup||u.pickup):u.pickup;
+      var sc=getUserScheduleForDate(u,attDate);
+      var curB=r?(r.bento||sc.bento):sc.bento;
+      var curP=r?(r.pickup||sc.pickup):sc.pickup;
       var curPM=r?(r.bentoPaymentMethod||u.bentoPaymentMethod):u.bentoPaymentMethod;
       var isAb=r?['欠席','体調不良','通院'].indexOf(r.status)>=0:false;
       var isAdj=r?r.status==='調整休':false;
@@ -5469,20 +5757,23 @@ function renderAttMonthlyTbl(){
     var timeDisp='-';
     var bIcon='−',pIcon='−';
     var notes='';
-    var isScheduled=user.scheduleDays&&user.scheduleDays.indexOf(dwj)>=0;
+    var sc=getUserScheduleForDate(user,ds);
+    var isScheduled=sc.scheduleDays&&sc.scheduleDays.indexOf(dwj)>=0;
     var isActive=isUserActive(user,ds);
     if(r){
       status=r.status;
       if(['出席','遅刻','早退','予定'].indexOf(status)>=0){
-        var sTime=r.startTime||user.scheduleStart||'';
-        var eTime=r.endTime||user.scheduleEnd||'';
-        var defBrk=(user&&user.breakMin!==undefined&&user.breakMin!==null&&user.breakMin!=='')?Number(user.breakMin):60;
+        var sc=getUserScheduleForDate(user,ds);
+        var sTime=r.startTime||sc.scheduleStart||'';
+        var eTime=r.endTime||sc.scheduleEnd||'';
+        var defBrk=(sc&&sc.breakMin!==undefined&&sc.breakMin!==null&&sc.breakMin!=='')?Number(sc.breakMin):60;
         var brkMin=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?Number(r.breakMin):defBrk;
         var brkMark=brkMin>0?'<span title="休憩'+brkMin+'分" style="font-size:10px;margin-left:3px;opacity:.7">☕</span>':'';
         timeDisp=sTime+'〜'+eTime+brkMark;
       }
       var isAb=['欠席','体調不良','通院','調整休'].indexOf(status)>=0;
-      var curB=r.bento||user.bento;
+      var sc=getUserScheduleForDate(user,ds);
+      var curB=r.bento||sc.bento;
       var curP=r.pickup||user.pickup;
       var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:user.bentoPaymentMethod;
       var bCount=getBentoCountValue(curB);
@@ -5590,7 +5881,8 @@ function renderAttMonthlyTbl(){
     var ds2=yr+'-'+String(mo).padStart(2,'0')+'-'+String(d2).padStart(2,'0');
     var dw2=new Date(yr,mo-1,d2).getDay();
     var dwj2=['日','月','火','水','木','金','土'][dw2];
-    var isScheduled2=user.scheduleDays&&user.scheduleDays.indexOf(dwj2)>=0;
+    var sc2=getUserScheduleForDate(user,ds2);
+    var isScheduled2=sc2.scheduleDays&&sc2.scheduleDays.indexOf(dwj2)>=0;
     var isActive2=isUserActive(user,ds2);
     if(isScheduled2&&isActive2&&attMonthlyClosedDays.indexOf(ds2)<0){
       var rCheck=userAtts.find(function(a){return String(a.date)===ds2;});
@@ -5629,10 +5921,10 @@ function renderAttMonthlyTbl(){
 async function bulkPresent(){
   var _ap=attDate.split('-'),dow=new Date(Number(_ap[0]),Number(_ap[1])-1,Number(_ap[2])).getDay(),dwj=['日','月','火','水','木','金','土'][dow];var rec=attData.map(function(a){return a.userId;});
   var activeUsers=S.users.filter(function(u){return isUserActive(u,attDate);});
-  var sch=activeUsers.filter(function(u){return u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0&&rec.indexOf(u.id)<0;});if(sch.length===0){await cAlert('対象者なし');return;}if(!await cConfirm(sch.length+'名を一括出席にしますか？'))return;
+  var sch=activeUsers.filter(function(u){var sc=getUserScheduleForDate(u,attDate);return sc.scheduleDays&&sc.scheduleDays.indexOf(dwj)>=0&&rec.indexOf(u.id)<0;});if(sch.length===0){await cAlert('対象者なし');return;}if(!await cConfirm(sch.length+'名を一括出席にしますか？'))return;
   var dWt = S.workTypes.find(function(w){return w.name==='軽作業';}) || S.workTypes[0];
   var wtId = dWt ? dWt.id : '';
-  var recs=sch.map(function(u){return{userId:u.id,date:attDate,status:'出席',startTime:u.scheduleStart||'10:00',endTime:u.scheduleEnd||'16:00',workTypeId:wtId,workTypeIdPm:wtId,breakMin:60,notes:''};});
+  var recs=sch.map(function(u){var sc=getUserScheduleForDate(u,attDate);var brk=(sc&&sc.breakMin!==undefined&&sc.breakMin!==null&&sc.breakMin!=='')?Number(sc.breakMin):60;return{userId:u.id,date:attDate,status:'出席',startTime:sc.scheduleStart||'10:00',endTime:sc.scheduleEnd||'16:00',workTypeId:sc.workTypeId||wtId,workTypeIdPm:sc.workTypeIdPm||wtId,breakMin:brk,notes:''};});
   if(!lockUI())return;try{await gas('bulkAddAttendance',recs);S.dashboard=null;clearCache('getAttendance');clearCache('getAttendanceByDate');loadAtt();}catch(e){await cAlert('失敗');}
 }
 
@@ -6142,8 +6434,9 @@ function openNewRoute(){
       activeUsers.map(function(u){
         var addr=(u.prefecture||'')+(u.city||'')+(u.address||'');
         var hasAddr=addr.length>=3;
-        var isSchDay=u.scheduleDays&&u.scheduleDays.indexOf(dwj)>=0;
-        var isPickup=isPickupUser(u.pickup);
+        var sc=getUserScheduleForDate(u,tDate);
+        var isSchDay=sc.scheduleDays&&sc.scheduleDays.indexOf(dwj)>=0;
+        var isPickup=isPickupUser(sc.pickup);
         return'<label style="display:flex;align-items:center;gap:5px;font-size:12px;padding:5px 7px;background:#fff;border-radius:6px;cursor:pointer;border:1.5px solid '+(isSchDay?'var(--pri)':'var(--bdr)')+';opacity:'+(hasAddr?'1':'.5')+'">'+
           '<input type="checkbox" class="nr-cb" value="'+u.id+'"'+(isSchDay&&isPickup&&hasAddr?' checked':'')+(!hasAddr?' disabled':'')+'>'+
           '<span>'+esc(u.name)+(isSchDay?'<span style="font-size:9px;color:var(--grn);margin-left:2px">予定日</span>':'')+(isPickup?'<span style="font-size:9px;color:var(--acc);margin-left:2px">送迎</span>':'')+'</span></label>';
@@ -6355,12 +6648,13 @@ async function autoGenRoutes(){
   try{var allAtt=await cachedGas('getAttendance',tDate.slice(0,7));dayAtt=allAtt.filter(function(a){return String(a.date)===tDate;});}catch(e){}
   var au=S.users.filter(function(u){
     if(!isUserActive(u,tDate))return false;
-    if(!u.scheduleDays||u.scheduleDays.indexOf(dwj)<0)return false;
+    var sc=getUserScheduleForDate(u,tDate);
+    if(!sc.scheduleDays||sc.scheduleDays.indexOf(dwj)<0)return false;
     var r=dayAtt.find(function(a){return String(a.userId)===String(u.id);});
     // 欠席系・調整休はスキップ
     if(r&&['欠席','体調不良','通院','調整休'].indexOf(r.status)>=0)return false;
     // 出欠記録で送迎が明示的に「なし」ならスキップ
-    var curP=(r&&r.pickup)?r.pickup:u.pickup;
+    var curP=(r&&r.pickup)?r.pickup:sc.pickup;
     return isPickupUser(curP);
   });
   // 臨時利用者も含む
@@ -6614,8 +6908,9 @@ async function renderWages(c){
 
 // 皆勤判定: 利用予定日すべてに「出席」or「通院」で出ていればtrue（遅刻・早退・欠席・体調不良はNG、未記録はスキップ）
 function checkKaikin(u, allAtt, ym, closedDays){
-  var schDays=(u.scheduleDays||'').split(',').filter(function(d){return d;});
-  if(schDays.length===0) return {kaikin:false, expected:0, ok:0, ng:0, pending:0, reason:'予定日なし'};
+  var curSc=getUserScheduleForDate(u,ym+'-01');
+  var schDays=(curSc.scheduleDays||u.scheduleDays||'').split(',').filter(function(d){return d;});
+  if(schDays.length===0 && !(u.scheduleHistory&&u.scheduleHistory.length>0)) return {kaikin:false, expected:0, ok:0, ng:0, pending:0, reason:'予定日なし'};
   var year=Number(ym.split('-')[0]), month=Number(ym.split('-')[1]);
   var dim=new Date(year, month, 0).getDate();
   var todayStr=today();
@@ -6627,7 +6922,9 @@ function checkKaikin(u, allAtt, ym, closedDays){
     if(closedDays.indexOf(ds)>=0) continue;
     var dw=new Date(year,month-1,d).getDay();
     var dwj=['日','月','火','水','木','金','土'][dw];
-    if(schDays.indexOf(dwj)<0) continue;
+    var daySc=getUserScheduleForDate(u,ds);
+    var daySchDays=(daySc.scheduleDays||'').split(',').filter(Boolean);
+    if(daySchDays.indexOf(dwj)<0) continue;
 
     var rec=allAtt.find(function(a){return String(a.userId)===String(u.id)&&String(a.date)===ds;});
     
@@ -7252,7 +7549,8 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
     var ds = adjM + '-' + String(d).padStart(2, '0');
     var dw = new Date(year, month-1, d).getDay();
     var dwj = ['日','月','火','水','木','金','土'][dw];
-    var isSch = (u.scheduleDays || '').indexOf(dwj) >= 0;
+    var sc = getUserScheduleForDate(u, ds);
+    var isSch = (sc.scheduleDays || '').indexOf(dwj) >= 0;
     var isClosed = closedDays.indexOf(ds) >= 0;
 
     var rec = allAtt.find(function(a){ return String(a.userId) === String(u.id) && String(a.date) === ds; });

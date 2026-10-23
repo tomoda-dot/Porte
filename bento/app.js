@@ -1,3 +1,33 @@
+
+function getUserScheduleForDate(user, dateStr) {
+  if (!user) return {};
+  const def = {
+    scheduleDays: user.scheduleDays || '',
+    scheduleStart: user.scheduleStart || '10:00',
+    scheduleEnd: user.scheduleEnd || '16:00',
+    bento: user.bento || 'なし',
+    pickup: user.pickup || 'なし'
+  };
+  let hist = user.scheduleHistory;
+  if (typeof hist === 'string' && hist.trim()) {
+    try { hist = JSON.parse(hist); } catch(e) { hist = null; }
+  }
+  if (!hist || !Array.isArray(hist) || hist.length === 0) {
+    return def;
+  }
+  const target = (typeof dateStr === 'string' && dateStr.length >= 10) ? dateStr.slice(0, 10) : new Date().toISOString().slice(0, 10);
+  const sorted = hist.slice().filter(item => item && typeof item === 'object').sort((a, b) => {
+    return (b.startDate || '1970-01-01').localeCompare(a.startDate || '1970-01-01');
+  });
+  for (let i = 0; i < sorted.length; i++) {
+    const sDate = sorted[i].startDate || '1970-01-01';
+    if (target >= sDate) {
+      return Object.assign({}, def, sorted[i]);
+    }
+  }
+  return Object.assign({}, def, sorted[sorted.length - 1]);
+}
+
 /**
  * ぽかぽか弁当 Web App - Main Logic (Porte integrated)
  */
@@ -3113,7 +3143,8 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         const r = attMap[uId] || attMap[uName];
         
         // 利用曜日のチェック
-        const scheduleDays = (u.scheduleDays || '').split(',').map(s => s.trim()).filter(Boolean);
+        const sc = getUserScheduleForDate(u, todayStr);
+        const scheduleDays = (sc.scheduleDays || '').split(',').map(s => s.trim()).filter(Boolean);
         const isScheduledToday = scheduleDays.length === 0 || scheduleDays.includes(todayDayJp);
 
         // 欠席・お休み判定
@@ -3136,7 +3167,7 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           }
         }
 
-        const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? String(r.bento).trim() : (u.bento ? String(u.bento).trim() : '');
+        const curB = (r && r.bento !== undefined && r.bento !== null && r.bento !== '') ? String(r.bento).trim() : (sc.bento ? String(sc.bento).trim() : '');
         const curMeal = (r && r.meal !== undefined && r.meal !== null) ? r.meal : u.meal;
 
         // お弁当が必要（wantsBento = true）かの判定：

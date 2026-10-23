@@ -337,6 +337,7 @@ async function gas(fn){
         if(!u.contacts && _uSet['userContacts_'+u.id]) u.contacts=_uSet['userContacts_'+u.id];
         if(!u.addresses && _uSet['userAddresses_'+u.id]) u.addresses=_uSet['userAddresses_'+u.id];
         if(!u.relatedOrgs && _uSet['userRelatedOrgs_'+u.id]) u.relatedOrgs=_uSet['userRelatedOrgs_'+u.id];
+        if(!u.scheduleHistory && _uSet['scheduleHistory_'+u.id]) u.scheduleHistory=_uSet['scheduleHistory_'+u.id];
         return u;
       });
     case 'addUser':
@@ -350,6 +351,7 @@ async function gas(fn){
       if(a1.contacts!==undefined)await _updateSetting('userContacts_'+a1.id,typeof a1.contacts==='string'?a1.contacts:JSON.stringify(a1.contacts));
       if(a1.addresses!==undefined)await _updateSetting('userAddresses_'+a1.id,typeof a1.addresses==='string'?a1.addresses:JSON.stringify(a1.addresses));
       if(a1.relatedOrgs!==undefined)await _updateSetting('userRelatedOrgs_'+a1.id,typeof a1.relatedOrgs==='string'?a1.relatedOrgs:JSON.stringify(a1.relatedOrgs));
+      if(a1.scheduleHistory!==undefined)await _updateSetting('scheduleHistory_'+a1.id,typeof a1.scheduleHistory==='string'?a1.scheduleHistory:JSON.stringify(a1.scheduleHistory));
       return _add('利用者',a1);
     case 'updateUser':
       if(a1.bentoPaymentMethod)await _updateSetting('bentoPay_'+a1.id,a1.bentoPaymentMethod);
@@ -361,6 +363,7 @@ async function gas(fn){
       if(a1.contacts!==undefined)await _updateSetting('userContacts_'+a1.id,typeof a1.contacts==='string'?a1.contacts:JSON.stringify(a1.contacts));
       if(a1.addresses!==undefined)await _updateSetting('userAddresses_'+a1.id,typeof a1.addresses==='string'?a1.addresses:JSON.stringify(a1.addresses));
       if(a1.relatedOrgs!==undefined)await _updateSetting('userRelatedOrgs_'+a1.id,typeof a1.relatedOrgs==='string'?a1.relatedOrgs:JSON.stringify(a1.relatedOrgs));
+      if(a1.scheduleHistory!==undefined)await _updateSetting('scheduleHistory_'+a1.id,typeof a1.scheduleHistory==='string'?a1.scheduleHistory:JSON.stringify(a1.scheduleHistory));
       return _update('利用者',a1);
     case 'deleteUser': return _del('利用者',a1);
 
@@ -1375,4 +1378,49 @@ async function _generateKokuhoReceiptCSV(ym, dataType, kokuhoOpts) {
   });
 
   return csvText;
+}
+
+// ================= SCHEDULE HISTORY & GENERATION HELPER =================
+function getUserScheduleForDate(user, dateStr) {
+  if (!user) return {};
+  var def = {
+    scheduleDays: user.scheduleDays || '',
+    scheduleStart: user.scheduleStart || '10:00',
+    scheduleEnd: user.scheduleEnd || '16:00',
+    breakMin: (user.breakMin !== undefined && user.breakMin !== null && user.breakMin !== '') ? String(user.breakMin) : '60',
+    contractStart: user.contractStart || '09:10',
+    contractEnd: user.contractEnd || '16:30',
+    workTypeId: user.workTypeId || '',
+    workTypeIdPm: user.workTypeIdPm || '',
+    bento: user.bento || 'なし',
+    bentoPaymentMethod: user.bentoPaymentMethod || '工賃払い',
+    pickup: user.pickup || 'なし',
+    transportationAllowance: user.transportationAllowance != null ? Number(user.transportationAllowance) : 0
+  };
+
+  var hist = user.scheduleHistory;
+  if (typeof hist === 'string' && hist.trim()) {
+    try { hist = JSON.parse(hist); } catch(e) { hist = null; }
+  }
+  if (!hist || !Array.isArray(hist) || hist.length === 0) {
+    return def;
+  }
+
+  var target = (typeof dateStr === 'string' && dateStr.length >= 10) ? dateStr.slice(0, 10) : (typeof today === 'function' ? today() : new Date().toISOString().slice(0, 10));
+
+  var sorted = hist.slice().filter(function(item){
+    return item && typeof item === 'object';
+  }).sort(function(a, b){
+    var da = a.startDate || '1970-01-01';
+    var db = b.startDate || '1970-01-01';
+    return db.localeCompare(da);
+  });
+
+  for (var i = 0; i < sorted.length; i++) {
+    var sDate = sorted[i].startDate || '1970-01-01';
+    if (target >= sDate) {
+      return Object.assign({}, def, sorted[i]);
+    }
+  }
+  return Object.assign({}, def, sorted[sorted.length - 1]);
 }
