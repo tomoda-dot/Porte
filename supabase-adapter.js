@@ -1,4 +1,4 @@
-﻿// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 // Supabase アダプター (gas() 互換レイヤー)
 // gas('functionName', args...) をそのまま使えるように
 // Supabase操作に自動変換する
@@ -905,15 +905,18 @@ async function _calcAttendanceList(ym){
     if(recs.length===0)return;
     var tServiceMin=0,tWM=0,tBM=0,tW=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
     recs.forEach(function(rec){
+      var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
       var netH=_calcNetH(rec,user);
       var sMin=Math.round(netH*60);
-      var sp=String(rec.startTime||'10:00').split(':'),ep=String(rec.endTime||'16:00').split(':');
-      var wm=Number(ep[0])*60+Number(ep[1])-Number(sp[0])*60-Number(sp[1]);var brk=Number(rec.breakMin)||0;
+      var sTime = rec.startTime || rec.in || rec.clockIn || rec.scheduleStart || (effU ? effU.scheduleStart : '') || '10:00';
+      var eTime = rec.endTime || rec.out || rec.clockOut || rec.scheduleEnd || (effU ? effU.scheduleEnd : '') || '16:00';
+      var sp=String(sTime).split(':'),ep=String(eTime).split(':');
+      var wm=Number(ep[0])*60+Number(ep[1])-Number(sp[0])*60-Number(sp[1]);
+      var brk=(rec.breakMin!==undefined&&rec.breakMin!==null&&rec.breakMin!=='')?Number(rec.breakMin):((effU&&effU.breakMin!==undefined&&effU.breakMin!==null&&effU.breakMin!=='')?Number(effU.breakMin):0);
       tServiceMin+=sMin;tWM+=wm;tBM+=brk;tW+=_calcRecWage(rec,wts,user).wage;
       var bCount = _getBentoCount(rec);
       if(bCount > 0){
         bc += bCount;
-        var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
         var pm=rec.bentoPaymentMethod || (effU&&effU.bentoPaymentMethod) || '工賃払い';
         var isFreeMeal = String(rec.bento||'').includes('無料') || String(rec.bento||'').includes('体験食');
         if(isFreeMeal || pm==='無料' || pm==='対象外'){
@@ -939,7 +942,13 @@ async function _calcAttendanceList(ym){
           if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
         }
         else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
-        else if(a.condition==='no_pickup'){match=recs.length>0&&!_isPickupUser(user.pickup);}
+        else if(a.condition==='no_pickup'){
+          var userPickup = user.pickup;
+          if(recs.length > 0 && typeof getUserScheduleForDate === 'function'){
+            userPickup = getUserScheduleForDate(user, recs[0].date).pickup;
+          }
+          match=recs.length>0&&!_isPickupUser(userPickup);
+        }
         if(match){bonus+=Number(a.amount)||0;}
       });
     }else{
@@ -1035,7 +1044,13 @@ async function _calcWageDetailPerUser(ym){
             if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
           }
           else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
-          else if(a.condition==='no_pickup'){match=recs.length>0&&!_isPickupUser(user.pickup);}
+          else if(a.condition==='no_pickup'){
+            var userPickup = user.pickup;
+            if(recs.length > 0 && typeof getUserScheduleForDate === 'function'){
+              userPickup = getUserScheduleForDate(user, recs[0].date).pickup;
+            }
+            match=recs.length>0&&!_isPickupUser(userPickup);
+          }
         }
         if(match){
           var amt=Number(a.amount)||0;
@@ -1050,7 +1065,13 @@ async function _calcWageDetailPerUser(ym){
       }
     }
 
-    result.push({id:user.id,name:user.name,bentoPaymentMethod:user.bentoPaymentMethod||'工賃払い',days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,transportAllowance:tTrans,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,bentoPrice:bentoPrice,total:wSub+bonus-bcDeduct*bentoPrice+tTrans});
+    var pmRaw = (recs.find(function(r){return r.bentoPaymentMethod;}) || {}).bentoPaymentMethod;
+    if(!pmRaw && recs.length > 0 && typeof getUserScheduleForDate === 'function'){
+      pmRaw = getUserScheduleForDate(user, recs[0].date).bentoPaymentMethod;
+    }
+    if(!pmRaw) pmRaw = user.bentoPaymentMethod || '工賃払い';
+
+    result.push({id:user.id,name:user.name,bentoPaymentMethod:pmRaw,days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,transportAllowance:tTrans,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,bentoPrice:bentoPrice,total:wSub+bonus-bcDeduct*bentoPrice+tTrans});
   });
   return{ym:ym,companyName:companyName,payDate:payDateStr,users:result,bentoPrice:bentoPrice};
 }
@@ -1069,7 +1090,11 @@ async function _calcWorkTypeSummary(ym){
     recs.forEach(function(rec){
       var day=Number(String(rec.date).split('-')[2]);if(day<1||day>dim)return;
       var netH=_calcNetH(rec,user);if(netH<=0)return;
-      var wt=_findWt(wts,rec.workTypeId||'',(rec.workTypeIdPm&&String(rec.workTypeIdPm)!=='')?rec.workTypeIdPm:rec.workTypeId||'');
+      var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
+      var amK = rec.workTypeId || (effU ? effU.workTypeId : '') || '';
+      var pmDef = (effU && effU.workTypeIdPm !== undefined && effU.workTypeIdPm !== null && effU.workTypeIdPm !== '') ? effU.workTypeIdPm : amK;
+      var pmK = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && String(rec.workTypeIdPm)!=='') ? rec.workTypeIdPm : pmDef;
+      var wt=_findWt(wts,amK,pmK);
       if(!wt.am || !wt.pm || String(wt.am.id)===String(wt.pm.id)){
         var targetWt=wt.am||wt.pm;
         var nm=targetWt?targetWt.name:'未設定';var rt=targetWt?Number(targetWt.rate):0;
@@ -1434,13 +1459,13 @@ function getUserScheduleForDate(user, dateStr) {
   var sorted = hist.slice().filter(function(item){
     return item && typeof item === 'object';
   }).sort(function(a, b){
-    var da = a.startDate || '1970-01-01';
-    var db = b.startDate || '1970-01-01';
+    var da = a.startDate || a.effectiveDate || '1970-01-01';
+    var db = b.startDate || b.effectiveDate || '1970-01-01';
     return db.localeCompare(da);
   });
 
   for (var i = 0; i < sorted.length; i++) {
-    var sDate = sorted[i].startDate || '1970-01-01';
+    var sDate = sorted[i].startDate || sorted[i].effectiveDate || '1970-01-01';
     if (target >= sDate) {
       return Object.assign({}, def, sorted[i]);
     }

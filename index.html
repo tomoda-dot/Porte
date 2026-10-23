@@ -8132,7 +8132,19 @@ async function loadE(){
     var d=S.users.map(function(u){
       var r=att.filter(function(a){return String(a.userId)===String(u.id)&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
       var h=0,w=0,bc=0;
-      r.forEach(function(a){var cw=calcWage(a,u);h+=cw.h;w+=cw.wage;if(a.bento&&String(a.bento)!=='0'&&String(a.bento)!=='false'&&String(a.bento)!==''&&String(a.bento)!=='なし')bc++;});
+      r.forEach(function(a){
+        var cw=calcWage(a,u);h+=cw.h;w+=cw.wage;
+        var effU = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, a.date)) : u;
+        var bVal = (a.bento !== undefined && a.bento !== null && a.bento !== '') ? a.bento : effU.bento;
+        if(bVal && String(bVal)!=='0' && String(bVal)!=='false' && String(bVal)!=='' && String(bVal)!=='なし'){
+          var bCount = (String(bVal)==='2食'||String(bVal)==='2') ? 2 : 1;
+          var isFreeMeal = String(bVal).includes('無料') || String(bVal).includes('体験');
+          var pm = a.bentoPaymentMethod || (effU && effU.bentoPaymentMethod) || '工賃払い';
+          if(!isFreeMeal && pm!=='無料' && pm!=='対象外' && pm!=='当日' && pm!=='月末締め翌月払い' && pm!=='翌月払い' && pm!=='翌月'){
+            bc += bCount;
+          }
+        }
+      });
       var kk=checkKaikin(u,att,eM,closedDays);
       var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
       var bonus=alResult.total;
@@ -8380,22 +8392,26 @@ async function loadE(){
       var recs=att.filter(function(a){return String(a.userId)===u.id&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
       var bc=0, bcDeduct=0, bcDaily=0, bcNext=0;
       recs.forEach(function(r){
-        if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
-          var isFreeMeal = String(r.bento).includes('無料') || String(r.bento).includes('体験');
-          var pm=r.bentoPaymentMethod || (u&&u.bentoPaymentMethod) || '工賃払い';
+        var effU = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, r.date)) : u;
+        var bVal = (r.bento !== undefined && r.bento !== null && r.bento !== '') ? r.bento : effU.bento;
+        if(bVal && String(bVal)!=='0' && String(bVal)!=='false' && String(bVal)!=='' && String(bVal)!=='なし'){
+          var bCount = (String(bVal)==='2食'||String(bVal)==='2') ? 2 : 1;
+          var isFreeMeal = String(bVal).includes('無料') || String(bVal).includes('体験');
+          var pm = r.bentoPaymentMethod || (effU && effU.bentoPaymentMethod) || '工賃払い';
           if(isFreeMeal || pm==='無料' || pm==='対象外'){
             // 無料体験食：控除・請求から除外
           } else {
-            bc++;
-            if(pm==='当日')bcDaily++;
-            else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
-            else bcDeduct++;
+            bc += bCount;
+            if(pm==='当日') bcDaily += bCount;
+            else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月') bcNext += bCount;
+            else bcDeduct += bCount;
           }
         }
       });
       if(bc>0){
         var totalAmt = bc * bentoPrice;
-        var pmRaw = (recs.find(function(r){return r.bentoPaymentMethod;}) || {}).bentoPaymentMethod || u.bentoPaymentMethod || '工賃払い';
+        var effUMonth = (typeof getUserScheduleForDate === 'function' && recs.length > 0) ? getUserScheduleForDate(u, recs[0].date) : u;
+        var pmRaw = (recs.find(function(r){return r.bentoPaymentMethod;}) || {}).bentoPaymentMethod || (effUMonth && effUMonth.bentoPaymentMethod) || '工賃払い';
         var pmLabel = pmRaw;
         if(pmRaw === '当日') pmLabel = '当日払い';
 
@@ -8499,16 +8515,19 @@ async function loadE(){
     },0);
     recs.forEach(function(r){
       var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
-      if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
-        var isFreeMeal = String(r.bento).includes('無料') || String(r.bento).includes('体験');
-        var pm=r.bentoPaymentMethod || (u&&u.bentoPaymentMethod) || '工賃払い';
+      var effU = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, r.date)) : u;
+      var bVal = (r.bento !== undefined && r.bento !== null && r.bento !== '') ? r.bento : effU.bento;
+      if(bVal && String(bVal)!=='0' && String(bVal)!=='false' && String(bVal)!=='' && String(bVal)!=='なし'){
+        var bCount = (String(bVal)==='2食'||String(bVal)==='2') ? 2 : 1;
+        var isFreeMeal = String(bVal).includes('無料') || String(bVal).includes('体験');
+        var pm = r.bentoPaymentMethod || (effU && effU.bentoPaymentMethod) || '工賃払い';
         if(isFreeMeal || pm==='無料' || pm==='対象外'){
           // 無料体験食：控除・請求から除外
         } else {
-          bc++;
-          if(pm==='当日')bcDaily++;
-          else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
-          else bcDeduct++;
+          bc += bCount;
+          if(pm==='当日') bcDaily += bCount;
+          else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月') bcNext += bCount;
+          else bcDeduct += bCount;
         }
       }
     });
@@ -8667,7 +8686,8 @@ function renderOneBentoReceipt(u,recs,bc,totalBentoAmt,bentoPrice,yStr,mStr,comp
   h+='<div style="text-align:center;margin-bottom:20px;padding:16px;border:2px solid #333;border-radius:8px"><span style="font-size:12px">領収金額</span><br><span style="font-size:28px;font-weight:700">¥'+Math.abs(totalBentoAmt).toLocaleString()+'</span></div>';
   h+='<p style="margin-bottom:12px">上記の金額を'+yStr+'年'+mStr+'月分の昼食代（お弁当代）として正に領収いたしました。</p>';
   h+='<table style="width:100%;border-collapse:collapse;margin-bottom:20px"><thead><tr style="background:#f5f5f5"><th style="border:1px solid #999;padding:8px;text-align:left">項目</th><th style="border:1px solid #999;padding:8px;text-align:center;width:60px">数量</th><th style="border:1px solid #999;padding:8px;text-align:right;width:80px">単価</th><th style="border:1px solid #999;padding:8px;text-align:right;width:100px">金額</th></tr></thead><tbody>';
-  var pmRaw = (recs.find(function(r){return r.bentoPaymentMethod;}) || {}).bentoPaymentMethod || u.bentoPaymentMethod || '工賃払い';
+  var effUMonth = (typeof getUserScheduleForDate === 'function' && recs.length > 0) ? getUserScheduleForDate(u, recs[0].date) : u;
+  var pmRaw = (recs.find(function(r){return r.bentoPaymentMethod;}) || {}).bentoPaymentMethod || (effUMonth && effUMonth.bentoPaymentMethod) || '工賃払い';
   var pmLabel = pmRaw;
   if(pmRaw === '当日') pmLabel = '当日払い';
   h+='<tr><td style="border:1px solid #999;padding:8px">昼食代（お弁当代） <span style="font-size:11px;color:#666">（支払方法: '+esc(pmLabel)+'）</span></td><td style="border:1px solid #999;padding:8px;text-align:center">'+bc+'食</td><td style="border:1px solid #999;padding:8px;text-align:right">¥'+bentoPrice.toLocaleString()+'</td><td style="border:1px solid #999;padding:8px;text-align:right">¥'+totalBentoAmt.toLocaleString()+'</td></tr>';
@@ -8695,16 +8715,19 @@ async function printAllIRP(){
     },0);
     recs.forEach(function(r){
       var cw=calcWage(r,u);tH+=cw.h;tW+=cw.wage;
-      if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
-        var isFreeMeal = String(r.bento).includes('無料') || String(r.bento).includes('体験');
-        var pm=r.bentoPaymentMethod || (u&&u.bentoPaymentMethod) || '工賃払い';
+      var effU = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, r.date)) : u;
+      var bVal = (r.bento !== undefined && r.bento !== null && r.bento !== '') ? r.bento : effU.bento;
+      if(bVal && String(bVal)!=='0' && String(bVal)!=='false' && String(bVal)!=='' && String(bVal)!=='なし'){
+        var bCount = (String(bVal)==='2食'||String(bVal)==='2') ? 2 : 1;
+        var isFreeMeal = String(bVal).includes('無料') || String(bVal).includes('体験');
+        var pm = r.bentoPaymentMethod || (effU && effU.bentoPaymentMethod) || '工賃払い';
         if(isFreeMeal || pm==='無料' || pm==='対象外'){
           // 無料体験食：控除・請求から除外
         } else {
-          bc++;
-          if(pm==='当日')bcDaily++;
-          else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext++;
-          else bcDeduct++;
+          bc += bCount;
+          if(pm==='当日') bcDaily += bCount;
+          else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月') bcNext += bCount;
+          else bcDeduct += bCount;
         }
       }
     });
