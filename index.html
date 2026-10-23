@@ -1617,8 +1617,10 @@ function updateAdmAH(){
   function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
   var uid=window._curAttUid||'';
   var u=S.users.find(function(x){return String(x.id)===String(uid);});
-  var sSch=(u&&u.scheduleStart)?u.scheduleStart:'10:00';
-  var eSch=(u&&u.scheduleEnd)?u.scheduleEnd:'16:00';
+  var curD = window._curAttDate || today();
+  var effU = (u && typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, curD)) : u;
+  var sSch=(effU&&effU.scheduleStart)?effU.scheduleStart:'10:00';
+  var eSch=(effU&&effU.scheduleEnd)?effU.scheduleEnd:'16:00';
   var brk=(document.getElementById('adm-brk')?Number(document.getElementById('adm-brk').value):0);
   var stdHrs=Math.max(0, toMin(eSch)-toMin(sSch)-brk)/60;
 
@@ -2381,11 +2383,14 @@ function findDefaultSchedulePeriodIndex(periods) {
 function getEffectiveSchedulePeriod(periods) {
   if (!periods || periods.length === 0) return null;
   var todayDate = today();
-  for (var i = 0; i < periods.length; i++) {
-    var sd = periods[i].startDate || '1970-01-01';
-    if (sd <= todayDate) return periods[i];
+  var sorted = periods.slice().filter(Boolean).sort(function(a, b){
+    return (b.startDate || '1970-01-01').localeCompare(a.startDate || '1970-01-01');
+  });
+  for (var i = 0; i < sorted.length; i++) {
+    var sd = sorted[i].startDate || '1970-01-01';
+    if (sd <= todayDate) return sorted[i];
   }
-  return periods[periods.length - 1];
+  return sorted[sorted.length - 1];
 }
 
 function renderSchedulePeriodsBar() {
@@ -4485,14 +4490,18 @@ async function saveUser(id){
     supportStartDate:gv('uf-sstart',existing.supportStartDate||''),supportEndDate:gv('uf-send',existing.supportEndDate||''),
     enrollDate:gv('uf-enroll',existing.enrollDate||''),endDate:gv('uf-edate',existing.endDate||''),
     endReason:gv('uf-endreason',existing.endReason||''),
-    scheduleDays:hasDays?days.join(','):(existing.scheduleDays||''),
-    scheduleStart:gv('uf-tstart',existing.scheduleStart||'10:00'),scheduleEnd:gv('uf-tend',existing.scheduleEnd||'16:00'),
-    breakMin:gv('uf-brk',existing.breakMin!==undefined&&existing.breakMin!==null?existing.breakMin:'60'),
-    workTypeId:gv('uf-wt',existing.workTypeId||''),
-    workTypeIdPm:gv('uf-wtp',existing.workTypeIdPm||''),
-    contractStart:gv('uf-cstart',existing.contractStart||'09:10'),contractEnd:gv('uf-cend',existing.contractEnd||'16:30'),
-    bento:gv('uf-bento',existing.bento||'なし'),bentoPaymentMethod:gv('uf-bento-pay',existing.bentoPaymentMethod||'工賃払い'),pickup:gv('uf-pickup',existing.pickup||'なし'),
-    transportationAllowance:Number(gv('uf-trans-allowance',existing.transportationAllowance||0))||0,
+    scheduleDays:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.scheduleDays : (hasDays?days.join(','):(existing.scheduleDays||'')),
+    scheduleStart:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.scheduleStart : gv('uf-tstart',existing.scheduleStart||'10:00'),
+    scheduleEnd:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.scheduleEnd : gv('uf-tend',existing.scheduleEnd||'16:00'),
+    breakMin:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.breakMin : gv('uf-brk',existing.breakMin!==undefined&&existing.breakMin!==null?existing.breakMin:'60'),
+    workTypeId:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.workTypeId : gv('uf-wt',existing.workTypeId||''),
+    workTypeIdPm:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.workTypeIdPm : gv('uf-wtp',existing.workTypeIdPm||''),
+    contractStart:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.contractStart : gv('uf-cstart',existing.contractStart||'09:10'),
+    contractEnd:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.contractEnd : gv('uf-cend',existing.contractEnd||'16:30'),
+    bento:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.bento : gv('uf-bento',existing.bento||'なし'),
+    bentoPaymentMethod:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.bentoPaymentMethod : gv('uf-bento-pay',existing.bentoPaymentMethod||'工賃払い'),
+    pickup:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.pickup : gv('uf-pickup',existing.pickup||'なし'),
+    transportationAllowance:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0 && currentData) ? currentData.transportationAllowance : (Number(gv('uf-trans-allowance',existing.transportationAllowance||0))||0),
     scheduleHistory:(window._ueSchedulePeriods && window._ueSchedulePeriods.length > 0) ? JSON.stringify(window._ueSchedulePeriods) : (existing.scheduleHistory || ''),
     notes:gv('uf-notes',existing.notes||''),
     afterCarePlan:gv('uf-aftercare',existing.afterCarePlan||''),afterCareOrg:gv('uf-afterorg',existing.afterCareOrg||''),
@@ -6955,17 +6964,23 @@ var KAIKIN_BONUS=Number(S.settings.kaikinBonus)||0; // 旧互換用、手当設�
 // 工賃計算: 基本はサービス提供時間（予定時間から休憩を差し引いた時間）。手動調整(actualHours)があればそれを優先
 function calcWage(r,user){
   function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
-  var sSch=(user&&user.scheduleStart)?String(user.scheduleStart):(r.scheduleStart?String(r.scheduleStart):'10:00');
-  var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):(r.scheduleEnd?String(r.scheduleEnd):'16:00');
-  var brk=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?Number(r.breakMin):60;
+  var effUser = user;
+  if(user && r && r.date && typeof getUserScheduleForDate === 'function'){
+    var sch = getUserScheduleForDate(user, r.date);
+    effUser = Object.assign({}, user, sch);
+  }
+  var sSch=(effUser&&effUser.scheduleStart)?String(effUser.scheduleStart):(r.scheduleStart?String(r.scheduleStart):'10:00');
+  var eSch=(effUser&&effUser.scheduleEnd)?String(effUser.scheduleEnd):(r.scheduleEnd?String(r.scheduleEnd):'16:00');
+  var brk=(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!=='')?Number(r.breakMin):((effUser&&effUser.breakMin!==undefined&&effUser.breakMin!==null&&effUser.breakMin!=='')?Number(effUser.breakMin):60);
   var rawMin=Math.max(0, toMin(eSch)-toMin(sSch)-brk);
   var baseH=rawMin/60;
 
   var hasManualAH=(r.actualHours!==undefined && r.actualHours!==null && r.actualHours!=='');
   var totalH=hasManualAH ? Math.max(0, Number(r.actualHours)) : baseH;
 
-  var amId=r.workTypeId||'';
-  var pmId=(r.workTypeIdPm!==undefined&&r.workTypeIdPm!==null&&r.workTypeIdPm!=='')?r.workTypeIdPm:(r.workTypeId||'');
+  var amId=r.workTypeId || (effUser ? effUser.workTypeId : '') || '';
+  var defaultPm = (effUser && effUser.workTypeIdPm !== undefined && effUser.workTypeIdPm !== null && effUser.workTypeIdPm !== '') ? effUser.workTypeIdPm : amId;
+  var pmId=(r.workTypeIdPm!==undefined&&r.workTypeIdPm!==null&&r.workTypeIdPm!=='')?r.workTypeIdPm:defaultPm;
   var isAmNone=(!amId || amId==='none' || amId==='なし');
   var isPmNone=(pmId==='none' || pmId==='なし');
 
@@ -7582,13 +7597,15 @@ function renderUserWageAdjustmentDetail(container, userId, allAtt, closedDays, b
     var workNoteTag = '';
     if(isAtt){
       function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
-      var sSch = (u && u.scheduleStart) ? String(u.scheduleStart) : (r.scheduleStart ? String(r.scheduleStart) : '10:00');
-      var eSch = (u && u.scheduleEnd) ? String(u.scheduleEnd) : (r.scheduleEnd ? String(r.scheduleEnd) : '16:00');
-      var brk = (r.breakMin !== undefined && r.breakMin !== null && r.breakMin !== '') ? Number(r.breakMin) : ((u && u.breakMin !== undefined) ? Number(u.breakMin) : 60);
+      var effU = Object.assign({}, u, dayInfo.rec ? getUserScheduleForDate(u, ds) : sc);
+      var sSch = (effU && effU.scheduleStart) ? String(effU.scheduleStart) : (r.scheduleStart ? String(r.scheduleStart) : '10:00');
+      var eSch = (effU && effU.scheduleEnd) ? String(effU.scheduleEnd) : (r.scheduleEnd ? String(r.scheduleEnd) : '16:00');
+      var brk = (r.breakMin !== undefined && r.breakMin !== null && r.breakMin !== '') ? Number(r.breakMin) : ((effU && effU.breakMin !== undefined && effU.breakMin !== null && effU.breakMin !== '') ? Number(effU.breakMin) : 60);
       baseH = Math.max(0, toMin(eSch) - toMin(sSch) - brk) / 60;
 
-      var amId = r.workTypeId || '';
-      var pmId = (r.workTypeIdPm !== undefined && r.workTypeIdPm !== null && r.workTypeIdPm !== '') ? r.workTypeIdPm : (r.workTypeId || '');
+      var amId = r.workTypeId || (effU ? effU.workTypeId : '') || '';
+      var defaultPm = (effU && effU.workTypeIdPm !== undefined && effU.workTypeIdPm !== null && effU.workTypeIdPm !== '') ? effU.workTypeIdPm : amId;
+      var pmId = (r.workTypeIdPm !== undefined && r.workTypeIdPm !== null && r.workTypeIdPm !== '') ? r.workTypeIdPm : defaultPm;
       var isAmNone = (!amId || amId === 'none' || amId === 'なし');
       var isPmNone = (pmId === 'none' || pmId === 'なし');
 

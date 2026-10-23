@@ -781,14 +781,20 @@ function _calcNetH(rec,user){
     return Math.max(0, Number(rec.actualHours));
   }
   function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
-  var sSch=(user&&user.scheduleStart)?String(user.scheduleStart):(rec.scheduleStart?String(rec.scheduleStart):'10:00');
-  var eSch=(user&&user.scheduleEnd)?String(user.scheduleEnd):(rec.scheduleEnd?String(rec.scheduleEnd):'16:00');
-  var brk=(rec.breakMin!==undefined&&rec.breakMin!==null&&rec.breakMin!=='')?Number(rec.breakMin):60;
+  var effUser = user;
+  if(user && rec && rec.date && typeof getUserScheduleForDate === 'function'){
+    var sch = getUserScheduleForDate(user, rec.date);
+    effUser = Object.assign({}, user, sch);
+  }
+  var sSch=(effUser&&effUser.scheduleStart)?String(effUser.scheduleStart):(rec.scheduleStart?String(rec.scheduleStart):'10:00');
+  var eSch=(effUser&&effUser.scheduleEnd)?String(effUser.scheduleEnd):(rec.scheduleEnd?String(rec.scheduleEnd):'16:00');
+  var brk=(rec.breakMin!==undefined&&rec.breakMin!==null&&rec.breakMin!=='')?Number(rec.breakMin):((effUser&&effUser.breakMin!==undefined&&effUser.breakMin!==null&&effUser.breakMin!=='')?Number(effUser.breakMin):60);
   var rawMin=Math.max(0, toMin(eSch)-toMin(sSch)-brk);
   var baseH=rawMin/60;
 
-  var amId = rec.workTypeId || '';
-  var pmId = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && rec.workTypeIdPm!=='') ? rec.workTypeIdPm : (rec.workTypeId || '');
+  var amId = rec.workTypeId || (effUser ? effUser.workTypeId : '') || '';
+  var defaultPm = (effUser && effUser.workTypeIdPm !== undefined && effUser.workTypeIdPm !== null && effUser.workTypeIdPm !== '') ? effUser.workTypeIdPm : amId;
+  var pmId = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && rec.workTypeIdPm!=='') ? rec.workTypeIdPm : defaultPm;
   var isAmNone = (!amId || amId==='none' || amId==='なし');
   var isPmNone = (pmId==='none' || pmId==='なし');
 
@@ -819,9 +825,16 @@ function _findWt(wts,amId,pmId){
   return{am:wtAm,pm:wtPm,isAmNone:isAmNone,isPmNone:isPmNone};
 }
 function _calcRecWage(rec,wts,user){
-  var netH=_calcNetH(rec,user);if(netH<=0)return{netH:0,wage:0};
-  var pmVal = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && rec.workTypeIdPm!=='') ? rec.workTypeIdPm : rec.workTypeId||'';
-  var wt=_findWt(wts,rec.workTypeId||'',pmVal);
+  var effUser = user;
+  if(user && rec && rec.date && typeof getUserScheduleForDate === 'function'){
+    var sch = getUserScheduleForDate(user, rec.date);
+    effUser = Object.assign({}, user, sch);
+  }
+  var netH=_calcNetH(rec,effUser);if(netH<=0)return{netH:0,wage:0};
+  var amVal = rec.workTypeId || (effUser ? effUser.workTypeId : '') || '';
+  var defaultPm = (effUser && effUser.workTypeIdPm !== undefined && effUser.workTypeIdPm !== null && effUser.workTypeIdPm !== '') ? effUser.workTypeIdPm : amVal;
+  var pmVal = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && rec.workTypeIdPm!=='') ? rec.workTypeIdPm : defaultPm;
+  var wt=_findWt(wts,amVal,pmVal);
   if(wt.isAmNone && wt.isPmNone) return {netH:netH, wage:0};
   if(!wt.isAmNone && wt.isPmNone){
     var rt = wt.am ? Number(wt.am.rate)||0 : 0;
@@ -853,20 +866,26 @@ function _isBento(rec){return _getBentoCount(rec) > 0;}
 function _isAttend(rec){return['出席','遅刻','早退'].indexOf(rec.status)>=0;}
 function _checkKaikin(user,allAtt,ym){
   var recs=allAtt.filter(function(a){return String(a.userId)===String(user.id);});
-  var sd=(user.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
-  if(sd.length===0)return{kaikin:false,ok:0,ng:0};
   var p=ym.split('-');var y=Number(p[0]),m=Number(p[1]);
   var dim=new Date(y,m,0).getDate();
-  var ok=0,ng=0;
+  var ok=0,ng=0,hasExpected=false;
   for(var d=1;d<=dim;d++){
+    var ds=ym+'-'+String(d).padStart(2,'0');
+    var eff = user;
+    if(user && typeof getUserScheduleForDate === 'function'){
+      eff = Object.assign({}, user, getUserScheduleForDate(user, ds));
+    }
+    var sd=(eff.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+    if(sd.length===0) continue;
     var dt=new Date(y,m-1,d);var dow=['日','月','火','水','木','金','土'][dt.getDay()];
     if(sd.indexOf(dow)<0)continue;
-    var ds=ym+'-'+String(d).padStart(2,'0');
+    hasExpected=true;
     var rec=recs.find(function(r){return String(r.date)===ds;});
     if(rec&&rec.status==='調整休')continue;
     if(rec&&['欠席','体調不良','通院'].indexOf(rec.status)>=0){ng++;continue;}
     if(rec&&_isAttend(rec)){ok++;}else{ng++;}
   }
+  if(!hasExpected) return {kaikin:false,ok:0,ng:0};
   return{kaikin:ng===0&&ok>0,ok:ok,ng:ng};
 }
 
@@ -957,7 +976,11 @@ async function _calcWageDetailPerUser(ym){
     },0);
     recs.forEach(function(rec){
       var netH=_calcNetH(rec,user);if(netH<=0)return;
-      var wt=_findWt(wts,rec.workTypeId||'',(rec.workTypeIdPm&&String(rec.workTypeIdPm)!=='')?rec.workTypeIdPm:rec.workTypeId||'');
+      var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
+      var amK = rec.workTypeId || (effU ? effU.workTypeId : '') || '';
+      var pmDef = (effU && effU.workTypeIdPm !== undefined && effU.workTypeIdPm !== null && effU.workTypeIdPm !== '') ? effU.workTypeIdPm : amK;
+      var pmK = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && String(rec.workTypeIdPm)!=='') ? rec.workTypeIdPm : pmDef;
+      var wt=_findWt(wts,amK,pmK);
       if(!wt.am || !wt.pm || String(wt.am.id)===String(wt.pm.id)){
         var targetWt=wt.am||wt.pm;
         var nm=targetWt?targetWt.name:'未設定';var rt=targetWt?Number(targetWt.rate):0;
