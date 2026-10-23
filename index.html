@@ -782,9 +782,10 @@ async function renderDashboard(c){
   var changes=upcoming.filter(function(a){
     if(a.status==='調整休') return false;
     var u=S.users.find(function(x){return x.id===a.userId;});if(!u)return false;
-    var tDiff=(a.startTime&&hasTimeDiff15(a.startTime,u.scheduleStart))||(a.endTime&&hasTimeDiff15(a.endTime,u.scheduleEnd));
-    var bDiff=(a.bento&&a.bento!==u.bento);
-    var pDiff=(a.pickup&&a.pickup!==u.pickup);
+    var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, a.date) : u;
+    var tDiff=(a.startTime&&hasTimeDiff15(a.startTime,sc.scheduleStart))||(a.endTime&&hasTimeDiff15(a.endTime,sc.scheduleEnd));
+    var bDiff=(a.bento&&a.bento!==sc.bento);
+    var pDiff=(a.pickup&&a.pickup!==sc.pickup);
     return (a.status!=='出席'&&a.status!=='予定')||tDiff||bDiff||pDiff;
   });
 
@@ -797,11 +798,12 @@ async function renderDashboard(c){
   // 出欠変更を統一フォーマットに
   var attChanges=changes.map(function(a){
     var u=S.users.find(function(x){return x.id===a.userId;});if(!u)return null;
+    var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, a.date) : u;
     var desc=[]; if(a.status!=='出席'&&a.status!=='予定')desc.push('【'+a.status+'】');
-    if(a.startTime&&hasTimeDiff15(a.startTime,u.scheduleStart))desc.push('出勤:'+a.startTime);
-    if(a.endTime&&hasTimeDiff15(a.endTime,u.scheduleEnd))desc.push('退勤:'+a.endTime);
-    if(a.bento&&a.bento!==u.bento)desc.push('弁当:'+a.bento);
-    if(a.pickup&&a.pickup!==u.pickup)desc.push('送迎:'+a.pickup);
+    if(a.startTime&&hasTimeDiff15(a.startTime,sc.scheduleStart))desc.push('出勤:'+a.startTime);
+    if(a.endTime&&hasTimeDiff15(a.endTime,sc.scheduleEnd))desc.push('退勤:'+a.endTime);
+    if(a.bento&&a.bento!==sc.bento)desc.push('弁当:'+a.bento);
+    if(a.pickup&&a.pickup!==sc.pickup)desc.push('送迎:'+a.pickup);
     return{date:a.date,userId:a.userId,userName:u.name,type:'change',desc:desc.join(' / '),notes:a.notes||''};
   }).filter(function(x){return x;});
 
@@ -977,8 +979,9 @@ async function renderDashboard(c){
 
     if (['欠席','体調不良','通院','調整休'].indexOf(stStatus) >= 0) return;
 
-    var sSch = u.scheduleStart || '10:00';
-    var eSch = u.scheduleEnd || '16:00';
+    var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, d) : u;
+    var sSch = sc.scheduleStart || '10:00';
+    var eSch = sc.scheduleEnd || '16:00';
 
     if (!st) {
       if (_nowHM >= sSch) {
@@ -1134,9 +1137,10 @@ async function renderDashboard(c){
       var u=S.users.find(function(x){return x.id===uid;}); if(!u)return'';
       var r=att.find(function(a){return a.userId===uid;});
       var isTmp=todayTempIds.indexOf(uid)>=0;
-      var s=u.scheduleStart||'', e=u.scheduleEnd||'';
-      var b=(r&&r.bento)?r.bento:u.bento, p=(r&&r.pickup)?r.pickup:u.pickup;
-      var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:u.bentoPaymentMethod;
+      var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, d) : u;
+      var s=sc.scheduleStart||'', e=sc.scheduleEnd||'';
+      var b=(r&&r.bento)?r.bento:sc.bento, p=(r&&r.pickup)?r.pickup:sc.pickup;
+      var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:sc.bentoPaymentMethod;
       var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
       var isAdj=r&&r.status==='調整休';
       var bIcon='−',pIcon='−';
@@ -1400,8 +1404,9 @@ function renderDD(ds){
     if(abIds.indexOf(uid)>=0)return;
     var u=S.users.find(function(u){return u.id===uid;});if(!u)return;
     var r=da.find(function(a){return a.userId===uid;});
-    var curB=(r&&r.bento)?r.bento:u.bento;
-    var curP=(r&&r.pickup)?r.pickup:u.pickup;
+    var scU = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, ds) : u;
+    var curB=(r&&r.bento)?r.bento:scU.bento;
+    var curP=(r&&r.pickup)?r.pickup:scU.pickup;
     var bCnt=getBentoCountValue(curB); if(bCnt>0) bc+=bCnt;
     if(isPickupUser(curP))pc++;
   });
@@ -1434,17 +1439,17 @@ function renderDD(ds){
     }
     var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
     var sTime=(r&&r.startTime)?r.startTime:(isTmp?'':sc.scheduleStart||'');
-    var eTime=(r&&r.endTime)?r.endTime:(isTmp?'':u.scheduleEnd||'');
-    var sDiff=r&&r.startTime&&hasTimeDiff15(r.startTime,u.scheduleStart);
-    var eDiff=r&&r.endTime&&hasTimeDiff15(r.endTime,u.scheduleEnd);
+    var eTime=(r&&r.endTime)?r.endTime:(isTmp?'':sc.scheduleEnd||'');
+    var sDiff=r&&r.startTime&&hasTimeDiff15(r.startTime,sc.scheduleStart);
+    var eDiff=r&&r.endTime&&hasTimeDiff15(r.endTime,sc.scheduleEnd);
     var timeDiff=sDiff||eDiff;
     var timeDisp='<span style="'+(timeDiff?'color:var(--red);font-weight:700':'')+'">'+sTime+'～'+eTime+'</span>';
-    var curB=(r&&r.bento)?r.bento:u.bento,curP=(r&&r.pickup)?r.pickup:u.pickup;
-    var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:u.bentoPaymentMethod;
-    var bIcon=fmtBentoBadge(curB, isAb, u.bento, curPM),pIcon='−';
+    var curB=(r&&r.bento)?r.bento:sc.bento,curP=(r&&r.pickup)?r.pickup:sc.pickup;
+    var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:sc.bentoPaymentMethod;
+    var bIcon=fmtBentoBadge(curB, isAb, sc.bento, curPM),pIcon='−';
     var pStr=String(curP||'').trim();
     var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
-    var uHasP=u.pickup&&u.pickup!=='なし'&&u.pickup!=='0'&&u.pickup!=='false';
+    var uHasP=sc.pickup&&sc.pickup!=='なし'&&sc.pickup!=='0'&&sc.pickup!=='false';
     if(hasP){
       if(isAb) pIcon='<span style="color:var(--red)">❌</span>';
       else pIcon=fmtPickupIcon(pStr);
@@ -1673,12 +1678,14 @@ async function openAttDailyM(uid, ds){
     var dailies=results[1];
     var att=atts.find(function(a){return String(a.userId)===String(uid);})||{userId:uid,date:ds,status:'出席',startTime:'',endTime:'',bento:'',pickup:'',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
-    var dWt=(u&&u.workTypeId)?(S.workTypes.find(function(w){return String(w.id)===String(u.workTypeId);})||{id:u.workTypeId}):(S.workTypes.find(function(w){return w.name==='軽作業';})||S.workTypes[0]);
-    var dWtPm=(u&&u.workTypeIdPm)?u.workTypeIdPm:(dWt?dWt.id:'');
+    var sc = (u && typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, ds) : (u || {});
+    var dWt=(sc&&sc.workTypeId)?(S.workTypes.find(function(w){return String(w.id)===String(sc.workTypeId);})||{id:sc.workTypeId}):(S.workTypes.find(function(w){return w.name==='軽作業';})||S.workTypes[0]);
+    var dWtPm=(sc&&sc.workTypeIdPm)?sc.workTypeIdPm:(dWt?dWt.id:'');
     var rep=dailies.find(function(d){return String(d.userId)===String(uid);})||{userId:uid,date:ds,workTypeId:dWt?dWt.id:'',workTypeIdPm:dWtPm,content:'',mood:'普通',notes:''};
     if(u){
-      if(!att.bento)att.bento=u.bento||'なし';
-      if(!att.pickup)att.pickup=u.pickup||'なし';
+      if(!att.bento)att.bento=sc.bento||'なし';
+      if(!att.pickup)att.pickup=sc.pickup||'なし';
+      if(!att.bentoPaymentMethod)att.bentoPaymentMethod=sc.bentoPaymentMethod||'工賃払い';
     }
     // 当日の予定者リスト（左パネル用）
     var _dp=ds.split('-'),_dw=new Date(Number(_dp[0]),Number(_dp[1])-1,Number(_dp[2])).getDay();
@@ -1743,7 +1750,7 @@ async function openAttDailyM(uid, ds){
       '      <label>休憩時間</label>'+
       '      <select id="adm-brk" style="width:100%" onchange="updateAdmAH()">'+
              [['0','なし（0分）'],['30','30分'],['45','45分'],['60','60分（標準）']].map(function(opt){
-               var defBrk=(u&&u.breakMin!==undefined&&u.breakMin!==null&&u.breakMin!=='')?String(u.breakMin):'60';
+               var defBrk=(sc&&sc.breakMin!==undefined&&sc.breakMin!==null&&sc.breakMin!=='')?String(sc.breakMin):'60';
                var brkVal=(att&&att.breakMin!==undefined&&att.breakMin!==null&&att.breakMin!=='')?String(att.breakMin):defBrk;
                return'<option value="'+opt[0]+'"'+(brkVal===opt[0]?' selected':'')+'>'+opt[1]+'</option>';
              }).join('')+
@@ -1755,7 +1762,7 @@ async function openAttDailyM(uid, ds){
       '    </div>'+
       '    <div class="grid3">'+
       '      <div class="field"><label>お弁当</label><select id="adm-b" style="width:100%">'+renderBentoOptions(att.bento)+'</select></div>'+
-      '      <div class="field"><label>支払方法</label><select id="adm-bp" style="width:100%"><option value="工賃払い"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod)||'工賃払い')==='工賃払い'?' selected':'')+'>工賃払い</option><option value="当日"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod))==='当日'?' selected':'')+'>当日</option><option value="月末締め翌月払い"'+((att.bentoPaymentMethod||(u&&u.bentoPaymentMethod))==='月末締め翌月払い'?' selected':'')+'>翌月払い</option></select></div>'+
+      '      <div class="field"><label>支払方法</label><select id="adm-bp" style="width:100%"><option value="工賃払い"'+((att.bentoPaymentMethod||(sc&&sc.bentoPaymentMethod)||'工賃払い')==='工賃払い'?' selected':'')+'>工賃払い</option><option value="当日"'+((att.bentoPaymentMethod||(sc&&sc.bentoPaymentMethod))==='当日'?' selected':'')+'>当日</option><option value="月末締め翌月払い"'+((att.bentoPaymentMethod||(sc&&sc.bentoPaymentMethod))==='月末締め翌月払い'?' selected':'')+'>翌月払い</option></select></div>'+
       '      <div class="field"><label>送迎</label><select id="adm-p" style="width:100%"><option value="なし"'+(att.pickup==='なし'||!att.pickup?' selected':'')+'>なし</option><option value="往復"'+(att.pickup==='往復'||att.pickup==='あり'||att.pickup==='必要'?' selected':'')+'>往復</option><option value="往路"'+(att.pickup==='往路'||att.pickup==='行き'?' selected':'')+'>往路（行きのみ）</option><option value="復路"'+(att.pickup==='復路'||att.pickup==='帰り'?' selected':'')+'>復路（帰りのみ）</option></select></div>'+
       '    </div>'+
       '    <div class="field" style="margin-top:14px">'+
@@ -5660,7 +5667,7 @@ async function renderAttTbl(){
       var sc=getUserScheduleForDate(u,attDate);
       var curB=r?(r.bento||sc.bento):sc.bento;
       var curP=r?(r.pickup||sc.pickup):sc.pickup;
-      var curPM=r?(r.bentoPaymentMethod||u.bentoPaymentMethod):u.bentoPaymentMethod;
+      var curPM=r?(r.bentoPaymentMethod||sc.bentoPaymentMethod):sc.bentoPaymentMethod;
       var isAb=r?['欠席','体調不良','通院'].indexOf(r.status)>=0:false;
       var isAdj=r?r.status==='調整休':false;
       var isNoWork=isAb||isAdj;
@@ -5668,10 +5675,10 @@ async function renderAttTbl(){
         bIcon='−';
         pIcon='−';
       }else{
-        bIcon=fmtBentoBadge(curB, isAb, u.bento, curPM);
+        bIcon=fmtBentoBadge(curB, isAb, sc.bento, curPM);
         var pStr=String(curP||'').trim();
         var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
-        var uHasP=u.pickup&&u.pickup!=='なし'&&u.pickup!=='0'&&u.pickup!=='false';
+        var uHasP=sc.pickup&&sc.pickup!=='なし'&&sc.pickup!=='0'&&sc.pickup!=='false';
         if(hasP){
           if(isAb) pIcon='<span style="color:var(--red)">❌</span>';
           else pIcon=fmtPickupIcon(pStr);
@@ -5783,14 +5790,14 @@ function renderAttMonthlyTbl(){
       var isAb=['欠席','体調不良','通院','調整休'].indexOf(status)>=0;
       var sc=getUserScheduleForDate(user,ds);
       var curB=r.bento||sc.bento;
-      var curP=r.pickup||user.pickup;
-      var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:user.bentoPaymentMethod;
+      var curP=r.pickup||sc.pickup;
+      var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:sc.bentoPaymentMethod;
       var bCount=getBentoCountValue(curB);
-      bIcon=fmtBentoBadge(curB, isAb, user.bento, curPM);
+      bIcon=fmtBentoBadge(curB, isAb, sc.bento, curPM);
       if(bCount>0 && !isAb) bentoCount+=bCount;
       var pStr=String(curP||'').trim();
       var hasP=pStr&&pStr!=='なし'&&pStr!=='0'&&pStr!=='false';
-      var uHasP=user.pickup&&user.pickup!=='なし'&&user.pickup!=='0'&&user.pickup!=='false';
+      var uHasP=sc.pickup&&sc.pickup!=='なし'&&sc.pickup!=='0'&&sc.pickup!=='false';
       if(hasP){
         if(isAb) pIcon='<span style="color:var(--red)">❌</span>';
         else pIcon=fmtPickupIcon(pStr);
@@ -5804,10 +5811,10 @@ function renderAttMonthlyTbl(){
       var isTempUser = userTemps.some(function(t){return String(t.date)===ds;});
       if((isActive&&isScheduled) || isTempUser){
         status='予定';
-        timeDisp=(user.scheduleStart||'10:00')+'〜'+(user.scheduleEnd||'16:00');
-        var uBCount=getBentoCountValue(user.bento);
-        if(uBCount>0){bIcon=fmtBentoBadge(user.bento, false, user.bento, user.bentoPaymentMethod);bentoCount+=uBCount;}
-        var uPStr=String(user.pickup||'').trim();
+        timeDisp=(sc.scheduleStart||'10:00')+'〜'+(sc.scheduleEnd||'16:00');
+        var uBCount=getBentoCountValue(sc.bento);
+        if(uBCount>0){bIcon=fmtBentoBadge(sc.bento, false, sc.bento, sc.bentoPaymentMethod);bentoCount+=uBCount;}
+        var uPStr=String(sc.pickup||'').trim();
         var uHasP=uPStr&&uPStr!=='なし'&&uPStr!=='0'&&uPStr!=='false';
         if(uHasP){
           pIcon=fmtPickupIcon(uPStr);
@@ -7790,17 +7797,19 @@ async function saveUserWageAdjustments(userId){
 
       var existingRec = attList.find(function(a){ return String(a.userId) === String(u.id) && String(a.date) === ds; });
 
+      var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, ds) : u;
       var targetRec = existingRec ? Object.assign({}, existingRec) : {
         userId: u.id,
         date: ds,
         status: '出席',
-        startTime: u.scheduleStart || '10:00',
-        endTime: u.scheduleEnd || '16:00',
-        breakMin: u.breakMin != null ? Number(u.breakMin) : 60,
-        workTypeId: u.workTypeId || '',
-        workTypeIdPm: u.workTypeIdPm || u.workTypeId || '',
-        bento: u.bento || 'なし',
-        pickup: u.pickup || 'なし'
+        startTime: sc.scheduleStart || '10:00',
+        endTime: sc.scheduleEnd || '16:00',
+        breakMin: sc.breakMin != null ? Number(sc.breakMin) : 60,
+        workTypeId: sc.workTypeId || '',
+        workTypeIdPm: sc.workTypeIdPm || sc.workTypeId || '',
+        bento: sc.bento || 'なし',
+        bentoPaymentMethod: sc.bentoPaymentMethod || '工賃払い',
+        pickup: sc.pickup || 'なし'
       };
 
       targetRec.actualHours = ahVal;

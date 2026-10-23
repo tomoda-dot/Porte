@@ -664,17 +664,20 @@ function _estimateRouteMinutes(ordered) {
   return { totalMinutes: totalMin, drivingMinutes: drivingMin, oneWayMinutes: maxOneWay };
 }
 
-async function _calcOptimalRoute(userIds,pattern,targetTime){
+async function _calcOptimalRoute(userIds,pattern,targetTime,date){
   var allUsers=await _getAll('利用者');var settings=await _getSettings();
   var facilityAddr=settings.facilityAddress||settings.address||'大阪府豊中市小曽根1丁目10-23';
+  var targetDate = (typeof date === 'string' && date.length >= 10) ? date.slice(0, 10) : '';
   var ordered=[];
   for(var i=0;i<userIds.length;i++){
     for(var j=0;j<allUsers.length;j++){
       if(String(allUsers[j].id)===String(userIds[i])){
-        var u=allUsers[j];var addr=_getUserRawAddressForRoute(u, pattern);
-        var cStart = u.contractStart ? u.contractStart : '09:10';
-        var cEnd = u.contractEnd ? u.contractEnd : '16:30';
-        ordered.push({id:u.id,name:u.name,address:addr,scheduleStart:cStart,scheduleEnd:cEnd,contractStart:cStart,contractEnd:cEnd});break;
+        var u=allUsers[j];
+        var effU = (targetDate && typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, targetDate)) : u;
+        var addr=_getUserRawAddressForRoute(effU, pattern);
+        var cStart = effU.contractStart ? effU.contractStart : '09:10';
+        var cEnd = effU.contractEnd ? effU.contractEnd : '16:30';
+        ordered.push({id:effU.id,name:effU.name,address:addr,scheduleStart:cStart,scheduleEnd:cEnd,contractStart:cStart,contractEnd:cEnd});break;
       }
     }
   }
@@ -719,9 +722,10 @@ async function _calcSmartRoutes(userIds,pattern,date){
   for(var i=0;i<userIds.length;i++){
     var u=null;for(var j=0;j<allUsers.length;j++){if(String(allUsers[j].id)===String(userIds[i])){u=allUsers[j];break;}}
     if(!u)continue;
-    var addr=_getUserRawAddressForRoute(u, pattern);if(!addr||addr.length<3)continue;
-    var sTime=u.contractStart?u.contractStart:'09:10';
-    var eTime=u.contractEnd?u.contractEnd:'16:30';
+    var effU = (date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, date)) : u;
+    var addr=_getUserRawAddressForRoute(effU, pattern);if(!addr||addr.length<3)continue;
+    var sTime=effU.contractStart?effU.contractStart:'09:10';
+    var eTime=effU.contractEnd?effU.contractEnd:'16:30';
     var timeKey=pattern==='morning'?sTime:eTime;
     var tp=timeKey.split(':');var timeMin=Number(tp[0])*60+Number(tp[1]||0);
     candidates.push({id:u.id,name:u.name,address:addr,startTime:sTime,endTime:eTime,timeKey:timeKey,timeMin:timeMin});
@@ -909,7 +913,8 @@ async function _calcAttendanceList(ym){
       var bCount = _getBentoCount(rec);
       if(bCount > 0){
         bc += bCount;
-        var pm=rec.bentoPaymentMethod || (user&&user.bentoPaymentMethod) || '工賃払い';
+        var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
+        var pm=rec.bentoPaymentMethod || (effU&&effU.bentoPaymentMethod) || '工賃払い';
         var isFreeMeal = String(rec.bento||'').includes('無料') || String(rec.bento||'').includes('体験食');
         if(isFreeMeal || pm==='無料' || pm==='対象外'){
           // 無料体験食：工賃控除しない
@@ -994,7 +999,8 @@ async function _calcWageDetailPerUser(ym){
       var bCount = _getBentoCount(rec);
       if(bCount > 0){
         bc += bCount;
-        var pm=rec.bentoPaymentMethod || (user&&user.bentoPaymentMethod) || '工賃払い';
+        var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
+        var pm=rec.bentoPaymentMethod || (effU&&effU.bentoPaymentMethod) || '工賃払い';
         var isFreeMeal = String(rec.bento||'').includes('無料') || String(rec.bento||'').includes('体験食');
         if(isFreeMeal || pm==='無料' || pm==='対象外'){
           // 無料体験食：工賃控除しない
@@ -1120,12 +1126,13 @@ async function _calcServiceRecordData(srYm){
       var dd={day:d,dow:dow,status:'',startTime:'',endTime:'',pickup:false,dropoff:false,meal:false,notes:'',signUrl:''};
       if(rec&&_isAttend(rec)){
         totalDays++;dd.status='1';
-        dd.startTime=rec.startTime||rec.in||rec.clockIn||rec.scheduleStart||user.scheduleStart||user.contractStart||'10:00';
-        dd.endTime=rec.endTime||rec.out||rec.clockOut||rec.scheduleEnd||user.scheduleEnd||user.contractEnd||'15:30';
-        var pu=(rec.pickup!==undefined&&rec.pickup!==null&&String(rec.pickup).trim()!=='')?String(rec.pickup):String(user.pickup||'');
+        var effU = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, ds)) : user;
+        dd.startTime=rec.startTime||rec.in||rec.clockIn||rec.scheduleStart||effU.scheduleStart||effU.contractStart||'10:00';
+        dd.endTime=rec.endTime||rec.out||rec.clockOut||rec.scheduleEnd||effU.scheduleEnd||effU.contractEnd||'15:30';
+        var pu=(rec.pickup!==undefined&&rec.pickup!==null&&String(rec.pickup).trim()!=='')?String(rec.pickup):String(effU.pickup||'');
         if(pu.indexOf('往')>=0||pu.indexOf('迎')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.pickup=true;pickupCount++;}
         if(pu.indexOf('復')>=0||pu.indexOf('送')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.dropoff=true;dropoffCount++;}
-        var curBento=(rec.bento!==undefined&&rec.bento!==null&&String(rec.bento).trim()!=='')?rec.bento:user.bento;
+        var curBento=(rec.bento!==undefined&&rec.bento!==null&&String(rec.bento).trim()!=='')?rec.bento:effU.bento;
         if(_isBento({bento:curBento})){dd.meal=true;mealCount++;}
         dd.notes=rec.notes||'';dd.signUrl=rec.signature||'';
       }
@@ -1310,16 +1317,17 @@ async function _generateKokuhoReceiptCSV(ym, dataType, kokuhoOpts) {
     validAtt.forEach(function(rec) {
       var user = us.find(function(u) { return String(u.id) === String(rec.userId); }) || {};
       var netH = rec.actualHours != null ? Number(rec.actualHours) : _calcNetH(rec, user);
+        var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
       var rowObj = {
         recipientNumber: user.recipientNumber || user.recipientNo || user.id || '',
         userName: user.name || '',
         serviceType: '46',
         date: String(rec.date).replace(/[^0-9]/g, ''),
-        startTime: String(rec.startTime || '10:00').replace(/[^0-9]/g, ''),
-        endTime: String(rec.endTime || '16:00').replace(/[^0-9]/g, ''),
+        startTime: String(rec.startTime || effU.scheduleStart || '10:00').replace(/[^0-9]/g, ''),
+        endTime: String(rec.endTime || effU.scheduleEnd || '16:00').replace(/[^0-9]/g, ''),
         actualHours: netH,
-        pickupFlag: (rec.pickup && rec.pickup !== 'なし' && rec.pickup !== 'false') || (user.pickup && user.pickup !== 'なし' && rec.pickup !== 'なし'),
-        mealFlag: _getBentoCount(rec) > 0 || (user.bento && user.bento !== 'なし' && rec.bento !== 'なし' && _getBentoCount({bento: user.bento}) > 0),
+        pickupFlag: (rec.pickup && rec.pickup !== 'なし' && rec.pickup !== 'false') || (effU.pickup && effU.pickup !== 'なし' && rec.pickup !== 'なし'),
+        mealFlag: _getBentoCount(rec) > 0 || (effU.bento && effU.bento !== 'なし' && rec.bento !== 'なし' && _getBentoCount({bento: effU.bento}) > 0),
         remarks: rec.notes || ''
       };
       dataRows.push(generator.formatShuukouBServiceRecordRow(rowObj));

@@ -716,13 +716,15 @@ async function selectUser(userId){
     });
     if(startInput) startInput.value = att ? att.startTime||'' : '';
     if(endInput) endInput.value = att ? att.endTime||'' : '';
-    var defaultBreak = (user && user.breakMin !== undefined && user.breakMin !== null && user.breakMin !== '') ? String(user.breakMin) : '60';
+    var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(user, date) : (user || {});
+    var defaultBreak = (sc && sc.breakMin !== undefined && sc.breakMin !== null && sc.breakMin !== '') ? String(sc.breakMin) : '60';
     if(breakInput) breakInput.value = (att && att.breakMin !== undefined && att.breakMin !== null && att.breakMin !== '') ? String(att.breakMin) : defaultBreak;
 
     // お弁当
     var bentoVal = 'なし';
-    if(att && att.bento){
-      var bs = String(att.bento).trim();
+    var rawBento = (att && att.bento) ? att.bento : (sc ? sc.bento : '');
+    if(rawBento){
+      var bs = String(rawBento).trim();
       if(bs==='3食'||bs==='3'||bs==='3個') bentoVal = '3食';
       else if(bs==='2食'||bs==='2'||bs==='2個') bentoVal = '2食';
       else if(bs==='1食'||bs==='1'||bs==='1個'||bs==='あり'||bs==='true') bentoVal = '1食';
@@ -731,19 +733,20 @@ async function selectUser(userId){
 
     // 送迎
     var transportVal = 'なし';
-    if(att && att.pickup){
-      var pStr = String(att.pickup);
-      if(pStr === '往復' || pStr === 'あり' || (att.pickup && att.dropoff)) transportVal = '往復';
+    var rawPickup = (att && att.pickup) ? att.pickup : (sc ? sc.pickup : '');
+    if(rawPickup){
+      var pStr = String(rawPickup);
+      if(pStr === '往復' || pStr === 'あり' || (att && att.pickup && att.dropoff)) transportVal = '往復';
       else if(pStr.indexOf('往')>=0 || pStr.indexOf('迎')>=0) transportVal = '往路';
       else if(pStr.indexOf('復')>=0 || pStr.indexOf('送')>=0) transportVal = '復路';
-      else if(pStr === 'true' || att.pickup === true) transportVal = '往復';
+      else if(pStr === 'true' || rawPickup === true) transportVal = '往復';
     }
     if(el('f-transport')) el('f-transport').value = transportVal;
     if(el('f-att-notes')) el('f-att-notes').value = att ? att.notes||'' : '';
 
     // 作業種別 AM / PM
-    var rawAm = rep ? (rep.workTypeId || rep.workAM) : (att ? att.workTypeId : '');
-    var rawPm = rep ? (rep.workTypeIdPm || rep.workPM) : (att ? (att.workTypeIdPm || att.workTypeId) : '');
+    var rawAm = rep ? (rep.workTypeId || rep.workAM) : (att ? att.workTypeId : (sc ? sc.workTypeId : ''));
+    var rawPm = rep ? (rep.workTypeIdPm || rep.workPM) : (att ? (att.workTypeIdPm || att.workTypeId) : (sc ? sc.workTypeIdPm : ''));
 
     if(el('f-work-am')) el('f-work-am').value = resolveWtId(rawAm);
     if(el('f-work-pm')) el('f-work-pm').value = resolveWtId(rawPm);

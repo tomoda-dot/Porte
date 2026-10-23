@@ -163,7 +163,7 @@ async function getTimecardUsers(){
 
     result.push({id:u.id,name:u.name,furigana:u.furigana||'',
       scheduleStart:sc.scheduleStart||'10:00',scheduleEnd:sc.scheduleEnd||'16:00',
-      bento:u.bento||'なし',pickup:u.pickup||'なし',
+      bento:sc.bento||'なし',pickup:sc.pickup||'なし',
       isScheduled:isScheduled,
       isTemp:isTemp,
       isOffStatus:isOffStatus,
@@ -252,9 +252,10 @@ async function clockIn(userId,signatureDataUrl){
   if(existing){
     await sb.from('出欠').update({startTime:now,status:'出席',signature:signatureDataUrl||null}).eq('userId',userId).eq('date',today2);
   }else{
+    var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(user, today2) : user;
     var rec={id:_genId('a'),userId:userId,date:today2,status:'出席',startTime:now,endTime:null,
-      breakMin:String(user.breakMin!==undefined&&user.breakMin!==null&&user.breakMin!==''?user.breakMin:60),workTypeId:defaultWt,
-      bento:user.bento||'なし',pickup:user.pickup||'なし',signature:signatureDataUrl||null};
+      breakMin:String(sc.breakMin!==undefined&&sc.breakMin!==null&&sc.breakMin!==''?sc.breakMin:60),workTypeId:sc.workTypeId||defaultWt,workTypeIdPm:sc.workTypeIdPm||sc.workTypeId||defaultWt,
+      bento:sc.bento||'なし',bentoPaymentMethod:sc.bentoPaymentMethod||'工賃払い',pickup:sc.pickup||'なし',signature:signatureDataUrl||null};
     var safe={};var cols=Object.keys(rec);
     for(var i=0;i<cols.length;i++){var v=rec[cols[i]];safe[cols[i]]=v===''?null:v;}
     for(var retry=0;retry<10;retry++){

@@ -1278,9 +1278,17 @@ async function syncMonthlyAttendanceToDailyOrders(targetMonth) {
       if (isAbsent) return;
 
       const userMaster = porteUsers.find(u => (uId && String(u.id).trim() === uId) || (uName && String(u.name).trim() === uName));
+      let defaultBento = '';
+      if (userMaster) {
+        if (typeof getUserScheduleForDate === 'function') {
+          defaultBento = getUserScheduleForDate(userMaster, dateKey).bento || '';
+        } else {
+          defaultBento = userMaster.bento || '';
+        }
+      }
       const bentoVal = (att.bento !== undefined && att.bento !== null && att.bento !== '') 
         ? String(att.bento).trim() 
-        : (userMaster && userMaster.bento ? String(userMaster.bento).trim() : '');
+        : defaultBento.trim();
       const mealVal = att.meal;
 
       if (!isBentoPositive(bentoVal, mealVal)) return;
@@ -3232,7 +3240,9 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           bentoVal: curB,
           bentoCount: savedBentoCount,
           selectedBentoId: savedBentoId,
-          selectedBentoIds: savedBentoIds
+          selectedBentoIds: savedBentoIds,
+          bento: u.bento || 'なし',
+          scheduleHistory: u.scheduleHistory || null
         });
       });
     }
