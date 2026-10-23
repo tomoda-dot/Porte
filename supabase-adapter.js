@@ -1,4 +1,4 @@
-// ═══════════════════════════════════════════════════
+﻿// ═══════════════════════════════════════════════════
 // Supabase アダプター (gas() 互換レイヤー)
 // gas('functionName', args...) をそのまま使えるように
 // Supabase操作に自動変換する
@@ -326,44 +326,28 @@ async function gas(fn){
     // ── 利用者 ──
     case 'getUsers':
       var _uList=await _getAll('利用者');
-      var _uSet=await _getSettings();
+      // デフォルト値の補完のみ行う（設定テーブルへのフォールバックは廃止）
       return _uList.map(function(u){
-        u.bentoPaymentMethod=u.bentoPaymentMethod||_uSet['bentoPay_'+u.id]||'工賃払い';
-        if(u.contractStart===undefined||u.contractStart===null||u.contractStart==='') u.contractStart=_uSet['contractStart_'+u.id]||'09:10';
-        if(u.contractEnd===undefined||u.contractEnd===null||u.contractEnd==='') u.contractEnd=_uSet['contractEnd_'+u.id]||'16:30';
-        if(u.breakMin===undefined||u.breakMin===null||u.breakMin==='') u.breakMin=_uSet['breakMin_'+u.id]||'60';
-        if(u.workTypeId===undefined||u.workTypeId===null||u.workTypeId==='') u.workTypeId=_uSet['workTypeId_'+u.id]||'';
-        if(u.workTypeIdPm===undefined||u.workTypeIdPm===null||u.workTypeIdPm==='') u.workTypeIdPm=_uSet['workTypeIdPm_'+u.id]||'';
-        if(!u.contacts && _uSet['userContacts_'+u.id]) u.contacts=_uSet['userContacts_'+u.id];
-        if(!u.addresses && _uSet['userAddresses_'+u.id]) u.addresses=_uSet['userAddresses_'+u.id];
-        if(!u.relatedOrgs && _uSet['userRelatedOrgs_'+u.id]) u.relatedOrgs=_uSet['userRelatedOrgs_'+u.id];
-        if(!u.scheduleHistory && _uSet['scheduleHistory_'+u.id]) u.scheduleHistory=_uSet['scheduleHistory_'+u.id];
+        if(!u.bentoPaymentMethod) u.bentoPaymentMethod='工賃払い';
+        if(u.contractStart===undefined||u.contractStart===null||u.contractStart==='') u.contractStart='09:10';
+        if(u.contractEnd===undefined||u.contractEnd===null||u.contractEnd==='') u.contractEnd='16:30';
+        if(u.breakMin===undefined||u.breakMin===null||u.breakMin==='') u.breakMin='60';
         return u;
       });
     case 'addUser':
       a1.id=_genId('u');
-      if(a1.bentoPaymentMethod)await _updateSetting('bentoPay_'+a1.id,a1.bentoPaymentMethod);
-      if(a1.contractStart)await _updateSetting('contractStart_'+a1.id,a1.contractStart);
-      if(a1.contractEnd)await _updateSetting('contractEnd_'+a1.id,a1.contractEnd);
-      if(a1.breakMin!==undefined)await _updateSetting('breakMin_'+a1.id,String(a1.breakMin));
-      if(a1.workTypeId!==undefined)await _updateSetting('workTypeId_'+a1.id,String(a1.workTypeId||''));
-      if(a1.workTypeIdPm!==undefined)await _updateSetting('workTypeIdPm_'+a1.id,String(a1.workTypeIdPm||''));
-      if(a1.contacts!==undefined)await _updateSetting('userContacts_'+a1.id,typeof a1.contacts==='string'?a1.contacts:JSON.stringify(a1.contacts));
-      if(a1.addresses!==undefined)await _updateSetting('userAddresses_'+a1.id,typeof a1.addresses==='string'?a1.addresses:JSON.stringify(a1.addresses));
-      if(a1.relatedOrgs!==undefined)await _updateSetting('userRelatedOrgs_'+a1.id,typeof a1.relatedOrgs==='string'?a1.relatedOrgs:JSON.stringify(a1.relatedOrgs));
-      if(a1.scheduleHistory!==undefined)await _updateSetting('scheduleHistory_'+a1.id,typeof a1.scheduleHistory==='string'?a1.scheduleHistory:JSON.stringify(a1.scheduleHistory));
+      // JSONカラムは文字列→オブジェクト変換
+      if(typeof a1.contacts==='string'){try{a1.contacts=JSON.parse(a1.contacts);}catch(e){}}
+      if(typeof a1.addresses==='string'){try{a1.addresses=JSON.parse(a1.addresses);}catch(e){}}
+      if(typeof a1.relatedOrgs==='string'){try{a1.relatedOrgs=JSON.parse(a1.relatedOrgs);}catch(e){}}
+      if(typeof a1.scheduleHistory==='string'){try{a1.scheduleHistory=JSON.parse(a1.scheduleHistory);}catch(e){}}
       return _add('利用者',a1);
     case 'updateUser':
-      if(a1.bentoPaymentMethod)await _updateSetting('bentoPay_'+a1.id,a1.bentoPaymentMethod);
-      if(a1.contractStart)await _updateSetting('contractStart_'+a1.id,a1.contractStart);
-      if(a1.contractEnd)await _updateSetting('contractEnd_'+a1.id,a1.contractEnd);
-      if(a1.breakMin!==undefined)await _updateSetting('breakMin_'+a1.id,String(a1.breakMin));
-      if(a1.workTypeId!==undefined)await _updateSetting('workTypeId_'+a1.id,String(a1.workTypeId||''));
-      if(a1.workTypeIdPm!==undefined)await _updateSetting('workTypeIdPm_'+a1.id,String(a1.workTypeIdPm||''));
-      if(a1.contacts!==undefined)await _updateSetting('userContacts_'+a1.id,typeof a1.contacts==='string'?a1.contacts:JSON.stringify(a1.contacts));
-      if(a1.addresses!==undefined)await _updateSetting('userAddresses_'+a1.id,typeof a1.addresses==='string'?a1.addresses:JSON.stringify(a1.addresses));
-      if(a1.relatedOrgs!==undefined)await _updateSetting('userRelatedOrgs_'+a1.id,typeof a1.relatedOrgs==='string'?a1.relatedOrgs:JSON.stringify(a1.relatedOrgs));
-      if(a1.scheduleHistory!==undefined)await _updateSetting('scheduleHistory_'+a1.id,typeof a1.scheduleHistory==='string'?a1.scheduleHistory:JSON.stringify(a1.scheduleHistory));
+      // JSONカラムは文字列→オブジェクト変換
+      if(typeof a1.contacts==='string'){try{a1.contacts=JSON.parse(a1.contacts);}catch(e){}}
+      if(typeof a1.addresses==='string'){try{a1.addresses=JSON.parse(a1.addresses);}catch(e){}}
+      if(typeof a1.relatedOrgs==='string'){try{a1.relatedOrgs=JSON.parse(a1.relatedOrgs);}catch(e){}}
+      if(typeof a1.scheduleHistory==='string'){try{a1.scheduleHistory=JSON.parse(a1.scheduleHistory);}catch(e){}}
       return _update('利用者',a1);
     case 'deleteUser': return _del('利用者',a1);
 
@@ -571,7 +555,15 @@ async function gas(fn){
     // ── 初期データ（複合）──
     case 'getInitialData':
       var p=await Promise.all([_getAll('利用者'),_getAll('作業種別'),_getSettings(),_getAll('スタッフ')]);
-      return{users:p[0],workTypes:p[1],settings:p[2],staff:p[3]};
+      // 利用者のデフォルト補完
+      var _iUsers=p[0].map(function(u){
+        if(!u.bentoPaymentMethod) u.bentoPaymentMethod='工賃払い';
+        if(u.contractStart===undefined||u.contractStart===null||u.contractStart==='') u.contractStart='09:10';
+        if(u.contractEnd===undefined||u.contractEnd===null||u.contractEnd==='') u.contractEnd='16:30';
+        if(u.breakMin===undefined||u.breakMin===null||u.breakMin==='') u.breakMin='60';
+        return u;
+      });
+      return{users:_iUsers,workTypes:p[1],settings:p[2],staff:p[3]};
     case 'getDeferredData':
       var p2=await Promise.all([
         _getAll('車両').catch(function(){return[];}),
