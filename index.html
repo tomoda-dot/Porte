@@ -5972,13 +5972,15 @@ function _getBmiStatusPill(bmi) {
   return '<span class="badge" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;font-size:11px;font-weight:600">🔴 高度肥満</span>';
 }
 
-function _isMealAdditionTarget(u) {
+function _isMealAdditionTarget(u, dateOrYm) {
   if (!u) return false;
-  var bento = String(u.bento || '').trim();
-  var mealAdd = String(u.mealAddition || u.mealAdd || u.meal || u.bentoAddition || '').trim();
-  if (bento === 'あり' || bento === '対象' || bento === '1' || bento === 'true') return true;
+  var targetDate = (dateOrYm && String(dateOrYm).length >= 7) ? (String(dateOrYm).length === 7 ? dateOrYm + '-01' : dateOrYm) : (_bmiYm ? _bmiYm + '-01' : today());
+  var effU = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, targetDate)) : u;
+  var bento = String(effU.bento || '').trim();
+  var mealAdd = String(effU.mealAddition || effU.mealAdd || effU.meal || effU.bentoAddition || '').trim();
+  if (bento === 'あり' || bento === '対象' || bento === '1' || bento === 'true' || bento === '1食' || bento === '2食') return true;
   if (mealAdd === 'あり' || mealAdd === '対象' || mealAdd === '1' || mealAdd === 'true') return true;
-  if (u.mealAdditionTarget === true || u.mealTarget === true) return true;
+  if (effU.mealAdditionTarget === true || effU.mealTarget === true) return true;
   if (bento !== '' && bento !== 'なし' && bento !== '0' && bento !== 'false') return true;
   if (mealAdd !== '' && mealAdd !== 'なし' && mealAdd !== '0' && mealAdd !== 'false') return true;
   return false;
@@ -6004,7 +6006,7 @@ function _drawBmiView(c) {
 
   // フィルタ処理
   var targetUsers = activeUsers.filter(function(u) {
-    if (_bmiMealOnly && !_isMealAdditionTarget(u)) return false;
+    if (_bmiMealOnly && !_isMealAdditionTarget(u, _bmiYm)) return false;
     if (_bmiSearch) {
       var q = _bmiSearch.toLowerCase();
       var name = (u.name || '').toLowerCase();
@@ -6042,7 +6044,7 @@ function _drawBmiView(c) {
     };
   });
 
-  var totalMealTargetCount = activeUsers.filter(_isMealAdditionTarget).length;
+  var totalMealTargetCount = activeUsers.filter(function(u){ return _isMealAdditionTarget(u, _bmiYm); }).length;
 
   c.innerHTML =
     '<div class="hd-row"><h2>⚖️ BMI測定管理</h2></div>' +
@@ -6092,7 +6094,7 @@ function _drawBmiView(c) {
           var u = item.user;
           var r = item.rec;
           var p = item.prevRec;
-          var isMeal = _isMealAdditionTarget(u);
+          var isMeal = _isMealAdditionTarget(u, _bmiYm);
           var bmiVal = r ? (r.bmi !== undefined ? r.bmi : _calcBmiValue(r.heightCm, r.weightKg)) : null;
           var prevBmiVal = p ? (p.bmi !== undefined ? p.bmi : _calcBmiValue(p.heightCm, p.weightKg)) : null;
 
@@ -6245,7 +6247,7 @@ function openBmiHistoryModal(userId) {
 function printBmiReport() {
   var activeUsers = S.users.filter(function(u) { return isUserActive(u, _bmiYm + '-01'); });
   var targetUsers = activeUsers.filter(function(u) {
-    if (_bmiMealOnly && !_isMealAdditionTarget(u)) return false;
+    if (_bmiMealOnly && !_isMealAdditionTarget(u, _bmiYm)) return false;
     return true;
   });
 
@@ -6269,7 +6271,7 @@ function printBmiReport() {
     '</tr></thead><tbody>' +
     targetUsers.map(function(u) {
       var r = _bmiRecords.find(function(rec) { return String(rec.userId) === String(u.id); });
-      var isMeal = _isMealAdditionTarget(u);
+      var isMeal = _isMealAdditionTarget(u, _bmiYm);
       var bmiVal = r ? (r.bmi !== undefined ? r.bmi : _calcBmiValue(r.heightCm, r.weightKg)) : null;
       return '<tr>' +
         '<td class="text-center">' + esc(u.recipientNo || '-') + '</td>' +
@@ -6292,14 +6294,14 @@ function printBmiReport() {
 function exportBmiCSV() {
   var activeUsers = S.users.filter(function(u) { return isUserActive(u, _bmiYm + '-01'); });
   var targetUsers = activeUsers.filter(function(u) {
-    if (_bmiMealOnly && !_isMealAdditionTarget(u)) return false;
+    if (_bmiMealOnly && !_isMealAdditionTarget(u, _bmiYm)) return false;
     return true;
   });
 
   var csv = ['"受給者番号","利用者名","食事提供加算","測定年月","測定日","身長(cm)","体重(kg)","BMI","健康判定","備考"'];
   targetUsers.forEach(function(u) {
     var r = _bmiRecords.find(function(rec) { return String(rec.userId) === String(u.id); });
-    var isMeal = _isMealAdditionTarget(u);
+    var isMeal = _isMealAdditionTarget(u, _bmiYm);
     var bmiVal = r ? (r.bmi !== undefined ? r.bmi : _calcBmiValue(r.heightCm, r.weightKg)) : '';
     var statusText = bmiVal ? (bmiVal < 18.5 ? '低体重' : (bmiVal < 25.0 ? '普通' : (bmiVal < 30.0 ? '肥満1度' : '高度肥満'))) : '未測定';
     var row = [
@@ -6466,7 +6468,15 @@ function openNewRoute(){
     '</div></div>';
 }
 
-function nrSelPickup(){document.querySelectorAll('.nr-cb').forEach(function(cb){if(!cb.disabled){var u=S.users.find(function(x){return x.id===cb.value;});cb.checked=u&&isPickupUser(u.pickup);}});}
+function nrSelPickup(){
+  document.querySelectorAll('.nr-cb').forEach(function(cb){
+    if(!cb.disabled){
+      var u=S.users.find(function(x){return x.id===cb.value;});
+      var sc=(u && typeof getUserScheduleForDate==='function') ? getUserScheduleForDate(u, tDate) : u;
+      cb.checked=sc && isPickupUser(sc.pickup);
+    }
+  });
+}
 function nrClear(){document.querySelectorAll('.nr-cb').forEach(function(cb){cb.checked=false;});}
 
 async function saveNewRoute(doCalc){
@@ -7383,7 +7393,10 @@ function checkAllowanceAutoMatch(a, user, att, ym, kaikinResult){
     return false;
   }
   if(a.condition === 'days_over'){ var threshold = parseInt(a.conditionValue) || 0; return recs.length >= threshold; }
-  if(a.condition === 'no_pickup') return recs.length > 0 && !isPickupUser(user.pickup);
+  if(a.condition === 'no_pickup') {
+    var scP = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(user, (recs && recs.length > 0 ? recs[0].date : ym + '-01')) : user;
+    return recs.length > 0 && !isPickupUser(scP.pickup);
+  }
   if(a.condition === 'custom'){
     var ckey = user.id + '_' + a.name;
     return !!(window._customAllowanceMap && window._customAllowanceMap[ckey]);
@@ -10997,7 +11010,10 @@ function calcAllowances(user,att,ym,kaikinResult){
         if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
       }
       else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
-      else if(a.condition==='no_pickup'){match=recs.length>0&&!isPickupUser(user.pickup);}
+      else if(a.condition==='no_pickup'){
+        var scP=(typeof getUserScheduleForDate==='function')?getUserScheduleForDate(user,(recs&&recs.length>0?recs[0].date:ym+'-01')):user;
+        match=recs.length>0&&!isPickupUser(scP.pickup);
+      }
       else if(a.condition==='custom'){
         var ckey=user.id+'_'+a.name;
         match=window._customAllowanceMap&&window._customAllowanceMap[ckey];

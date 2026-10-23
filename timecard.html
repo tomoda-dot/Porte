@@ -119,13 +119,15 @@ function getUserScheduleForDate(user, dateStr) {
   if (!hist || !Array.isArray(hist) || hist.length === 0) return def;
   var target = (typeof dateStr === 'string' && dateStr.length >= 10) ? dateStr.slice(0, 10) : new Date().toISOString().slice(0, 10);
   var sorted = hist.slice().filter(function(item){ return item && typeof item === 'object'; }).sort(function(a, b){
-    return (b.startDate || '1970-01-01').localeCompare(a.startDate || '1970-01-01');
+    var da = a.startDate || a.effectiveDate || '1970-01-01';
+    var db = b.startDate || b.effectiveDate || '1970-01-01';
+    return db.localeCompare(da);
   });
   for (var i = 0; i < sorted.length; i++) {
-    var sDate = sorted[i].startDate || '1970-01-01';
+    var sDate = sorted[i].startDate || sorted[i].effectiveDate || '1970-01-01';
     if (target >= sDate) return Object.assign({}, def, sorted[i]);
   }
-  return Object.assign({}, def, sorted[sorted.length - 1]);
+  return def;
 }
 // --- 利用者モード ---
 async function getTimecardUsers(){

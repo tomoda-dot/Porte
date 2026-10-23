@@ -1470,5 +1470,5 @@ function getUserScheduleForDate(user, dateStr) {
       return Object.assign({}, def, sorted[i]);
     }
   }
-  return Object.assign({}, def, sorted[sorted.length - 1]);
+  return def;
 }

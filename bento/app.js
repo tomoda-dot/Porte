@@ -17,15 +17,17 @@ function getUserScheduleForDate(user, dateStr) {
   }
   const target = (typeof dateStr === 'string' && dateStr.length >= 10) ? dateStr.slice(0, 10) : new Date().toISOString().slice(0, 10);
   const sorted = hist.slice().filter(item => item && typeof item === 'object').sort((a, b) => {
-    return (b.startDate || '1970-01-01').localeCompare(a.startDate || '1970-01-01');
+    const da = a.startDate || a.effectiveDate || '1970-01-01';
+    const db = b.startDate || b.effectiveDate || '1970-01-01';
+    return db.localeCompare(da);
   });
   for (let i = 0; i < sorted.length; i++) {
-    const sDate = sorted[i].startDate || '1970-01-01';
+    const sDate = sorted[i].startDate || sorted[i].effectiveDate || '1970-01-01';
     if (target >= sDate) {
       return Object.assign({}, def, sorted[i]);
     }
   }
-  return Object.assign({}, def, sorted[sorted.length - 1]);
+  return def;
 }
 
 /**
