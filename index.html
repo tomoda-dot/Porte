@@ -260,6 +260,8 @@ var calcH=function(s,e,b){if(!s||!e)return 0;var sm=Number(s.split(':')[0])*60+N
 var esc=function(s){if(s===null||s===undefined)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;};
 var statusColor={'出席':'#2e7d32','欠席':'#c62828','遅刻':'#e65100','早退':'#f9a825','体調不良':'#6a1b9a','通院':'#1565c0','予定':'#c07830','調整休':'#757575'};
 var hasTimeDiff15=function(t1,t2){if(!t1||!t2)return false;var p1=t1.split(':'),p2=t2.split(':');if(p1.length<2||p2.length<2)return false;var m1=parseInt(p1[0])*60+parseInt(p1[1]),m2=parseInt(p2[0])*60+parseInt(p2[1]);return Math.abs(m1-m2)>=15;};
+var isLateStart=function(actual,sch){if(!actual||!sch)return false;var p1=actual.split(':'),p2=sch.split(':');if(p1.length<2||p2.length<2)return false;var m1=parseInt(p1[0])*60+parseInt(p1[1]),m2=parseInt(p2[0])*60+parseInt(p2[1]);return (m1-m2)>=15;};
+var isEarlyEnd=function(actual,sch){if(!actual||!sch)return false;var p1=actual.split(':'),p2=sch.split(':');if(p1.length<2||p2.length<2)return false;var m1=parseInt(p1[0])*60+parseInt(p1[1]),m2=parseInt(p2[0])*60+parseInt(p2[1]);return (m2-m1)>=15;};
 var fmtPickupIcon=function(pStr){
   var s=String(pStr||'').trim();
   if(s==='往路'||s==='行き'||s==='行きだけ') return '<span title="送迎: 行きのみ" style="color:#00796b;font-weight:700;display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;font-size:11px;vertical-align:middle"><span>🚐</span><span>往</span></span>';
@@ -783,7 +785,7 @@ async function renderDashboard(c){
     if(a.status==='調整休') return false;
     var u=S.users.find(function(x){return x.id===a.userId;});if(!u)return false;
     var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, a.date) : u;
-    var tDiff=(a.startTime&&hasTimeDiff15(a.startTime,sc.scheduleStart))||(a.endTime&&hasTimeDiff15(a.endTime,sc.scheduleEnd));
+    var tDiff=(a.startTime&&isLateStart(a.startTime,sc.scheduleStart))||(a.endTime&&isEarlyEnd(a.endTime,sc.scheduleEnd));
     var bDiff=(a.bento&&a.bento!==sc.bento);
     var pDiff=(a.pickup&&a.pickup!==sc.pickup);
     return (a.status!=='出席'&&a.status!=='予定')||tDiff||bDiff||pDiff;
@@ -800,8 +802,8 @@ async function renderDashboard(c){
     var u=S.users.find(function(x){return x.id===a.userId;});if(!u)return null;
     var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, a.date) : u;
     var desc=[]; if(a.status!=='出席'&&a.status!=='予定')desc.push('【'+a.status+'】');
-    if(a.startTime&&hasTimeDiff15(a.startTime,sc.scheduleStart))desc.push('出勤:'+a.startTime);
-    if(a.endTime&&hasTimeDiff15(a.endTime,sc.scheduleEnd))desc.push('退勤:'+a.endTime);
+    if(a.startTime&&isLateStart(a.startTime,sc.scheduleStart))desc.push('遅刻:'+a.startTime);
+    if(a.endTime&&isEarlyEnd(a.endTime,sc.scheduleEnd))desc.push('早退:'+a.endTime);
     if(a.bento&&a.bento!==sc.bento)desc.push('弁当:'+a.bento);
     if(a.pickup&&a.pickup!==sc.pickup)desc.push('送迎:'+a.pickup);
     return{date:a.date,userId:a.userId,userName:u.name,type:'change',desc:desc.join(' / '),notes:a.notes||''};
@@ -1440,8 +1442,8 @@ function renderDD(ds){
     var isAb=r&&['欠席','体調不良','通院'].indexOf(r.status)>=0;
     var sTime=(r&&r.startTime)?r.startTime:(isTmp?'':sc.scheduleStart||'');
     var eTime=(r&&r.endTime)?r.endTime:(isTmp?'':sc.scheduleEnd||'');
-    var sDiff=r&&r.startTime&&hasTimeDiff15(r.startTime,sc.scheduleStart);
-    var eDiff=r&&r.endTime&&hasTimeDiff15(r.endTime,sc.scheduleEnd);
+    var sDiff=r&&r.startTime&&isLateStart(r.startTime,sc.scheduleStart);
+    var eDiff=r&&r.endTime&&isEarlyEnd(r.endTime,sc.scheduleEnd);
     var timeDiff=sDiff||eDiff;
     var timeDisp='<span style="'+(timeDiff?'color:var(--red);font-weight:700':'')+'">'+sTime+'～'+eTime+'</span>';
     var curB=(r&&r.bento)?r.bento:sc.bento,curP=(r&&r.pickup)?r.pickup:sc.pickup;
