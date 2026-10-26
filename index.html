@@ -9774,21 +9774,31 @@ async function dlCSV(){try{
 var _staffTab='list',_staffYM=null;
 function renderStaff(c){
   if(!_staffYM){var d=new Date();_staffYM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
-  function stBtn(id,tab,icon,label){
-    var sel=_staffTab===tab;
-    return'<button id="'+id+'" onclick="_staffTab=\''+tab+'\';renderStaff(document.getElementById(\'content\'))" style="padding:8px 20px;border:none;background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(sel?'var(--pri)':'#999')+';border-bottom:3px solid '+(sel?'var(--pri)':'transparent')+'">'+icon+' '+label+'</button>';
+  var isAdmin = isAdminUser();
+  if(_staffTab==='requests' && !isAdmin){
+    _staffTab='list';
   }
+  function stBtn(id,tab,icon,label,badgeHtml){
+    var sel=_staffTab===tab;
+    return'<button id="'+id+'" onclick="_staffTab=\''+tab+'\';renderStaff(document.getElementById(\'content\'))" style="padding:8px 20px;border:none;background:none;font-size:14px;font-weight:700;cursor:pointer;color:'+(sel?'var(--pri)':'#999')+';border-bottom:3px solid '+(sel?'var(--pri)':'transparent')+';white-space:nowrap">'+icon+' '+label+(badgeHtml||'')+'</button>';
+  }
+  var reqBadge = (window._staffPendingCount && window._staffPendingCount > 0) ? '<span style="background:#e65100;color:#fff;padding:1px 6px;border-radius:10px;font-size:10px;margin-left:5px">'+window._staffPendingCount+'</span>' : '';
+  var reqBtn = isAdmin ? stBtn('stab-requests','requests','📋','申請一覧・履歴',reqBadge) : '';
+
   c.innerHTML='<h2 style="margin-bottom:12px">👔 スタッフ管理</h2>'+
-    '<div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0d6cf">'+
+    '<div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0d6cf;overflow-x:auto">'+
     stBtn('stab-list','list','👥','スタッフ一覧')+
     stBtn('stab-att','attendance','📊','勤怠実績・常勤換算')+
     stBtn('stab-paid','paidLeave','📅','有給管理')+
     stBtn('stab-shift','shift','📆','シフト管理')+
+    reqBtn+
     '</div><div id="staff-content"></div><div id="st-modal"></div>';
   if(_staffTab==='list')renderStaffList();
   else if(_staffTab==='attendance')renderStaffAttendance();
   else if(_staffTab==='paidLeave')renderPaidLeave();
-  else renderShiftManagement();
+  else if(_staffTab==='shift')renderShiftManagement();
+  else if(_staffTab==='requests' && isAdmin)renderStaffRequests();
+  else renderStaffList();
 }
 function renderStaffList(){
   var addBtn = isAdminUser() ? '<button class="bp" onclick="openSM()">＋ 新規登録</button>' : '<span style="font-size:12px;color:var(--sub)">※スタッフ個人情報の追加・変更は管理者のみ可能です</span>';
@@ -10841,6 +10851,248 @@ function dlPaidLeaveCSV(){
   a.download='有給管理_'+esc(s.name)+'_'+today()+'.csv';a.click();
 }
 
+// ─── スタッフ申請一覧・履歴（管理者・友田専用） ──────────────────
+var _reqFilterStaff = '', _reqFilterType = 'all', _reqFilterStatus = 'pending', _reqFilterYM = '';
+var _cachedAdminRequests = null;
+
+async function renderStaffRequests(){
+  var c = document.getElementById('staff-content');
+  if(!c) return;
+  if(!isAdminUser()){
+    c.innerHTML = '<div class="card" style="padding:40px;text-align:center;color:#c62828">⚠️ この機能は管理者・友田のみ閲覧・操作可能です</div>';
+    return;
+  }
+
+  showLoading('staff-content', '申請データを読み込み中...');
+  try {
+    var results = await Promise.all([
+      gas('getChangeRequests'),
+      gas('getPaidLeaveRequests')
+    ]);
+    var crList = results[0] || [];
+    var plrList = results[1] || [];
+
+    var allReqs = [];
+    crList.forEach(function(r){
+      allReqs.push({
+        source: 'change_request',
+        id: r.id,
+        staffId: r.staffId,
+        type: r.type || 'shift',
+        date: r.date,
+        requestData: r.requestData,
+        reason: r.reason || '',
+        status: r.status || 'pending',
+        comment: r.comment || '',
+        createdAt: r.createdAt || ''
+      });
+    });
+
+    plrList.forEach(function(r){
+      allReqs.push({
+        source: 'paid_request',
+        id: r.id,
+        staffId: r.staffId,
+        type: 'paid',
+        paidType: r.type || '有給',
+        date: r.date,
+        reason: r.reason || '',
+        status: r.status || 'pending',
+        comment: r.comment || '',
+        createdAt: r.createdAt || ''
+      });
+    });
+
+    // 申請日時が新しい順にソート
+    allReqs.sort(function(a,b){ return (b.createdAt||'').localeCompare(a.createdAt||''); });
+    _cachedAdminRequests = allReqs;
+
+    // 承認待ち件数をタブバッジ用に保持
+    var pendingTotal = allReqs.filter(function(r){ return r.status === 'pending'; }).length;
+    window._staffPendingCount = pendingTotal;
+
+    drawStaffRequestsUI(allReqs);
+  } catch(e) {
+    c.innerHTML = '<div class="card" style="color:#c62828;padding:20px">読み込みエラー: ' + esc(e.message||e) + '</div>';
+  }
+}
+
+function drawStaffRequestsUI(allReqs){
+  var c = document.getElementById('staff-content');
+  if(!c) return;
+  var reqs = allReqs || _cachedAdminRequests || [];
+
+  // カウント集計
+  var pendingCnt = reqs.filter(function(r){ return r.status === 'pending'; }).length;
+  var shiftCnt = reqs.filter(function(r){ return r.type === 'shift'; }).length;
+  var attCnt = reqs.filter(function(r){ return r.type === 'attendance'; }).length;
+  var paidCnt = reqs.filter(function(r){ return r.type === 'paid'; }).length;
+
+  // フィルタリング
+  var filtered = reqs.slice();
+  if(_reqFilterStaff) {
+    filtered = filtered.filter(function(r){ return String(r.staffId) === String(_reqFilterStaff); });
+  }
+  if(_reqFilterType !== 'all') {
+    filtered = filtered.filter(function(r){ return r.type === _reqFilterType; });
+  }
+  if(_reqFilterStatus !== 'all') {
+    filtered = filtered.filter(function(r){ return r.status === _reqFilterStatus; });
+  }
+  if(_reqFilterYM) {
+    filtered = filtered.filter(function(r){ return r.date && r.date.indexOf(_reqFilterYM) === 0; });
+  }
+
+  // スタッフ選択肢
+  var staffOpts = '<option value="">全スタッフ</option>';
+  (S.staff||[]).forEach(function(s){
+    staffOpts += '<option value="'+s.id+'"'+(_reqFilterStaff===s.id?' selected':'')+'>'+esc(s.name)+' ('+esc(s.role||'スタッフ')+')</option>';
+  });
+
+  var html = '<div style="margin-bottom:16px">'+
+    // サマリーカード
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px">'+
+      '<div class="card" style="padding:12px;text-align:center;background:'+(_reqFilterStatus==='pending'?'#fff3e0':'#fff')+';border:1.5px solid '+(_reqFilterStatus==='pending'?'#f97316':'var(--bdr)')+';cursor:pointer;transition:.2s" onclick="_reqFilterStatus=\'pending\';drawStaffRequestsUI()">'+
+        '<div style="font-size:22px;font-weight:800;color:#ea580c">'+pendingCnt+'</div>'+
+        '<div style="font-size:11px;font-weight:700;color:#c2410c">⏳ 承認待ち</div>'+
+      '</div>'+
+      '<div class="card" style="padding:12px;text-align:center;background:'+(_reqFilterType==='shift'?'#fdf8f4':'#fff')+';border:1.5px solid '+(_reqFilterType==='shift'?'#c07830':'var(--bdr)')+';cursor:pointer;transition:.2s" onclick="_reqFilterType=(_reqFilterType===\'shift\'?\'all\':\'shift\');drawStaffRequestsUI()">'+
+        '<div style="font-size:22px;font-weight:800;color:#c07830">'+shiftCnt+'</div>'+
+        '<div style="font-size:11px;font-weight:700;color:var(--sub)">📆 シフト変更</div>'+
+      '</div>'+
+      '<div class="card" style="padding:12px;text-align:center;background:'+(_reqFilterType==='attendance'?'#f0fdf4':'#fff')+';border:1.5px solid '+(_reqFilterType==='attendance'?'#2e7d32':'var(--bdr)')+';cursor:pointer;transition:.2s" onclick="_reqFilterType=(_reqFilterType===\'attendance\'?\'all\':\'attendance\');drawStaffRequestsUI()">'+
+        '<div style="font-size:22px;font-weight:800;color:#2e7d32">'+attCnt+'</div>'+
+        '<div style="font-size:11px;font-weight:700;color:var(--sub)">📊 打刻修正</div>'+
+      '</div>'+
+      '<div class="card" style="padding:12px;text-align:center;background:'+(_reqFilterType==='paid'?'#eff6ff':'#fff')+';border:1.5px solid '+(_reqFilterType==='paid'?'#1565c0':'var(--bdr)')+';cursor:pointer;transition:.2s" onclick="_reqFilterType=(_reqFilterType===\'paid\'?\'all\':\'paid\');drawStaffRequestsUI()">'+
+        '<div style="font-size:22px;font-weight:800;color:#1565c0">'+paidCnt+'</div>'+
+        '<div style="font-size:11px;font-weight:700;color:var(--sub)">📅 有給申請</div>'+
+      '</div>'+
+    '</div>'+
+
+    // フィルターツールバー
+    '<div class="card" style="padding:12px 16px;margin-bottom:14px;background:#fcfbf9;border:1px solid #e0d6cf">'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'+
+        '<span style="font-size:12px;font-weight:700;color:var(--pri)">🔍 絞り込み:</span>'+
+        '<select id="streq-f-staff" onchange="_reqFilterStaff=this.value;drawStaffRequestsUI()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--bdr);font-size:12px">'+staffOpts+'</select>'+
+        '<select id="streq-f-type" onchange="_reqFilterType=this.value;drawStaffRequestsUI()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--bdr);font-size:12px">'+
+          '<option value="all"'+(_reqFilterType==='all'?' selected':'')+'>全申請種別</option>'+
+          '<option value="shift"'+(_reqFilterType==='shift'?' selected':'')+'>📆 シフト変更申請</option>'+
+          '<option value="attendance"'+(_reqFilterType==='attendance'?' selected':'')+'>📊 打刻修正申請</option>'+
+          '<option value="paid"'+(_reqFilterType==='paid'?' selected':'')+'>📅 有給申請</option>'+
+        '</select>'+
+        '<select id="streq-f-status" onchange="_reqFilterStatus=this.value;drawStaffRequestsUI()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--bdr);font-size:12px">'+
+          '<option value="all"'+(_reqFilterStatus==='all'?' selected':'')+'>全ステータス</option>'+
+          '<option value="pending"'+(_reqFilterStatus==='pending'?' selected':'')+'>⏳ 承認待ちのみ</option>'+
+          '<option value="approved"'+(_reqFilterStatus==='approved'?' selected':'')+'>✅ 承認済み</option>'+
+          '<option value="rejected"'+(_reqFilterStatus==='rejected'?' selected':'')+'>❌ 却下</option>'+
+        '</select>'+
+        '<input type="month" id="streq-f-ym" value="'+_reqFilterYM+'" onchange="_reqFilterYM=this.value;drawStaffRequestsUI()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--bdr);font-size:12px" title="対象月絞り込み">'+
+        (_reqFilterYM?'<button class="bg" onclick="_reqFilterYM=\'\';drawStaffRequestsUI()" style="padding:4px 8px;font-size:11px">年月クリア</button>':'')+
+        '<button class="bg" onclick="renderStaffRequests()" style="padding:4px 10px;font-size:12px;margin-left:auto">🔄 最新に更新</button>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+
+  if(filtered.length === 0){
+    html += '<div class="card" style="padding:40px;text-align:center;color:var(--sub)">該当する申請データはありません</div>';
+    c.innerHTML = html;
+    return;
+  }
+
+  // 申請リスト
+  html += '<div style="display:flex;flex-direction:column;gap:10px">';
+  filtered.forEach(function(r){
+    var st = (S.staff||[]).find(function(x){ return String(x.id) === String(r.staffId); });
+    var sName = st ? st.name : 'スタッフ ('+r.staffId+')';
+    var sRole = st ? (st.role || 'スタッフ') : '';
+
+    var badgeBg = '#3d5a3e', typeLabel = '';
+    var detailHtml = '';
+
+    if(r.source === 'paid_request'){
+      badgeBg = '#1565c0';
+      typeLabel = '📅 有給申請';
+      var tl = r.paidType === '有給' ? '全日（1日）' : r.paidType === '午前半休' ? '午前半休（0.5日）' : '午後半休（0.5日）';
+      detailHtml = '<span style="font-weight:700;color:#1565c0">種別: ' + tl + '</span>';
+    }else if(r.type === 'shift'){
+      badgeBg = '#c07830';
+      typeLabel = '📆 シフト変更申請';
+      var reqPattern = '';
+      try {
+        var d = typeof r.requestData === 'string' ? JSON.parse(r.requestData) : r.requestData;
+        reqPattern = d.requestedPattern || '';
+      } catch(e){}
+      detailHtml = '希望シフト: <b style="color:var(--pri)">' + esc(reqPattern||'指定あり') + '</b>';
+    }else{
+      badgeBg = '#2e7d32';
+      typeLabel = '📊 打刻修正申請';
+      var sp = '', ep = '', brk = '';
+      try {
+        var d2 = typeof r.requestData === 'string' ? JSON.parse(r.requestData) : r.requestData;
+        sp = d2.startTime || ''; ep = d2.endTime || ''; brk = d2.breakMin || '';
+      } catch(e){}
+      detailHtml = '修正打刻: <b>' + esc(sp) + ' 〜 ' + esc(ep) + '</b>（休憩 ' + esc(brk) + '分）';
+    }
+
+    var dowJ = ['日','月','火','水','木','金','土'][new Date(r.date).getDay()];
+    var statusBadge = '';
+    if(r.status === 'pending'){
+      statusBadge = '<span style="background:#fff3e0;color:#e65100;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid #fed7aa">⏳ 承認待ち</span>';
+    }else if(r.status === 'approved'){
+      statusBadge = '<span style="background:#e8f5e8;color:#2e7d32;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid #c8e6c9">✅ 承認済み</span>';
+    }else{
+      statusBadge = '<span style="background:#fce8e8;color:#c62828;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid #ffcdd2">❌ 却下</span>';
+    }
+
+    var reasonText = r.reason || '';
+    if(!reasonText && r.requestData){
+      try {
+        var rd = typeof r.requestData === 'string' ? JSON.parse(r.requestData) : r.requestData;
+        if(rd && rd.reason) reasonText = rd.reason;
+      }catch(e){}
+    }
+
+    var createdDisp = r.createdAt ? new Date(r.createdAt).toLocaleString('ja-JP', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
+
+    html += '<div class="card" style="padding:14px 16px;border-left:5px solid '+badgeBg+';margin-bottom:0">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<span style="background:'+badgeBg+';color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px">'+typeLabel+'</span>'+
+          '<span style="font-size:15px;font-weight:700;color:var(--pri)">'+esc(sName)+'</span>'+
+          '<span style="font-size:11px;color:var(--sub)">('+esc(sRole)+')</span>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<span style="font-size:11px;color:var(--sub)">申請日時: '+createdDisp+'</span>'+
+          statusBadge+
+        '</div>'+
+      '</div>'+
+
+      '<div style="background:#fdfcf9;border:1px solid #eee;border-radius:8px;padding:10px 14px;margin-bottom:8px">'+
+        '<div style="font-size:13px;color:#333;margin-bottom:4px">'+
+          '対象日: <b style="font-size:14px;color:var(--pri)">'+fmtD(r.date)+'（'+dowJ+'）</b> ｜ '+detailHtml+
+        '</div>'+
+        (reasonText ? '<div style="font-size:12px;color:#555;margin-top:6px;background:#f5f0ea;padding:6px 10px;border-radius:6px">💬 <b>申請理由:</b> '+esc(reasonText)+'</div>' : '')+
+        (r.comment ? '<div style="font-size:12px;color:#c62828;margin-top:6px;background:#fff0f0;padding:6px 10px;border-radius:6px">📝 <b>管理者コメント:</b> '+esc(r.comment)+'</div>' : '')+
+      '</div>'+
+
+      (r.status === 'pending' ?
+        '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">'+
+          (r.source === 'paid_request' ?
+            '<button class="bp" style="background:#2e7d32;padding:6px 16px;font-size:12px;font-weight:700" onclick="approvePLR(\''+r.id+'\')">✅ 承認する</button>'+
+            '<button class="bg" style="color:#c62828;border-color:#fca5a5;padding:6px 14px;font-size:12px;font-weight:700" onclick="rejectPLR(\''+r.id+'\')">❌ 却下</button>'
+          :
+            '<button class="bp" style="background:#2e7d32;padding:6px 16px;font-size:12px;font-weight:700" onclick="approveCR(\''+r.id+'\')">✅ 承認する</button>'+
+            '<button class="bg" style="color:#c62828;border-color:#fca5a5;padding:6px 14px;font-size:12px;font-weight:700" onclick="rejectCR(\''+r.id+'\')">❌ 却下</button>'
+          )+
+        '</div>'
+      : '')+
+    '</div>';
+  });
+  html += '</div>';
+
+  c.innerHTML = html;
+}
 
 // ═══ 設定 ═══
 // ═══ GPS設定 ═══
@@ -11974,7 +12226,11 @@ async function approvePLR(reqId, staffId, date, type){
     // 5. シフトに反映
     await gas('saveShiftCell',{staffId:staffId,date:date,pattern:patName});
     toast('✅ 承認しました。シフト・有給記録に反映しました');
-    renderDashboard(document.getElementById('content'));
+    if(S.tab==='staff' && _staffTab==='requests'){
+      renderStaffRequests();
+    }else{
+      renderDashboard(document.getElementById('content'));
+    }
   }catch(e){await cAlert('承認失敗: '+e);}finally{unlockUI();}
 }
 
@@ -11997,7 +12253,11 @@ async function rejectPLR(reqId){
   try{
     await gas('rejectPaidLeaveRequest',{id:reqId,comment:comment});
     toast('却下しました');
-    renderDashboard(document.getElementById('content'));
+    if(S.tab==='staff' && _staffTab==='requests'){
+      renderStaffRequests();
+    }else{
+      renderDashboard(document.getElementById('content'));
+    }
   }catch(e){await cAlert('却下失敗: '+e);}finally{unlockUI();}
 }
 
@@ -12025,7 +12285,11 @@ async function approveCR(reqId){
       });
     }
     toast('✅ 承認しました');
-    renderDashboard(document.getElementById('content'));
+    if(S.tab==='staff' && _staffTab==='requests'){
+      renderStaffRequests();
+    }else{
+      renderDashboard(document.getElementById('content'));
+    }
   }catch(e){await cAlert('承認失敗: '+e);}finally{unlockUI();}
 }
 
@@ -12048,7 +12312,11 @@ async function rejectCR(reqId){
   try{
     await gas('rejectChangeRequest',{id:reqId,comment:comment});
     toast('却下しました');
-    renderDashboard(document.getElementById('content'));
+    if(S.tab==='staff' && _staffTab==='requests'){
+      renderStaffRequests();
+    }else{
+      renderDashboard(document.getElementById('content'));
+    }
   }catch(e){await cAlert('却下失敗: '+e);}finally{unlockUI();}
 }
 

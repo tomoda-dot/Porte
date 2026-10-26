@@ -503,10 +503,11 @@ async function gas(fn){
     case 'getStaffAttendance': return a1?_getLike('スタッフ出欠','date',a1):_getAll('スタッフ出欠');
     case 'getStaffAttendanceByDate': return _getFiltered('スタッフ出欠','date',a1);
     case 'upsertStaffAttendance':
-      var _saEx=await supabase.from('スタッフ出欠').select('id,startTime').eq('staffId',a1.staffId).eq('date',a1.date).limit(1);
+      var _saEx=await supabase.from('スタッフ出欠').select('id,startTime,endTime,breakMin').eq('staffId',a1.staffId).eq('date',a1.date).limit(1);
       if(_saEx.data&&_saEx.data.length>0){
-        if(_saEx.data[0].startTime)return null;
-        a1.id=_saEx.data[0].id;return _update('スタッフ出欠',a1);
+        a1.id=_saEx.data[0].id;
+        if(!a1.startTime && _saEx.data[0].startTime) a1.startTime = _saEx.data[0].startTime;
+        return _update('スタッフ出欠',a1);
       }
       a1.id=_genId('sa');return _add('スタッフ出欠',a1);
     case 'getTodayShifts': return _getFiltered('シフト','date',a1);
