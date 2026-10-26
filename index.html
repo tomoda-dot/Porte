@@ -9970,6 +9970,27 @@ async function renderStaffAttendance(){
     h+='<button class="ba" onclick="dlStaffAttCSV()" style="font-size:12px;margin-left:auto">📥 CSV出力（行政書士用）</button>';
     h+='</div>';
 
+    // ── 未退勤（過去日の退勤打刻漏れ）警告バナー ──
+    var _todayStr = today();
+    var missingStaffAtts = (att||[]).filter(function(a){
+      return a.date < _todayStr && a.startTime && (!a.endTime || String(a.endTime).trim() === '');
+    });
+    if(missingStaffAtts.length > 0){
+      h += '<div style="background:#fff7ed;border:1.5px solid #f97316;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(249,115,22,.12)">';
+      h += '<span style="font-size:20px;line-height:1">⚠️</span>';
+      h += '<div style="flex:1;font-size:12px;color:#c2410c">';
+      h += '<b>退勤打刻の押し忘れがあります：</b> ';
+      var missingList = missingStaffAtts.map(function(ma){
+        var st = S.staff.find(function(x){ return String(x.id) === String(ma.staffId); });
+        var sName = st ? st.name : 'スタッフ';
+        var dParts = ma.date.split('-');
+        var mdStr = parseInt(dParts[1]) + '/' + parseInt(dParts[2]);
+        return '<span style="background:#fff;border:1px solid #fed7aa;padding:3px 8px;border-radius:6px;margin:2px 4px;display:inline-block;cursor:pointer;font-weight:600;color:#333" onclick="editStaffAtt(\''+ma.staffId+'\',\''+esc(sName)+'\',\''+ma.date+'\')" title="クリックして退勤時刻を入力・修正できます"><b>'+esc(sName)+'</b>: '+mdStr+'（出勤 '+ma.startTime+'〜 <span style="color:#dc2626;font-weight:700">退勤未打刻</span> ✏️）</span>';
+      }).join(' ');
+      h += missingList;
+      h += '</div></div>';
+    }
+
     // ── 集計ロジック（全スタッフ分） ──
     var summaryData=[];
     _activeStaff.forEach(function(s){
@@ -10127,7 +10148,12 @@ async function renderStaffAttendance(){
             h+='<span style="display:inline-block;background:#0288d1;color:#fff;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700">有給PM</span>'
              +'<span style="color:var(--sub);font-size:9px"> 09:00〜13:00</span>';
           }else{
-            h+='<span style="color:'+_shiftColor(shift)+';font-weight:700">'+shift+'</span> '+time;
+            var isMissingOut = !rec.endTime && ds < today();
+            var dispTime = time;
+            if(isMissingOut){
+              dispTime = '<span style="color:#d97706;font-weight:700">'+esc(rec.startTime)+'〜</span> <span style="background:#fee2e2;color:#dc2626;padding:1px 4px;border-radius:4px;font-size:9px;font-weight:700;border:1px solid #fca5a5" title="退勤打刻がありません。クリックして修正できます">⚠️退勤漏れ</span>';
+            }
+            h+='<span style="color:'+_shiftColor(shift)+';font-weight:700">'+shift+'</span> '+dispTime;
           }
           h+='</td>';
         }else{

@@ -177,6 +177,9 @@ header{background:var(--pri);color:#fff;padding:12px 16px;border-radius:12px;mar
     </div>
   </header>
 
+  <!-- 未退勤・打刻漏れアラートエリア -->
+  <div id="mp-alert-container"></div>
+
   <!-- タイムカード -->
   <div class="card" id="tc-card">
     <div class="ct">🕐 タイムカード — <span id="tc-date"></span></div>
@@ -655,6 +658,7 @@ async function boot(){
     await renderShift();
     renderMyShiftReqs();
     var di=el('plr-date'); if(di)di.value=today();
+    await checkAndRenderMissingAttendanceAlert();
 
     // 友田アカウントチェック（管理者特権）
     if(isTomoda(ME)){
@@ -880,7 +884,11 @@ async function renderAtt(){
       timeDisp='<span style="display:inline-block;background:#0288d1;color:#fff;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:700">有給PM</span>'
         +' <span style="font-size:11px;color:var(--sub)">09:00〜13:00</span>';
     }else{
-      timeDisp='<span style="font-weight:600">'+esc(r.startTime)+'〜'+esc(r.endTime||'')+'</span>';
+      if(!r.endTime && r.date < today()){
+        timeDisp='<span style="font-weight:600">'+esc(r.startTime)+'〜</span> <span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;border:1px solid #fca5a5">⚠️ 退勤未打刻</span>';
+      }else{
+        timeDisp='<span style="font-weight:600">'+esc(r.startTime)+'〜'+esc(r.endTime||'')+'</span>';
+      }
     }
     html+='<div class="row" style="display:flex;align-items:center" data-rec="'+esc(recData)+'" onclick="openAttCR(this)">'
       +'<span style="width:90px;color:var(--sub);font-size:12px">'+fmtD(r.date)+'（'+DOW[di]+'）</span>'
@@ -1006,17 +1014,132 @@ function openShiftCR(row){
   };
 }
 
+// ─── 打刻漏れ（未退勤）アラート ──────────────────
+async function checkAndRenderMissingAttendanceAlert(){
+  var c=el('mp-alert-container');
+  if(!c) return;
+  c.innerHTML='';
+
+  var td=today();
+  // 過去35日間のスタッフ出欠レコードを取得（前月〜当日の前日まで）
+  var pastRecords=await safeQuery(
+    SB.from('スタッフ出欠')
+      .select('*')
+      .eq('staffId', ME.id)
+      .lt('date', td)
+      .order('date', { ascending: false })
+      .limit(35)
+  );
+
+  // 未退勤レコード（出勤はあるが退勤がない過去日）
+  var missingOutList=pastRecords.filter(function(r){
+    return r.startTime && (!r.endTime || String(r.endTime).trim() === '');
+  });
+
+  if(missingOutList.length === 0){
+    return;
+  }
+
+  // 申請済みチェック（未承認または承認済み）
+  var unappliedList=[];
+  var pendingList=[];
+
+  missingOutList.forEach(function(r){
+    var req=(MY_SHIFT_REQS || []).find(function(q){
+      return q.type === 'attendance' && q.date === r.date && (q.status === 'pending' || q.status === 'approved');
+    });
+    if(req && req.status === 'pending'){
+      pendingList.push({ rec: r, req: req });
+    }else if(!req){
+      unappliedList.push(r);
+    }
+  });
+
+  if(unappliedList.length === 0 && pendingList.length === 0) return;
+
+  var html='<div class="card" style="background:#fff7ed;border:1.5px solid #f97316;border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 3px 12px rgba(249,115,22,.15)">'
+    + '<div style="display:flex;align-items:flex-start;gap:10px">'
+    + '  <span style="font-size:24px;line-height:1">⚠️</span>'
+    + '  <div style="flex:1">'
+    + '    <div style="font-size:14px;font-weight:700;color:#c2410c;margin-bottom:4px">⚠️ 打刻漏れ（未退勤）のお知らせ</div>'
+    + '    <div style="font-size:12px;color:#7c2d12;line-height:1.5;margin-bottom:8px">退勤打刻がされていない過去日があります。以下のボタンから退勤時刻の修正申請を行ってください。</div>';
+
+  // 未申請の日付
+  unappliedList.forEach(function(r){
+    var di=new Date(r.date).getDay();
+    var recData=JSON.stringify({
+      date: r.date,
+      startTime: r.startTime,
+      endTime: '',
+      breakMin: (r.breakMin !== undefined && r.breakMin !== null && r.breakMin !== '') ? r.breakMin : 60
+    });
+    html += '<div style="margin-top:6px;background:#fff;border-radius:8px;padding:9px 12px;border:1px solid #fed7aa;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+      + '  <div>'
+      + '    <span style="font-weight:700;font-size:13px;color:#333">' + fmtD(r.date) + '（' + DOW[di] + '）</span>'
+      + '    <span style="font-size:12px;color:#ea580c;margin-left:8px;font-weight:600">出勤 ' + esc(r.startTime) + ' 〜 <span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;border:1px solid #fca5a5">退勤未打刻</span></span>'
+      + '  </div>'
+      + '  <button onclick=\'openAttCR(' + esc(JSON.stringify(recData)) + ')\' style="background:#ea580c;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15)">📝 勤怠修正を申請</button>'
+      + '</div>';
+  });
+
+  // 申請中の日付
+  pendingList.forEach(function(item){
+    var r=item.rec;
+    var di=new Date(r.date).getDay();
+    html += '<div style="margin-top:6px;background:#fefce8;border-radius:8px;padding:9px 12px;border:1px solid #fef08a;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+      + '  <div>'
+      + '    <span style="font-weight:700;font-size:13px;color:#333">' + fmtD(r.date) + '（' + DOW[di] + '）</span>'
+      + '    <span style="font-size:12px;color:#ca8a04;margin-left:8px;font-weight:600">出勤 ' + esc(r.startTime) + ' 〜 退勤未打刻</span>'
+      + '  </div>'
+      + '  <span class="badge pending" style="padding:4px 8px;font-size:11px">⏳ 修正申請中（承認待ち）</span>'
+      + '</div>';
+  });
+
+  html += '  </div></div></div>';
+  c.innerHTML = html;
+
+  // 未申請のものがある場合、起動時にダイアログで確認
+  if(unappliedList.length > 0 && !window._missingAttAlertShown){
+    window._missingAttAlertShown = true;
+    var datesStr = unappliedList.map(function(r){
+      var di = new Date(r.date).getDay();
+      return fmtD(r.date) + '（' + DOW[di] + '）出勤: ' + r.startTime + '〜 (退勤未打刻)';
+    }).join('\n');
+    setTimeout(function(){
+      if(confirm('⚠️【退勤打刻の押し忘れがあります】\n\n以下の日付の退勤打刻が完了していません：\n' + datesStr + '\n\n今すぐ勤怠修正の申請を行いますか？')){
+        var firstRec = unappliedList[0];
+        openAttCR({
+          date: firstRec.date,
+          startTime: firstRec.startTime,
+          endTime: '',
+          breakMin: (firstRec.breakMin !== undefined && firstRec.breakMin !== null && firstRec.breakMin !== '') ? firstRec.breakMin : 60
+        });
+      }
+    }, 400);
+  }
+}
+
 // 勤怠修正申請
-function openAttCR(row){
-  var rec=JSON.parse(row.getAttribute('data-rec'));
+function openAttCR(target){
+  var rec=null;
+  if(target && typeof target === 'object' && target.getAttribute){
+    try{ rec=JSON.parse(target.getAttribute('data-rec')); }catch(e){}
+  }else if(typeof target === 'string'){
+    try{ rec=JSON.parse(target); }catch(e){}
+  }else if(target && typeof target === 'object'){
+    rec=target;
+  }
+  if(!rec || !rec.date) return;
   var dow=DOW[new Date(rec.date).getDay()];
+  var curDisp = (rec.startTime || '未出勤') + '〜' + (rec.endTime ? esc(rec.endTime) : '<span style="color:#dc2626;font-weight:700">退勤未打刻</span>');
+  var bMin = (rec.breakMin!==undefined&&rec.breakMin!==null&&rec.breakMin!=='')?rec.breakMin:60;
   openModal('勤怠修正申請',
     '<p style="font-size:12px;color:var(--sub);margin-bottom:10px">'+fmtD(rec.date)+'（'+dow+'）</p>'
-    +'<div style="background:#f5f0ea;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px">現在: <b>'+esc(rec.startTime)+'〜'+esc(rec.endTime)+'</b>（休憩'+rec.breakMin+'分）</div>'
-    +'<div class="grid2"><div><label>出勤時刻</label><input type="time" id="cr-in" value="'+esc(rec.startTime)+'"></div>'
-    +'<div><label>退勤時刻</label><input type="time" id="cr-out" value="'+esc(rec.endTime)+'"></div></div>'
-    +'<label style="margin-top:10px">休憩（分）</label><input type="number" id="cr-brk" value="'+rec.breakMin+'" style="width:100px">'
-    +'<label style="margin-top:10px">修正理由</label><textarea id="cr-reason" rows="3" placeholder="例: 打刻忘れのため"></textarea>'
+    +'<div style="background:#f5f0ea;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px">現在: <b>'+curDisp+'</b>（休憩'+bMin+'分）</div>'
+    +'<div class="grid2"><div><label>出勤時刻</label><input type="time" id="cr-in" value="'+esc(rec.startTime||'')+'"></div>'
+    +'<div><label>退勤時刻</label><input type="time" id="cr-out" value="'+esc(rec.endTime||'')+'"></div></div>'
+    +'<label style="margin-top:10px">休憩（分）</label><input type="number" id="cr-brk" value="'+bMin+'" style="width:100px">'
+    +'<label style="margin-top:10px">修正理由</label><textarea id="cr-reason" rows="3" placeholder="例: 退勤打刻を押し忘れたため">'+(!rec.endTime ? '退勤打刻を押し忘れたため' : '')+'</textarea>'
     +'<button class="sub-btn" id="cr-submit" style="margin-top:12px">申請する</button>'
   );
   el('cr-submit').onclick=async function(){
@@ -1029,6 +1152,7 @@ function openAttCR(row){
       var r=await safeInsert('変更申請',{id:'cr'+Date.now(),staffId:ME.id,type:'attendance',date:rec.date,requestData:reqData,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
       MY_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
       renderMyShiftReqs();
+      await checkAndRenderMissingAttendanceAlert();
       if(isTomoda(ME)) await loadAdminReqs();
       hide('modal'); alert('✅ 勤怠修正申請を送信しました');
     }catch(e){alert('送信失敗: '+(e.message||e));}
