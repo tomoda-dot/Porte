@@ -1391,37 +1391,35 @@ async function approveAdminReq(source, id){
           }
         }
       }else if(req2.type==='attendance'){
-        var st='',et='',brk=60;
+        var st='', et='', brk=60;
         try{
-          var dObj=typeof req2.requestData==='string'?JSON.parse(req2.requestData):req2.requestData;
-          st=dObj.startTime||''; et=dObj.endTime||''; brk=Number(dObj.breakMin)||60;
+          var dObj = typeof req2.requestData==='string'?JSON.parse(req2.requestData):req2.requestData;
+          st = dObj.startTime || '';
+          et = dObj.endTime || '';
+          if(dObj.breakMin !== undefined && dObj.breakMin !== null && dObj.breakMin !== '') brk = Number(dObj.breakMin);
         }catch(e){}
         var saEx = await SB.from('スタッフ出欠').select('id,startTime,endTime,breakMin').eq('staffId',req2.staffId).eq('date',req2.date).limit(1);
         if(saEx.data && saEx.data.length>0){
-          var updatePayload = {
-            startTime: st || saEx.data[0].startTime,
-            endTime: et || null,
-            breakMin: brk
-          };
-          await SB.from('スタッフ出欠').update(updatePayload).eq('id',saEx.data[0].id);
+          var upd = { endTime: et, breakMin: brk };
+          if(st) upd.startTime = st;
+          await SB.from('スタッフ出欠').update(upd).eq('id',saEx.data[0].id);
         }else{
           await safeInsert('スタッフ出欠',{
-            id:'sa'+Date.now(),
-            staffId:req2.staffId,
-            date:req2.date,
-            startTime:st,
-            endTime:et||null,
-            breakMin:brk
+            id: 'sa'+Date.now(),
+            staffId: req2.staffId,
+            date: req2.date,
+            startTime: st || '09:00',
+            endTime: et || '18:00',
+            breakMin: brk
           });
         }
       }
     }
-    alert('✅ 承認しました');
+    alert('✅ 承認しました。出欠・シフトデータに反映しました');
     await loadAdminReqs();
     await renderShift();
-    await renderAtt();
-    await loadTC();
     await checkAndRenderMissingAttendanceAlert();
+    await renderAtt();
   }catch(e){
     alert('承認エラー: '+(e.message||e));
   }
