@@ -10852,7 +10852,7 @@ function dlPaidLeaveCSV(){
 }
 
 // ─── スタッフ申請一覧・履歴（管理者・友田専用） ──────────────────
-var _reqFilterStaff = '', _reqFilterType = 'all', _reqFilterStatus = 'pending', _reqFilterYM = '';
+var _reqFilterStaff = '', _reqFilterType = 'all', _reqFilterStatus = 'all', _reqFilterYM = '';
 var _cachedAdminRequests = null;
 
 async function renderStaffRequests(){
@@ -10917,6 +10917,14 @@ async function renderStaffRequests(){
   }
 }
 
+function resetAllStaffReqFilters(){
+  _reqFilterStaff = '';
+  _reqFilterType = 'all';
+  _reqFilterStatus = 'all';
+  _reqFilterYM = '';
+  drawStaffRequestsUI();
+}
+
 function drawStaffRequestsUI(allReqs){
   var c = document.getElementById('staff-content');
   if(!c) return;
@@ -10949,24 +10957,45 @@ function drawStaffRequestsUI(allReqs){
     staffOpts += '<option value="'+s.id+'"'+(_reqFilterStaff===s.id?' selected':'')+'>'+esc(s.name)+' ('+esc(s.role||'スタッフ')+')</option>';
   });
 
+  // 年月選択肢（全データから抽出 + 直近月）
+  var ymSet = {};
+  reqs.forEach(function(r){
+    if(r.date && r.date.length >= 7) ymSet[r.date.substring(0,7)] = true;
+  });
+  var curD = new Date();
+  var thisYM = curD.getFullYear()+'-'+String(curD.getMonth()+1).padStart(2,'0');
+  ymSet[thisYM] = true;
+  var ymList = Object.keys(ymSet).sort().reverse();
+  var ymOpts = '<option value="">全期間（すべての月）</option>';
+  ymList.forEach(function(ym){
+    var p = ym.split('-');
+    var ymLabel = p[0] + '年' + parseInt(p[1]) + '月';
+    ymOpts += '<option value="'+ym+'"'+(_reqFilterYM===ym?' selected':'')+'>'+ymLabel+'</option>';
+  });
+
+  var isAttCardActive = _reqFilterType === 'attendance';
+  var isShiftCardActive = _reqFilterType === 'shift';
+  var isPaidCardActive = _reqFilterType === 'paid';
+  var isPendingCardActive = _reqFilterStatus === 'pending';
+
   var html = '<div style="margin-bottom:16px">'+
-    // サマリーカード
+    // サマリーカード（クリックでその種別の申請履歴をパッと全件表示）
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px">'+
-      '<div class="card" style="padding:12px;text-align:center;background:'+(_reqFilterStatus==='pending'?'#fff3e0':'#fff')+';border:1.5px solid '+(_reqFilterStatus==='pending'?'#f97316':'var(--bdr)')+';cursor:pointer;transition:.2s" onclick="_reqFilterStatus=\'pending\';drawStaffRequestsUI()">'+
-        '<div style="font-size:22px;font-weight:800;color:#ea580c">'+pendingCnt+'</div>'+
-        '<div style="font-size:11px;font-weight:700;color:#c2410c">⏳ 承認待ち</div>'+
+      '<div class="card" style="padding:12px;text-align:center;background:'+(isPendingCardActive?'#fff3e0':'#fff')+';border:2px solid '+(isPendingCardActive?'#ea580c':'var(--bdr)')+';cursor:pointer;box-shadow:'+(isPendingCardActive?'0 2px 8px rgba(234,88,12,.2)':'none')+';transition:.15s" onclick="_reqFilterStatus=\'pending\';_reqFilterType=\'all\';_reqFilterYM=\'\';drawStaffRequestsUI()" title="承認待ちの申請のみ絞り込み">'+
+        '<div style="font-size:24px;font-weight:800;color:#ea580c">'+pendingCnt+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:#c2410c">⏳ 承認待ち</div>'+
       '</div>'+
-      '<div class="card" style="padding:12px;text-align:center;background:'+(_reqFilterType==='shift'?'#fdf8f4':'#fff')+';border:1.5px solid '+(_reqFilterType==='shift'?'#c07830':'var(--bdr)')+';cursor:pointer;transition:.2s" onclick="_reqFilterType=(_reqFilterType===\'shift\'?\'all\':\'shift\');drawStaffRequestsUI()">'+
-        '<div style="font-size:22px;font-weight:800;color:#c07830">'+shiftCnt+'</div>'+
-        '<div style="font-size:11px;font-weight:700;color:var(--sub)">📆 シフト変更</div>'+
+      '<div class="card" style="padding:12px;text-align:center;background:'+(isShiftCardActive?'#fdf8f4':'#fff')+';border:2px solid '+(isShiftCardActive?'#c07830':'var(--bdr)')+';cursor:pointer;box-shadow:'+(isShiftCardActive?'0 2px 8px rgba(192,120,48,.2)':'none')+';transition:.15s" onclick="_reqFilterType=\'shift\';_reqFilterStatus=\'all\';_reqFilterYM=\'\';drawStaffRequestsUI()" title="シフト変更申請の全履歴を表示">'+
+        '<div style="font-size:24px;font-weight:800;color:#c07830">'+shiftCnt+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+(isShiftCardActive?'#c07830':'var(--sub)')+'">📆 シフト変更</div>'+
       '</div>'+
-      '<div class="card" style="padding:12px;text-align:center;background:'+(_reqFilterType==='attendance'?'#f0fdf4':'#fff')+';border:1.5px solid '+(_reqFilterType==='attendance'?'#2e7d32':'var(--bdr)')+';cursor:pointer;transition:.2s" onclick="_reqFilterType=(_reqFilterType===\'attendance\'?\'all\':\'attendance\');drawStaffRequestsUI()">'+
-        '<div style="font-size:22px;font-weight:800;color:#2e7d32">'+attCnt+'</div>'+
-        '<div style="font-size:11px;font-weight:700;color:var(--sub)">📊 打刻修正</div>'+
+      '<div class="card" style="padding:12px;text-align:center;background:'+(isAttCardActive?'#f0fdf4':'#fff')+';border:2px solid '+(isAttCardActive?'#2e7d32':'var(--bdr)')+';cursor:pointer;box-shadow:'+(isAttCardActive?'0 2px 8px rgba(46,125,50,.2)':'none')+';transition:.15s" onclick="_reqFilterType=\'attendance\';_reqFilterStatus=\'all\';_reqFilterYM=\'\';drawStaffRequestsUI()" title="打刻修正申請の全履歴を表示">'+
+        '<div style="font-size:24px;font-weight:800;color:#2e7d32">'+attCnt+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+(isAttCardActive?'#2e7d32':'var(--sub)')+'">📊 打刻修正</div>'+
       '</div>'+
-      '<div class="card" style="padding:12px;text-align:center;background:'+(_reqFilterType==='paid'?'#eff6ff':'#fff')+';border:1.5px solid '+(_reqFilterType==='paid'?'#1565c0':'var(--bdr)')+';cursor:pointer;transition:.2s" onclick="_reqFilterType=(_reqFilterType===\'paid\'?\'all\':\'paid\');drawStaffRequestsUI()">'+
-        '<div style="font-size:22px;font-weight:800;color:#1565c0">'+paidCnt+'</div>'+
-        '<div style="font-size:11px;font-weight:700;color:var(--sub)">📅 有給申請</div>'+
+      '<div class="card" style="padding:12px;text-align:center;background:'+(isPaidCardActive?'#eff6ff':'#fff')+';border:2px solid '+(isPaidCardActive?'#1565c0':'var(--bdr)')+';cursor:pointer;box-shadow:'+(isPaidCardActive?'0 2px 8px rgba(21,101,192,.2)':'none')+';transition:.15s" onclick="_reqFilterType=\'paid\';_reqFilterStatus=\'all\';_reqFilterYM=\'\';drawStaffRequestsUI()" title="有給申請の全履歴を表示">'+
+        '<div style="font-size:24px;font-weight:800;color:#1565c0">'+paidCnt+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+(isPaidCardActive?'#1565c0':'var(--sub)')+'">📅 有給申請</div>'+
       '</div>'+
     '</div>'+
 
@@ -10974,28 +11003,32 @@ function drawStaffRequestsUI(allReqs){
     '<div class="card" style="padding:12px 16px;margin-bottom:14px;background:#fcfbf9;border:1px solid #e0d6cf">'+
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'+
         '<span style="font-size:12px;font-weight:700;color:var(--pri)">🔍 絞り込み:</span>'+
-        '<select id="streq-f-staff" onchange="_reqFilterStaff=this.value;drawStaffRequestsUI()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--bdr);font-size:12px">'+staffOpts+'</select>'+
-        '<select id="streq-f-type" onchange="_reqFilterType=this.value;drawStaffRequestsUI()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--bdr);font-size:12px">'+
+        '<select id="streq-f-staff" onchange="_reqFilterStaff=this.value;drawStaffRequestsUI()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px">'+staffOpts+'</select>'+
+        '<select id="streq-f-type" onchange="_reqFilterType=this.value;drawStaffRequestsUI()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px">'+
           '<option value="all"'+(_reqFilterType==='all'?' selected':'')+'>全申請種別</option>'+
           '<option value="shift"'+(_reqFilterType==='shift'?' selected':'')+'>📆 シフト変更申請</option>'+
           '<option value="attendance"'+(_reqFilterType==='attendance'?' selected':'')+'>📊 打刻修正申請</option>'+
           '<option value="paid"'+(_reqFilterType==='paid'?' selected':'')+'>📅 有給申請</option>'+
         '</select>'+
-        '<select id="streq-f-status" onchange="_reqFilterStatus=this.value;drawStaffRequestsUI()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--bdr);font-size:12px">'+
+        '<select id="streq-f-status" onchange="_reqFilterStatus=this.value;drawStaffRequestsUI()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px">'+
           '<option value="all"'+(_reqFilterStatus==='all'?' selected':'')+'>全ステータス</option>'+
           '<option value="pending"'+(_reqFilterStatus==='pending'?' selected':'')+'>⏳ 承認待ちのみ</option>'+
           '<option value="approved"'+(_reqFilterStatus==='approved'?' selected':'')+'>✅ 承認済み</option>'+
           '<option value="rejected"'+(_reqFilterStatus==='rejected'?' selected':'')+'>❌ 却下</option>'+
         '</select>'+
-        '<input type="month" id="streq-f-ym" value="'+_reqFilterYM+'" onchange="_reqFilterYM=this.value;drawStaffRequestsUI()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--bdr);font-size:12px" title="対象月絞り込み">'+
-        (_reqFilterYM?'<button class="bg" onclick="_reqFilterYM=\'\';drawStaffRequestsUI()" style="padding:4px 8px;font-size:11px">年月クリア</button>':'')+
-        '<button class="bg" onclick="renderStaffRequests()" style="padding:4px 10px;font-size:12px;margin-left:auto">🔄 最新に更新</button>'+
+        '<select id="streq-f-ym" onchange="_reqFilterYM=this.value;drawStaffRequestsUI()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px">'+ymOpts+'</select>'+
+        '<button class="bg" onclick="resetAllStaffReqFilters()" style="padding:5px 10px;font-size:12px;border-radius:6px" title="すべての条件を解除して全件表示">🔄 リセット（全件表示）</button>'+
+        '<button class="bg" onclick="renderStaffRequests()" style="padding:5px 12px;font-size:12px;border-radius:6px;margin-left:auto;font-weight:600">📥 最新データを取得</button>'+
       '</div>'+
     '</div>'+
   '</div>';
 
   if(filtered.length === 0){
-    html += '<div class="card" style="padding:40px;text-align:center;color:var(--sub)">該当する申請データはありません</div>';
+    html += '<div class="card" style="padding:40px;text-align:center;color:var(--sub)">'+
+      '<div style="font-size:24px;margin-bottom:8px">🔍</div>'+
+      '<div>選択中の条件に該当する申請データはありません</div>'+
+      '<div style="margin-top:12px"><button class="bp" onclick="resetAllStaffReqFilters()" style="font-size:12px;padding:6px 16px">すべての条件をリセットして全件表示</button></div>'+
+    '</div>';
     c.innerHTML = html;
     return;
   }
