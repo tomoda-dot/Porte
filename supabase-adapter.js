@@ -162,7 +162,7 @@ function _padTimes(row){
     if(!row.in && row.startTime) row.in = row.startTime;
     if(!row.out && row.endTime) row.out = row.endTime;
 
-    // 出欠レコードの工賃調整メタデータ（actualHours, dailyBonus, transportationAllowance）をnotesから復元
+    // 出欠レコードの工賃調整メタデータ（actualHours, dailyBonus, transportationAllowance, mealRate）をnotesから復元
     if(row.notes && typeof row.notes === 'string' && row.notes.indexOf('<!--ADJ:') >= 0){
       var adjMatch = row.notes.match(/<!--ADJ:(.*?)-->/);
       if(adjMatch){
@@ -171,6 +171,7 @@ function _padTimes(row){
           if(adjObj.ah !== undefined) row.actualHours = adjObj.ah;
           if(adjObj.b !== undefined) row.dailyBonus = adjObj.b;
           if(adjObj.t !== undefined) row.transportationAllowance = adjObj.t;
+          if(adjObj.mr !== undefined) row.mealRate = adjObj.mr;
         }catch(e){}
         row.notes = row.notes.replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
       }
@@ -195,18 +196,20 @@ function _padTimes(row){
   return row;
 }
 
-// 出欠レコードの工賃調整メタデータ（actualHours, dailyBonus, transportationAllowance）をnotes末尾にエンコード
+// 出欠レコードの工賃調整メタデータ（actualHours, dailyBonus, transportationAllowance, mealRate）をnotes末尾にエンコード
 function _encodeAttendanceAdj(obj){
   if(!obj) return;
   var hasAdj = (obj.actualHours !== undefined && obj.actualHours !== null && obj.actualHours !== '') ||
                (obj.dailyBonus !== undefined && obj.dailyBonus !== null && Number(obj.dailyBonus) !== 0) ||
-               (obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0);
+               (obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0) ||
+               (obj.mealRate !== undefined && obj.mealRate !== null && obj.mealRate !== '');
   var rawNotes = String(obj.notes || '').replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
   if(hasAdj){
     var adjData = {};
     if(obj.actualHours !== undefined && obj.actualHours !== null && obj.actualHours !== '') adjData.ah = Number(obj.actualHours);
     if(obj.dailyBonus !== undefined && obj.dailyBonus !== null && Number(obj.dailyBonus) !== 0) adjData.b = Number(obj.dailyBonus);
     if(obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0) adjData.t = Number(obj.transportationAllowance);
+    if(obj.mealRate !== undefined && obj.mealRate !== null && obj.mealRate !== '') adjData.mr = obj.mealRate;
     obj.notes = (rawNotes ? rawNotes + ' ' : '') + '<!--ADJ:' + JSON.stringify(adjData) + '-->';
   } else {
     obj.notes = rawNotes;
@@ -593,6 +596,9 @@ async function gas(fn){
 
     // ── 国保連レセプトCSV生成 ──
     case 'generateKokuhoReceiptCSV': return _generateKokuhoReceiptCSV(a1,a2,a3);
+
+    // ── 過去食事提供実績の摂食率(10割)一括補完 ──
+    case 'batchFillMealRate': return _batchFillMealRate(a1);
 
     // ── アプリURL ──
     case 'getAppUrl': return window.location.origin+window.location.pathname;
@@ -1159,7 +1165,11 @@ async function _calcServiceRecordData(srYm){
         if(pu.indexOf('往')>=0||pu.indexOf('迎')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.pickup=true;pickupCount++;}
         if(pu.indexOf('復')>=0||pu.indexOf('送')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.dropoff=true;dropoffCount++;}
         var curBento=(rec.bento!==undefined&&rec.bento!==null&&String(rec.bento).trim()!=='')?rec.bento:effU.bento;
-        if(_isBento({bento:curBento})){dd.meal=true;mealCount++;}
+        if(_isBento({bento:curBento})){
+          dd.meal=true;
+          mealCount++;
+          dd.mealRate=rec.mealRate||'10割';
+        }
         dd.notes=rec.notes||'';dd.signUrl=rec.signature||'';
       }
       days.push(dd);
@@ -1473,3 +1483,23 @@ function getUserScheduleForDate(user, dateStr) {
   }
   return def;
 }
+
+// ================= BATCH FILL MEAL RATE (PAST ATTENDANCE) =================
+async function _batchFillMealRate(targetYm) {
+  var atts = targetYm ? await _getLike('出欠', 'date', targetYm) : await _getAll('出欠');
+  var updated = 0;
+  for (var i = 0; i < atts.length; i++) {
+    var a = atts[i];
+    var b = String(a.bento || '').trim();
+    var st = String(a.status || '').trim();
+    var isAbsent = ['欠席', '体調不良', '通院', '調整休'].indexOf(st) >= 0;
+    var hasBento = b && b !== 'なし' && b !== '0' && b !== 'false';
+    if (hasBento && !isAbsent && (!a.mealRate || a.mealRate === '-' || a.mealRate === '未記録')) {
+      a.mealRate = '10割';
+      await _update('出欠', a);
+      updated++;
+    }
+  }
+  return { success: true, count: updated };
+}
+
