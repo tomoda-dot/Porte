@@ -1490,11 +1490,10 @@ async function _batchFillMealRate(targetYm) {
   var updated = 0;
   for (var i = 0; i < atts.length; i++) {
     var a = atts[i];
+    if (a.userId === 'TODAYS_MENU') continue;
     var b = String(a.bento || '').trim();
-    var st = String(a.status || '').trim();
-    var isAbsent = ['欠席', '体調不良', '通院', '調整休'].indexOf(st) >= 0;
     var hasBento = b && b !== 'なし' && b !== '0' && b !== 'false';
-    if (hasBento && !isAbsent && (!a.mealRate || a.mealRate === '-' || a.mealRate === '未記録')) {
+    if (hasBento && (!a.mealRate || a.mealRate === '-' || a.mealRate === '未記録')) {
       a.mealRate = '10割';
       await _update('出欠', a);
       updated++;
