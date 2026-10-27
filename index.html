@@ -1654,10 +1654,14 @@ function updateAdmAH(){
   document.getElementById('adm-m').disabled=isAbs;
   var btnClear=document.getElementById('adm-e-clear');
   if(btnClear) btnClear.disabled=isAbs;
+  var mrEl=document.getElementById('adm-mr');
   if(isAbs){
     document.getElementById('adm-s').value='';
     document.getElementById('adm-e').value='';
     if(ahInp) ahInp.value='';
+    if(mrEl) mrEl.value='-';
+  } else {
+    onAdmBentoChange();
   }
   function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
   var uid=window._curAttUid||'';
@@ -1957,7 +1961,7 @@ async function saveAttDaily(uid, ds){
     workTypeId:isNoWork?'':saveAmId,
     workTypeIdPm:isNoWork?'':savePmId,
     bento:document.getElementById('adm-b').value,
-    mealRate:document.getElementById('adm-mr')?document.getElementById('adm-mr').value:'',
+    mealRate:(isNoWork||document.getElementById('adm-b').value==='なし')?'-':(document.getElementById('adm-mr')?document.getElementById('adm-mr').value:'10割'),
     bentoPaymentMethod:document.getElementById('adm-bp')?document.getElementById('adm-bp').value:'',
     pickup:document.getElementById('adm-p').value,
     notes:document.getElementById('adm-an').value
@@ -5752,7 +5756,8 @@ async function renderAttTbl(){
         }
         else if(r&&r.pickup==='なし'&&uHasP){pIcon='<span style="color:var(--red);font-size:10px;font-weight:700;white-space:nowrap">✕取消</span>';}
 
-        if(!isAb){
+        var isAttended = r && ['出席','遅刻','早退'].indexOf(r.status) >= 0;
+        if(isAttended){
           var hasB = curB && curB !== 'なし' && curB !== '0' && curB !== 'false';
           if(hasB){
             var mrVal = (r && r.mealRate) ? r.mealRate : '10割';
@@ -5849,6 +5854,7 @@ function renderAttMonthlyTbl(){
     var status='';
     var timeDisp='-';
     var bIcon='−',pIcon='−';
+    var curB='';
     var notes='';
     var sc=getUserScheduleForDate(user,ds);
     var isScheduled=sc.scheduleDays&&sc.scheduleDays.indexOf(dwj)>=0;
@@ -5866,7 +5872,7 @@ function renderAttMonthlyTbl(){
       }
       var isAb=['欠席','体調不良','通院','調整休'].indexOf(status)>=0;
       var sc=getUserScheduleForDate(user,ds);
-      var curB=r.bento||sc.bento;
+      curB=r.bento||sc.bento;
       var curP=r.pickup||sc.pickup;
       var curPM=(r&&r.bentoPaymentMethod)?r.bentoPaymentMethod:sc.bentoPaymentMethod;
       var bCount=getBentoCountValue(curB);
@@ -5939,15 +5945,16 @@ function renderAttMonthlyTbl(){
     var todayStr=today();
     var rowBg=(ds===todayStr)?'background:#e8f5e9;':'';
     var mrDisp = '-';
+    var isAttended = r && ['出席','遅刻','早退'].indexOf(status) >= 0;
     if(status==='調整休'){
       bIcon='−'; pIcon='−'; mrDisp='−'; timeDisp='-';
-    } else if(!isAbLine){
+    } else if(isAttended){
       var curBCheck = curB;
       var hasB = curBCheck && curBCheck !== 'なし' && curBCheck !== '0' && curBCheck !== 'false';
       if(hasB){
         var mrVal = (r && r.mealRate) ? r.mealRate : '10割';
         var mrBg = (mrVal === '10割' || mrVal === '9割' || mrVal === '8割') ? 'background:#dcfce7;color:#16a34a;border:1px solid #86efac' : (mrVal === '0割' ? 'background:#fee2e2;color:#dc2626;border:1px solid #fca5a5' : 'background:#fef3c7;color:#b45309;border:1px solid #fde68a');
-        mrDisp = '<span class="badge" style="' + mrBg + ';font-size:11px;font-weight:700">' + esc(mrVal) + '</span>';
+        mrDisp = '<span class="badge" style="' + mrBg + ';font-size:11px;font-weight:700;white-space:nowrap">' + esc(mrVal) + '</span>';
       }
     }
     var isTempUser = userTemps.some(function(t){return String(t.date)===ds;});

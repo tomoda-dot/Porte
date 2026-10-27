@@ -860,6 +860,11 @@ function setStatus(btn){
     b.classList.remove('on');
   });
   btn.classList.add('on');
+  if(['欠席','体調不良','通院'].indexOf(CURRENT_STATUS)>=0){
+    if(el('f-meal-rate')) el('f-meal-rate').value = '-';
+  } else if(['出席','遅刻','早退'].indexOf(CURRENT_STATUS)>=0){
+    onBentoChangeTablet();
+  }
 }
 
 // ─── テンプレート適用 ──────────────────
@@ -914,7 +919,7 @@ async function saveForm(){
       workTypeId: amTypeId,
       workTypeIdPm: pmTypeId,
       bento: el('f-bento').value,
-      mealRate: el('f-meal-rate') ? el('f-meal-rate').value : (el('f-bento') && el('f-bento').value !== 'なし' ? '10割' : '-'),
+      mealRate: (['出席','遅刻','早退'].indexOf(CURRENT_STATUS)>=0 && el('f-bento') && el('f-bento').value !== 'なし') ? (el('f-meal-rate') ? el('f-meal-rate').value : '10割') : '-',
       bentoPaymentMethod: userObj ? (userObj.bentoPaymentMethod || '工賃払い') : '工賃払い',
       pickup: transport,
       notes: el('f-att-notes').value || null
