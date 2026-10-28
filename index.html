@@ -1720,7 +1720,7 @@ async function openAttDailyM(uid, ds){
     var results=await Promise.all([cachedGas('getAttendanceByDate',ds),cachedGas('getDailyByDate',ds)]);
     var atts=results[0];
     var dailies=results[1];
-    var att=atts.find(function(a){return String(a.userId)===String(uid);})||{userId:uid,date:ds,status:'出席',startTime:'',endTime:'',bento:'',pickup:'',notes:''};
+    var att=atts.find(function(a){return String(a.userId)===String(uid);})||{userId:uid,date:ds,status:'予定',startTime:'',endTime:'',bento:'',pickup:'',notes:''};
     var u=S.users.find(function(x){return x.id===uid;});
     var sc = (u && typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, ds) : (u || {});
     var dWt=(sc&&sc.workTypeId)?(S.workTypes.find(function(w){return String(w.id)===String(sc.workTypeId);})||{id:sc.workTypeId}):(S.workTypes.find(function(w){return w.name==='軽作業';})||S.workTypes[0]);
@@ -1941,6 +1941,13 @@ async function saveAttDaily(uid, ds){
   };
 
   var st=document.getElementById('adm-st').value;
+  if(ds > today() && ['出席','遅刻','早退'].indexOf(st) >= 0){
+    if(!await cConfirm('未来の日付（' + fmtDate(ds) + '）が「' + st + '」になっています。\n本当にこのまま保存しますか？\n（通常は来所されるまで「予定」のままにしておきます）')){
+      resetBtn();
+      unlockUI();
+      return;
+    }
+  }
   var isAbs=['欠席','体調不良','通院'].indexOf(st)>=0;
   var isAdj=st==='調整休';
   var isNoWork=isAbs||isAdj;
@@ -7932,21 +7939,9 @@ async function saveUserWageAdjustments(userId){
       var notesVal = document.getElementById('adj-n-' + ds).value;
 
       var existingRec = attList.find(function(a){ return String(a.userId) === String(u.id) && String(a.date) === ds; });
+      if(!existingRec || ['出席','遅刻','早退'].indexOf(existingRec.status) < 0) continue;
 
-      var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, ds) : u;
-      var targetRec = existingRec ? Object.assign({}, existingRec) : {
-        userId: u.id,
-        date: ds,
-        status: '出席',
-        startTime: sc.scheduleStart || '10:00',
-        endTime: sc.scheduleEnd || '16:00',
-        breakMin: sc.breakMin != null ? Number(sc.breakMin) : 60,
-        workTypeId: sc.workTypeId || '',
-        workTypeIdPm: sc.workTypeIdPm || sc.workTypeId || '',
-        bento: sc.bento || 'なし',
-        bentoPaymentMethod: sc.bentoPaymentMethod || '工賃払い',
-        pickup: sc.pickup || 'なし'
-      };
+      var targetRec = Object.assign({}, existingRec);
 
       targetRec.actualHours = ahVal;
       targetRec.dailyBonus = bonusVal;
