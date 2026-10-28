@@ -1717,7 +1717,9 @@ async function openAttDailyM(uid, ds){
   window._curAttUid=uid;
   showLoading('content','出欠・日報を読み込み中...');
   try{
-    var results=await Promise.all([cachedGas('getAttendanceByDate',ds),cachedGas('getDailyByDate',ds)]);
+    clearCache('getAttendanceByDate');
+    clearCache('getDailyByDate');
+    var results=await Promise.all([gas('getAttendanceByDate',ds),gas('getDailyByDate',ds)]);
     var atts=results[0];
     var dailies=results[1];
     var att=atts.find(function(a){return String(a.userId)===String(uid);})||{userId:uid,date:ds,status:'予定',startTime:'',endTime:'',bento:'',pickup:'',notes:''};
@@ -5662,12 +5664,12 @@ async function renderAttendance(c){
     '</div>';
 
   if(S.attSubTab==='daily'){
-    c.innerHTML='<div class="hd-row"><h2>📝 出欠・日報管理</h2><div style="display:flex;gap:8px;align-items:center"><input type="date" id="att-date" value="'+attDate+'" onchange="attDate=this.value;loadAtt()"><span style="font-size:12px;color:var(--sub)" id="att-wd">('+weekday(attDate)+')</span><button class="ba" onclick="bulkPresent()" style="font-size:11px">予定者を一括出席</button></div></div>'+
+    c.innerHTML='<div class="hd-row"><h2>📝 出欠・日報管理</h2><div style="display:flex;gap:8px;align-items:center"><input type="date" id="att-date" value="'+attDate+'" onchange="attDate=this.value;loadAtt()"><span style="font-size:12px;color:var(--sub)" id="att-wd">('+weekday(attDate)+')</span><button class="bg" onclick="loadAtt()" style="font-size:11px;padding:3px 9px" title="最新の打刻・出欠データを再取得">🔄 更新</button><button class="ba" onclick="bulkPresent()" style="font-size:11px">予定者を一括出席</button></div></div>'+
       subTabs+
       '<div class="card"><div class="tbl-wrap" id="att-tbl">読み込み中...</div></div><div id="att-modal"></div>';
     loadAtt();
   }else{
-    c.innerHTML='<div class="hd-row"><h2>📝 出欠・日報管理</h2></div>'+
+    c.innerHTML='<div class="hd-row"><h2>📝 出欠・日報管理</h2><div><button class="bg" onclick="loadAttMonthly(true)" style="font-size:11px;padding:4px 10px" title="最新の打刻・出欠データを再取得">🔄 最新情報に更新</button></div></div>'+
       subTabs+
       '<div class="card">'+
       '  <div style="display:flex;gap:15px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'+
@@ -5798,26 +5800,29 @@ var attMonthlyData=[];
 var dailyMonthlyData=[];
 var attMonthlyClosedDays=[];
 var attMonthlyTempData=[];
-async function loadAttMonthly(){
+async function loadAttMonthly(forceRefresh){
   var tbl=document.getElementById('att-monthly-tbl');
   if(!tbl)return;
-  // キャッシュがあれば即表示
+  // キャッシュがあればまず即座に高速表示
   var cKey1='getAttendance|'+JSON.stringify([S.attMonth]);
   var cKey2='getDaily|'+JSON.stringify([S.attMonth]);
-  if(_cache[cKey1]&&_cache[cKey2]&&(Date.now()-_cache[cKey1].t<300000)){
+  var hasCache = _cache[cKey1] && _cache[cKey2];
+  if(hasCache && !forceRefresh){
     attMonthlyData=_cache[cKey1].d;dailyMonthlyData=_cache[cKey2].d;
-    var cKey3='getClosedDays|'+JSON.stringify([S.attMonth]);attMonthlyClosedDays=(_cache[cKey3]&&(Date.now()-_cache[cKey3].t<300000))?_cache[cKey3].d:[];
-    var cKey4='getTempByMonth|'+JSON.stringify([S.attMonth]);attMonthlyTempData=(_cache[cKey4]&&(Date.now()-_cache[cKey4].t<300000))?_cache[cKey4].d:[];
+    var cKey3='getClosedDays|'+JSON.stringify([S.attMonth]);attMonthlyClosedDays=_cache[cKey3]?_cache[cKey3].d:[];
+    var cKey4='getTempByMonth|'+JSON.stringify([S.attMonth]);attMonthlyTempData=_cache[cKey4]?_cache[cKey4].d:[];
     renderAttMonthlyTbl();
-    return;
+  } else {
+    showLoading(tbl,'月次データを読み込み中...');
   }
-  showLoading(tbl,'月次データを読み込み中...');
+  // 必ず最新のDBデータを再取得して表示を最新化（タイムカードやタブレットの打刻を即座に反映）
   try{
-    var results=await Promise.all([cachedGas('getAttendance',S.attMonth),cachedGas('getDaily',S.attMonth),cachedGas('getClosedDays',S.attMonth),cachedGas('getTempByMonth',S.attMonth)]);
+    clearCache('getAttendance');clearCache('getDaily');
+    var results=await Promise.all([gas('getAttendance',S.attMonth),gas('getDaily',S.attMonth),cachedGas('getClosedDays',S.attMonth),cachedGas('getTempByMonth',S.attMonth)]);
     attMonthlyData=results[0];dailyMonthlyData=results[1];attMonthlyClosedDays=results[2]||[];attMonthlyTempData=results[3]||[];
     renderAttMonthlyTbl();
   }catch(e){
-    tbl.innerHTML='読み込み失敗: '+e;
+    if(!hasCache) tbl.innerHTML='読み込み失敗: '+e;
   }
 }
 function renderAttMonthlyTbl(){
