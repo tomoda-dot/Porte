@@ -165,6 +165,7 @@
           <div class="card-header">
             <h3>📜 注文・受付履歴ログ</h3>
             <div style="display:flex; gap:8px;">
+              <button class="btn btn-sm btn-pop" id="openAddPastOrderModalBtn" onclick="openAddPastOrderModal()" style="background: linear-gradient(135deg, #2b8a3e, #40c057); color: #fff; border:none; font-weight:800; cursor:pointer;">➕ 過去注文の追加</button>
               <button class="btn btn-sm btn-outline" id="exportHistoryCsvBtn">📥 注文履歴CSV出力</button>
             </div>
           </div>
@@ -483,6 +484,41 @@
       </div>
       <div class="modal-footer" style="background:#f8f9fa;">
         <button class="btn btn-secondary" onclick="closeStaffSelectForBentoModal()">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 過去の注文手動登録モーダル -->
+  <div class="modal-overlay" id="addPastOrderModal">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header" style="background:#f0fff4; border-bottom:2px solid #b2f2bb;">
+        <h3 style="color:#2b8a3e;">➕ 過去の注文履歴を手動追加</h3>
+        <button class="close-btn" onclick="closeAddPastOrderModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <p style="margin-bottom: 16px; font-size: 0.9rem; color: #495057; font-weight: 600;">
+          過去に提供されたお弁当や記録漏れの日付・利用者を指定して履歴台帳に追加登録します。
+        </p>
+        <div style="margin-bottom: 14px;">
+          <label style="display:block; font-weight:800; margin-bottom:6px; color:#2b8a3e;">📅 注文日（提供日）</label>
+          <input type="date" id="pastOrderDateInput" class="form-control" style="width:100%; font-size:1rem; padding:8px 12px;">
+        </div>
+        <div style="margin-bottom: 14px;">
+          <label style="display:block; font-weight:800; margin-bottom:6px; color:#2b8a3e;">👤 対象のご利用者様 / スタッフ</label>
+          <select id="pastOrderUserSelect" class="form-control" style="width:100%; font-size:0.95rem; padding:8px 12px;">
+            <!-- JSで動的生成 -->
+          </select>
+        </div>
+        <div style="margin-bottom: 18px;">
+          <label style="display:block; font-weight:800; margin-bottom:6px; color:#2b8a3e;">🍱 注文したお弁当</label>
+          <select id="pastOrderBentoSelect" class="form-control" style="width:100%; font-size:0.95rem; padding:8px 12px;">
+            <!-- JSで動的生成 -->
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer" style="background:#f8f9fa;">
+        <button class="btn btn-secondary" onclick="closeAddPastOrderModal()">キャンセル</button>
+        <button class="btn btn-primary" onclick="savePastOrder()" style="background: linear-gradient(135deg, #2b8a3e, #40c057); border:none; font-weight:800;">登録して履歴に反映</button>
       </div>
     </div>
   </div>

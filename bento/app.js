@@ -132,12 +132,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!document.hidden) syncFromSupabase();
   });
 
-  // ページを開いた瞬間に自動的にPorte DBから最新利用者＆出欠データを非同期取得して画面更新
+  // 端末間同期を最初に行い、Supabase上の最新注文・最新選択状態をまず取得
   try {
     const { url, key } = getSupabaseCredentials();
     if (url && key && typeof supabase !== 'undefined') {
-      await fetchPorteDbAttendance(false); // 自動取得して結果をトースト表示＆レンダリング
       await syncFromSupabase();
+      await fetchPorteDbAttendance(true); // その後にPorte DBから出欠・利用者更新
     }
   } catch (e) {
     console.warn('Auto fetch user data error:', e);
@@ -358,20 +358,7 @@ function cleanupAutoAttOrders() {
         if (fakeAttSyncDates.includes(o.dateKey)) return false;
       }
 
-      // 当日のログで、現在porteUsersでそのお弁当を選択していないものを削除（自動作成ログのクリア）
-      if (o.dateKey === todayKey) {
-        const u = porteUsers.find(user => 
-          (o.userId && String(user.id).trim() === String(o.userId).trim()) ||
-          (o.userName && String(user.name).replace('👔','').trim() === String(o.userName).replace('👔','').trim())
-        );
-        if (u) {
-          normalizeUserData(u);
-          const userHasBento = Array.isArray(u.selectedBentoIds) && u.selectedBentoIds.some(bId => bId === o.bentoId);
-          if (!userHasBento) return false;
-        } else {
-          return false;
-        }
-      }
+      // 実注文ログは端末間同期で保護するため自動削除しない
       return true;
     });
     if (orderHistory.length !== originalHistCount) {
@@ -564,12 +551,14 @@ function updateAndSaveDailyOrdersAndHistory() {
       orders: currentOrders
     };
   } else {
-    dailyOrders[todayKey] = {
-      status: 'DRAFT',
-      confirmedAt: null,
-      orders: []
-    };
-    orderHistory = orderHistory.filter(h => h.dateKey !== todayKey);
+    // 注文が0件でも既存の確定注文や履歴ログを勝手に全消去しない
+    if (!dailyOrders[todayKey] || dailyOrders[todayKey].status !== 'CONFIRMED') {
+      dailyOrders[todayKey] = {
+        status: 'DRAFT',
+        confirmedAt: null,
+        orders: []
+      };
+    }
   }
 
   saveDailyOrders();
@@ -699,7 +688,10 @@ function mergePorteUsers(remoteUsers, localUsers) {
     const maxLen = Math.max(luIds.length, ruIds.length, res.bentoCount || 1);
     const mergedIds = [];
     for (let i = 0; i < maxLen; i++) {
-      mergedIds[i] = ruIds[i] !== undefined ? ruIds[i] : (luIds[i] || '');
+      const rVal = (ruIds[i] !== undefined && ruIds[i] !== null) ? ruIds[i] : '';
+      const lVal = (luIds[i] !== undefined && luIds[i] !== null) ? luIds[i] : '';
+      // 空文字で既存の選択が上書きされないように保護（値がある方を優先）
+      mergedIds[i] = rVal || lVal;
     }
     res.selectedBentoIds = mergedIds;
     res.selectedBentoId = mergedIds[0] || '';
@@ -724,12 +716,8 @@ function mergePorteUsers(remoteUsers, localUsers) {
 function applyDailyOrdersToPorteUsers(dailyOrdersObj, usersArray) {
   if (!dailyOrdersObj || !Array.isArray(usersArray)) return usersArray;
 
-  // 全利用者の本日の選択状態を初期化（前日や無選択状態のキャリーオーバーを防止）
   usersArray.forEach(u => {
     normalizeUserData(u);
-    const count = u.bentoCount || 1;
-    u.selectedBentoIds = Array(count).fill('');
-    u.selectedBentoId = '';
   });
 
   const todayKey = getTodayKey();
@@ -3297,7 +3285,7 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
 
     if (loadedUsers.length > 0) {
       applyDailyOrdersToPorteUsers(dailyOrders, loadedUsers);
-      porteUsers = loadedUsers;
+      porteUsers = mergePorteUsers(loadedUsers, porteUsers);
     } else {
       showToast('⚠️ テーブル内にデータが見つかりませんでした。', 'warning');
       return;
@@ -4013,3 +4001,131 @@ window.addEventListener('focus', function() {
 document.addEventListener('visibilitychange', function() {
   if (!document.hidden) syncFromSupabase();
 });
+
+// ─── 過去の注文履歴手動登録モーダル ───
+window.openAddPastOrderModal = function() {
+  const modal = document.getElementById('addPastOrderModal');
+  if (!modal) return;
+
+  const dateInput = document.getElementById('pastOrderDateInput');
+  const userSelect = document.getElementById('pastOrderUserSelect');
+  const bentoSelect = document.getElementById('pastOrderBentoSelect');
+
+  // 日付の初期値を前日に設定
+  const yest = new Date();
+  yest.setDate(yest.getDate() - 1);
+  const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+  if (dateInput) dateInput.value = yestStr;
+
+  // 利用者セレクトボックスを生成
+  if (userSelect) {
+    userSelect.innerHTML = '<option value="">-- 対象者を選択してください --</option>';
+    porteUsers.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      opt.textContent = `${u.name} (${u.type || '通所'})`;
+      userSelect.appendChild(opt);
+    });
+  }
+
+  // お弁当セレクトボックスを生成（カテゴリごとにグループ化）
+  if (bentoSelect) {
+    bentoSelect.innerHTML = '<option value="">-- 注文したお弁当を選択してください --</option>';
+    bentoMaster.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = `${b.icon || '🍱'} ${b.name} (${b.category || '一般'})`;
+      bentoSelect.appendChild(opt);
+    });
+  }
+
+  modal.classList.add('active');
+};
+
+window.closeAddPastOrderModal = function() {
+  const modal = document.getElementById('addPastOrderModal');
+  if (modal) modal.classList.remove('active');
+};
+
+window.savePastOrder = async function() {
+  const dateInput = document.getElementById('pastOrderDateInput');
+  const userSelect = document.getElementById('pastOrderUserSelect');
+  const bentoSelect = document.getElementById('pastOrderBentoSelect');
+
+  const dateVal = dateInput ? dateInput.value : '';
+  const userId = userSelect ? userSelect.value : '';
+  const bentoId = bentoSelect ? bentoSelect.value : '';
+
+  if (!dateVal) {
+    showToast('⚠️ 注文日を選択してください。', 'warning');
+    return;
+  }
+  if (!userId) {
+    showToast('⚠️ ご利用者様・スタッフを選択してください。', 'warning');
+    return;
+  }
+  if (!bentoId) {
+    showToast('⚠️ お弁当を選択してください。', 'warning');
+    return;
+  }
+
+  const user = porteUsers.find(u => String(u.id).trim() === String(userId).trim());
+  const bento = bentoMaster.find(b => String(b.id) === String(bentoId));
+
+  if (!user || !bento) {
+    showToast('⚠️ 選択データが見つかりませんでした。', 'warning');
+    return;
+  }
+
+  const parts = dateVal.split('-');
+  const dateLabel = (parts.length === 3) ? `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)} 12:00` : dateVal;
+
+  // 1. orderHistory に追加（重複がなければ先頭に追加）
+  const newHistId = 'ord_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+  orderHistory.unshift({
+    id: newHistId,
+    date: dateLabel,
+    dateKey: dateVal,
+    userId: user.id,
+    userName: user.name,
+    slotIndex: 0,
+    slotName: '1食目',
+    bentoId: bento.id,
+    bentoName: bento.name,
+    category: bento.category
+  });
+
+  // 2. dailyOrders[dateVal] に反映
+  if (!dailyOrders[dateVal]) {
+    dailyOrders[dateVal] = {
+      status: 'CONFIRMED',
+      confirmedAt: `${dateVal} 12:00 (過去分手動登録)`,
+      orders: []
+    };
+  }
+  if (!Array.isArray(dailyOrders[dateVal].orders)) {
+    dailyOrders[dateVal].orders = [];
+  }
+  dailyOrders[dateVal].orders.push({
+    userId: user.id,
+    userName: user.name,
+    slotIndex: 0,
+    slotName: '1食目',
+    bentoId: bento.id,
+    bentoName: bento.name,
+    category: bento.category
+  });
+  dailyOrders[dateVal].status = 'CONFIRMED';
+
+  // 3. 在庫のFIFO減算
+  deductBentoStockFIFO(bento, 1);
+
+  // 4. Supabaseおよびローカルに即座に同期保存
+  saveOrderHistory();
+  saveDailyOrders();
+  saveMaster();
+
+  closeAddPastOrderModal();
+  renderAll();
+  showToast(`🎉 ${dateVal} の注文（${user.name}様：${bento.name}）を履歴に登録・共有しました！`, 'success');
+};

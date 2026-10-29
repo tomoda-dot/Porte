@@ -814,7 +814,10 @@
         const maxLen = Math.max(luIds.length, ruIds.length, res.bentoCount || 1);
         const mergedIds = [];
         for (let i = 0; i < maxLen; i++) {
-          mergedIds[i] = ruIds[i] !== undefined ? ruIds[i] : (luIds[i] || '');
+          const rVal = (ruIds[i] !== undefined && ruIds[i] !== null) ? ruIds[i] : '';
+          const lVal = (luIds[i] !== undefined && luIds[i] !== null) ? luIds[i] : '';
+          // 空文字で既存の選択が上書きされないように保護（値がある方を優先）
+          mergedIds[i] = rVal || lVal;
         }
         res.selectedBentoIds = mergedIds;
         res.selectedBentoId = mergedIds[0] || '';
@@ -865,12 +868,8 @@
     function applyDailyOrdersToPorteUsers(dailyOrdersObj, usersArray) {
       if (!dailyOrdersObj || !Array.isArray(usersArray)) return usersArray;
 
-      // 全利用者の本日の選択状態を初期化（前日や無選択状態のキャリーオーバーを防止）
       usersArray.forEach(u => {
         normalizeUserData(u);
-        const count = u.bentoCount || 1;
-        u.selectedBentoIds = Array(count).fill('');
-        u.selectedBentoId = '';
       });
 
       const todayKey = getTodayKey();
