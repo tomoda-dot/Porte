@@ -623,6 +623,19 @@
       recalculateBentoTotalStock(bento);
     }
 
+    function restoreBentoStock(bento, count = 1) {
+      ensureBentoLots(bento);
+      const addQty = parseInt(count, 10) || 1;
+      if (addQty <= 0) return;
+      if (Array.isArray(bento.lots) && bento.lots.length > 0) {
+        bento.lots[0].qty += addQty;
+      } else {
+        addBentoStockLot(bento, addQty, getOffsetDateStr(7), 'RESTORED');
+      }
+      bento.lots.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
+      recalculateBentoTotalStock(bento);
+    }
+
     function getSupabaseCredentials() {
       const url = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) ? SUPABASE_URL : localStorage.getItem('porte_sb_url');
       const key = (typeof SUPABASE_KEY !== 'undefined' && SUPABASE_KEY) ? SUPABASE_KEY : localStorage.getItem('porte_sb_key');
@@ -1331,7 +1344,7 @@
       if (oldBentoId) {
         const oldBento = bentoMaster.find(b => b.id === oldBentoId);
         if (oldBento) {
-          addBentoStockLot(oldBento, 1, getOffsetDateStr(7), 'RESTORED');
+          restoreBentoStock(oldBento, 1);
         }
       }
       if (newBentoId) {

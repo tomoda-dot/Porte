@@ -301,6 +301,21 @@ function addBentoStockLot(bento, qty, expDate, type = 'ARRIVED') {
   recalculateBentoTotalStock(bento);
 }
 
+// 注文キャンセル・変更時の在庫復元（既存ロットの賞味期限を維持し、勝手に延長しない）
+function restoreBentoStock(bento, count = 1) {
+  ensureBentoLots(bento);
+  const addQty = parseInt(count, 10) || 1;
+  if (addQty <= 0) return;
+
+  if (Array.isArray(bento.lots) && bento.lots.length > 0) {
+    bento.lots[0].qty += addQty;
+  } else {
+    addBentoStockLot(bento, addQty, getOffsetDateStr(7), 'RESTORED');
+  }
+  bento.lots.sort((a, b) => new Date(a.expDate) - new Date(b.expDate));
+  recalculateBentoTotalStock(bento);
+}
+
 function cleanupAutoAttOrders() {
   let modified = false;
   const todayKey = getTodayKey();
@@ -1158,7 +1173,7 @@ function unlockDailyOrder() {
       dailyOrders[todayKey].orders.forEach(o => {
         const b = bentoMaster.find(item => item.id === o.bentoId);
         if (b) {
-          addBentoStockLot(b, 1, getOffsetDateStr(7), 'RESTORED');
+          restoreBentoStock(b, 1);
         }
       });
       saveMaster();
@@ -2279,7 +2294,7 @@ window.assignUserBentoSlot = function(userIndex, slotIndex, newBentoId) {
   if (oldBentoId) {
     const oldBento = bentoMaster.find(b => b.id === oldBentoId);
     if (oldBento) {
-      addBentoStockLot(oldBento, 1, getOffsetDateStr(7), 'RESTORED');
+      restoreBentoStock(oldBento, 1);
     }
   }
   if (newBentoId) {
