@@ -110,6 +110,7 @@ function getUserScheduleForDate(user, dateStr) {
     scheduleStart: user.scheduleStart || '10:00',
     scheduleEnd: user.scheduleEnd || '16:00',
     bento: user.bento || 'なし',
+    bentoPaymentMethod: user.bentoPaymentMethod || '工賃払い',
     pickup: user.pickup || 'なし'
   };
   var hist = user.scheduleHistory;
@@ -257,7 +258,7 @@ async function clockIn(userId,signatureDataUrl){
     var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(user, today2) : user;
     var rec={id:_genId('a'),userId:userId,date:today2,status:'出席',startTime:now,endTime:null,
       breakMin:String(sc.breakMin!==undefined&&sc.breakMin!==null&&sc.breakMin!==''?sc.breakMin:60),workTypeId:sc.workTypeId||defaultWt,workTypeIdPm:sc.workTypeIdPm||sc.workTypeId||defaultWt,
-      bento:sc.bento||'なし',bentoPaymentMethod:sc.bentoPaymentMethod||'工賃払い',pickup:sc.pickup||'なし',signature:signatureDataUrl||null};
+      bento:sc.bento||'なし',bentoPaymentMethod:sc.bentoPaymentMethod||user.bentoPaymentMethod||'工賃払い',pickup:sc.pickup||'なし',signature:signatureDataUrl||null};
     var safe={};var cols=Object.keys(rec);
     for(var i=0;i<cols.length;i++){var v=rec[cols[i]];safe[cols[i]]=v===''?null:v;}
     for(var retry=0;retry<10;retry++){
