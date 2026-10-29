@@ -10548,13 +10548,32 @@ async function deleteStaffAtt(staffId,date){
   }
   catch(e){await cAlert('削除失敗: '+e);}
 }
+
+function generateStaffLoginId(){
+  var maxNum = 0;
+  (S.staff || []).forEach(function(s){
+    var lid = String(s.loginId || '');
+    var m = lid.match(/(\d+)/);
+    if(m){
+      var num = parseInt(m[1], 10);
+      if(num > maxNum) maxNum = num;
+    }
+  });
+  var nextNum = maxNum + 1;
+  return 'temp' + String(nextNum).padStart(3, '0');
+}
+
 function openSM(s){
   if (!isAdminUser()) {
     cAlert('管理者以外はスタッフ個人情報の閲覧・編集を行うことができません。');
     return;
   }
+  var isE=!!(s && s.id);
   s=s||{name:'',role:'',employment:'',loginId:'',password:'',startDate:'',endDate:'',qualifications:''};
-  var isE=!!s.id;
+  if(!isE){
+    if(!s.loginId) s.loginId = generateStaffLoginId();
+    if(!s.password) s.password = '0000';
+  }
   var roles=['サービス管理責任者','生活支援員','職業指導員','管理者','その他'];
   var empls=['正社員','パート・アルバイト','非常勤','業務委託','その他'];
   var roleOpts=roles.map(function(r){return'<option'+(s.role===r?' selected':'')+'>'+r+'</option>';}).join('');
@@ -10601,10 +10620,10 @@ function openSM(s){
       '<th style="padding:5px 8px;border:1px solid #ddd;width:36px"></th>'+
     '</tr></thead><tbody id="sq-body">'+qRows+'</tbody></table></div>'+
     '<div style="text-align:right;margin-top:6px"><button onclick="addQualRow()" style="font-size:11px;padding:3px 12px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer">＋ 資格を追加</button></div>'+
-    '<div class="section-title">ログイン情報</div>'+
+    '<div class="section-title">ログイン情報 <span style="font-size:11px;font-weight:normal;color:var(--sub)">※PINコード方式のためIDは自動設定されます</span></div>'+
     '<div class="grid2">'+
-      '<div class="field"><label>ログインID</label><input id="sm-lid" value="'+esc(s.loginId||'')+'" style="width:100%"></div>'+
-      '<div class="field"><label>パスワード</label><input type="text" id="sm-pwd" value="'+esc(s.password||'')+'" style="width:100%"></div>'+
+      '<div class="field"><label>ログインID <span style="font-size:10px;color:var(--sub)">（自動設定）</span></label><input id="sm-lid" value="'+esc(s.loginId||'')+'" style="width:100%" placeholder="自動採番"></div>'+
+      '<div class="field"><label>暗証番号（PIN / パスワード）</label><input type="text" id="sm-pwd" value="'+esc(s.password||'0000')+'" style="width:100%" placeholder="4桁数字 (例: 0000)"></div>'+
     '</div>'+
     '<div class="btns" style="border-top:1px solid #eee;padding-top:12px;margin-top:12px">'+
     (isE?'<button style="background:#c62828;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px" onclick="delS(\''+s.id+'\')">🗑️ 削除</button>':'')+
@@ -10639,6 +10658,10 @@ function collectQuals(){
 async function saveS(id){
   if (!isAdminUser()){ await cAlert('管理者以外はスタッフ情報を保存・更新できません'); return; }
   if(!lockUI())return;
+  var lid = document.getElementById('sm-lid') ? document.getElementById('sm-lid').value.trim() : '';
+  if (!lid && !id) lid = generateStaffLoginId();
+  var pwd = document.getElementById('sm-pwd') ? document.getElementById('sm-pwd').value.trim() : '';
+  if (!pwd) pwd = '0000';
   var d={
     name:document.getElementById('sm-n').value,
     role:document.getElementById('sm-r').value,
@@ -10646,8 +10669,8 @@ async function saveS(id){
     weeklyDays:(document.getElementById('sm-wdays')?document.getElementById('sm-wdays').value:''),
     startDate:document.getElementById('sm-sd').value,
     endDate:document.getElementById('sm-ed').value,
-    loginId:document.getElementById('sm-lid').value,
-    password:document.getElementById('sm-pwd').value,
+    loginId:lid,
+    password:pwd,
     qualifications:JSON.stringify(collectQuals())
   };
   if(!d.name){unlockUI();await cAlert('氏名を入力');return;}

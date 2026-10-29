@@ -359,8 +359,19 @@ async function gas(fn){
       var _st=await _getAll('スタッフ');
       var _roleOrder={'サービス管理責任者':1,'生活支援員':2,'職業指導員':3};
       _st.sort(function(a,b){return(_roleOrder[a.role]||99)-(_roleOrder[b.role]||99);});
-      return _st;
-    case 'addStaff': a1.id=_genId('s');return _add('スタッフ',a1);
+    case 'addStaff':
+      a1.id=_genId('s');
+      if(!a1.loginId){
+        var _existingSt=await _getAll('スタッフ');
+        var maxNum=0;
+        (_existingSt||[]).forEach(function(st){
+          var m=String(st.loginId||'').match(/(\d+)/);
+          if(m){var n=parseInt(m[1],10);if(n>maxNum)maxNum=n;}
+        });
+        a1.loginId='temp'+String(maxNum+1).padStart(3,'0');
+      }
+      if(!a1.password)a1.password='0000';
+      return _add('スタッフ',a1);
     case 'updateStaff': return _update('スタッフ',a1);
     case 'deleteStaff': return _del('スタッフ',a1);
 
