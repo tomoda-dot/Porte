@@ -38,7 +38,7 @@ async function _getCols(table){
   return _colCache[table];
 }
 
-// オブジェクトからテーブルに存在するカラムだけ抽出 + 空文字→null変換
+// オブジェクトからテーブルに存在するカラムだけ抽出 + 空文字→null変換 + bigintカラム安全サニタイズ
 async function _filterCols(table,obj){
   var cols=await _getCols(table);
   var filtered={};
@@ -47,6 +47,17 @@ async function _filterCols(table,obj){
     var k=keys[i];
     if(obj[k]!==undefined){
       filtered[k]=obj[k]===''?null:obj[k];
+    }
+  }
+  // 利用者テーブルのbigint型カラム（電話番号・受給者証番号等）のハイフン除去・数値変換
+  if(table==='利用者'){
+    var bigintCols=['contact','contact2','contact3','emergencyPhone','recipientNumber'];
+    for(var b=0;b<bigintCols.length;b++){
+      var bk=bigintCols[b];
+      if(filtered[bk]!==undefined && filtered[bk]!==null && filtered[bk]!==''){
+        var digits=String(filtered[bk]).replace(/\D/g, '');
+        filtered[bk]=digits ? Number(digits) : null;
+      }
     }
   }
   return filtered;
@@ -192,6 +203,10 @@ function _padTimes(row){
       if(/^\d{9,10}$/.test(s)&&s.charAt(0)!=='0') row[pk]='0'+s;
       else row[pk]=s;
     }
+  }
+  if(row.recipientNumber!==undefined&&row.recipientNumber!==null&&row.recipientNumber!==''){
+    var rs=String(row.recipientNumber).trim();
+    if(/^\d{1,10}$/.test(rs)) row.recipientNumber=rs.padStart(10,'0');
   }
   return row;
 }
