@@ -810,6 +810,8 @@
         </div>
       </div>
 
+      <div id="aiGenerationStatusBanner" style="display:none; margin-bottom:14px; padding:12px 16px; border-radius:8px; font-size:13px; line-height:1.6; box-shadow:0 1px 3px rgba(0,0,0,0.05);"></div>
+
       <div class="table-responsive">
         <table class="data-table">
           <thead>
@@ -946,9 +948,9 @@
     const providerModels = {
       offline: [{ val: 'offline', text: '⚡ オフライン定型文エンジン（100%確実・高精度）' }],
       gemini: [
-        { val: 'gemini-2.5-flash-lite', text: 'Gemini 2.5 Flash Lite（推奨）' },
-        { val: 'gemini-2.5-flash', text: 'Gemini 2.5 Flash（高性能）' },
-        { val: 'gemini-1.5-flash', text: 'Gemini 1.5 Flash' }
+        { val: 'gemini-2.5-flash-lite', text: 'Gemini 2.5 Flash Lite（推奨・高速安定）' },
+        { val: 'gemini-flash-latest', text: 'Gemini Flash Latest（最新自動追従）' },
+        { val: 'gemini-3.8-flash', text: 'Gemini 3.8 Flash（Google最新世代）' }
       ],
       openai: [
         { val: 'gpt-4o-mini', text: 'GPT-4o mini（標準・推奨）' },
@@ -1360,7 +1362,7 @@
         if (provider === 'gemini') {
           const targetModel = model || 'gemini-2.5-flash-lite';
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
-          const resp = await fetch(url, {
+          let resp = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1371,10 +1373,31 @@
               }
             })
           });
+
+          // 自動フォールバック（もし404等で旧モデルが弾かれた場合は gemini-2.5-flash-lite で1回再試行）
+          if (!resp.ok && targetModel !== 'gemini-2.5-flash-lite' && (resp.status === 404 || resp.status === 400)) {
+            console.warn(`Gemini ${targetModel} failed (${resp.status}), retrying with gemini-2.5-flash-lite...`);
+            const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+            resp = await fetch(fallbackUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.95, topP: 0.95 }
+              })
+            });
+          }
+
           if (!resp.ok) {
             const errBody = await resp.text().catch(() => '');
             console.warn('Gemini API Error:', resp.status, errBody);
-            lastAiCallStatus.errorDetail = `Gemini エラー (${resp.status})`;
+            let detail = `Gemini エラー (${resp.status})`;
+            if (resp.status === 429) {
+              detail = 'Gemini API一時利用制限 (429: 利用頻度・クォータ制限)';
+            } else if (resp.status === 404) {
+              detail = 'Gemini モデル未検出 (404)';
+            }
+            lastAiCallStatus.errorDetail = detail;
             return null;
           }
           const data = await resp.json();
@@ -1724,27 +1747,75 @@ ${focusPrompt}${keptPrompt}
         const hasClean = /(掃除|清掃|環境整備|片付け|クリーン)/i.test(contextStr);
 
         const basePool = [
-          { goal: '通所日数の安定維持（週3〜4日）', role: '前日に睡眠をしっかりとり、体調を整えて通所する。', support: focusText ? `【${focusText}】に配慮し、登所時に検温と体調確認を行い安心して過ごせる環境を提供する。` : '登所時に笑顔で出迎え、検温と体調確認を行い安心して過ごせる環境を提供する。' },
-          { goal: '作業手順の定着と正確性の向上', role: '写真付きマニュアルを確認しながら作業を行い丁寧に進める。', support: focusText ? `【${focusText}】を導入し、工程ごとの視覚的な指示書を用意して出来た工程を具体的に承認評価する。` : '工程ごとの視覚的な指示書を用意し、出来た工程を具体的に承認評価する。' },
-          { goal: '作業中の不要な焦り軽減と一定ペース維持', role: '周りのスピードに惑わされず、自分の落ち着いたテンポで作業を進める。', support: '作業量を急かさず、仕上がりの丁寧さを褒め、落ち着いて取り組めるよう声かけする。' },
-          { goal: '困りごとの早期相談・ヘルプサインの獲得', role: '不明点や精神的疲労を感じた時は遠慮なくスタッフに合図・相談する。', support: '相談しやすい受容的な雰囲気を保ち、相談を受けた際は安心感を持って迅速に応答する。' },
-          { goal: '集中力・持続力の無理のない向上', role: 'タイマーを意識して1回の作業時間（50分）を落ち着いてやり遂げる。', support: '定時ごとの休憩アナウンスを行い、適度なストレッチや水分補給を促す。' },
-          { goal: '自主検品によるミス防止と達成感', role: '仕上がり時に所定のチェックシートで自己確認を行う。', support: 'ダブルチェック体制を整え、検品ポイントを事前に明確に提示して成功体験を共有する。' },
-          { goal: '挨拶と対人マナーの安心した定着', role: '朝夕の挨拶や「お願いします」「ありがとうございます」を無理なく発信する。', support: 'スタッフが率先して温かい挨拶を行い、人間関係の緊張や不安を軽減する。' },
-          { goal: '静養・メンタル・ストレスの自己管理', role: '体調不良や気分の落ち込みを感じたら無理をせず静養室利用を申し出る。', support: '静養スペースの環境を整え、個別の健康面談や日々の傾聴を適宜実施する。' },
-          { goal: '役割意識・作業への自信の醸成', role: '自分の担当作業を最後までやり遂げ、仕上がりをスタッフに報告する。', support: '工賃・作業手当の仕組みを説明し、労働への達成感と自己肯定感を高める声かけをする。' },
-          { goal: '月1回の振り返り面談への参加', role: '1ヶ月の通所や作業の頑張りをスタッフと共に振り返る。', support: '定期面談で成果を共に喜び、次のステップや安心できる配慮を一緒に設定する。' },
-          { goal: '作業環境の整理整頓と道具管理', role: '作業前後に道具の定位置管理と机上の簡単な拭き掃除を行う。', support: '整理用トレーや片付けラベルを配置し、作業しやすい環境整備をサポートする。' },
-          { goal: '時間配分と見通しを持った作業', role: '時計を確認しながら、時間ごとの目安を見据えて作業を進める。', support: '見通しが立ちやすいスケジュールをあらかじめ提示し、不安なく作業できるよう促す。' }
+          { 
+            goal: focusText ? `【${focusText}】に基づく通所リズムと体調の安定維持` : '通所日数の安定維持（週3〜4日）', 
+            role: focusText ? `【${focusText}】を活用し、前日に睡眠と休息をしっかりとって通所する。` : '前日に睡眠をしっかりとり、体調を整えて通所する。', 
+            support: focusText ? `【${focusText}】を最優先に配慮し、登所時に検温・体調確認を行い安心して過ごせる環境を提供する。` : '登所時に笑顔で出迎え、検温と体調確認を行い安心して過ごせる環境を提供する。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】を取り入れた作業手順の定着と正確性の向上` : '作業手順の定着と正確性の向上', 
+            role: focusText ? `【${focusText}】の配慮のもと、写真付きマニュアルを確認しながら落ち着いて作業を進める。` : '写真付きマニュアルを確認しながら作業を行い丁寧に進める。', 
+            support: focusText ? `【${focusText}】を導入し、工程ごとの視覚的な指示書を用意して出来た工程を具体的に承認評価する。` : '工程ごとの視覚的な指示書を用意し、出来た工程を具体的に承認評価する。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】による不要な焦り軽減と一定ペース維持` : '作業中の不要な焦り軽減と一定ペース維持', 
+            role: focusText ? `【${focusText}】を意識し、周りのスピードに惑わされず自分の落ち着いたテンポで取り組む。` : '周りのスピードに惑わされず、自分の落ち着いたテンポで作業を進める。', 
+            support: focusText ? `【${focusText}】に留意して急かさず、仕上がりの丁寧さを褒め、落ち着いて取り組めるよう声かけする。` : '作業量を急かさず、仕上がりの丁寧さを褒め、落ち着いて取り組めるよう声かけする。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】を通じた困りごとの早期相談・ヘルプサイン獲得` : '困りごとの早期相談・ヘルプサインの獲得', 
+            role: focusText ? `【${focusText}】の機会を活用し、不明点や精神的疲労を感じた際はスタッフに合図・相談する。` : '不明点や精神的疲労を感じた時は遠慮なくスタッフに合図・相談する。', 
+            support: focusText ? `【${focusText}】の体制を整え、相談しやすい受容的な雰囲気で迅速かつ親身に応答する。` : '相談しやすい受容的な雰囲気を保ち、相談を受けた際は安心感を持って迅速に応答する。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】を取り入れた集中力・持続力の無理のない向上` : '集中力・持続力の無理のない向上', 
+            role: focusText ? `【${focusText}】で疲労をリセットしながら、1回の作業時間（50分）を落ち着いてやり遂げる。` : 'タイマーを意識して1回の作業時間（50分）を落ち着いてやり遂げる。', 
+            support: focusText ? `【${focusText}】のタイミングを適切に促し、定時ごとの休憩アナウンスや水分補給を支援する。` : '定時ごとの休憩アナウンスを行い、適度なストレッチや水分補給を促す。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】の配慮下での自主検品によるミス防止と達成感` : '自主検品によるミス防止と達成感', 
+            role: focusText ? `【${focusText}】で落ち着いた状態で、仕上がり時に所定のチェックシートで自己確認を行う。` : '仕上がり時に所定のチェックシートで自己確認を行う。', 
+            support: focusText ? `【${focusText}】を考慮したチェック体制を整え、検品ポイントを明確に提示して成功体験を共有する。` : 'ダブルチェック体制を整え、検品ポイントを事前に明確に提示して成功体験を共有する。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】を通じた安心できる挨拶と対人コミュニケーション` : '挨拶と対人マナーの安心した定着', 
+            role: focusText ? `【${focusText}】で無理のない心理状態を保ち、朝夕の挨拶や御礼を自分のペースで発信する。` : '朝夕の挨拶や「お願いします」「ありがとうございます」を無理なく発信する。', 
+            support: focusText ? `【${focusText}】を尊重し、人間関係の緊張や不安を軽減できるよう温かい声かけで見守る。` : 'スタッフが率先して温かい挨拶を行い、人間関係の緊張や不安を軽減する。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】によるメンタル・ストレスの自己管理` : '静養・メンタル・ストレスの自己管理', 
+            role: focusText ? `【${focusText}】を利用し、体調不良や気分の落ち込みを感じたら無理をせず利用を申し出る。` : '体調不良や気分の落ち込みを感じたら無理をせず静養室利用を申し出る。', 
+            support: focusText ? `【${focusText}】の環境を整備し、個別の健康面談や日々の傾聴を適宜実施する。` : '静養スペースの環境を整え、個別の健康面談や日々の傾聴を適宜実施する。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】に支えられた役割意識と作業への自信醸成` : '役割意識・作業への自信の醸成', 
+            role: focusText ? `【${focusText}】でエネルギーを充電し、自分の担当作業を最後までやり遂げてスタッフに報告する。` : '自分の担当作業を最後までやり遂げ、仕上がりをスタッフに報告する。', 
+            support: focusText ? `【${focusText}】の取り組みを労い、工賃・作業手当への達成感と自己肯定感を高める声かけをする。` : '工賃・作業手当の仕組みを説明し、労働への達成感と自己肯定感を高める声かけをする。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】の効果を振り返る月1回の定期面談` : '月1回の振り返り面談への参加', 
+            role: focusText ? `【${focusText}】の活用状況や1ヶ月の頑張りをスタッフと共に振り返る。` : '1ヶ月の通所や作業の頑張りをスタッフと共に振り返る。', 
+            support: focusText ? `【${focusText}】の成果を共に喜び、次のステップやさらなる配慮事項を一緒に検討する。` : '定期面談で成果を共に喜び、次のステップや安心できる配慮を一緒に設定する。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】を踏まえた作業環境の整理整頓と道具管理` : '作業環境の整理整頓と道具管理', 
+            role: focusText ? `【${focusText}】で整えた気持ちで、作業前後に道具の定位置管理と机上の拭き掃除を行う。` : '作業前後に道具の定位置管理と机上の簡単な拭き掃除を行う。', 
+            support: focusText ? `【${focusText}】と作業効率を両立できるよう、整理用トレーや片付けラベルの配置をサポートする。` : '整理用トレーや片付けラベルを配置し、作業しやすい環境整備をサポートする。' 
+          },
+          { 
+            goal: focusText ? `【${focusText}】を取り入れた見通しのある作業スケジューリング` : '時間配分と見通しを持った作業', 
+            role: focusText ? `【${focusText}】を組み込んだスケジュールを意識し、時間ごとの目安を見据えて作業を進める。` : '時計を確認しながら、時間ごとの目安を見据えて作業を進める。', 
+            support: focusText ? `【${focusText}】を取り入れた無理のないタイムスケジュールを提示し、不安なく作業できるよう促す。` : '見通しが立ちやすいスケジュールをあらかじめ提示し、不安なく作業できるよう促す。' 
+          }
         ];
 
         const specificPool = [];
-        if (hasSeal) specificPool.push({ goal: 'シール貼り・軽作業の丁寧な習得', role: '見本と照らし合わせながら、シワやズレがないよう丁寧にシールを貼る。', support: '位置合わせの補助シートや現物サンプルを用意し、できた工程をしっかり認める。' });
-        if (hasClean) specificPool.push({ goal: '清掃・美化作業のスキル向上', role: '手順書に沿ってモップ掛けやゴミ分別、拭き掃除を責任を持って行う。', support: '清掃チェック表を用意し、綺麗な環境づくりへの貢献をフィードバックする。' });
-        if (hasCoffee) specificPool.push({ goal: 'コーヒー作業（焙煎・計量・封入）の習得', role: '計量器の目盛りをしっかり確認し、正確なグラム数で袋詰めを行う。', support: '過去の経験を尊重し、デジタルスケールや専用じょうご等を用いて負担の少ない工程を提供する。' });
-        if (hasBeads) specificPool.push({ goal: 'ビーズ・ハンドメイド制作の安心した習得', role: '無理のない簡単な工程からスタートし、自分のペースで丁寧に制作する。', support: '最初から難しい作品を求めず、得意な工程を切り出して手元のサポートを寄り添って行う。' });
-        if (hasDagashi) specificPool.push({ goal: '駄菓子接客・値札貼り作業の精度向上', role: '商品と値札を照合し、まっすぐに丁寧に貼り付ける。', support: '現物サンプルを配置し、作業終了時に仕上がり状況を評価・フィードバックする。' });
-        if (hasPc) specificPool.push({ goal: 'PC入力のスピード・正確性向上', role: 'タイピング練習やデータ入力で目標文字数を無理なく目指す。', support: '入力レベルに合わせた課題を提供し、成長が実感できるようフィードバックする。' });
+        if (hasSeal) specificPool.push({ goal: focusText ? `【${focusText}】を意識したシール貼り・軽作業習得` : 'シール貼り・軽作業の丁寧な習得', role: '見本と照らし合わせながら、シワやズレがないよう丁寧にシールを貼る。', support: '位置合わせの補助シートや現物サンプルを用意し、できた工程をしっかり認める。' });
+        if (hasClean) specificPool.push({ goal: focusText ? `【${focusText}】を取り入れた清掃・美化作業のスキル向上` : '清掃・美化作業のスキル向上', role: '手順書に沿ってモップ掛けやゴミ分別、拭き掃除を責任を持って行う。', support: '清掃チェック表を用意し、綺麗な環境づくりへの貢献をフィードバックする。' });
+        if (hasCoffee) specificPool.push({ goal: focusText ? `【${focusText}】に配慮したコーヒー作業（焙煎・計量・封入）の習得` : 'コーヒー作業（焙煎・計量・封入）の習得', role: '計量器の目盛りをしっかり確認し、正確なグラム数で袋詰めを行う。', support: '過去の経験を尊重し、デジタルスケールや専用じょうご等を用いて負担の少ない工程を提供する。' });
+        if (hasBeads) specificPool.push({ goal: focusText ? `【${focusText}】で落ち着いて取り組むビーズ制作の習得` : 'ビーズ・ハンドメイド制作の安心した習得', role: '無理のない簡単な工程からスタートし、自分のペースで丁寧に制作する。', support: '最初から難しい作品を求めず、得意な工程を切り出して手元のサポートを寄り添って行う。' });
+        if (hasDagashi) specificPool.push({ goal: focusText ? `【${focusText}】を意識した駄菓子接客・値札貼り作業の精度向上` : '駄菓子接客・値札貼り作業の精度向上', role: '商品と値札を照合し、まっすぐに丁寧に貼り付ける。', support: '現物サンプルを配置し、作業終了時に仕上がり状況を評価・フィードバックする。' });
+        if (hasPc) specificPool.push({ goal: focusText ? `【${focusText}】を取り入れたPC入力のスキル向上` : 'PC入力のスピード・正確性向上', role: 'タイピング練習やデータ入力で目標文字数を無理なく目指す。', support: '入力レベルに合わせた課題を提供し、成長が実感できるようフィードバックする。' });
 
         const existingGoals = [...keptItems, ...newItems].map(k => k.goal);
         const fullPool = [...specificPool, ...basePool].filter(p => !existingGoals.includes(p.goal));
@@ -1763,6 +1834,32 @@ ${focusPrompt}${keptPrompt}
       selectedDetailIndices = keptItems.map((_, idx) => idx);
 
       renderDetailTable(combinedItems, true);
+
+      // AI生成ステータスバナーの更新
+      const aiStatusBanner = document.getElementById('aiGenerationStatusBanner');
+      if (aiStatusBanner) {
+        if (lastAiCallStatus.usedLiveAI) {
+          aiStatusBanner.style.display = 'block';
+          aiStatusBanner.style.background = '#f0fdf4';
+          aiStatusBanner.style.border = '1px solid #86efac';
+          aiStatusBanner.style.color = '#166534';
+          aiStatusBanner.innerHTML = `
+            <div style="font-weight:700; font-size:13px; margin-bottom:2px;">✨ Gemini AI による新提案の生成に成功しました</div>
+            <div>キープ固定中の <strong>${keptItems.length}件（1番〜${keptItems.length}番）</strong> を保護し、残りの <strong>${numNeeded}件（${keptItems.length + 1}番〜10番）</strong> を「<strong>${focusText || '多角的な新視点'}</strong>」の切り口を反映してGemini AIによって完全新規考案しました。</div>
+          `;
+        } else {
+          aiStatusBanner.style.display = 'block';
+          aiStatusBanner.style.background = '#fffbeb';
+          aiStatusBanner.style.border = '1px solid #fde68a';
+          aiStatusBanner.style.color = '#92400e';
+          const errReason = lastAiCallStatus.errorDetail || 'オフライン・通信制限';
+          aiStatusBanner.innerHTML = `
+            <div style="font-weight:700; font-size:13px; margin-bottom:2px;">⚠️ AI通信ステータス案内 (${errReason})</div>
+            <div>Gemini APIの利用頻度制限（429: Quota Exceeded等）または未接続のため、指定された重点切り口「<strong>${focusText || '重点事項'}</strong>」を全項目に自動適用した高精度定型文エンジンで3番〜10番を生成しました。<br>
+            <span style="font-size:11px; color:#b45309;">※数十秒〜1分ほど時間を置いて「再考案」を押すと、Gemini AIによる完全新規出力が再開されます。</span></div>
+          `;
+        }
+      }
       document.getElementById('bannerSelectedShortGoal').innerHTML = `
         <div style="font-size:12px; font-weight:800; color:#1e40af; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
           📌 【計画作成の前提条件（本人の希望・総合方針・長短目標）】
@@ -1831,7 +1928,7 @@ ${focusPrompt}${keptPrompt}
         const isNew = !!item.isNewAI;
         const badgeHtml = isKept 
           ? `<div style="font-size:10px; background:#fef3c7; color:#92400e; padding:1px 5px; border-radius:4px; margin-top:3px; font-weight:700; border:1px solid #fde68a;">🔒キープ固定</div>`
-          : (isNew ? `<div style="font-size:10px; background:#dcfce7; color:#15803d; padding:1px 5px; border-radius:4px; margin-top:3px; font-weight:700; border:1px solid #86efac;">✨AI新提案</div>` : '');
+          : (isNew ? `<div style="font-size:10px; background:#dcfce7; color:#15803d; padding:1px 5px; border-radius:4px; margin-top:3px; font-weight:700; border:1px solid #86efac;">✨AI新提案</div>` : `<div style="font-size:10px; background:#e0f2fe; color:#0369a1; padding:1px 5px; border-radius:4px; margin-top:3px; font-weight:700; border:1px solid #bae6fd;">⚡定型文新案</div>`);
 
         return `
         <tr id="row_${idx}" onclick="toggleDetailRow(${idx})" style="cursor:pointer;">
