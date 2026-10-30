@@ -206,18 +206,38 @@ function unlockUI(){
 }
 function toast(msg){var d=document.createElement('div');d.textContent=msg;d.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 28px;border-radius:8px;font-size:14px;z-index:99999;opacity:0;transition:opacity .3s';document.body.appendChild(d);setTimeout(function(){d.style.opacity='1';},10);setTimeout(function(){d.style.opacity='0';setTimeout(function(){d.remove();},300);},2000);}
 // ─── カスタムモーダル（alert/confirm代替） ───
+function _humanizeDisplayMsg(msg){
+  if(msg===null||msg===undefined) return '';
+  var s = String(msg);
+  var prefix = '';
+  if(s.indexOf('保存に失敗') >= 0) { prefix = '【保存に失敗しました】\n'; }
+  else if(s.indexOf('登録に失敗') >= 0) { prefix = '【登録に失敗しました】\n'; }
+  else if(s.indexOf('削除に失敗') >= 0 || s.indexOf('削除失敗') >= 0) { prefix = '【削除に失敗しました】\n'; }
+  else if(s.indexOf('読み込み失敗') >= 0 || s.indexOf('取得失敗') >= 0) { prefix = '【データの取得に失敗しました】\n'; }
+
+  var clean = s.replace(/^(?:保存に失敗|登録に失敗|削除に失敗|削除失敗|読み込み失敗|取得失敗|失敗|エラー)[:：]?\s*/i, '')
+               .replace(/^Error:\s*/i, '');
+
+  var human = (typeof _humanizeError === 'function') ? _humanizeError(clean) : clean;
+  if(human !== clean){
+    return prefix + human;
+  }
+  return s;
+}
+
 function _modalBase(msg,type){
   return new Promise(function(resolve){
+    msg = _humanizeDisplayMsg(msg);
     var ov=document.createElement('div');
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:100000;animation:fadeIn .15s';
     var box=document.createElement('div');
-    box.style.cssText='background:#fff;border-radius:12px;padding:24px 28px 20px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);font-size:14px;line-height:1.7;animation:scaleIn .15s';
+    box.style.cssText='background:#fff;border-radius:12px;padding:24px 28px 20px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);font-size:14px;line-height:1.7;animation:scaleIn .15s';
     var icon=type==='confirm'?'⚠️':'ℹ️';
     if(msg.indexOf('失敗')>=0||msg.indexOf('エラー')>=0)icon='❌';
     else if(msg.indexOf('成功')>=0||msg.indexOf('完了')>=0||msg.indexOf('送信しました')>=0)icon='✅';
     else if(msg.indexOf('削除')>=0)icon='🗑️';
-    var pre=msg.replace(/\n/g,'<br>');
-    box.innerHTML='<div style="text-align:center;font-size:28px;margin-bottom:8px">'+icon+'</div><div style="text-align:center;margin-bottom:20px;color:#333">'+pre+'</div>';
+    var pre=esc(msg).replace(/\n/g,'<br>');
+    box.innerHTML='<div style="text-align:center;font-size:32px;margin-bottom:10px">'+icon+'</div><div style="text-align:left;margin-bottom:20px;color:#333;word-break:break-word;font-weight:500">'+pre+'</div>';
     var btnRow=document.createElement('div');
     btnRow.style.cssText='display:flex;gap:8px;justify-content:center';
     if(type==='confirm'){

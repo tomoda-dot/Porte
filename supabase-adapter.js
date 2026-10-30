@@ -19,8 +19,76 @@ function _getSupabase(){
 // ID生成（GASと同じ形式）
 function _genId(prefix){return prefix+new Date().getTime()+Math.random().toString(36).substr(2,5);}
 
-// エラーを文字列に変換
-function _throwErr(e){throw new Error(e.message||e.hint||JSON.stringify(e));}
+// エラーメッセージの日本語翻訳・親切ガイド変換
+function _humanizeError(err){
+  if(!err) return '不明なエラーが発生しました。';
+  var msg = (typeof err === 'string') ? err : (err.message || err.hint || err.details || JSON.stringify(err));
+
+  // 1. bigint / 数値型エラー（ハイフンや文字列の混入）
+  var mBigint = msg.match(/invalid input syntax for type (?:bigint|integer|numeric|smallint):\s*"([^"]*)"/i);
+  if(mBigint){
+    return '【入力エラー】数値のみを入力する項目に、文字や記号（「' + mBigint[1] + '」）が含まれています。\n数字のみで入力してください。';
+  }
+
+  // 2. 日付・時刻エラー
+  var mDate = msg.match(/invalid input syntax for type (?:date|timestamp|time)[^:]*:\s*"([^"]*)"/i);
+  if(mDate){
+    return '【日付・時刻エラー】日付または時刻の形式が正しくありません（入力値: 「' + mDate[1] + '」）。\n「年/月/日」または「時:分」の形式で入力されているかご確認ください。';
+  }
+
+  // 3. 必須項目（NOT NULL制約）エラー
+  var mNotNull = msg.match(/null value in column "([^"]+)"/i);
+  if(mNotNull){
+    var colMap = {
+      'name': '氏名', 'furigana': 'フリガナ', 'date': '日付', 'userId': '利用者',
+      'staffId': '担当スタッフ', 'status': '出欠状況', 'loginId': 'ログインID',
+      'password': 'パスワード', 'role': '役職・権限', 'serviceType': 'サービス種別',
+      'recipientNumber': '受給者証番号', 'bento': 'お弁当', 'startTime': '開始時刻', 'endTime': '終了時刻'
+    };
+    var colName = colMap[mNotNull[1]] || mNotNull[1];
+    return '【未入力エラー】必須項目「' + colName + '」が入力されていません。入力内容をご確認ください。';
+  }
+
+  // 4. 重複登録（UNIQUE制約）エラー
+  if(msg.indexOf('duplicate key value violates unique constraint') >= 0 || msg.indexOf('23505') >= 0){
+    if(msg.indexOf('loginId') >= 0 || msg.indexOf('ログイン') >= 0){
+      return '【重複エラー】このログインIDはすでに別のスタッフに使用されています。別のIDを指定してください。';
+    }
+    return '【重複エラー】すでに同じデータが登録されています。重複しない値に変更してください。';
+  }
+
+  // 5. 文字数オーバー
+  var mLen = msg.match(/value too long for type character varying\((\d+)\)/i);
+  if(mLen){
+    return '【文字数エラー】入力文字数が上限（' + mLen[1] + '文字）を超えています。少し短くして入力してください。';
+  }
+
+  // 6. ネットワーク通信エラー
+  if(msg.indexOf('Failed to fetch') >= 0 || msg.indexOf('NetworkError') >= 0 || msg.indexOf('timeout') >= 0 || msg.indexOf('net::ERR') >= 0){
+    return '【通信エラー】インターネット接続が不安定か、一時的に切断されています。\nWi-Fiや電波状況をご確認のうえ、もう一度お試しください。';
+  }
+
+  // 7. 権限・セッションエラー
+  if(msg.indexOf('row-level security') >= 0 || msg.indexOf('permission denied') >= 0 || msg.indexOf('JWT') >= 0){
+    return '【権限・認証エラー】ログインの有効期限が切れた可能性があります。\n一度ブラウザを再読み込み（リロード）して再度ログインしてください。';
+  }
+
+  // 8. 外部キー制約エラー
+  if(msg.indexOf('foreign key constraint') >= 0){
+    return '【データ関連エラー】選択された利用者やスタッフのデータが見つかりません。最新のデータに更新して再度お試しください。';
+  }
+
+  return msg.replace(/^Error:\s*/i, '');
+}
+if(typeof window !== 'undefined') window._humanizeError = _humanizeError;
+
+// エラーを文字列に変換（親切な日本語案内付き）
+function _throwErr(e){
+  var humanMsg = _humanizeError(e);
+  var err = new Error(humanMsg);
+  err.original = e;
+  throw err;
+}
 
 // テーブルのカラム名キャッシュ
 var _colCache={};
