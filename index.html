@@ -711,9 +711,26 @@ function render(){
     _shellRendered=true;
   }
   updateNav();
-
-
   renderTab();
+
+  if(!window._urlParamHandled){
+    window._urlParamHandled = true;
+    try {
+      var _qp = new URLSearchParams(window.location.search);
+      var _quid = _qp.get('userId') || _qp.get('id');
+      var _qtab = _qp.get('tab');
+      if(_quid && S.users && S.users.length > 0){
+        var _qu = S.users.find(function(x){return x.id === _quid;});
+        if(_qu){
+          window._ueTab = _qtab || 'basic';
+          setTimeout(function(){
+            openUserModal(_qu);
+          }, 200);
+          try { history.replaceState(null, '', window.location.pathname); } catch(err){}
+        }
+      }
+    } catch(e){}
+  }
 }
 function updateNav(){
   var nav=document.getElementById('main-nav');

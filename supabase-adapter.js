@@ -542,7 +542,29 @@ async function gas(fn){
     case 'setClosedDays': return _updateSetting('closedDays_'+a1,JSON.stringify(a2));
 
     // ── 個別支援計画 ──
-    case 'getSupportPlans': return _getFiltered('個別支援計画','userId',a1);
+    case 'getSupportPlans':
+      var pList = await _getFiltered('個別支援計画','userId',a1);
+      if(!Array.isArray(pList)) pList = [];
+      try {
+        var uRes = await supabase.from('利用者').select('name').eq('id', a1).limit(1);
+        if(uRes.data && uRes.data.length > 0 && uRes.data[0].name){
+          var uName = uRes.data[0].name;
+          var missingUserIdPlans = await supabase.from('個別支援計画').select('*').is('userId', null).eq('userName', uName);
+          if(missingUserIdPlans.data && missingUserIdPlans.data.length > 0){
+            for(var mIdx = 0; mIdx < missingUserIdPlans.data.length; mIdx++){
+              var mPlan = missingUserIdPlans.data[mIdx];
+              await supabase.from('個別支援計画').update({userId: a1}).eq('id', mPlan.id);
+              mPlan.userId = a1;
+              if(!pList.some(function(x){return x.id === mPlan.id;})){
+                pList.push(mPlan);
+              }
+            }
+          }
+        }
+      } catch(e) {
+        console.warn('getSupportPlans fallback/auto-repair error:', e);
+      }
+      return pList;
     case 'getAllSupportPlans': return _getAll('個別支援計画');
     case 'upsertSupportPlan':
       // signatureDataUrl → signatureUrl に変換（画面側はsignatureUrlで読む）

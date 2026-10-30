@@ -910,11 +910,18 @@
 
   <!-- JavaScript App Engine -->
   <script>
+    // URL parameters & State variables
+    const _urlParams = new URLSearchParams(window.location.search);
+    let targetUserId = _urlParams.get('userId') || '';
+
     function returnToMainScreen() {
-      window.location.href = 'index.html';
+      if (targetUserId) {
+        window.location.href = 'index.html?userId=' + encodeURIComponent(targetUserId) + '&tab=plan';
+      } else {
+        window.location.href = 'index.html';
+      }
     }
 
-    // State variables
     let currentStep = 0;
     let selectedLongGoalText = '';
     let selectedShortGoalText = '';
@@ -951,15 +958,35 @@
     };
 
     // Initialize App
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       renderStepper();
-      initSupabaseConnection();
       loadApiSettings();
       handleProviderChange();
-      loadDemoSample('new');
 
       // Set default create date
       document.getElementById('sheetCreateDate').value = new Date().toISOString().split('T')[0];
+
+      await initSupabaseConnection();
+      if (supabaseClient) {
+        await loadPorteUsersFromSupabase();
+      }
+
+      // If targetUserId is present and found, auto-select
+      if (targetUserId && porteUsersList.length > 0) {
+        const matched = porteUsersList.find(u => u.id === targetUserId);
+        if (matched) {
+          const sel = document.getElementById('porteUserSelect');
+          if (sel) sel.value = targetUserId;
+          handlePorteUserSelected();
+          showToast(`👥 ${matched.name} 様の個別支援計画を作成します`);
+          return;
+        }
+      }
+
+      // Fallback demo sample if not specified
+      if (!targetUserId) {
+        loadDemoSample('new');
+      }
     });
 
     // Supabase Connection initialization
@@ -1253,6 +1280,10 @@
         sel.innerHTML = '<option value="">-- 手動入力（新規利用者） --</option>' + 
           porteUsersList.map(u => `<option value="${u.id}">${u.name} (${u.serviceType || 'B型'})</option>`).join('');
         
+        if (targetUserId) {
+          sel.value = targetUserId;
+        }
+
         showToast(`✅ Porteから ${porteUsersList.length} 名の利用者を読み込みました！`);
       } catch (err) {
         alert('Porteデータ取得エラー: ' + err.message);
@@ -1261,6 +1292,7 @@
 
     function handlePorteUserSelected() {
       const uid = document.getElementById('porteUserSelect').value;
+      targetUserId = uid || '';
       if (!uid) return;
       const user = porteUsersList.find(u => u.id === uid);
       if (user) {
@@ -1774,12 +1806,39 @@ ${focusPrompt}${keptPrompt}
       try {
         showToast('⏳ Porteのデータベースに保存中...');
         const newId = 'sp' + Date.now() + Math.random().toString(36).substring(2, 6);
-        const userName = document.getElementById('sheetUserName').value.replace(' 様', '');
+        const userName = document.getElementById('sheetUserName').value.replace(' 様', '').trim();
+
+        // 1. targetUserId が未設定の場合は氏名から porteUsersList を逆引き
+        let resolvedUserId = targetUserId || document.getElementById('porteUserSelect').value;
+        if (!resolvedUserId && userName && porteUsersList.length > 0) {
+          const found = porteUsersList.find(u => 
+            u.name === userName || 
+            u.name.replace(/\s+/g, '') === userName.replace(/\s+/g, '')
+          );
+          if (found) {
+            resolvedUserId = found.id;
+            targetUserId = found.id;
+          }
+        }
+
+        // 2. サービス管理責任者名・事業所名
+        let mgrName = '友田篤賜';
+        let facilityName = 'ひとつぎ豊中小曽根';
+        try {
+          const sessRaw = sessionStorage.getItem('porte_session');
+          if (sessRaw) {
+            const sess = JSON.parse(sessRaw);
+            if (sess.name) mgrName = sess.name;
+          }
+        } catch(e) {}
 
         const row = {
           id: newId,
+          userId: resolvedUserId || null,
           userName: userName,
-          serviceType: document.getElementById('sheetServiceType').value,
+          serviceType: document.getElementById('sheetServiceType').value || '就労継続支援B型',
+          facility: facilityName,
+          manager: mgrName,
           createDate: document.getElementById('sheetCreateDate').value,
           startDate: document.getElementById('sheetCreateDate').value,
           policy: document.getElementById('sheetPolicy').value,
@@ -1795,7 +1854,7 @@ ${focusPrompt}${keptPrompt}
             row[`task${idx + 1}`] = tas[0].value;
             row[`role${idx + 1}`] = tas[1].value;
             row[`support${idx + 1}`] = tas[2].value;
-            row[`period${idx + 1}`] = '6ヶ月以内';
+            row[`period${idx + 1}`] = '6か月';
           }
         });
 
@@ -1803,8 +1862,46 @@ ${focusPrompt}${keptPrompt}
         if (error) throw error;
 
         showToast('🎉 Porteのデータベースに正常に保存されました！');
+
+        // 保存成功モーダル表示
+        showSaveSuccessDialog(userName, resolvedUserId);
       } catch (err) {
         alert('Porte保存エラー: ' + err.message);
+      }
+    }
+
+    function showSaveSuccessDialog(name, uid) {
+      const existing = document.getElementById('save-success-modal');
+      if (existing) existing.remove();
+
+      const modalHtml = `
+        <div id="save-success-modal" class="modal-backdrop active" style="z-index:99999;">
+          <div class="modal-box" style="text-align:center; max-width:440px;">
+            <div style="font-size:48px; margin-bottom:12px;">🎉</div>
+            <h3 style="font-size:18px; font-weight:800; color:var(--dark); margin-bottom:8px;">Porteへの保存が完了しました</h3>
+            <p style="font-size:13px; color:var(--muted); margin-bottom:20px; line-height:1.6;">
+              <b>${name} 様</b> の個別支援計画（案）がPorteに正常登録されました。<br>
+              Porteの個別支援計画画面に戻って内容を確認しますか？
+            </p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <button class="btn btn-primary" onclick="goToPortePlan('${uid || ''}')" style="width:100%; font-size:14px; padding:12px;">
+                📋 Porteの個別支援計画画面を開く
+              </button>
+              <button class="btn btn-secondary" onclick="document.getElementById('save-success-modal').remove()" style="width:100%; font-size:13px;">
+                📄 この画面にとどまる（印刷・コピーなど）
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    function goToPortePlan(uid) {
+      if (uid) {
+        window.location.href = 'index.html?userId=' + encodeURIComponent(uid) + '&tab=plan';
+      } else {
+        window.location.href = 'index.html';
       }
     }
 
