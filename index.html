@@ -8538,7 +8538,7 @@ async function loadE(){
 
     users.forEach(function(u){
       var recs=att.filter(function(a){return String(a.userId)===u.id&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
-      var bc=0, bcDeduct=0, bcDaily=0, bcNext=0;
+      var pmMap = {}; // { '月末締め翌月払い（振込）': 9, '月末締め翌月払い': 1 }
       recs.forEach(function(r){
         var effU = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, r.date)) : u;
         var bVal = (r.bento !== undefined && r.bento !== null && r.bento !== '') ? r.bento : effU.bento;
@@ -8549,41 +8549,48 @@ async function loadE(){
           if(isFreeMeal || pm==='無料' || pm==='対象外'){
             // 無料体験食：控除・請求から除外
           } else {
-            bc += bCount;
-            if(pm==='当日') bcDaily += bCount;
-            else if(pm==='月末締め翌月払い'||pm==='月末締め翌月払い（振込）'||pm==='翌月払い'||pm==='翌月'||pm.indexOf('翌月')>=0) bcNext += bCount;
-            else bcDeduct += bCount;
+            var pmKey = pm;
+            if(pm === '当日') pmKey = '当日払い';
+            else if(pm === '月末締め翌月払い（振込）' || pm.indexOf('振込') >= 0) pmKey = '月末締め翌月払い（振込）';
+            else if(pm === '月末締め翌月払い' || pm === '翌月払い' || pm === '翌月') pmKey = '月末締め翌月払い';
+            else if(!pmKey) pmKey = '工賃払い';
+
+            if(!pmMap[pmKey]) pmMap[pmKey] = 0;
+            pmMap[pmKey] += bCount;
+
+            grandCount += bCount;
+            grandAmount += bCount * bentoPrice;
+            if(pmKey === '当日払い'){
+              grandDailyCount += bCount;
+              grandDailyAmt += bCount * bentoPrice;
+            } else if(pmKey === '月末締め翌月払い' || pmKey === '月末締め翌月払い（振込）'){
+              grandNextCount += bCount;
+              grandNextAmt += bCount * bentoPrice;
+            } else {
+              grandDeductCount += bCount;
+              grandDeductAmt += bCount * bentoPrice;
+            }
           }
         }
       });
-      if(bc>0){
-        var totalAmt = bc * bentoPrice;
-        var effUMonth = (typeof getUserScheduleForDate === 'function' && recs.length > 0) ? getUserScheduleForDate(u, recs[0].date) : u;
-        var pmRaw = (recs.find(function(r){return r.bentoPaymentMethod;}) || {}).bentoPaymentMethod || (effUMonth && effUMonth.bentoPaymentMethod) || '工賃払い';
-        var pmLabel = pmRaw;
-        if(pmRaw === '当日') pmLabel = '当日払い';
 
-        summaryList.push({
-          id: u.id,
-          name: u.name,
-          serviceType: u.serviceType || '就労B型',
-          pmLabel: pmLabel,
-          count: bc,
-          bentoPrice: bentoPrice,
-          amount: totalAmt,
-          bcDeduct: bcDeduct,
-          bcNext: bcNext,
-          bcDaily: bcDaily
-        });
-        grandCount += bc;
-        grandAmount += totalAmt;
-        grandDeductCount += bcDeduct;
-        grandDeductAmt += bcDeduct * bentoPrice;
-        grandNextCount += bcNext;
-        grandNextAmt += bcNext * bentoPrice;
-        grandDailyCount += bcDaily;
-        grandDailyAmt += bcDaily * bentoPrice;
-      }
+      // 支払方法ごとに明細レコードを作成
+      var pmKeys = ['月末締め翌月払い（振込）', '月末締め翌月払い', '当日払い', '工賃払い'];
+      Object.keys(pmMap).forEach(function(k){ if(pmKeys.indexOf(k)<0) pmKeys.push(k); });
+      pmKeys.forEach(function(pmKey){
+        var cnt = pmMap[pmKey];
+        if(cnt > 0){
+          summaryList.push({
+            id: u.id,
+            name: u.name,
+            serviceType: u.serviceType || '就労B型',
+            pmLabel: pmKey,
+            count: cnt,
+            bentoPrice: bentoPrice,
+            amount: cnt * bentoPrice
+          });
+        }
+      });
     });
 
     window._bentoSummaryCtx = {
@@ -8612,18 +8619,18 @@ async function loadE(){
       if(curFilter !== 'all'){
         filtered = ctx.summaryList.filter(function(item){
           if(curFilter === '月末締め翌月払い（振込）'){
-            return item.pmLabel === '月末締め翌月払い（振込）' || item.pmRaw === '月末締め翌月払い（振込）';
+            return item.pmLabel === '月末締め翌月払い（振込）';
           }
           if(curFilter === '月末締め翌月払い'){
-            return (item.pmLabel === '月末締め翌月払い' || item.pmRaw === '月末締め翌月払い') && item.pmLabel.indexOf('振込') < 0 && item.pmRaw.indexOf('振込') < 0;
+            return item.pmLabel === '月末締め翌月払い';
           }
           if(curFilter === '当日払い' || curFilter === '当日'){
-            return item.pmLabel === '当日払い' || item.pmRaw === '当日' || item.pmRaw === '当日払い';
+            return item.pmLabel === '当日払い' || item.pmLabel === '当日';
           }
           if(curFilter === '工賃払い'){
-            return item.pmLabel === '工賃払い' || item.pmRaw === '工賃払い';
+            return item.pmLabel === '工賃払い';
           }
-          return item.pmLabel === curFilter || item.pmRaw === curFilter;
+          return item.pmLabel === curFilter;
         });
       }
 
@@ -8679,7 +8686,10 @@ async function loadE(){
       }
 
       h += '</tbody><tfoot><tr style="background:#e8e0d8;font-weight:700">';
-      var totalLabel = curFilter === 'all' ? '合計（利用人数: '+filtered.length+'名）' : '合計（'+esc(curFilter)+': '+filtered.length+'名）';
+      var uniqueUids = [];
+      filtered.forEach(function(it){ if(uniqueUids.indexOf(it.id) < 0) uniqueUids.push(it.id); });
+      var userCount = uniqueUids.length;
+      var totalLabel = curFilter === 'all' ? ('合計（利用人数: '+userCount+'名）') : ('合計（'+esc(curFilter)+': '+userCount+'名）');
       h += '<td colspan="4" style="padding:8px;border:1px solid #ccc;text-align:right">'+totalLabel+'</td>';
       h += '<td style="padding:8px;border:1px solid #ccc;text-align:right;font-size:13px">'+fCount+' 食</td>';
       h += '<td style="padding:8px;border:1px solid #ccc"></td>';
@@ -9962,38 +9972,44 @@ async function dlCSV(){try{
     var totalCB=0, totalAB=0;
     usersB.forEach(function(u){
       var recs=attB.filter(function(a){return String(a.userId)===u.id&&['出席','遅刻','早退'].indexOf(a.status)>=0;});
-      var bc=0, bcDeduct=0, bcDaily=0, bcNext=0;
+      var pmMap = {};
       recs.forEach(function(r){
-        if(r.bento&&String(r.bento)!=='0'&&String(r.bento)!=='false'&&String(r.bento)!==''&&String(r.bento)!=='なし'){
-          var isFreeMeal = String(r.bento).includes('無料') || String(r.bento).includes('体験');
-          var pm=r.bentoPaymentMethod || (u&&u.bentoPaymentMethod) || '工賃払い';
+        var effU = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, r.date)) : u;
+        var bVal = (r.bento !== undefined && r.bento !== null && r.bento !== '') ? r.bento : effU.bento;
+        if(bVal && String(bVal)!=='0' && String(bVal)!=='false' && String(bVal)!=='' && String(bVal)!=='なし'){
+          var bCount = (String(bVal)==='2食'||String(bVal)==='2') ? 2 : 1;
+          var isFreeMeal = String(bVal).includes('無料') || String(bVal).includes('体験');
+          var pm = r.bentoPaymentMethod || (effU && effU.bentoPaymentMethod) || '工賃払い';
           if(isFreeMeal || pm==='無料' || pm==='対象外'){
             // 無料体験食：控除・請求から除外
           } else {
-            bc++;
-            if(pm==='当日')bcDaily++;
-            else if(pm==='月末締め翌月払い'||pm==='月末締め翌月払い（振込）'||pm==='翌月払い'||pm==='翌月'||pm.indexOf('翌月')>=0)bcNext++;
-            else bcDeduct++;
+            var pmKey = pm;
+            if(pm === '当日') pmKey = '当日払い';
+            else if(pm === '月末締め翌月払い（振込）' || pm.indexOf('振込') >= 0) pmKey = '月末締め翌月払い（振込）';
+            else if(pm === '月末締め翌月払い' || pm === '翌月払い' || pm === '翌月') pmKey = '月末締め翌月払い';
+            else if(!pmKey) pmKey = '工賃払い';
+
+            if(!pmMap[pmKey]) pmMap[pmKey] = 0;
+            pmMap[pmKey] += bCount;
           }
         }
       });
-      if(bc>0){
-        var amt = bc * bentoPriceB;
-        var pmRaw = (recs.find(function(r){return r.bentoPaymentMethod;}) || {}).bentoPaymentMethod || u.bentoPaymentMethod || '工賃払い';
-        var pmLabel = pmRaw;
-        if(pmRaw === '当日') pmLabel = '当日払い';
 
-        if(curFilter !== 'all'){
-          if(curFilter === '月末締め翌月払い（振込）' && pmLabel !== '月末締め翌月払い（振込）' && pmRaw !== '月末締め翌月払い（振込）') return;
-          if(curFilter === '月末締め翌月払い' && ((pmLabel !== '月末締め翌月払い' && pmRaw !== '月末締め翌月払い') || pmLabel.indexOf('振込') >= 0 || pmRaw.indexOf('振込') >= 0)) return;
-          if((curFilter === '当日払い' || curFilter === '当日') && pmLabel !== '当日払い' && pmRaw !== '当日' && pmRaw !== '当日払い') return;
-          if(curFilter === '工賃払い' && pmLabel !== '工賃払い' && pmRaw !== '工賃払い') return;
+      var pmKeys = ['月末締め翌月払い（振込）', '月末締め翌月払い', '当日払い', '工賃払い'];
+      Object.keys(pmMap).forEach(function(k){ if(pmKeys.indexOf(k)<0) pmKeys.push(k); });
+      pmKeys.forEach(function(pmKey){
+        var cnt = pmMap[pmKey];
+        if(cnt > 0){
+          if(curFilter !== 'all' && curFilter !== pmKey) return;
+          var amt = cnt * bentoPriceB;
+          var bcDeduct = pmKey === '工賃払い' ? cnt : 0;
+          var bcNext = (pmKey === '月末締め翌月払い' || pmKey === '月末締め翌月払い（振込）') ? cnt : 0;
+          var bcDaily = pmKey === '当日払い' ? cnt : 0;
+          csvB += eM+','+(u.serviceType||'就労B型')+','+u.name+','+pmKey+','+cnt+','+bentoPriceB+','+amt+','+bcDeduct+','+bcNext+','+bcDaily+'\n';
+          totalCB += cnt;
+          totalAB += amt;
         }
-
-        csvB += eM+','+(u.serviceType||'就労B型')+','+u.name+','+pmLabel+','+bc+','+bentoPriceB+','+amt+','+bcDeduct+','+bcNext+','+bcDaily+'\n';
-        totalCB += bc;
-        totalAB += amt;
-      }
+      });
     });
     var sumTitle = curFilter === 'all' ? '合計' : '合計('+curFilter+')';
     csvB += sumTitle+',-,-,-,'+totalCB+','+bentoPriceB+','+totalAB+',-,-,-\n';
