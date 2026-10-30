@@ -8633,23 +8633,15 @@ async function loadE(){
       var h = '<div class="card" style="max-width:900px;margin:0 auto;padding:24px">';
 
       // 絞り込みフィルターツールバー（画面表示時のみ、印刷時は非表示）
-      h += '<div class="no-print" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;background:#f5f0ea;padding:12px 18px;border-radius:10px;border:1px solid #e0d8cf;flex-wrap:wrap;gap:12px">';
-      h += '  <div style="display:flex;align-items:center;gap:10px">';
-      h += '    <label for="bento-filter-pm-select" style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:0">💳 支払方法で絞り込み:</label>';
-      h += '    <select id="bento-filter-pm-select" onchange="window._bentoPmFilter=this.value;renderBentoSummaryView()" style="padding:6px 14px;font-size:13px;font-weight:700;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer">';
-      h += '      <option value="all"'+(curFilter==='all'?' selected':'')+'>すべての支払方法（全体表示）</option>';
-      h += '      <option value="月末締め翌月払い（振込）"'+(curFilter==='月末締め翌月払い（振込）'?' selected':'')+'>月末締め翌月払い（振込）</option>';
-      h += '      <option value="月末締め翌月払い"'+(curFilter==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option>';
-      h += '      <option value="当日払い"'+(curFilter==='当日払い'||curFilter==='当日'?' selected':'')+'>当日払い</option>';
-      h += '      <option value="工賃払い"'+(curFilter==='工賃払い'?' selected':'')+'>工賃払い</option>';
-      h += '    </select>';
-      h += '  </div>';
-      if(curFilter !== 'all'){
-        h += '  <div style="font-size:12px;color:var(--pri);font-weight:700;background:#fff;padding:4px 12px;border-radius:6px;border:1px solid #ddd">';
-        h += '    「'+esc(curFilter)+'」で絞り込み中: '+filtered.length+'名 / '+fCount+'食 (¥'+fAmount.toLocaleString()+')';
-        h += '    <button class="bg" onclick="window._bentoPmFilter=\'all\';renderBentoSummaryView()" style="margin-left:8px;font-size:11px;padding:1px 6px;cursor:pointer">解除</button>';
-        h += '  </div>';
-      }
+      h += '<div class="no-print" style="margin-bottom:20px;display:flex;align-items:center;background:#f5f0ea;padding:12px 18px;border-radius:10px;border:1px solid #e0d8cf;gap:12px">';
+      h += '  <label for="bento-filter-pm-select" style="font-size:13px;font-weight:700;color:var(--pri);margin-bottom:0">💳 支払方法で絞り込み:</label>';
+      h += '  <select id="bento-filter-pm-select" onchange="window._bentoPmFilter=this.value;renderBentoSummaryView()" style="padding:6px 14px;font-size:13px;font-weight:700;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer">';
+      h += '    <option value="all"'+(curFilter==='all'?' selected':'')+'>すべての支払方法（全体表示）</option>';
+      h += '    <option value="月末締め翌月払い（振込）"'+(curFilter==='月末締め翌月払い（振込）'?' selected':'')+'>月末締め翌月払い（振込）</option>';
+      h += '    <option value="月末締め翌月払い"'+(curFilter==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option>';
+      h += '    <option value="当日払い"'+(curFilter==='当日払い'||curFilter==='当日'?' selected':'')+'>当日払い</option>';
+      h += '    <option value="工賃払い"'+(curFilter==='工賃払い'?' selected':'')+'>工賃払い</option>';
+      h += '  </select>';
       h += '</div>';
 
       // 売上計上サマリー
