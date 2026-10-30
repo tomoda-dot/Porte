@@ -778,8 +778,15 @@
       <!-- 再考案 アシスタントブロック -->
       <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:10px 14px; margin-bottom:14px;">
         <!-- キープ中項目の保護バナー -->
-        <div id="keepItemsNotice" style="font-size:12px; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #86efac; border-radius:6px; padding:7px 12px; margin-bottom:10px; display:none;">
-          🔒 チェック選択中の <span id="keepCountBadge">0</span> 件を【キープ固定】しています。再考案を行ってもこの項目は残り、未選択の枠のみ新しく再考案されます！
+        <div id="keepItemsNotice" style="font-size:12px; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #86efac; border-radius:6px; padding:8px 12px; margin-bottom:10px; display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              🔒 チェック選択中の <span id="keepCountBadge" style="text-decoration:underline; font-size:13px;">0</span> 件を【キープ固定】しています（再考案しても上部にそのまま残ります）。
+            </div>
+            <button type="button" onclick="clearKeptAndRegenerateStep3()" style="background:#fff; border:1.5px solid #16a34a; border-radius:5px; color:#15803d; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.05);" title="固定を解除して10件すべて新しく作り直します">
+              🔓 キープを解除して10件すべて完全新規考案
+            </button>
+          </div>
         </div>
 
         <div style="font-size:11px; font-weight:700; color:#0369a1; margin-bottom:6px;">
@@ -792,10 +799,13 @@
           <span class="chip-item" onclick="setRethinkChip('step3', '工賃算出・達成感のフィードバック重視')">📈 工賃・成果評価</span>
           <span class="chip-item" onclick="setRethinkChip('step3', '駄菓子・ビーズ・コーヒー作業に特化')">☕ 事業所固有作業特化</span>
         </div>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="rethinkInputStep3" placeholder="例: 疲れたらすぐ静養室を使える配慮を入れる... (自由入力可)" style="flex:1; font-size:12px; padding:6px 10px; border:1px solid #7dd3fc; border-radius:6px;">
-          <button type="button" class="btn btn-secondary" style="padding:6px 14px; font-size:12px; background:#0284c7; color:#fff; font-weight:700; border:none;" onclick="generateDetailPlans(true, document.getElementById('rethinkInputStep3').value)">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="rethinkInputStep3" placeholder="例: 疲れたらすぐ静養室を使える配慮を入れる... (自由入力可)" style="flex:1; min-width:200px; font-size:12px; padding:6px 10px; border:1px solid #7dd3fc; border-radius:6px;">
+          <button type="button" class="btn btn-secondary" style="padding:6px 12px; font-size:12px; background:#0284c7; color:#fff; font-weight:700; border:none;" onclick="generateDetailPlans(true, document.getElementById('rethinkInputStep3').value)" title="チェック中の項目はキープしたまま、未チェック枠を再考案します">
             ⚡ この切り口で再考案
+          </button>
+          <button type="button" class="btn btn-secondary" style="padding:6px 12px; font-size:12px; background:#475569; color:#fff; font-weight:700; border:none;" onclick="clearKeptAndRegenerateStep3()" title="選択中のキープを解除し、全10件を入力した切り口で完全新規作成します">
+            🔄 全10件を新規考案
           </button>
         </div>
       </div>
@@ -1313,8 +1323,17 @@
       else if (stepId === 'step3') generateDetailPlans(true, text);
     }
 
+    let lastAiCallStatus = {
+      usedLiveAI: false,
+      provider: 'offline',
+      model: '',
+      errorDetail: ''
+    };
+
     // Call LLM API (Gemini, OpenAI, Groq, OpenRouter, Claude) with fallback to offline mode
     async function callLLMApi(prompt) {
+      lastAiCallStatus = { usedLiveAI: false, provider: 'offline', model: '', errorDetail: '' };
+
       const providerSelect = document.getElementById('apiProviderSelect');
       const provider = providerSelect ? providerSelect.value : 'offline';
       const modelSelect = document.getElementById('apiModelSelect');
@@ -1325,24 +1344,45 @@
       const savedKey = localStorage.getItem('porte_ai_key_' + provider) || (typeof PRECONFIGURED_API_KEYS !== 'undefined' ? PRECONFIGURED_API_KEYS[provider] : '');
       const apiKey = userKey || savedKey;
 
-      if (provider === 'offline' || !apiKey) {
+      lastAiCallStatus.provider = provider;
+      lastAiCallStatus.model = model;
+
+      if (provider === 'offline') {
+        lastAiCallStatus.errorDetail = 'オフライン定型文モード';
+        return null;
+      }
+      if (!apiKey) {
+        lastAiCallStatus.errorDetail = 'APIキー未設定';
         return null;
       }
 
       try {
         if (provider === 'gemini') {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-2.0-flash'}:generateContent?key=${apiKey}`;
+          const targetModel = model || 'gemini-2.5-flash-lite';
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
           const resp = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0.95,
+                topP: 0.95
+              }
+            })
           });
           if (!resp.ok) {
-            console.warn('Gemini API Error:', resp.status);
+            const errBody = await resp.text().catch(() => '');
+            console.warn('Gemini API Error:', resp.status, errBody);
+            lastAiCallStatus.errorDetail = `Gemini エラー (${resp.status})`;
             return null;
           }
           const data = await resp.json();
-          return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+          if (text) {
+            lastAiCallStatus.usedLiveAI = true;
+          }
+          return text;
         } else if (provider === 'openai' || provider === 'groq' || provider === 'openrouter') {
           let endpoint = 'https://api.openai.com/v1/chat/completions';
           if (provider === 'groq') endpoint = 'https://api.groq.com/openai/v1/chat/completions';
@@ -1362,15 +1402,21 @@
             headers: headers,
             body: JSON.stringify({
               model: model || (provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini'),
+              temperature: 0.9,
               messages: [{ role: 'user', content: prompt }]
             })
           });
           if (!resp.ok) {
             console.warn(`${provider} API Error:`, resp.status);
+            lastAiCallStatus.errorDetail = `${provider} エラー (${resp.status})`;
             return null;
           }
           const data = await resp.json();
-          return data?.choices?.[0]?.message?.content || null;
+          const text = data?.choices?.[0]?.message?.content || null;
+          if (text) {
+            lastAiCallStatus.usedLiveAI = true;
+          }
+          return text;
         } else if (provider === 'claude') {
           const resp = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
@@ -1382,18 +1428,25 @@
             body: JSON.stringify({
               model: model || 'claude-3-5-haiku-20241022',
               max_tokens: 1024,
+              temperature: 0.9,
               messages: [{ role: 'user', content: prompt }]
             })
           });
           if (!resp.ok) {
             console.warn('Claude API Error:', resp.status);
+            lastAiCallStatus.errorDetail = `Claude エラー (${resp.status})`;
             return null;
           }
           const data = await resp.json();
-          return data?.content?.[0]?.text || null;
+          const text = data?.content?.[0]?.text || null;
+          if (text) {
+            lastAiCallStatus.usedLiveAI = true;
+          }
+          return text;
         }
       } catch (err) {
         console.warn('LLM API Call Exception:', err);
+        lastAiCallStatus.errorDetail = `通信エラー (${err.message || '接続失敗'})`;
         return null;
       }
       return null;
@@ -1433,16 +1486,17 @@
 
       let focusPrompt = '';
       if (focusText) {
-        focusPrompt = `\n【再考案の重点切り口・こだわり要求】: "${focusText}"\n※現在提案中の案には納得がいっていません。上記のこだわり要求を最優先に反映させ、完全に新しい切り口・着眼点から深く再考案した候補を5件作成してください。`;
+        focusPrompt = `\n【再考案の重点切り口・こだわり要求】: "${focusText}"\n※現在提案中の案には納得がいっていません。上記のこだわり要求「${focusText}」を最優先に反映させ、完全に新しい切り口・着眼点から深く再考案した候補を5件作成してください。`;
       } else if (isReload) {
-        focusPrompt = `\n※現在提案中の案には納得がいっていません。通所安定型、作業精度向上型、対人・コミュニケーション型、セルフケア型、挑戦・工賃獲得型などの異なる切り口から、深く再考案した別案5件を作成してください。`;
+        focusPrompt = `\n※現在提案中の案とは語彙や表現、着眼点（体調セルフケア、作業手順、対人コミュニケーション、工賃獲得、社会参加など）をガラリと変え、全く新しい別案の長期目標を5件作成してください。`;
       }
 
       const prompt = `あなたは就労継続支援B型事業所のサービス管理責任者です。
 【本人の希望】${wish}
 【総合方針】${policy}${focusPrompt}
 
-就労継続支援B型の支援範囲に基づき、長期目標の候補を5件作成しJSON配列で出力してください:
+就労継続支援B型の支援範囲に基づき、長期目標の候補を5件作成しJSON配列で出力してください。
+【重要】前回の提案と重複するようなありきたりな表現を避け、本人の強みや困りごとに深く寄り添った具体的かつ個性的な表現で、5つの異なる角度（通所安定、作業スキル向上、対人関係・報連相、セルフケア・体調管理、社会参加・役割意識など）から5件作成してください:
 ["目標1", "目標2", "目標3", "目標4", "目標5"]`;
 
       let goals = null;
@@ -1453,7 +1507,11 @@
         console.warn('generateLongTermGoals error:', err);
       }
 
-      if (!goals || !Array.isArray(goals) || goals.length < 5) {
+      // 5件未満の場合でも、AIが生成した分を最大限活かし、不足分のみプールから補完
+      if (!goals || !Array.isArray(goals) || goals.length === 0) {
+        goals = [];
+      }
+      if (goals.length < 5) {
         const pool = [
           focusText ? `【${focusText}】を意識し、自分のペースに合わせた安定した通所（週3〜4日）を継続して取り組むことができる。` : `自分のペースに合わせた安定した通所（週3〜4日）を継続し、無理なく作業活動に取り組むことができる。`,
           focusText ? `【${focusText}】を取り入れ、得意な作業工程を増やし正確性を意識して責任を持って仕事に取り組むことができる。` : `得意な作業工程（駄菓子値札貼り、ビーズ制作等）を増やし、正確性を意識して責任を持って仕事に取り組むことができる。`,
@@ -1466,13 +1524,22 @@
           `作業前後の準備・片付けを主導的に行い、集中力を保ちながら安全・丁寧に業務を遂行できる。`,
           `毎月の通所目標を意識し、精神的な安定と自己肯定感を育みながら社会参加の基盤を作る。`
         ];
-        const shuffled = [...pool].sort(() => Math.random() - 0.5);
-        goals = shuffled.slice(0, 5);
+        const unused = pool.filter(p => !goals.includes(p)).sort(() => Math.random() - 0.5);
+        while (goals.length < 5 && unused.length > 0) {
+          goals.push(unused.pop());
+        }
       }
 
       renderGoalOptions('longTermGoalList', goals, 'long');
       selectedLongGoalText = '';
       document.getElementById('btnToStep2').disabled = true;
+
+      if (lastAiCallStatus.usedLiveAI) {
+        showToast(focusText ? `✨ AIが「${focusText}」に特化した長期目標案を生成しました！` : (isReload ? '✨ AIが新しい視点で長期目標案を再考案しました！' : '✨ AIが長期目標案を生成しました！'));
+      } else {
+        showToast(lastAiCallStatus.errorDetail ? `⚠️ 定型文から生成しました (${lastAiCallStatus.errorDetail})` : '⚡ 定型文エンジンで長期目標案を生成しました');
+      }
+
       if (!isReload) goToStep(1);
     }
 
@@ -1492,15 +1559,16 @@
 
       let focusPrompt = '';
       if (focusText) {
-        focusPrompt = `\n【再考案の重点切り口・こだわり要求】: "${focusText}"\n※現在の提案には納得がいっていません。上記のこだわり要求を強く反映し、長期目標達成に向けたスモールステップとして深く再考案した候補5件を作成してください。`;
+        focusPrompt = `\n【再考案の重点切り口・こだわり要求】: "${focusText}"\n※現在の提案には納得がいっていません。上記のこだわり要求「${focusText}」を強く反映し、長期目標達成に向けたスモールステップとして深く再考案した候補5件を作成してください。`;
       } else if (isReload) {
-        focusPrompt = `\n※現在の提案には納得がいっていません。動作手順、作業報告、時間配分、セルフチェック、道具準備など、視点をガラリと変えたスモールステップ5件を再考案してください。`;
+        focusPrompt = `\n※現在の提案とは視点や表現をガラリと変え、具体的な動作手順、報告マナー、時間配分、セルフチェック、道具準備など、異なる切り口のスモールステップ5件を再考案してください。`;
       }
 
       const prompt = `選択された長期目標: ${selectedLongGoalText}
 本人の希望: ${wish}${focusPrompt}
 
-長期目標に向けたスモールステップとしての短期目標の候補5件をJSON配列で出力してください:
+長期目標に向けたスモールステップとしての短期目標の候補5件をJSON配列で出力してください。
+【重要】前回の提案と重複するような表現は避け、動作手順、作業報告、時間配分、セルフチェック、道具準備など、視点をガラリと変えた具体的なスモールステップ5件を作成してください:
 ["短期目標1", "短期目標2", "短期目標3", "短期目標4", "短期目標5"]`;
 
       let goals = null;
@@ -1511,7 +1579,10 @@
         console.warn('generateShortTermGoals error:', err);
       }
 
-      if (!goals || !Array.isArray(goals) || goals.length < 5) {
+      if (!goals || !Array.isArray(goals) || goals.length === 0) {
+        goals = [];
+      }
+      if (goals.length < 5) {
         const pool = [
           focusText ? `【${focusText}】を意識し、通所日数を確保して決められた時間に通所することができる。` : `通所日数を意識し、週3日以上の決められた時間に通所することができる。`,
           focusText ? `【${focusText}】を重視し、作業マニュアルを確認しながら自己検品を行うことができる。` : `作業マニュアルを確認しながら集中して取り組み、自己検品を行うことができる。`,
@@ -1524,8 +1595,10 @@
           `作業中の不要な焦りを減らし、一定のテンポを保って落ち着いて業務を進めることができる。`,
           `報告・連絡・相談を怠らず、スタッフや他の利用者と円滑な協力関係を維持できる。`
         ];
-        const shuffled = [...pool].sort(() => Math.random() - 0.5);
-        goals = shuffled.slice(0, 5);
+        const unused = pool.filter(p => !goals.includes(p)).sort(() => Math.random() - 0.5);
+        while (goals.length < 5 && unused.length > 0) {
+          goals.push(unused.pop());
+        }
       }
 
       const wishText = document.getElementById('inputWish') ? document.getElementById('inputWish').value.trim() : '';
@@ -1550,11 +1623,25 @@
       renderGoalOptions('shortTermGoalList', goals, 'short');
       selectedShortGoalText = '';
       document.getElementById('btnToStep3').disabled = true;
+
+      if (lastAiCallStatus.usedLiveAI) {
+        showToast(focusText ? `✨ AIが「${focusText}」に特化した短期目標案を生成しました！` : (isReload ? '✨ AIが新しいステップで短期目標案を再考案しました！' : '✨ AIが短期目標案を生成しました！'));
+      } else {
+        showToast(lastAiCallStatus.errorDetail ? `⚠️ 定型文から生成しました (${lastAiCallStatus.errorDetail})` : '⚡ 定型文エンジンで短期目標案を生成しました');
+      }
+
       if (!isReload) goToStep(2);
     }
 
+    // Step 3: キープ固定を解除して全10件を完全新規考案
+    function clearKeptAndRegenerateStep3() {
+      selectedDetailIndices = [];
+      const inputVal = document.getElementById('rethinkInputStep3') ? document.getElementById('rethinkInputStep3').value.trim() : '';
+      generateDetailPlans(true, inputVal, true);
+    }
+
     // Step 3: Generate Detailed Plans (10 items total)
-    async function generateDetailPlans(isReload = false, rethinkFocus = '') {
+    async function generateDetailPlans(isReload = false, rethinkFocus = '', clearKept = false) {
       const inputVal = document.getElementById('rethinkInputStep3') ? document.getElementById('rethinkInputStep3').value.trim() : '';
       const focusText = (rethinkFocus || inputVal).trim();
       const wishText = document.getElementById('inputWish') ? document.getElementById('inputWish').value.trim() : '';
@@ -1566,10 +1653,13 @@
         return;
       }
 
-      // 既に選択/チェックしている項目を抽出（キープ保護）
+      // キープ固定項目の抽出（clearKept時はキープ解除して10件全生成）
       let keptItems = [];
-      if (isReload && selectedDetailIndices.length > 0 && generatedDetailItems.length > 0) {
-        keptItems = selectedDetailIndices.map(idx => generatedDetailItems[idx]).filter(Boolean);
+      if (isReload && !clearKept && selectedDetailIndices.length > 0 && generatedDetailItems.length > 0) {
+        keptItems = selectedDetailIndices.map(idx => {
+          const item = generatedDetailItems[idx];
+          return item ? { ...item, isKept: true, isNewAI: false } : null;
+        }).filter(Boolean);
       }
 
       const numNeeded = 10 - keptItems.length;
@@ -1577,14 +1667,14 @@
       if (keptItems.length > 0) {
         showToast(`🔒 選択中の ${keptItems.length} 件を固定保持し、残り ${numNeeded} 件を「${focusText || '別角度'}」で再考案中...`);
       } else {
-        showToast(focusText ? `🔄 「${focusText}」の切り口で具体的計画を再考案中...` : (isReload ? '🔄 別のバリエーションで具体的支援計画案を再考案中...' : '⏳ 具体的支援計画案を生成中...'));
+        showToast(focusText ? `🔄 「${focusText}」の切り口で具体的計画を再考案中...` : (isReload ? '🔄 全10件を別の切り口で再考案中...' : '⏳ 具体的支援計画案を生成中...'));
       }
 
       let focusPrompt = '';
       if (focusText) {
-        focusPrompt = `\n【再考案の重点切り口・配慮要望】: "${focusText}"\n※現在の提案には納得がいっていません。上記の配慮要望を最優先で反映させてください。`;
+        focusPrompt = `\n【再考案の重点切り口・配慮要望】: "${focusText}"\n※現在の提案には納得がいっていません。上記の配慮要望「${focusText}」を到達目標・本人の役割・支援内容の全項目に最優先で直接反映させてください。`;
       } else if (isReload) {
-        focusPrompt = `\n※現在の提案には納得がいっていません。環境調整、視覚指示、健康面談、二重点検、作業手当フィードバックなど、多角的な支援内容で再考案してください。`;
+        focusPrompt = `\n※現在の提案とは文言・着眼点を完全に一新し、環境調整、視覚指示、健康面談、二重点検、作業手当フィードバックなど、多角的な支援内容で全く新しい計画案を作成してください。`;
       }
 
       let keptPrompt = '';
@@ -1608,19 +1698,22 @@
 4. 【短期目標】: ${selectedShortGoalText}
 ${focusPrompt}${keptPrompt}
 
-上記4つの前提要素すべてを網羅・調和させた具体的支援計画のセットを【${numNeeded}件】作成し、JSON配列で出力してください:
+【重要】前回の提案と重複するようなありきたりな表現を避け、本人の特性と重点切り口を深く反映させた独自性のある計画を【必ず${numNeeded}件】作成し、JSON配列で出力してください:
 [{"goal":"到達目標1","role":"本人の役割1","support":"支援内容1"}, ...]`;
 
         try {
           const aiRaw = await callLLMApi(prompt);
-          newItems = parseJsonResponse(aiRaw);
+          const parsed = parseJsonResponse(aiRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            newItems = parsed.map(item => ({ ...item, isKept: false, isNewAI: true }));
+          }
         } catch (err) {
           console.warn('generateDetailPlans error:', err);
         }
       }
 
-      if (!newItems || !Array.isArray(newItems) || newItems.length < numNeeded) {
-        // 利用者の主訴・方針・長短目標のキーワードを解析して無関係な作業を完全除外
+      // AI生成件数が不足している場合やオフライン時のみ、不足分を賢くプールから補完
+      if (newItems.length < numNeeded) {
         const contextStr = (wishText + ' ' + policyText + ' ' + selectedLongGoalText + ' ' + selectedShortGoalText + ' ' + focusText).toLowerCase();
 
         const hasPc = /(パソコン|pc|タイピング|データ入力|文字入力)/i.test(contextStr);
@@ -1630,7 +1723,6 @@ ${focusPrompt}${keptPrompt}
         const hasSeal = /(シール|ラベル|軽作業|袋詰め|検品)/i.test(contextStr);
         const hasClean = /(掃除|清掃|環境整備|片付け|クリーン)/i.test(contextStr);
 
-        // 誰にでも共通して適する福祉・就労基礎プール
         const basePool = [
           { goal: '通所日数の安定維持（週3〜4日）', role: '前日に睡眠をしっかりとり、体調を整えて通所する。', support: focusText ? `【${focusText}】に配慮し、登所時に検温と体調確認を行い安心して過ごせる環境を提供する。` : '登所時に笑顔で出迎え、検温と体調確認を行い安心して過ごせる環境を提供する。' },
           { goal: '作業手順の定着と正確性の向上', role: '写真付きマニュアルを確認しながら作業を行い丁寧に進める。', support: focusText ? `【${focusText}】を導入し、工程ごとの視覚的な指示書を用意して出来た工程を具体的に承認評価する。` : '工程ごとの視覚的な指示書を用意し、出来た工程を具体的に承認評価する。' },
@@ -1646,33 +1738,21 @@ ${focusPrompt}${keptPrompt}
           { goal: '時間配分と見通しを持った作業', role: '時計を確認しながら、時間ごとの目安を見据えて作業を進める。', support: '見通しが立ちやすいスケジュールをあらかじめ提示し、不安なく作業できるよう促す。' }
         ];
 
-        // 本人の主訴や方針にキーワードが含まれる場合のみ特定作業を追加
         const specificPool = [];
-        if (hasSeal) {
-          specificPool.push({ goal: 'シール貼り・軽作業の丁寧な習得', role: '見本と照らし合わせながら、シワやズレがないよう丁寧にシールを貼る。', support: '位置合わせの補助シートや現物サンプルを用意し、できた工程をしっかり認める。' });
-        }
-        if (hasClean) {
-          specificPool.push({ goal: '清掃・美化作業のスキル向上', role: '手順書に沿ってモップ掛けやゴミ分別、拭き掃除を責任を持って行う。', support: '清掃チェック表を用意し、綺麗な環境づくりへの貢献をフィードバックする。' });
-        }
-        if (hasCoffee) {
-          specificPool.push({ goal: 'コーヒー作業（焙煎・計量・封入）の習得', role: '計量器の目盛りをしっかり確認し、正確なグラム数で袋詰めを行う。', support: '過去の経験を尊重し、デジタルスケールや専用じょうご等を用いて負担の少ない工程を提供する。' });
-        }
-        if (hasBeads) {
-          specificPool.push({ goal: 'ビーズ・ハンドメイド制作の安心した習得', role: '無理のない簡単な工程からスタートし、自分のペースで丁寧に制作する。', support: '最初から難しい作品を求めず、得意な工程を切り出して手元のサポートを寄り添って行う。' });
-        }
-        if (hasDagashi) {
-          specificPool.push({ goal: '駄菓子接客・値札貼り作業の精度向上', role: '商品と値札を照合し、まっすぐに丁寧に貼り付ける。', support: '現物サンプルを配置し、作業終了時に仕上がり状況を評価・フィードバックする。' });
-        }
-        if (hasPc) {
-          // PC・入力が希望されている場合のみ追加
-          specificPool.push({ goal: 'PC入力のスピード・正確性向上', role: 'タイピング練習やデータ入力で目標文字数を無理なく目指す。', support: '入力レベルに合わせた課題を提供し、成長が実感できるようフィードバックする。' });
-        }
+        if (hasSeal) specificPool.push({ goal: 'シール貼り・軽作業の丁寧な習得', role: '見本と照らし合わせながら、シワやズレがないよう丁寧にシールを貼る。', support: '位置合わせの補助シートや現物サンプルを用意し、できた工程をしっかり認める。' });
+        if (hasClean) specificPool.push({ goal: '清掃・美化作業のスキル向上', role: '手順書に沿ってモップ掛けやゴミ分別、拭き掃除を責任を持って行う。', support: '清掃チェック表を用意し、綺麗な環境づくりへの貢献をフィードバックする。' });
+        if (hasCoffee) specificPool.push({ goal: 'コーヒー作業（焙煎・計量・封入）の習得', role: '計量器の目盛りをしっかり確認し、正確なグラム数で袋詰めを行う。', support: '過去の経験を尊重し、デジタルスケールや専用じょうご等を用いて負担の少ない工程を提供する。' });
+        if (hasBeads) specificPool.push({ goal: 'ビーズ・ハンドメイド制作の安心した習得', role: '無理のない簡単な工程からスタートし、自分のペースで丁寧に制作する。', support: '最初から難しい作品を求めず、得意な工程を切り出して手元のサポートを寄り添って行う。' });
+        if (hasDagashi) specificPool.push({ goal: '駄菓子接客・値札貼り作業の精度向上', role: '商品と値札を照合し、まっすぐに丁寧に貼り付ける。', support: '現物サンプルを配置し、作業終了時に仕上がり状況を評価・フィードバックする。' });
+        if (hasPc) specificPool.push({ goal: 'PC入力のスピード・正確性向上', role: 'タイピング練習やデータ入力で目標文字数を無理なく目指す。', support: '入力レベルに合わせた課題を提供し、成長が実感できるようフィードバックする。' });
 
-        const keptGoals = keptItems.map(k => k.goal);
-        // 本人が希望する特定作業を最優先にして結合
-        const fullPool = [...specificPool, ...basePool].filter(p => !keptGoals.includes(p.goal));
+        const existingGoals = [...keptItems, ...newItems].map(k => k.goal);
+        const fullPool = [...specificPool, ...basePool].filter(p => !existingGoals.includes(p.goal));
         const shuffled = [...fullPool].sort(() => Math.random() - 0.5);
-        newItems = shuffled.slice(0, numNeeded);
+
+        const fillCount = numNeeded - newItems.length;
+        const fallbackItems = shuffled.slice(0, fillCount).map(item => ({ ...item, isKept: false, isNewAI: false }));
+        newItems = [...newItems, ...fallbackItems];
       }
 
       // キープ項目 + 新規再考案項目を合体
@@ -1702,6 +1782,17 @@ ${focusPrompt}${keptPrompt}
           </div>
         </div>
       `;
+
+      if (lastAiCallStatus.usedLiveAI) {
+        if (keptItems.length > 0) {
+          showToast(`✨ AI新提案を生成しました！（キープ中の ${keptItems.length} 件を保持し、残り ${numNeeded} 件を新考案）`);
+        } else {
+          showToast(focusText ? `✨ AIが「${focusText}」に特化した新提案10件を生成しました！` : (isReload ? '✨ AIが新しい視点で具体的計画10件を再考案しました！' : '✨ AIが具体的支援計画10件を生成しました！'));
+        }
+      } else {
+        showToast(lastAiCallStatus.errorDetail ? `⚠️ 定型文から生成しました (${lastAiCallStatus.errorDetail})` : '⚡ 定型文エンジンで具体的支援計画案を生成しました');
+      }
+
       if (!isReload) goToStep(3);
     }
 
@@ -1735,20 +1826,28 @@ ${focusPrompt}${keptPrompt}
         selectedDetailIndices = [];
       }
       const tbody = document.getElementById('detailPlanTableBody');
-      tbody.innerHTML = items.map((item, idx) => `
+      tbody.innerHTML = items.map((item, idx) => {
+        const isKept = !!item.isKept;
+        const isNew = !!item.isNewAI;
+        const badgeHtml = isKept 
+          ? `<div style="font-size:10px; background:#fef3c7; color:#92400e; padding:1px 5px; border-radius:4px; margin-top:3px; font-weight:700; border:1px solid #fde68a;">🔒キープ固定</div>`
+          : (isNew ? `<div style="font-size:10px; background:#dcfce7; color:#15803d; padding:1px 5px; border-radius:4px; margin-top:3px; font-weight:700; border:1px solid #86efac;">✨AI新提案</div>` : '');
+
+        return `
         <tr id="row_${idx}" onclick="toggleDetailRow(${idx})" style="cursor:pointer;">
           <td style="text-align:center;">
             <input type="checkbox" id="chk_${idx}" onclick="event.stopPropagation(); toggleDetailRow(${idx})">
           </td>
-          <td style="text-align:center; font-weight:700;">
+          <td style="text-align:center; font-weight:700; vertical-align:middle;">
             ${idx + 1}
-            <span id="lock_badge_${idx}" style="display:none; font-size:10px; background:#dcfce7; color:#15803d; padding:1px 5px; border-radius:4px; margin-left:2px;">🔒固定</span>
+            ${badgeHtml}
           </td>
           <td>${item.goal}</td>
           <td>${item.role}</td>
           <td>${item.support}</td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
       updateDetailSelectionState();
     }
 
@@ -2051,6 +2150,27 @@ ${document.getElementById('sheetShortGoal').value}
           badge.textContent = '保存済みキー: なし (オフライン定型文可能)';
           badge.style.background = '#f1f5f9';
           badge.style.color = '#64748b';
+        }
+      }
+
+      const currentProvider = document.getElementById('apiProviderSelect') ? document.getElementById('apiProviderSelect').value : 'offline';
+      const headerAiBadge = document.getElementById('badgeAiStatus');
+      if (headerAiBadge) {
+        if (currentProvider !== 'offline') {
+          const k = localStorage.getItem('porte_ai_key_' + currentProvider) || (typeof PRECONFIGURED_API_KEYS !== 'undefined' ? PRECONFIGURED_API_KEYS[currentProvider] : '');
+          if (k) {
+            headerAiBadge.textContent = `🤖 ${pNames[currentProvider] || currentProvider} AI 稼働中 (API接続済)`;
+            headerAiBadge.style.background = '#dcfce7';
+            headerAiBadge.style.color = '#15803d';
+          } else {
+            headerAiBadge.textContent = `⚠️ ${pNames[currentProvider] || currentProvider} (キー未設定・定型文モード)`;
+            headerAiBadge.style.background = '#fef3c7';
+            headerAiBadge.style.color = '#92400e';
+          }
+        } else {
+          headerAiBadge.textContent = '⚡ オフライン定型文モード';
+          headerAiBadge.style.background = '#e0f2fe';
+          headerAiBadge.style.color = '#0369a1';
         }
       }
     }
