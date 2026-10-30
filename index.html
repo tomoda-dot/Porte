@@ -7299,7 +7299,6 @@ var totalBentoAll=data.reduce(function(s,d){return s+d.bc;},0);
       detail+='<div><div style="font-size:9px;color:#888">出席</div><div style="font-size:16px;font-weight:700;color:var(--grn)">'+d.d+'</div></div>';
       detail+='<div><div style="font-size:9px;color:#888">休み</div><div style="font-size:16px;font-weight:700;color:'+(d.kk.ng>0?'#c62828':'#ccc')+'">'+d.kk.ng+'</div></div>';
       detail+='</div>';
-      if(d.kk.reason){detail+='<div style="font-size:10px;color:#c62828;margin-top:4px;text-align:center">内訳: '+esc(d.kk.reason)+'</div>';}
       detail+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid #eee"><div style="font-size:11px;font-weight:700;color:#2e7d32;margin-bottom:2px">💵 交通費支給（現金）</div><div style="font-size:14px;font-weight:700;color:#2e7d32">¥'+d.tTrans.toLocaleString()+' <span style="font-size:10px;color:#666;font-weight:400">('+d.d+'日分)</span></div></div>';
       if(d.kk.pending>0){detail+='<div style="font-size:10px;color:#1565c0;margin-top:6px;text-align:center">⏳ 未記録 '+d.kk.pending+'日</div>';}
       if(d.bc>0){
