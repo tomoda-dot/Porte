@@ -282,6 +282,10 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function el(id){ return document.getElementById(id); }
 function show(id){ var e=el(id); if(e)e.style.display='block'; }
 function hide(id){ var e=el(id); if(e)e.style.display='none'; }
+function cleanNotesText(str){
+  if(!str) return '';
+  return String(str).replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
+}
 
 function calcWorkTime(){
   var sInput = el('f-start'), eInput = el('f-end'), bInput = el('f-break');
@@ -624,11 +628,6 @@ async function renderUserList(){
     if(att && att.status==='調整休') return false;
     return !isScheduledToday(u,date);
   });
-
-  function cleanNotesText(str){
-    if(!str) return '';
-    return String(str).replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
-  }
 
   function makeItem(u){
     var isActive=String(u.id)===String(curId);
