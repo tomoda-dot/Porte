@@ -324,7 +324,10 @@ var fmtBentoBadge=function(curB, isAb, masterBento, payMethod){
     var pm = String(payMethod||'').trim();
     var subText = isFree ? '無料' : '工賃';
     var subColor = isFree ? '#7b1fa2' : '#2e7d32'; // 紫色: 無料(体験食)
-    if(!isFree && (pm === '月末締め翌月払い' || pm === '月末締め翌月払い（振込）' || pm === '翌月払い' || pm === '翌月' || pm.indexOf('翌月') >= 0)) {
+    if(!isFree && (pm === '月末締め翌月払い（振込）' || pm.indexOf('振込') >= 0)) {
+      subText = '振込';
+      subColor = '#4527a0'; // インディゴ・深紫: 振込
+    } else if(!isFree && (pm === '月末締め翌月払い' || pm === '翌月払い' || pm === '翌月' || pm.indexOf('翌月') >= 0)) {
       subText = '翌月';
       subColor = '#1565c0'; // 青色: 翌月払い
     } else if(!isFree && (pm === '当日' || pm === '当日払い')) {
