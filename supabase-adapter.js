@@ -1025,6 +1025,7 @@ async function _calcAttendanceList(ym){
   var activeAls=configuredAls.filter(function(a){return a.enabled!==false;});
   var result=[];
   us.forEach(function(user){
+    if((user.enrollDate && user.enrollDate > ym + '-31') || (user.endDate && user.endDate < ym + '-01')) return;
     var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
     if(recs.length===0)return;
     var tServiceMin=0,tWM=0,tBM=0,tW=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
@@ -1105,6 +1106,7 @@ async function _calcWageDetailPerUser(ym){
 
   var result=[];
   us.forEach(function(user){
+    if((user.enrollDate && user.enrollDate > ym + '-31') || (user.endDate && user.endDate < ym + '-01')) return;
     var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
     if(recs.length===0)return;
     var byWt={},bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
@@ -1208,6 +1210,7 @@ async function _calcWorkTypeSummary(ym){
   var dayDows=[];for(var d=1;d<=dim;d++)dayDows.push(dowNames[new Date(year,month-1,d).getDay()]);
   var users=[],gWD=new Array(dim).fill(0),gHD=new Array(dim).fill(0),gWT=0,gHT=0,gWC=0;
   us.forEach(function(user){
+    if((user.enrollDate && user.enrollDate > ym + '-31') || (user.endDate && user.endDate < ym + '-01')) return;
     var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
     if(recs.length===0)return;
     var byWt={},uWD=new Array(dim).fill(0),uHD=new Array(dim).fill(0),uWT=0,uHT=0,uWC=0;
@@ -1265,6 +1268,7 @@ async function _calcServiceRecordData(srYm){
   var srDays=new Date(srY,srM,0).getDate();var srDow=['日','月','火','水','木','金','土'];
   var srReiwa='令和'+(srY-2018)+'年'+srM+'月分';var srResult=[];
   srUsers.forEach(function(user){
+    if((user.enrollDate && user.enrollDate > srYm + '-31') || (user.endDate && user.endDate < srYm + '-01')) return;
     var recs=srAtt.filter(function(a){return String(a.userId)===String(user.id);});
     var attendRecs=recs.filter(function(a){return _isAttend(a);});
     if(attendRecs.length===0)return;
