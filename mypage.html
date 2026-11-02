@@ -404,6 +404,10 @@ el('btn-login').onclick = async function(){
     if(r.error)throw r.error;
     if(!r.data||!r.data.length){err.textContent='IDまたはパスワードが違います';return;}
     ME=r.data[0];
+    if(!isStaffActive(ME)){
+      err.textContent='このアカウントは現在利用期間外です（入職日前または退職後）';
+      return;
+    }
     try{sessionStorage.setItem('mp',JSON.stringify(ME));}catch(e){}
     await boot();
   }catch(e){
@@ -544,6 +548,15 @@ async function verifyMpPinInput(){
   var errEl = el('mp-pin-err');
   
   if (targetPw === enteredPin || targetId === enteredPin) {
+    if (!isStaffActive(s)) {
+      if (errEl) {
+        errEl.style.display = 'block';
+        errEl.textContent = '現在利用期間外のスタッフです（入職日前または退職後）';
+      }
+      _mpPinInput = '';
+      updateMpPinDots();
+      return;
+    }
     ME = s;
     try { sessionStorage.setItem('mp', JSON.stringify(ME)); } catch(e){}
     await boot();
@@ -1160,26 +1173,38 @@ function openAttCR(target){
   };
 }
 
-// 退職チェック
-function isStaffActive(s, ym){
+// 退職・在籍チェック（入職日から退職日の間）
+function isStaffActive(s, targetDate){
   if(!s) return false;
   var lid = String(s.loginId || '').toLowerCase();
   var name = String(s.name || '').toLowerCase();
   if (lid === 'administrator' || name === 'administrator') return false;
 
   var st = String(s.status || s.userStatus || '').trim();
-  if (['退職', '退職済', '離職', '無効', '非表示', '利用終了', '退所'].indexOf(st) >= 0) return false;
-  if (s.isRetired === true || s.isArchived === true || s.active === false) return false;
+  if (['無効', '非表示', '削除'].indexOf(st) >= 0) return false;
+  if (s.isArchived === true || s.active === false) return false;
 
-  var td = today();
-  var checkYM = ym || td.substring(0,7);
-  if(s.startDate){
-    var stYM = s.startDate.substring(0,7);
-    if(checkYM < stYM) return false;
+  var td = typeof today === 'function' ? today() : new Date().toISOString().slice(0, 10);
+  var d = targetDate || td;
+  d = String(d).slice(0, 10);
+
+  // 年月指定の場合（YYYY-MM）
+  if (d.length === 7) {
+    var ymStart = d + '-01', ymEnd = d + '-31';
+    if (s.startDate && s.startDate > ymEnd) return false;
+    if (s.endDate && s.endDate < ymStart) return false;
+    if (['退職', '退職済', '離職', '利用終了', '退所'].indexOf(st) >= 0 || s.isRetired === true) {
+      if (!s.endDate && d >= td.slice(0, 7)) return false;
+    }
+    return true;
   }
-  if(!s.endDate) return true;
-  var endYM = s.endDate.substring(0,7);
-  if(s.endDate <= td || checkYM > endYM) return false;
+
+  // 日付指定または現在判定（YYYY-MM-DD: 入職日から退職日の間）
+  if (s.startDate && s.startDate > d) return false;
+  if (s.endDate && s.endDate < d) return false;
+  if (['退職', '退職済', '離職', '利用終了', '退所'].indexOf(st) >= 0 || s.isRetired === true) {
+    if (!s.endDate || s.endDate <= d) return false;
+  }
   return true;
 }
 
@@ -1192,16 +1217,23 @@ async function loadAdminReqs(){
   if(sel){
     var curVal=sel.value;
     var activeStaff = ALL_STAFF.filter(function(s){ return isStaffActive(s); });
-    var retiredStaff = ALL_STAFF.filter(function(s){ return !isStaffActive(s); });
+    var inactiveStaff = ALL_STAFF.filter(function(s){
+      if(!s) return false;
+      var lid = String(s.loginId || '').toLowerCase();
+      var name = String(s.name || '').toLowerCase();
+      if (lid === 'administrator' || name === 'administrator') return false;
+      return !isStaffActive(s);
+    });
 
     var opts = '<option value="">全スタッフ（在籍中）</option>';
     activeStaff.forEach(function(s){
       opts += '<option value="'+s.id+'">'+esc(s.name)+'</option>';
     });
-    if(retiredStaff.length > 0){
-      opts += '<option value="" disabled>── 退職済み ──</option>';
-      retiredStaff.forEach(function(s){
-        opts += '<option value="'+s.id+'">'+esc(s.name)+' (退職)</option>';
+    if(inactiveStaff.length > 0){
+      opts += '<option value="" disabled>── 入職前・退職済 ──</option>';
+      inactiveStaff.forEach(function(s){
+        var note = (s.startDate && s.startDate > today()) ? ' (入職前)' : ' (退職)';
+        opts += '<option value="'+s.id+'">'+esc(s.name)+note+'</option>';
       });
     }
     sel.innerHTML=opts;
@@ -1215,7 +1247,8 @@ async function loadAdminReqs(){
 function staffNameById(staffId){
   var s=ALL_STAFF.find(function(x){return x.id===staffId;});
   if(!s) return 'スタッフ('+staffId+')';
-  return s.name + (!isStaffActive(s) ? ' (退職)' : '');
+  var note = isStaffActive(s) ? '' : ((s.startDate && s.startDate > today()) ? ' (入職前)' : ' (退職)');
+  return s.name + note;
 }
 
 function renderAdminReqs(){
