@@ -534,6 +534,29 @@ async function boot(){
   }
 }
 
+// ─── タブレット日跨ぎ自動同期 ───
+window._lastTabletDate = today();
+function checkTabletDateRollover(){
+  var cur = today();
+  if(window._lastTabletDate !== cur){
+    window._lastTabletDate = cur;
+    var sel = el('sel-date');
+    if(sel){
+      sel.max = cur;
+      if(sel.value < cur){
+        sel.value = cur;
+        delete ATTENDANCE_CACHE[cur];
+        fetchAttendanceForDate(cur).then(renderUserList);
+      }
+    }
+  }
+}
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible') checkTabletDateRollover();
+});
+window.addEventListener('focus', checkTabletDateRollover);
+setInterval(checkTabletDateRollover, 30000);
+
 // セッション復元
 (async function(){
   try{

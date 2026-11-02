@@ -278,6 +278,86 @@ var fmtMonth=function(m){if(!m)return'';var p=m.split('-');return p[0]+'年'+par
 var weekday=function(d){if(!d)return'';var p=String(d).split('-');return['日','月','火','水','木','金','土'][new Date(Number(p[0]),Number(p[1])-1,Number(p[2])).getDay()];};
 var calcH=function(s,e,b){if(!s||!e)return 0;var sm=Number(s.split(':')[0])*60+Number(s.split(':')[1]),em=Number(e.split(':')[0])*60+Number(e.split(':')[1]);return Math.max(0,em-sm-(Number(b)||0))/60;};
 var esc=function(s){if(s===null||s===undefined)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;};
+
+// ─── 日跨ぎ・日付自動同期マネージャー ───
+window._lastActiveDate = today();
+
+function checkAndSyncDayChange(force){
+  var currentToday = today();
+  var dateChanged = force || (window._lastActiveDate !== currentToday);
+  if(!dateChanged) return;
+
+  var prevDate = window._lastActiveDate;
+  window._lastActiveDate = currentToday;
+  console.log('📅 日跨ぎ・日付自動同期検知:', prevDate, '→', currentToday);
+
+  // 1. 出欠・日報: 過去日付のままなら本日へ自動更新
+  if(typeof attDate !== 'undefined'){
+    if(attDate < currentToday || force){
+      attDate = currentToday;
+      var attDateInput = document.getElementById('att-date');
+      if(attDateInput) attDateInput.value = attDate;
+      var attWd = document.getElementById('att-wd');
+      if(attWd) attWd.textContent = '(' + weekday(attDate) + ')';
+    }
+  }
+  if(typeof S !== 'undefined' && S && S.attMonth && S.attMonth < currentToday.slice(0, 7)){
+    S.attMonth = currentToday.slice(0, 7);
+    var attMonthSelect = document.getElementById('att-month-select');
+    if(attMonthSelect) attMonthSelect.value = S.attMonth;
+  }
+
+  // 2. カレンダー: 月が変わっていればカレンダーの基準月も今月に更新
+  if(typeof initCM === 'function'){
+    var curYM = currentToday.slice(0, 7);
+    var calYM = (typeof calY !== 'undefined' && typeof calM !== 'undefined' && calY && calM) ? (calY + '-' + String(calM).padStart(2, '0')) : '';
+    if(!calYM || calYM < curYM || force){
+      initCM();
+    }
+  }
+
+  // 3. 送迎管理: 過去日付なら本日へ自動更新
+  if(typeof tDate !== 'undefined'){
+    if(tDate < currentToday || force){
+      tDate = currentToday;
+      var tDateInput = document.getElementById('t-date');
+      if(tDateInput) tDateInput.value = tDate;
+      var tDow = document.getElementById('t-dow');
+      if(tDow) tDow.textContent = '（' + weekday(tDate) + '）';
+    }
+  }
+
+  // 4. モーダル編集中（入力フォームが開いている最中）は入力内容保護のため強制再描画しない
+  var activeModal = document.querySelector('.modal[style*="block"], #modal[style*="block"], #common-modal[style*="block"], #att-modal[style*="block"], #t-modal[style*="block"], #modal-bg[style*="block"]');
+  var isEditing = !!(activeModal && activeModal.innerHTML.trim() !== '');
+
+  // 5. 日付連動タブ（出欠・日報、カレンダー、ダッシュボード、送迎、タイムカード）を表示中の場合は最新データへ自動再描画
+  var dateSensitiveTabs = ['dashboard', 'attendance', 'calendar', 'transport', 'timecard'];
+  if(!isEditing && typeof S !== 'undefined' && S && dateSensitiveTabs.indexOf(S.tab) >= 0 && typeof renderTab === 'function'){
+    renderTab();
+    if(typeof toast === 'function'){
+      toast('📅 日付が本日の「' + currentToday.replace(/-/g, '/') + ' (' + weekday(currentToday) + ')」に自動更新されました');
+    }
+  }
+}
+
+// ─── 日跨ぎ・復帰リスナー（PCスリープ復帰、別タブ復帰、夜間放置対応） ───
+if(typeof document !== 'undefined'){
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible'){
+      checkAndSyncDayChange();
+    }
+  });
+}
+if(typeof window !== 'undefined'){
+  window.addEventListener('focus', function(){
+    checkAndSyncDayChange();
+  });
+  // 30秒ごとの自動監視（常時開きっぱなし対応）
+  setInterval(function(){
+    checkAndSyncDayChange();
+  }, 30000);
+}
 var statusColor={'出席':'#2e7d32','欠席':'#c62828','遅刻':'#e65100','早退':'#f9a825','体調不良':'#6a1b9a','通院':'#1565c0','予定':'#c07830','調整休':'#757575'};
 var cleanNotesText=function(str){if(!str)return'';return String(str).replace(/\s*<!--ADJ:.*?-->\s*/g,'').trim();};
 var hasTimeDiff15=function(t1,t2){if(!t1||!t2)return false;var p1=t1.split(':'),p2=t2.split(':');if(p1.length<2||p2.length<2)return false;var m1=parseInt(p1[0])*60+parseInt(p1[1]),m2=parseInt(p2[0])*60+parseInt(p2[1]);return Math.abs(m1-m2)>=15;};
@@ -779,10 +859,32 @@ window.addEventListener('popstate',function(e){
 function switchTab(t,isHistory){
   if(_isTabNavigating) return;
   guardNav(function(){
+    var curToday = today();
+    // 日付連動タブの最新化（前日や前月のまま残らないよう自動同期）
+    if(t==='attendance'){
+      S.attSubTab='daily';
+      if(typeof attDate === 'undefined' || !attDate || attDate < curToday){
+        attDate = curToday;
+      }
+      if(!S.attMonth || S.attMonth < curToday.slice(0, 7)){
+        S.attMonth = curToday.slice(0, 7);
+      }
+    }
+    if(t==='calendar'){
+      var curYM = curToday.slice(0, 7);
+      var calYM = (typeof calY !== 'undefined' && typeof calM !== 'undefined' && calY && calM) ? (calY + '-' + String(calM).padStart(2, '0')) : '';
+      if(!calYM || calYM < curYM){
+        initCM();
+      }
+    }
+    if(t==='transport'){
+      tSubTab='daily';
+      if(typeof tDate === 'undefined' || !tDate || tDate < curToday){
+        tDate = curToday;
+      }
+    }
     if(t==='export')eT='menu';
-    if(t==='attendance')S.attSubTab='daily';
     if(t==='staff')_staffTab='list';
-    if(t==='transport')tSubTab='daily';
     if(t==='wageSettings'){t='wages';S.wagesSubTab='settings';}
     else if(t==='wageAdjustments'){t='wages';S.wagesSubTab='adjust';}
     else if(t==='wages'&&!S.wagesSubTab){S.wagesSubTab='calc';}
@@ -1245,8 +1347,10 @@ async function renderDashboard(c){
 // ═══ カレンダー ═══
 var calY,calM;function initCM(){var d=new Date();calY=d.getFullYear();calM=d.getMonth()+1;}if(!calY)initCM();
 async function renderCalendar(c){
+  if(!calY || !calM) initCM();
+  var isCurrentMonth = (calY === new Date().getFullYear() && calM === (new Date().getMonth() + 1));
   c.innerHTML='<div class="hd-row"><h2>📅 カレンダー</h2></div>'+
-    '<div class="cal-nav no-print"><button onclick="calY-=(calM===1?0:0);calM--;if(calM<1){calM=12;calY--;}renderCalendar(document.getElementById(\'content\'))">◀</button><div class="cal-month">'+calY+'年'+calM+'月</div><button onclick="calM++;if(calM>12){calM=1;calY++;}renderCalendar(document.getElementById(\'content\'))">▶</button><button class="bg" onclick="initCM();renderCalendar(document.getElementById(\'content\'))" style="font-size:11px;margin-left:8px">今月</button></div>'+
+    '<div class="cal-nav no-print"><button onclick="calY-=(calM===1?0:0);calM--;if(calM<1){calM=12;calY--;}renderCalendar(document.getElementById(\'content\'))">◀</button><div class="cal-month">'+calY+'年'+calM+'月</div><button onclick="calM++;if(calM>12){calM=1;calY++;}renderCalendar(document.getElementById(\'content\'))">▶</button><button class="bg" onclick="initCM();renderCalendar(document.getElementById(\'content\'))" style="font-size:11px;margin-left:8px;font-weight:700;color:'+(isCurrentMonth?'var(--sub)':'var(--pri)')+';border-color:'+(isCurrentMonth?'var(--border)':'var(--pri)')+'" title="現在の月に切り替え">今月</button></div>'+
     '<div class="card" style="padding:10px"><div id="cal-g">読み込み中...</div></div><div id="cal-d"></div>';
   var ym=calY+'-'+String(calM).padStart(2,'0');var att=[],tempRecs=[],closedDays=[];
   try{var results=await Promise.all([gas('getAttendance',ym),gas('getTempByMonth',ym),cachedGas('getClosedDays',ym)]);att=results[0];tempRecs=results[1];closedDays=results[2]||[];}catch(e){}
@@ -5694,9 +5798,11 @@ function switchAttSubTab(sub){
   renderAttendance(document.getElementById('content'));
 }
 async function renderAttendance(c){
+  var curToday = today();
+  if(!attDate || attDate < curToday) attDate = curToday;
   if(!S.attSubTab)S.attSubTab='daily';
   if(!S.attUserId && S.users.length>0)S.attUserId=S.users[0].id;
-  if(!S.attMonth)S.attMonth=today().slice(0,7);
+  if(!S.attMonth || S.attMonth < curToday.slice(0,7))S.attMonth=curToday.slice(0,7);
 
   var subTabs='<div class="filter-tabs no-print">'+
     '<button class="filter-tab'+(S.attSubTab==='daily'?' active':'')+'" onclick="switchAttSubTab(\'daily\')">日別管理</button>'+
@@ -5704,7 +5810,19 @@ async function renderAttendance(c){
     '</div>';
 
   if(S.attSubTab==='daily'){
-    c.innerHTML='<div class="hd-row"><h2>📝 出欠・日報管理</h2><div style="display:flex;gap:8px;align-items:center"><input type="date" id="att-date" value="'+attDate+'" onchange="attDate=this.value;loadAtt()"><span style="font-size:12px;color:var(--sub)" id="att-wd">('+weekday(attDate)+')</span><button class="bg" onclick="loadAtt()" style="font-size:11px;padding:3px 9px" title="最新の打刻・出欠データを再取得">🔄 更新</button><button class="ba" onclick="bulkPresent()" style="font-size:11px">予定者を一括出席</button></div></div>'+
+    var isToday = (attDate === curToday);
+    var badgeHtml = isToday
+      ? '<span id="att-date-badge" style="font-size:11px;padding:2px 8px;border-radius:12px;background:#dcfce7;color:#15803d;font-weight:700;border:1px solid #86efac">本日</span>'
+      : '<span id="att-date-badge" style="font-size:11px;padding:2px 8px;border-radius:12px;background:#fef3c7;color:#92400e;font-weight:700;border:1px solid #fde68a" title="過去または別の日付を表示しています">⚠️ 過去日表示中</span>';
+
+    c.innerHTML='<div class="hd-row"><h2>📝 出欠・日報管理</h2><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+      '<input type="date" id="att-date" value="'+attDate+'" onchange="attDate=this.value;loadAtt()">' +
+      '<span style="font-size:12px;color:var(--sub)" id="att-wd">('+weekday(attDate)+')</span>' +
+      badgeHtml +
+      '<button class="bg" id="btn-att-today" onclick="attDate=today();document.getElementById(\'att-date\').value=attDate;loadAtt()" style="font-size:11px;padding:3px 9px;font-weight:700;color:'+(isToday?'var(--sub)':'var(--pri)')+';border-color:'+(isToday?'var(--border)':'var(--pri)')+'" title="本日の日付（'+curToday+'）に切り替え">📅 今日へ</button>' +
+      '<button class="bg" onclick="loadAtt()" style="font-size:11px;padding:3px 9px" title="最新の打刻・出欠データを再取得">🔄 更新</button>' +
+      '<button class="ba" onclick="bulkPresent()" style="font-size:11px">予定者を一括出席</button>' +
+    '</div></div>'+
       subTabs+
       '<div class="card"><div class="tbl-wrap" id="att-tbl">読み込み中...</div></div><div id="att-modal"></div>';
     loadAtt();
@@ -5733,7 +5851,22 @@ async function loadAtt(){
     showLoading('att-tbl');
     var results=await Promise.all([gas('getAttendanceByDate',attDate),gas('getDailyByDate',attDate)]);
     attData=results[0];dailyData=results[1];
-    document.getElementById('att-wd').textContent='('+weekday(attDate)+')';
+    var wdEl = document.getElementById('att-wd');
+    if(wdEl) wdEl.textContent='('+weekday(attDate)+')';
+
+    var isToday = (attDate === today());
+    var badgeEl = document.getElementById('att-date-badge');
+    if(badgeEl){
+      badgeEl.outerHTML = isToday
+        ? '<span id="att-date-badge" style="font-size:11px;padding:2px 8px;border-radius:12px;background:#dcfce7;color:#15803d;font-weight:700;border:1px solid #86efac">本日</span>'
+        : '<span id="att-date-badge" style="font-size:11px;padding:2px 8px;border-radius:12px;background:#fef3c7;color:#92400e;font-weight:700;border:1px solid #fde68a" title="過去または別の日付を表示しています">⚠️ 過去日表示中</span>';
+    }
+    var btnToday = document.getElementById('btn-att-today');
+    if(btnToday){
+      btnToday.style.color = isToday ? 'var(--sub)' : 'var(--pri)';
+      btnToday.style.borderColor = isToday ? 'var(--border)' : 'var(--pri)';
+    }
+
     renderAttTbl();
   }catch(e){
     document.getElementById('att-tbl').innerHTML='読み込み失敗';
@@ -6503,11 +6636,20 @@ async function batchFillPastMealRateBtn() {
 var tDate=today(),tRoutes=[],tSubTab='daily';
 
 async function renderTransport(c){
+  var curToday = today();
+  if(!tDate || tDate < curToday) tDate = curToday;
+  var isToday = (tDate === curToday);
+  var badgeHtml = isToday
+    ? '<span id="t-date-badge" style="font-size:11px;padding:2px 8px;border-radius:12px;background:#dcfce7;color:#15803d;font-weight:700;border:1px solid #86efac">本日</span>'
+    : '<span id="t-date-badge" style="font-size:11px;padding:2px 8px;border-radius:12px;background:#fef3c7;color:#92400e;font-weight:700;border:1px solid #fde68a" title="過去または別の日付を表示しています">⚠️ 過去日表示中</span>';
+
   c.innerHTML=
     '<div class="hd-row"><h2>🚐 送迎管理</h2></div>'+
     '<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap">'+
-      '<input type="date" id="t-date" value="'+tDate+'" onchange="tDate=this.value;document.getElementById(\'t-dow\').textContent=\'（\'+weekday(tDate)+\'）\';loadRoutes()">'+
+      '<input type="date" id="t-date" value="'+tDate+'" onchange="tDate=this.value;loadRoutes()">'+
       '<span id="t-dow" style="font-size:13px;color:var(--sub)">（'+weekday(tDate)+'）</span>'+
+      badgeHtml +
+      '<button class="bg" id="btn-t-today" onclick="tDate=today();document.getElementById(\'t-date\').value=tDate;loadRoutes()" style="font-size:11px;padding:3px 9px;font-weight:700;color:'+(isToday?'var(--sub)':'var(--pri)')+';border-color:'+(isToday?'var(--border)':'var(--pri)')+'" title="本日の日付（'+curToday+'）に切り替え">📅 今日へ</button>'+
       '<button class="bp" onclick="openNewRoute()">＋ ルートを追加</button>'+
       '<button class="bg" onclick="autoGenRoutes()" style="font-size:12px">🔄 当日予定者から自動生成</button>'+
       '<button class="bg" onclick="printRoutesByPattern(\'morning\')" style="font-size:12px">🖨 朝の送迎を印刷</button>'+
@@ -6521,6 +6663,20 @@ async function renderTransport(c){
 async function loadRoutes(){
   try{
     showLoading('t-routes','送迎ルートを読み込み中...');
+    var dowEl = document.getElementById('t-dow');
+    if(dowEl) dowEl.textContent = '（' + weekday(tDate) + '）';
+    var isToday = (tDate === today());
+    var badgeEl = document.getElementById('t-date-badge');
+    if(badgeEl){
+      badgeEl.outerHTML = isToday
+        ? '<span id="t-date-badge" style="font-size:11px;padding:2px 8px;border-radius:12px;background:#dcfce7;color:#15803d;font-weight:700;border:1px solid #86efac">本日</span>'
+        : '<span id="t-date-badge" style="font-size:11px;padding:2px 8px;border-radius:12px;background:#fef3c7;color:#92400e;font-weight:700;border:1px solid #fde68a" title="過去または別の日付を表示しています">⚠️ 過去日表示中</span>';
+    }
+    var btnToday = document.getElementById('btn-t-today');
+    if(btnToday){
+      btnToday.style.color = isToday ? 'var(--sub)' : 'var(--pri)';
+      btnToday.style.borderColor = isToday ? 'var(--border)' : 'var(--pri)';
+    }
     tRoutes=await gas('getRoutesByDate',tDate);
     renderRouteCards();
   }catch(e){document.getElementById('t-routes').innerHTML='読み込み失敗';}
