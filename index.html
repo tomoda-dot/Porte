@@ -8907,7 +8907,7 @@ async function loadE(){
     var curPayFilter = window._ePayFilter || 'all';
 
     var displayUsers = activeUsers.filter(function(u){
-      if(eT === 'proxyReceipt') return true;
+      if(eT === 'proxyReceipt' || eT === 'receipt') return true;
       if(curPayFilter === 'all') return true;
       var effUMonth = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, eM + '-01')) : u;
       var pm = effUMonth.bentoPaymentMethod || u.bentoPaymentMethod || '工賃払い';
@@ -8924,7 +8924,7 @@ async function loadE(){
       window._eUid = uid;
     }
     var userSelHtml='<div class="no-print" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">';
-    if(eT !== 'proxyReceipt'){
+    if(eT !== 'proxyReceipt' && eT !== 'receipt'){
       userSelHtml+='<label style="font-size:12px;font-weight:700;color:var(--pri)">💳 支払方法:</label>';
       userSelHtml+='<select onchange="window._ePayFilter=this.value;window._eUid=\'\';loadE()" style="padding:5px 10px;font-size:13px;border:1px solid #ccc;border-radius:6px;font-weight:600">';
       userSelHtml+='<option value="all"'+(curPayFilter==='all'?' selected':'')+'>すべての支払方法</option>';
@@ -8939,7 +8939,8 @@ async function loadE(){
     displayUsers.forEach(function(u){
       var effUMonth = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, eM + '-01')) : u;
       var pmStr = effUMonth.bentoPaymentMethod || u.bentoPaymentMethod || '工賃払い';
-      var lbl=esc(u.name)+(u.userStatus==='利用終了'?' (終了)':'')+(eT==='proxyReceipt'?'':' ['+esc(pmStr)+']');
+      var hidePmSuffix = (eT === 'proxyReceipt' || eT === 'receipt');
+      var lbl=esc(u.name)+(u.userStatus==='利用終了'?' (終了)':'')+(hidePmSuffix?'':' ['+esc(pmStr)+']');
       userSelHtml+='<option value="'+u.id+'"'+(uid===u.id?' selected':'')+'>'+lbl+'</option>';
     });
     userSelHtml+='</select>';
@@ -9160,6 +9161,7 @@ async function printAllIRP(){
     var curPayFilter = window._ePayFilter || 'all';
     var users=S.users.filter(function(u){
       if(!isUserActive(u,eM)) return false;
+      if(eT === 'receipt') return true;
       if(curPayFilter === 'all') return true;
       var effUMonth = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, eM + '-01')) : u;
       var pm = effUMonth.bentoPaymentMethod || u.bentoPaymentMethod || '工賃払い';
