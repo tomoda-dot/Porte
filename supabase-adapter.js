@@ -1043,11 +1043,11 @@ async function _calcAttendanceList(ym){
         bc += bCount;
         var pm=rec.bentoPaymentMethod || (effU&&effU.bentoPaymentMethod) || '工賃払い';
         var isFreeMeal = String(rec.bento||'').includes('無料') || String(rec.bento||'').includes('体験食');
-        if(isFreeMeal || pm==='無料' || pm==='対象外'){
-          // 無料体験食：工賃控除しない
+        if(isFreeMeal || pm==='無料' || pm==='対象外' || pm==='なし'){
+          // 無料体験食・対象外・なし：工賃控除しない
         } else if(pm==='当日')bcDaily += bCount;
-        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext += bCount;
-        else bcDeduct += bCount;
+        else if(pm==='月末締め翌月払い'||pm==='月末締め翌月払い（振込）'||pm==='翌月払い'||pm==='翌月'||pm.indexOf('翌月')>=0||pm.indexOf('振込')>=0)bcNext += bCount;
+        else if(pm==='工賃払い')bcDeduct += bCount;
       }
     });
     var tTrans=recs.reduce(function(s,r){
@@ -1135,11 +1135,11 @@ async function _calcWageDetailPerUser(ym){
         var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
         var pm=rec.bentoPaymentMethod || (effU&&effU.bentoPaymentMethod) || '工賃払い';
         var isFreeMeal = String(rec.bento||'').includes('無料') || String(rec.bento||'').includes('体験食');
-        if(isFreeMeal || pm==='無料' || pm==='対象外'){
-          // 無料体験食：工賃控除しない
+        if(isFreeMeal || pm==='無料' || pm==='対象外' || pm==='なし'){
+          // 無料体験食・対象外・なし：工賃控除しない
         } else if(pm==='当日')bcDaily += bCount;
-        else if(pm==='月末締め翌月払い'||pm==='翌月払い'||pm==='翌月')bcNext += bCount;
-        else bcDeduct += bCount;
+        else if(pm==='月末締め翌月払い'||pm==='月末締め翌月払い（振込）'||pm==='翌月払い'||pm==='翌月'||pm.indexOf('翌月')>=0||pm.indexOf('振込')>=0)bcNext += bCount;
+        else if(pm==='工賃払い')bcDeduct += bCount;
       }
     });
     var items=[],wSub=0;Object.keys(byWt).forEach(function(k){var w=byWt[k];var rw=Math.round(w.wage);items.push({name:k,hours:Math.round(w.hours*100)/100,rate:w.rate,wage:rw});wSub+=rw;});
