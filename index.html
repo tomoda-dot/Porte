@@ -8907,6 +8907,7 @@ async function loadE(){
     var curPayFilter = window._ePayFilter || 'all';
 
     var displayUsers = activeUsers.filter(function(u){
+      if(eT === 'proxyReceipt') return true;
       if(curPayFilter === 'all') return true;
       var effUMonth = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, eM + '-01')) : u;
       var pm = effUMonth.bentoPaymentMethod || u.bentoPaymentMethod || '工賃払い';
@@ -8923,25 +8924,29 @@ async function loadE(){
       window._eUid = uid;
     }
     var userSelHtml='<div class="no-print" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">';
-    userSelHtml+='<label style="font-size:12px;font-weight:700;color:var(--pri)">💳 支払方法:</label>';
-    userSelHtml+='<select onchange="window._ePayFilter=this.value;window._eUid=\'\';loadE()" style="padding:5px 10px;font-size:13px;border:1px solid #ccc;border-radius:6px;font-weight:600">';
-    userSelHtml+='<option value="all"'+(curPayFilter==='all'?' selected':'')+'>すべての支払方法</option>';
-    userSelHtml+='<option value="月末締め翌月払い（振込）"'+(curPayFilter==='月末締め翌月払い（振込）'?' selected':'')+'>月末締め翌月払い（振込）</option>';
-    userSelHtml+='<option value="月末締め翌月払い"'+(curPayFilter==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option>';
-    userSelHtml+='<option value="当日払い"'+(curPayFilter==='当日払い'||curPayFilter==='当日'?' selected':'')+'>当日払い</option>';
-    userSelHtml+='<option value="工賃払い"'+(curPayFilter==='工賃払い'?' selected':'')+'>工賃払い</option>';
-    userSelHtml+='</select>';
+    if(eT !== 'proxyReceipt'){
+      userSelHtml+='<label style="font-size:12px;font-weight:700;color:var(--pri)">💳 支払方法:</label>';
+      userSelHtml+='<select onchange="window._ePayFilter=this.value;window._eUid=\'\';loadE()" style="padding:5px 10px;font-size:13px;border:1px solid #ccc;border-radius:6px;font-weight:600">';
+      userSelHtml+='<option value="all"'+(curPayFilter==='all'?' selected':'')+'>すべての支払方法</option>';
+      userSelHtml+='<option value="月末締め翌月払い（振込）"'+(curPayFilter==='月末締め翌月払い（振込）'?' selected':'')+'>月末締め翌月払い（振込）</option>';
+      userSelHtml+='<option value="月末締め翌月払い"'+(curPayFilter==='月末締め翌月払い'?' selected':'')+'>月末締め翌月払い</option>';
+      userSelHtml+='<option value="当日払い"'+(curPayFilter==='当日払い'||curPayFilter==='当日'?' selected':'')+'>当日払い</option>';
+      userSelHtml+='<option value="工賃払い"'+(curPayFilter==='工賃払い'?' selected':'')+'>工賃払い</option>';
+      userSelHtml+='</select>';
+    }
     userSelHtml+='<select id="eU-sel" onchange="window._eUid=this.value;loadE()" style="padding:5px 10px;font-size:13px;border:1px solid #ccc;border-radius:6px">';
     userSelHtml+='<option value="">利用者を選択 ('+displayUsers.length+'名)</option>';
     displayUsers.forEach(function(u){
       var effUMonth = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, eM + '-01')) : u;
       var pmStr = effUMonth.bentoPaymentMethod || u.bentoPaymentMethod || '工賃払い';
-      var lbl=esc(u.name)+(u.userStatus==='利用終了'?' (終了)':'')+' ['+esc(pmStr)+']';
+      var lbl=esc(u.name)+(u.userStatus==='利用終了'?' (終了)':'')+(eT==='proxyReceipt'?'':' ['+esc(pmStr)+']');
       userSelHtml+='<option value="'+u.id+'"'+(uid===u.id?' selected':'')+'>'+lbl+'</option>';
     });
     userSelHtml+='</select>';
     userSelHtml+='<button class="bp" onclick="window.print()" style="font-size:11px;padding:3px 10px">🖨 この利用者を印刷</button>';
-    userSelHtml+='<button class="bg" onclick="printAllIRP()" style="font-size:11px;padding:3px 10px">🖨 一括印刷 ('+displayUsers.length+'名)</button>';
+    if(eT !== 'proxyReceipt'){
+      userSelHtml+='<button class="bg" onclick="printAllIRP()" style="font-size:11px;padding:3px 10px">🖨 一括印刷 ('+displayUsers.length+'名)</button>';
+    }
     userSelHtml+='</div>';
 
     if(!uid){
