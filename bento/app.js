@@ -381,6 +381,67 @@ function cleanupAutoAttOrders() {
     }
   }
 
+  // 3. 当日の dailyOrders から欠席・通院・体調不良利用者の注文を削除
+  if (dailyOrders && dailyOrders[todayKey] && Array.isArray(dailyOrders[todayKey].orders)) {
+    const originalCount = dailyOrders[todayKey].orders.length;
+    dailyOrders[todayKey].orders = dailyOrders[todayKey].orders.filter(o => {
+      if (!o) return false;
+      const u = (porteUsers || []).find(user => 
+        (o.userId && String(user.id).trim() === String(o.userId).trim()) ||
+        (o.userName && String(user.name).trim() === String(o.userName).trim())
+      );
+      if (u) {
+        const isAbsent = (
+          u.wantsBento === false ||
+          u.status === '欠席' || u.status === '通院' || u.status === '体調不良' ||
+          u.status === '公休' || u.status === '調整休' || u.status === '欠勤' ||
+          String(u.status || '').includes('欠') || String(u.status || '').includes('休') ||
+          String(u.status || '').includes('通院') || String(u.status || '').includes('体調')
+        );
+        if (isAbsent) return false;
+      }
+      return true;
+    });
+    if (dailyOrders[todayKey].orders.length !== originalCount) {
+      modified = true;
+    }
+  }
+
+  // 4. 当日の dailyOrders の誤確定（11:30の不具合による自動引き継ぎ注文）を完全初期化
+  if (dailyOrders && dailyOrders['2026-11-02']) {
+    const rec = dailyOrders['2026-11-02'];
+    if (rec.confirmedAt && rec.confirmedAt.includes('11:30')) {
+      delete dailyOrders['2026-11-02'];
+      modified = true;
+    }
+  }
+
+  // 11:30の不具合による注文履歴ログを削除
+  if (Array.isArray(orderHistory)) {
+    const prevLen = orderHistory.length;
+    orderHistory = orderHistory.filter(o => {
+      if (o.dateKey === '2026-11-02' && (String(o.id).includes('1793586617921') || String(o.date).includes('11:30'))) {
+        return false;
+      }
+      return true;
+    });
+    if (orderHistory.length !== prevLen) modified = true;
+  }
+
+  // 5. 本日注文が未確定または空の場合、本日明示的に選択されていない利用者の選択を空に初期化
+  const todayOrders = (dailyOrders[todayKey] && Array.isArray(dailyOrders[todayKey].orders)) ? dailyOrders[todayKey].orders : [];
+  if (todayOrders.length === 0 && Array.isArray(porteUsers)) {
+    porteUsers.forEach(u => {
+      if (!u.selectionDate || u.selectionDate !== todayKey) {
+        if (u.selectedBentoIds && u.selectedBentoIds.some(Boolean)) {
+          u.selectedBentoId = '';
+          u.selectedBentoIds = Array(u.bentoCount || 1).fill('');
+          modified = true;
+        }
+      }
+    });
+  }
+
   if (modified) {
     saveDailyOrdersToSupabase();
     saveOrderHistoryToSupabase();
@@ -506,8 +567,10 @@ function loadData() {
     // 本日の未確定選択状態をクリア
     porteUsers.forEach(u => {
       u.selectedBentoId = '';
-      u.selectedBentoIds = [];
+      u.selectedBentoIds = Array(u.bentoCount || 1).fill('');
+      u.selectionDate = '';
     });
+    localStorage.setItem('bento_porte_users_date', todayKey);
     savePorteUsers();
   }
   localStorage.setItem('bento_last_active_date', todayKey);
@@ -525,13 +588,19 @@ function saveTodaysMenu() {
 }
 
 function savePorteUsers() {
+  const todayKey = getTodayKey();
   localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+  localStorage.setItem('bento_porte_users_date', todayKey);
   savePorteUsersToSupabase();
   updateAndSaveDailyOrdersAndHistory();
 }
 
 async function savePorteUsersToSupabase() {
-  await saveSettingToSupabase('bento_porte_users', JSON.stringify(porteUsers));
+  const todayKey = getTodayKey();
+  await Promise.all([
+    saveSettingToSupabase('bento_porte_users', JSON.stringify(porteUsers)),
+    saveSettingToSupabase('bento_porte_users_date', todayKey)
+  ]);
 }
 
 function updateAndSaveDailyOrdersAndHistory() {
@@ -539,7 +608,24 @@ function updateAndSaveDailyOrdersAndHistory() {
   const currentOrders = [];
   porteUsers.forEach(u => {
     normalizeUserData(u);
-    if (u.wantsBento !== false && Array.isArray(u.selectedBentoIds)) {
+    // 欠席・通院・体調不良等の利用者は注文から完全除外
+    const isUserAbsent = (
+      u.wantsBento === false ||
+      u.status === '欠席' ||
+      u.status === '通院' ||
+      u.status === '体調不良' ||
+      u.status === '公休' ||
+      u.status === '調整休' ||
+      u.status === '欠勤' ||
+      u.status === 'お休み' ||
+      u.status === 'キャンセル' ||
+      String(u.status || '').includes('欠') ||
+      String(u.status || '').includes('休') ||
+      String(u.status || '').includes('通院') ||
+      String(u.status || '').includes('体調')
+    );
+
+    if (!isUserAbsent && Array.isArray(u.selectedBentoIds)) {
       u.selectedBentoIds.forEach((bId, idx) => {
         if (bId) {
           const b = bentoMaster.find(item => item.id === bId);
@@ -557,23 +643,21 @@ function updateAndSaveDailyOrdersAndHistory() {
     }
   });
 
-  const existingConfirmedAt = (dailyOrders[todayKey] && dailyOrders[todayKey].confirmedAt) ? dailyOrders[todayKey].confirmedAt : new Date().toLocaleString('ja-JP');
+  const isAlreadyConfirmed = (dailyOrders[todayKey] && dailyOrders[todayKey].status === 'CONFIRMED');
+  const existingConfirmedAt = (dailyOrders[todayKey] && dailyOrders[todayKey].confirmedAt) ? dailyOrders[todayKey].confirmedAt : (isAlreadyConfirmed ? new Date().toLocaleString('ja-JP') : null);
 
   if (currentOrders.length > 0) {
     dailyOrders[todayKey] = {
-      status: 'CONFIRMED',
+      status: isAlreadyConfirmed ? 'CONFIRMED' : 'DRAFT',
       confirmedAt: existingConfirmedAt,
       orders: currentOrders
     };
   } else {
-    // 注文が0件でも既存の確定注文や履歴ログを勝手に全消去しない
-    if (!dailyOrders[todayKey] || dailyOrders[todayKey].status !== 'CONFIRMED') {
-      dailyOrders[todayKey] = {
-        status: 'DRAFT',
-        confirmedAt: null,
-        orders: []
-      };
-    }
+    dailyOrders[todayKey] = {
+      status: 'DRAFT',
+      confirmedAt: null,
+      orders: []
+    };
   }
 
   saveDailyOrders();
@@ -582,6 +666,12 @@ function updateAndSaveDailyOrdersAndHistory() {
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const dateLabel = (parts.length === 3) ? `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)} ${timeStr}` : todayKey;
+
+  // 当日有効な注文以外を orderHistory から削除
+  orderHistory = orderHistory.filter(h => {
+    if (h.dateKey !== todayKey) return true;
+    return currentOrders.some(o => String(o.userId) === String(h.userId) && o.slotIndex === h.slotIndex);
+  });
 
   currentOrders.forEach(o => {
     const existingIndex = orderHistory.findIndex(h => h.dateKey === todayKey && String(h.userId) === String(o.userId) && h.slotIndex === o.slotIndex);
@@ -682,6 +772,7 @@ function mergePorteUsers(remoteUsers, localUsers) {
   if (!Array.isArray(remoteUsers) || remoteUsers.length === 0) return localUsers || [];
   if (!Array.isArray(localUsers) || localUsers.length === 0) return remoteUsers;
 
+  const todayKey = getTodayKey();
   const localMap = {};
   localUsers.forEach(u => {
     if (u && (u.id || u.name)) {
@@ -698,20 +789,24 @@ function mergePorteUsers(remoteUsers, localUsers) {
 
     const res = Object.assign({}, lu, ru);
 
-    const luIds = Array.isArray(lu.selectedBentoIds) ? lu.selectedBentoIds : (lu.selectedBentoId ? [lu.selectedBentoId] : []);
-    const ruIds = Array.isArray(ru.selectedBentoIds) ? ru.selectedBentoIds : (ru.selectedBentoId ? [ru.selectedBentoId] : []);
+    // 今日付の選択のみをマージ対象とする（前日以前の選択が復活するのを防止）
+    const isLuToday = lu.selectionDate === todayKey;
+    const isRuToday = ru.selectionDate === todayKey;
+
+    const luIds = (isLuToday && Array.isArray(lu.selectedBentoIds)) ? lu.selectedBentoIds : ((isLuToday && lu.selectedBentoId) ? [lu.selectedBentoId] : []);
+    const ruIds = (isRuToday && Array.isArray(ru.selectedBentoIds)) ? ru.selectedBentoIds : ((isRuToday && ru.selectedBentoId) ? [ru.selectedBentoId] : []);
     const maxLen = Math.max(luIds.length, ruIds.length, res.bentoCount || 1);
     const mergedIds = [];
     for (let i = 0; i < maxLen; i++) {
       const rVal = (ruIds[i] !== undefined && ruIds[i] !== null) ? ruIds[i] : '';
       const lVal = (luIds[i] !== undefined && luIds[i] !== null) ? luIds[i] : '';
-      // 空文字で既存の選択が上書きされないように保護（値がある方を優先）
       mergedIds[i] = rVal || lVal;
     }
     res.selectedBentoIds = mergedIds;
     res.selectedBentoId = mergedIds[0] || '';
     if (mergedIds.some(Boolean)) {
       res.wantsBento = true;
+      res.selectionDate = todayKey;
     }
     return res;
   });
@@ -745,9 +840,25 @@ function applyDailyOrdersToPorteUsers(dailyOrdersObj, usersArray) {
       (ord.userId && String(item.id).trim() === String(ord.userId).trim()) ||
       (ord.userName && String(item.name).trim() === String(ord.userName).trim())
     );
-    if (u) {
+    // 欠席・通院・体調不良の利用者は除外
+    const isUserAbsent = u && (
+      u.status === '欠席' || 
+      u.status === '通院' || 
+      u.status === '体調不良' || 
+      u.status === '公休' || 
+      u.status === '調整休' || 
+      u.status === '欠勤' || 
+      u.status === 'お休み' || 
+      u.status === 'キャンセル' ||
+      String(u.status || '').includes('欠') ||
+      String(u.status || '').includes('休') ||
+      String(u.status || '').includes('通院') ||
+      String(u.status || '').includes('体調')
+    );
+    if (u && !isUserAbsent) {
       normalizeUserData(u);
       u.wantsBento = true;
+      u.selectionDate = todayKey;
       if (!Array.isArray(u.selectedBentoIds)) u.selectedBentoIds = [];
       const slotIdx = ord.slotIndex !== undefined ? Number(ord.slotIndex) : 0;
       while (u.selectedBentoIds.length <= slotIdx) {
@@ -786,7 +897,7 @@ async function syncFromSupabase() {
     const SB = supabase.createClient(url, key);
 
     // 設定テーブルから商品マスター＆入荷ロットデータ＆利用者注文データを一括読み込み（全端末共有）
-    const keysToFetch = ['bento_master', 'bento_todays_menu', 'bento_order_history', 'bento_daily_orders', 'bento_porte_users'];
+    const keysToFetch = ['bento_master', 'bento_todays_menu', 'bento_order_history', 'bento_daily_orders', 'bento_porte_users', 'bento_porte_users_date'];
     const settingsRes = await SB.from('設定').select('*').in('key', keysToFetch);
     if (settingsRes.data && settingsRes.data.length > 0) {
       const latestByKey = {};
@@ -846,13 +957,28 @@ async function syncFromSupabase() {
         } catch(e) {}
       }
 
+      const todayKey = getTodayKey();
+      const bentoDate = latestByKey['bento_porte_users_date'] || localStorage.getItem('bento_porte_users_date');
+      const isBentoSameDay = (bentoDate === todayKey);
+
       if (latestByKey['bento_porte_users']) {
         try {
           const parsed = JSON.parse(latestByKey['bento_porte_users']);
           if (Array.isArray(parsed) && parsed.length > 0) {
+            // 前日以前のデータがSupabaseにある場合は、当日に前日のメニュー選択を引き継がないよう初期化
+            if (!isBentoSameDay) {
+              parsed.forEach(u => {
+                u.selectedBentoId = '';
+                u.selectedBentoIds = Array(u.bentoCount || 1).fill('');
+                u.selectionDate = '';
+              });
+            }
             porteUsers = mergePorteUsers(parsed, porteUsers);
-            applyDailyOrdersToPorteUsers(dailyOrders, porteUsers);
+            if (isBentoSameDay) {
+              applyDailyOrdersToPorteUsers(dailyOrders, porteUsers);
+            }
             localStorage.setItem('bento_porte_users', JSON.stringify(porteUsers));
+            localStorage.setItem('bento_porte_users_date', todayKey);
           }
         } catch(e) {}
       }
@@ -1273,14 +1399,29 @@ async function syncMonthlyAttendanceToDailyOrders(targetMonth) {
 
       const isAbsent = (
         att.status === '欠席' || 
+        att.status === '通院' || 
+        att.status === '体調不良' || 
         att.status === '公休' || 
         att.status === '調整休' || 
         att.status === '欠勤' || 
         att.status === 'お休み' || 
-        att.status === 'キャンセル'
+        att.status === 'キャンセル' ||
+        String(att.status || '').includes('欠') ||
+        String(att.status || '').includes('休') ||
+        String(att.status || '').includes('通院') ||
+        String(att.status || '').includes('体調')
       );
 
-      if (isAbsent) return;
+      if (isAbsent) {
+        if (dailyOrders[dateKey] && Array.isArray(dailyOrders[dateKey].orders)) {
+          const prevLen = dailyOrders[dateKey].orders.length;
+          dailyOrders[dateKey].orders = dailyOrders[dateKey].orders.filter(o => 
+            !(o && ((o.userId && uId && String(o.userId).trim() === uId) || (o.userName && uName && String(o.userName).trim() === uName)))
+          );
+          if (dailyOrders[dateKey].orders.length !== prevLen) modified = true;
+        }
+        return;
+      }
 
       const userMaster = porteUsers.find(u => (uId && String(u.id).trim() === uId) || (uName && String(u.name).trim() === uName));
       let defaultBento = '';
@@ -2307,6 +2448,11 @@ window.assignUserBentoSlot = function(userIndex, slotIndex, newBentoId) {
 
   user.selectedBentoIds[slotIndex] = newBentoId;
   user.selectedBentoId = user.selectedBentoIds[0] || '';
+  if (user.selectedBentoIds.some(Boolean)) {
+    user.selectionDate = getTodayKey();
+  } else {
+    user.selectionDate = '';
+  }
 
   savePorteUsers();
   renderAll();
@@ -3165,13 +3311,17 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         if (r) {
           isAbsent = (
             r.status === '欠席' || 
+            r.status === '通院' || 
+            r.status === '体調不良' || 
             r.status === '公休' || 
             r.status === '調整休' || 
             r.status === '欠勤' || 
             r.status === 'お休み' || 
             r.status === 'キャンセル' ||
             String(r.status || '').includes('欠') ||
-            String(r.status || '').includes('休')
+            String(r.status || '').includes('休') ||
+            String(r.status || '').includes('通院') ||
+            String(r.status || '').includes('体調')
           );
         } else {
           // 出欠レコードがない場合、登録利用曜日に入っていなければ「お休み（利用曜日外）」判定
@@ -3200,7 +3350,11 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         const noteText = (r && r.notes) ? r.notes : (u.note || u.特記事項 || '');
         let fullNote = '';
         if (isAbsent) {
-          if (!r && scheduleDays.length > 0 && !isScheduledToday) {
+          if (r && (r.status === '通院' || String(r.status).includes('通院'))) {
+            fullNote = noteText ? `【通院】${noteText}` : '【通院】';
+          } else if (r && (r.status === '体調不良' || String(r.status).includes('体調'))) {
+            fullNote = noteText ? `【体調不良】${noteText}` : '【体調不良】';
+          } else if (!r && scheduleDays.length > 0 && !isScheduledToday) {
             fullNote = noteText ? `【利用曜日外】${noteText}` : '【利用曜日外(本日お休み)】';
           } else {
             fullNote = noteText ? `【本日お休み】${noteText}` : '【本日お休み】';
@@ -3211,28 +3365,49 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
 
         // 既存の選択中のお弁当IDを保護・マージ (dailyOrders からも復元)
         const todayKey = getTodayKey();
-        const todayOrders = (dailyOrders[todayKey] && Array.isArray(dailyOrders[todayKey].orders)) ? dailyOrders[todayKey].orders : [];
-        const userTodayOrders = todayOrders.filter(o => 
-          (o.userId && String(o.userId).trim() === uId) || 
-          (o.userName && String(o.userName).trim() === uName)
-        );
+        let savedBentoIds = [];
+        let savedBentoCount = undefined;
+        let userSelectionDate = '';
 
-        const existingUser = porteUsers.find(item => String(item.id).trim() === uId || String(item.name).trim() === String(u.name || u.氏名).trim());
-        let savedBentoIds = existingUser && Array.isArray(existingUser.selectedBentoIds) ? [...existingUser.selectedBentoIds] : (existingUser && existingUser.selectedBentoId ? [existingUser.selectedBentoId] : []);
-        
-        if (userTodayOrders.length > 0) {
-          userTodayOrders.forEach(o => {
-            const slotIdx = o.slotIndex !== undefined ? Number(o.slotIndex) : 0;
-            while (savedBentoIds.length <= slotIdx) savedBentoIds.push('');
-            if (o.bentoId) savedBentoIds[slotIdx] = o.bentoId;
-          });
+        if (isAbsent) {
+          wantsBento = false;
+          savedBentoCount = 0;
+          savedBentoIds = [];
+          // 欠席者の本日注文がもし dailyOrders に残っていたら削除
+          if (dailyOrders[todayKey] && Array.isArray(dailyOrders[todayKey].orders)) {
+            dailyOrders[todayKey].orders = dailyOrders[todayKey].orders.filter(o => 
+              !(o && ((o.userId && String(o.userId).trim() === uId) || (o.userName && String(o.userName).trim() === uName)))
+            );
+          }
+        } else {
+          const existingUser = porteUsers.find(item => String(item.id).trim() === uId || String(item.name).trim() === String(u.name || u.氏名).trim());
+          if (existingUser && existingUser.selectionDate === todayKey) {
+            savedBentoIds = Array.isArray(existingUser.selectedBentoIds) ? [...existingUser.selectedBentoIds] : (existingUser.selectedBentoId ? [existingUser.selectedBentoId] : []);
+            savedBentoCount = existingUser.bentoCount;
+            userSelectionDate = todayKey;
+          }
+
+          const todayOrders = (dailyOrders[todayKey] && Array.isArray(dailyOrders[todayKey].orders)) ? dailyOrders[todayKey].orders : [];
+          const userTodayOrders = todayOrders.filter(o => 
+            (o.userId && String(o.userId).trim() === uId) || 
+            (o.userName && String(o.userName).trim() === uName)
+          );
+
+          if (userTodayOrders.length > 0) {
+            userTodayOrders.forEach(o => {
+              const slotIdx = o.slotIndex !== undefined ? Number(o.slotIndex) : 0;
+              while (savedBentoIds.length <= slotIdx) savedBentoIds.push('');
+              if (o.bentoId) savedBentoIds[slotIdx] = o.bentoId;
+            });
+            userSelectionDate = todayKey;
+          }
+
+          if (savedBentoIds.some(Boolean)) {
+            wantsBento = true;
+          }
         }
 
         const savedBentoId = savedBentoIds[0] || '';
-        const savedBentoCount = existingUser && existingUser.bentoCount !== undefined ? existingUser.bentoCount : undefined;
-        if (savedBentoIds.some(Boolean)) {
-          wantsBento = true;
-        }
 
         loadedUsers.push({
           id: u.id || `P${idx+1}`,
@@ -3246,6 +3421,7 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
           bentoCount: savedBentoCount,
           selectedBentoId: savedBentoId,
           selectedBentoIds: savedBentoIds,
+          selectionDate: userSelectionDate,
           bento: u.bento || 'なし',
           scheduleHistory: u.scheduleHistory || null
         });
@@ -3279,8 +3455,8 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         }
 
         const existingUser = porteUsers.find(item => String(item.id).trim() === sId || String(item.name).trim() === (`👔 ${sName}`));
-        const savedBentoId = existingUser ? (existingUser.selectedBentoId || '') : '';
-        const savedBentoIds = existingUser && Array.isArray(existingUser.selectedBentoIds) ? [...existingUser.selectedBentoIds] : (savedBentoId ? [savedBentoId] : []);
+        const savedBentoId = (existingUser && existingUser.selectionDate === todayKey) ? (existingUser.selectedBentoId || '') : '';
+        const savedBentoIds = (existingUser && existingUser.selectionDate === todayKey && Array.isArray(existingUser.selectedBentoIds)) ? [...existingUser.selectedBentoIds] : (savedBentoId ? [savedBentoId] : []);
         const savedBentoCount = existingUser && existingUser.bentoCount !== undefined ? existingUser.bentoCount : undefined;
 
         loadedUsers.push({
