@@ -3239,6 +3239,7 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
     
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayKey = getTodayKey();
 
     const [userRes, attRes, staffRes, staffAttRes] = await Promise.all([
       SB.from('利用者').select('*'),
@@ -3364,7 +3365,6 @@ async function fetchPorteDbAttendance(isAutoLoad = false) {
         }
 
         // 既存の選択中のお弁当IDを保護・マージ (dailyOrders からも復元)
-        const todayKey = getTodayKey();
         let savedBentoIds = [];
         let savedBentoCount = undefined;
         let userSelectionDate = '';
