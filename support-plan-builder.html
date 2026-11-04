@@ -694,7 +694,7 @@
           🔄 別の角度から再考案・再提案
         </button>
       </div>
-      <div class="card-desc">提案された5件の長期目標から、最適な1件を選択してください。現在の提案にしっくり来ない場合は、以下の重視ポイントを選択または入力して【再考案】ができます。</div>
+      <div class="card-desc">提案された5件または6番目の自由入力から、最適な1件を選択してください。ご自身で考えた目標を直接入力して提案することも可能です。現在の提案にしっくり来ない場合は、以下の重視ポイントを選択または入力して【再考案】ができます。</div>
 
       <!-- 再考案 アシスタントブロック -->
       <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:10px 14px; margin-bottom:14px;">
@@ -734,7 +734,7 @@
           🔄 別の角度から再考案・再提案
         </button>
       </div>
-      <div class="card-desc">長期目標を達成するための短期目標5件から1件を選択してください。現在の提案にしっくり来ない場合は、以下の重視ポイントを選択または入力して【再考案】ができます。</div>
+      <div class="card-desc">長期目標を達成するための短期目標5件または6番目の自由入力から、最適な1件を選択してください。ご自身で考えた目標を直接入力して提案することも可能です。現在の提案にしっくり来ない場合は、以下の重視ポイントを選択または入力して【再考案】ができます。</div>
 
       <!-- 再考案 アシスタントブロック -->
       <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:10px 14px; margin-bottom:14px;">
@@ -939,6 +939,10 @@
     let selectedShortGoalText = '';
     let currentLongTermGoals = [];
     let currentShortTermGoals = [];
+    let customLongGoalText = '';
+    let customShortGoalText = '';
+    let isCustomLongSelected = false;
+    let isCustomShortSelected = false;
     let generatedDetailItems = [];
     let selectedDetailIndices = [];
     let porteUsersList = [];
@@ -1623,9 +1627,22 @@
         }
       }
 
+      if (!isReload) {
+        customLongGoalText = '';
+        isCustomLongSelected = false;
+        selectedLongGoalText = '';
+        document.getElementById('btnToStep2').disabled = true;
+      } else {
+        if (isCustomLongSelected && customLongGoalText.trim()) {
+          selectedLongGoalText = customLongGoalText.trim();
+          document.getElementById('btnToStep2').disabled = false;
+        } else {
+          isCustomLongSelected = false;
+          selectedLongGoalText = '';
+          document.getElementById('btnToStep2').disabled = true;
+        }
+      }
       renderGoalOptions('longTermGoalList', goals, 'long');
-      selectedLongGoalText = '';
-      document.getElementById('btnToStep2').disabled = true;
 
       if (lastAiCallStatus.usedLiveAI) {
         showToast(focusText ? `✨ AIが「${focusText}」に特化した長期目標案を生成しました！` : (isReload ? '✨ AIが新しい視点で長期目標案を再考案しました！' : '✨ AIが長期目標案を生成しました！'));
@@ -1715,9 +1732,22 @@
           </div>
         </div>
       `;
+      if (!isReload) {
+        customShortGoalText = '';
+        isCustomShortSelected = false;
+        selectedShortGoalText = '';
+        document.getElementById('btnToStep3').disabled = true;
+      } else {
+        if (isCustomShortSelected && customShortGoalText.trim()) {
+          selectedShortGoalText = customShortGoalText.trim();
+          document.getElementById('btnToStep3').disabled = false;
+        } else {
+          isCustomShortSelected = false;
+          selectedShortGoalText = '';
+          document.getElementById('btnToStep3').disabled = true;
+        }
+      }
       renderGoalOptions('shortTermGoalList', goals, 'short');
-      selectedShortGoalText = '';
-      document.getElementById('btnToStep3').disabled = true;
 
       if (lastAiCallStatus.usedLiveAI) {
         showToast(focusText ? `✨ AIが「${focusText}」に特化した短期目標案を生成しました！` : (isReload ? '✨ AIが新しいステップで短期目標案を再考案しました！' : '✨ AIが短期目標案を生成しました！'));
@@ -1988,17 +2018,61 @@ ${focusPrompt}${keptPrompt}
       } else {
         currentShortTermGoals = cleanGoals;
       }
-      container.innerHTML = cleanGoals.map((g, idx) => `
-        <div class="goal-card" onclick="selectGoalOption(this, '${type}', ${idx})">
+
+      const isCustomSelected = (type === 'long' ? isCustomLongSelected : isCustomShortSelected);
+      const customVal = (type === 'long' ? customLongGoalText : customShortGoalText) || '';
+
+      let html = cleanGoals.map((g, idx) => {
+        const isSelected = !isCustomSelected && ((type === 'long' ? selectedLongGoalText : selectedShortGoalText) === g);
+        return `
+        <div class="goal-card${isSelected ? ' selected' : ''}" onclick="selectGoalOption(this, '${type}', ${idx})">
           <div class="goal-badge">${idx + 1}</div>
           <div class="goal-text">${escHtml(g)}</div>
         </div>
-      `).join('');
+      `;
+      }).join('');
+
+      // 6番目の自由入力項目
+      html += `
+        <div class="goal-card custom-goal-card${isCustomSelected ? ' selected' : ''}" id="customGoalCard_${type}" onclick="selectCustomGoalOption('${type}')" style="background:${isCustomSelected ? 'var(--primary-light)' : '#f8fafc'}; border:2px ${isCustomSelected ? 'solid var(--primary)' : 'dashed #94a3b8'};">
+          <div class="goal-badge" style="${isCustomSelected ? 'background:var(--primary); color:#fff;' : 'background:#64748b; color:#fff;'}">6</div>
+          <div class="goal-text" style="width:100%;">
+            <div style="font-weight:700; color:#1e293b; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+              <span>✏️ 自由入力（独自の${type === 'long' ? '長期目標' : '短期目標'}を入力して提案）</span>
+              <span style="font-size:11px; font-weight:normal; color:#64748b;">※自分で考えた目標を直接入力して設定できます</span>
+            </div>
+            <textarea id="customGoalInput_${type}" rows="2" 
+              placeholder="${type === 'long' ? '独自の長期目標を入力してください（例: 得意な作業を中心に通所リズムを確立し、自信を育む。）' : '独自の短期目標を入力してください（例: 1枠50分の作業に集中し、終了後に自己点検を行う。）'}" 
+              style="width:100%; font-size:13px; line-height:1.5; padding:8px 10px; border:1.5px solid ${isCustomSelected ? 'var(--primary)' : '#cbd5e1'}; border-radius:6px; resize:vertical; font-family:inherit; box-sizing:border-box; background:#fff;"
+              onclick="event.stopPropagation(); selectCustomGoalOption('${type}')"
+              oninput="onCustomGoalInput('${type}', this.value)">${escHtml(customVal)}</textarea>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
     }
 
     function selectGoalOption(el, type, target) {
+      if (type === 'long') {
+        isCustomLongSelected = false;
+      } else {
+        isCustomShortSelected = false;
+      }
+
       el.parentElement.querySelectorAll('.goal-card').forEach(c => c.classList.remove('selected'));
       el.classList.add('selected');
+
+      const customCard = document.getElementById('customGoalCard_' + type);
+      if (customCard) {
+        customCard.classList.remove('selected');
+        customCard.style.background = '#f8fafc';
+        customCard.style.border = '2px dashed #94a3b8';
+        const badge = customCard.querySelector('.goal-badge');
+        if (badge) { badge.style.background = '#64748b'; badge.style.color = '#fff'; }
+        const input = document.getElementById('customGoalInput_' + type);
+        if (input) input.style.borderColor = '#cbd5e1';
+      }
 
       const text = (typeof target === 'number')
         ? ((type === 'long' ? currentLongTermGoals : currentShortTermGoals)[target] || '')
@@ -2006,10 +2080,72 @@ ${focusPrompt}${keptPrompt}
 
       if (type === 'long') {
         selectedLongGoalText = text;
-        document.getElementById('btnToStep2').disabled = false;
+        document.getElementById('btnToStep2').disabled = !text;
       } else {
         selectedShortGoalText = text;
-        document.getElementById('btnToStep3').disabled = false;
+        document.getElementById('btnToStep3').disabled = !text;
+      }
+    }
+
+    function selectCustomGoalOption(type) {
+      const card = document.getElementById('customGoalCard_' + type);
+      const input = document.getElementById('customGoalInput_' + type);
+      const container = card ? card.parentElement : null;
+
+      if (container) {
+        container.querySelectorAll('.goal-card').forEach(c => c.classList.remove('selected'));
+      }
+      if (card) {
+        card.classList.add('selected');
+        card.style.background = 'var(--primary-light)';
+        card.style.border = '2px solid var(--primary)';
+        const badge = card.querySelector('.goal-badge');
+        if (badge) { badge.style.background = 'var(--primary)'; badge.style.color = '#fff'; }
+      }
+      if (input) {
+        input.style.borderColor = 'var(--primary)';
+        input.focus();
+      }
+
+      const val = input ? input.value.trim() : '';
+      if (type === 'long') {
+        isCustomLongSelected = true;
+        customLongGoalText = input ? input.value : '';
+        selectedLongGoalText = val;
+        document.getElementById('btnToStep2').disabled = !val;
+      } else {
+        isCustomShortSelected = true;
+        customShortGoalText = input ? input.value : '';
+        selectedShortGoalText = val;
+        document.getElementById('btnToStep3').disabled = !val;
+      }
+    }
+
+    function onCustomGoalInput(type, value) {
+      const card = document.getElementById('customGoalCard_' + type);
+      const container = card ? card.parentElement : null;
+      if (container) {
+        container.querySelectorAll('.goal-card').forEach(c => c.classList.remove('selected'));
+      }
+      if (card) {
+        card.classList.add('selected');
+        card.style.background = 'var(--primary-light)';
+        card.style.border = '2px solid var(--primary)';
+        const badge = card.querySelector('.goal-badge');
+        if (badge) { badge.style.background = 'var(--primary)'; badge.style.color = '#fff'; }
+      }
+
+      const val = value.trim();
+      if (type === 'long') {
+        isCustomLongSelected = true;
+        customLongGoalText = value;
+        selectedLongGoalText = val;
+        document.getElementById('btnToStep2').disabled = !val;
+      } else {
+        isCustomShortSelected = true;
+        customShortGoalText = value;
+        selectedShortGoalText = val;
+        document.getElementById('btnToStep3').disabled = !val;
       }
     }
 
@@ -2371,6 +2507,10 @@ ${document.getElementById('sheetShortGoal').value}
     function resetAllSteps() {
       selectedLongGoalText = '';
       selectedShortGoalText = '';
+      customLongGoalText = '';
+      customShortGoalText = '';
+      isCustomLongSelected = false;
+      isCustomShortSelected = false;
       generatedDetailItems = [];
       selectedDetailIndices = [];
       goToStep(0);
