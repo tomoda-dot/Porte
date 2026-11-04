@@ -2232,7 +2232,7 @@ function renderUsers(c){
       S.staff.filter(function(s){return _isStaffActive(s);}).map(function(s){return'<option value="'+s.id+'"'+(uStaff===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select>'+
     '</div>'+
     // テーブル
-    '<div class="tbl-wrap"><table style="min-width:850px"><thead><tr><th style="white-space:nowrap">ID(受給者証番号)</th><th style="white-space:nowrap">種類</th><th style="white-space:nowrap">氏名</th><th style="white-space:nowrap">担当</th><th style="white-space:nowrap">利用開始日</th><th style="white-space:nowrap">受給者証満了日</th><th style="white-space:nowrap">利用終了日</th><th style="white-space:nowrap">状態</th></tr></thead><tbody id="u-tbody"></tbody></table></div>'+
+    '<div class="tbl-wrap"><table style="min-width:850px"><thead><tr><th style="white-space:nowrap">受給者証番号</th><th style="white-space:nowrap">種類</th><th style="white-space:nowrap">氏名</th><th style="white-space:nowrap">担当</th><th style="white-space:nowrap">利用開始日</th><th style="white-space:nowrap">受給者証満了日</th><th style="white-space:nowrap">利用終了日</th><th style="white-space:nowrap">状態</th></tr></thead><tbody id="u-tbody"></tbody></table></div>'+
     '<div id="u-count" style="margin-top:8px;font-size:11px;color:var(--sub)"></div>'+
     '</div><div id="u-modal"></div>';
   filterU();
