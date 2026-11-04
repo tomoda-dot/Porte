@@ -937,6 +937,8 @@
     let currentStep = 0;
     let selectedLongGoalText = '';
     let selectedShortGoalText = '';
+    let currentLongTermGoals = [];
+    let currentShortTermGoals = [];
     let generatedDetailItems = [];
     let selectedDetailIndices = [];
     let porteUsersList = [];
@@ -1475,6 +1477,73 @@
       return null;
     }
 
+    // Helper: Escaping HTML
+    function escHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Helper: Extract clean string from possible AI object / value
+    function extractGoalText(g) {
+      if (g === null || g === undefined) return '';
+      if (typeof g === 'string') return g.trim();
+      if (typeof g === 'number') return String(g);
+      if (typeof g === 'object') {
+        const candidates = [
+          g.goal, g.text, g.content, g.title,
+          g.shortTermGoal, g.short_term_goal, g.shortGoal,
+          g.longTermGoal, g.long_term_goal, g.longGoal,
+          g.target, g.plan, g.name,
+          g['短期目標'], g['長期目標'], g['目標'], g['到達目標'], g['内容'], g['案'],
+          g.description
+        ];
+        for (const c of candidates) {
+          if (typeof c === 'string' && c.trim()) return c.trim();
+        }
+        for (const v of Object.values(g)) {
+          if (typeof v === 'string' && v.trim()) return v.trim();
+          if (typeof v === 'object' && v !== null) {
+            const nested = extractGoalText(v);
+            if (nested) return nested;
+          }
+        }
+      }
+      return String(g || '').trim();
+    }
+
+    // Helper: Normalize goal list to array of clean strings
+    function normalizeGoalList(parsed) {
+      if (!parsed) return [];
+      if (Array.isArray(parsed)) {
+        return parsed.map(extractGoalText).filter(Boolean);
+      }
+      if (typeof parsed === 'object') {
+        for (const key of Object.keys(parsed)) {
+          if (Array.isArray(parsed[key])) {
+            const list = parsed[key].map(extractGoalText).filter(Boolean);
+            if (list.length > 0) return list;
+          }
+        }
+        const values = Object.values(parsed).map(extractGoalText).filter(Boolean);
+        if (values.length > 0) return values;
+      }
+      return [];
+    }
+
+    // Helper: Normalize detail plan item (Step 3)
+    function normalizeDetailItem(item) {
+      if (!item || typeof item !== 'object') return null;
+      const goal = item.goal || item.target || item['到達目標'] || item['目標'] || item['具体的目標'] || item.title || '';
+      const role = item.role || item.userRole || item['本人の役割'] || item['本人の行動'] || item['役割'] || '';
+      const support = item.support || item.staffSupport || item['支援内容'] || item['事業所の支援内容'] || item['支援'] || item['対応'] || '';
+      return {
+        goal: String(goal || '').trim(),
+        role: String(role || '').trim(),
+        support: String(support || '').trim(),
+        isKept: !!item.isKept,
+        isNewAI: !!item.isNewAI
+      };
+    }
+
     // Helper: Parse JSON from AI response text
     function parseJsonResponse(raw) {
       if (!raw || typeof raw !== 'string') return null;
@@ -1519,19 +1588,20 @@
 【総合方針】${policy}${focusPrompt}
 
 就労継続支援B型の支援範囲に基づき、長期目標の候補を5件作成しJSON配列で出力してください。
-【重要】前回の提案と重複するようなありきたりな表現を避け、本人の強みや困りごとに深く寄り添った具体的かつ個性的な表現で、5つの異なる角度（通所安定、作業スキル向上、対人関係・報連相、セルフケア・体調管理、社会参加・役割意識など）から5件作成してください:
+【重要】前回の提案と重複するようなありきたりな表現を避け、本人の強みや困りごとに深く寄り添った具体的かつ個性的な表現で、5つの異なる角度（通所安定、作業スキル向上、対人関係・報連相、セルフケア・体調管理、社会参加・役割意識など）から5件作成してください。
+【形式】出力はオブジェクトではなく、文字列のみのフラットなJSON配列としてください:
 ["目標1", "目標2", "目標3", "目標4", "目標5"]`;
 
-      let goals = null;
+      let goals = [];
       try {
         const aiRaw = await callLLMApi(prompt);
-        goals = parseJsonResponse(aiRaw);
+        const parsed = parseJsonResponse(aiRaw);
+        goals = normalizeGoalList(parsed);
       } catch (err) {
         console.warn('generateLongTermGoals error:', err);
       }
 
-      // 5件未満の場合でも、AIが生成した分を最大限活かし、不足分のみプールから補完
-      if (!goals || !Array.isArray(goals) || goals.length === 0) {
+      if (!goals || !Array.isArray(goals)) {
         goals = [];
       }
       if (goals.length < 5) {
@@ -1591,18 +1661,20 @@
 本人の希望: ${wish}${focusPrompt}
 
 長期目標に向けたスモールステップとしての短期目標の候補5件をJSON配列で出力してください。
-【重要】前回の提案と重複するような表現は避け、動作手順、作業報告、時間配分、セルフチェック、道具準備など、視点をガラリと変えた具体的なスモールステップ5件を作成してください:
+【重要】前回の提案と重複するような表現は避け、動作手順、作業報告、時間配分、セルフチェック、道具準備など、視点をガラリと変えた具体的なスモールステップ5件を作成してください。
+【形式】出力はオブジェクトではなく、文字列のみのフラットなJSON配列としてください:
 ["短期目標1", "短期目標2", "短期目標3", "短期目標4", "短期目標5"]`;
 
-      let goals = null;
+      let goals = [];
       try {
         const aiRaw = await callLLMApi(prompt);
-        goals = parseJsonResponse(aiRaw);
+        const parsed = parseJsonResponse(aiRaw);
+        goals = normalizeGoalList(parsed);
       } catch (err) {
         console.warn('generateShortTermGoals error:', err);
       }
 
-      if (!goals || !Array.isArray(goals) || goals.length === 0) {
+      if (!goals || !Array.isArray(goals)) {
         goals = [];
       }
       if (goals.length < 5) {
@@ -1727,8 +1799,22 @@ ${focusPrompt}${keptPrompt}
         try {
           const aiRaw = await callLLMApi(prompt);
           const parsed = parseJsonResponse(aiRaw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            newItems = parsed.map(item => ({ ...item, isKept: false, isNewAI: true }));
+          let rawList = [];
+          if (Array.isArray(parsed)) {
+            rawList = parsed;
+          } else if (parsed && typeof parsed === 'object') {
+            for (const k of Object.keys(parsed)) {
+              if (Array.isArray(parsed[k])) {
+                rawList = parsed[k];
+                break;
+              }
+            }
+          }
+          if (rawList.length > 0) {
+            newItems = rawList.map(item => {
+              const norm = normalizeDetailItem(item);
+              return norm && (norm.goal || norm.role || norm.support) ? norm : null;
+            }).filter(Boolean);
           }
         } catch (err) {
           console.warn('generateDetailPlans error:', err);
@@ -1896,17 +1982,27 @@ ${focusPrompt}${keptPrompt}
     // Render Goal Options (Step 1 & Step 2)
     function renderGoalOptions(containerId, goals, type) {
       const container = document.getElementById(containerId);
-      container.innerHTML = goals.map((g, idx) => `
-        <div class="goal-card" onclick="selectGoalOption(this, '${type}', \`${g}\`)">
+      const cleanGoals = (Array.isArray(goals) ? goals : [goals]).map(extractGoalText).filter(Boolean);
+      if (type === 'long') {
+        currentLongTermGoals = cleanGoals;
+      } else {
+        currentShortTermGoals = cleanGoals;
+      }
+      container.innerHTML = cleanGoals.map((g, idx) => `
+        <div class="goal-card" onclick="selectGoalOption(this, '${type}', ${idx})">
           <div class="goal-badge">${idx + 1}</div>
-          <div class="goal-text">${g}</div>
+          <div class="goal-text">${escHtml(g)}</div>
         </div>
       `).join('');
     }
 
-    function selectGoalOption(el, type, text) {
+    function selectGoalOption(el, type, target) {
       el.parentElement.querySelectorAll('.goal-card').forEach(c => c.classList.remove('selected'));
       el.classList.add('selected');
+
+      const text = (typeof target === 'number')
+        ? ((type === 'long' ? currentLongTermGoals : currentShortTermGoals)[target] || '')
+        : extractGoalText(target);
 
       if (type === 'long') {
         selectedLongGoalText = text;
@@ -1939,9 +2035,9 @@ ${focusPrompt}${keptPrompt}
             ${idx + 1}
             ${badgeHtml}
           </td>
-          <td>${item.goal}</td>
-          <td>${item.role}</td>
-          <td>${item.support}</td>
+          <td>${escHtml(item.goal)}</td>
+          <td>${escHtml(item.role)}</td>
+          <td>${escHtml(item.support)}</td>
         </tr>
       `;
       }).join('');
