@@ -265,6 +265,7 @@ var USERS = [], WORK_TYPES = [], TEMPLATES = [], SETTINGS = {};
 var CURRENT_STATUS = '出席';
 var SAVED_DATES = {};
 var ATTENDANCE_CACHE = {};
+var TEMP_CACHE = {};
 
 // ─── ユーティリティ ─────────────────────
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -545,6 +546,7 @@ async function boot(){
     await renderUserList();
     el('sel-date').onchange=async function(){
       delete ATTENDANCE_CACHE[this.value];
+      delete TEMP_CACHE[this.value];
       await fetchAttendanceForDate(this.value);
       await renderUserList();
     };
@@ -571,6 +573,7 @@ function checkTabletDateRollover(){
       if(sel.value < cur){
         sel.value = cur;
         delete ATTENDANCE_CACHE[cur];
+        delete TEMP_CACHE[cur];
         fetchAttendanceForDate(cur).then(renderUserList);
       }
     }
@@ -608,10 +611,12 @@ async function fetchAttendanceForDate(date){
   try{
     var results=await Promise.all([
       gas('getAttendanceByDate', date),
-      gas('getDailyByDate', date)
+      gas('getDailyByDate', date),
+      gas('getTempByDate', date)
     ]);
     var attList=results[0]||[];
     var repList=results[1]||[];
+    var tempList=results[2]||[];
     var map={};
     if(attList && Array.isArray(attList)){
       attList.forEach(function(a){
@@ -628,10 +633,36 @@ async function fetchAttendanceForDate(date){
       });
     }
     ATTENDANCE_CACHE[date]=map;
+
+    var tempMap={};
+    if(tempList && Array.isArray(tempList)){
+      tempList.forEach(function(t){
+        if(t && t.userId) tempMap[String(t.userId).trim()]=t;
+      });
+    }
+    TEMP_CACHE[date]=tempMap;
   }catch(e){
     console.error('fetchAttendanceForDate error:', e);
     ATTENDANCE_CACHE[date]={};
+    TEMP_CACHE[date]={};
   }
+}
+
+function isTempUser(user, date){
+  if(!date)return false;
+  var uKey=String(user.id||'').trim();
+  var tempMap=TEMP_CACHE[date]||{};
+  if(tempMap[uKey]) return true;
+
+  var sc=(typeof getUserScheduleForDate==='function')?getUserScheduleForDate(user,date):user;
+  var sd=(sc.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var dow=['日','月','火','水','木','金','土'][new Date(date).getDay()];
+  var isRegularScheduled = sd.indexOf(dow)>=0;
+
+  var attMap=ATTENDANCE_CACHE[date]||{};
+  var att=attMap[uKey];
+  if(!isRegularScheduled && att && ['出席','遅刻','早退','予定'].indexOf(att.status)>=0) return true;
+  return false;
 }
 
 function isScheduledToday(user, date){
@@ -645,12 +676,21 @@ function isScheduledToday(user, date){
   if(att && (att.status==='調整休'||att.status==='欠席'||att.status==='体調不良'||att.status==='通院')){
     return false;
   }
+  // 臨時利用登録があるか
+  if(isTempUser(user, date)) return true;
+
+  // すでに出欠記録（出席・遅刻・早退・予定等）があるか
+  if(att && ['出席','遅刻','早退','予定'].indexOf(att.status)>=0) return true;
+
+  // 通常スケジュール曜日か
   var sc=(typeof getUserScheduleForDate==='function')?getUserScheduleForDate(user,date):user;
   var sd=(sc.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
   if(sd.length===0)return false;
   var dow=['日','月','火','水','木','金','土'][new Date(date).getDay()];
   return sd.indexOf(dow)>=0;
 }
+
+var _showUnscheduledTablet = false;
 
 async function renderUserList(){
   var kw=el('search-box').value.trim();
@@ -670,43 +710,69 @@ async function renderUserList(){
     return(u.name||'').indexOf(kw)>=0||(u.kana||'').indexOf(kw)>=0||(u.furigana||'').indexOf(kw)>=0;
   });
 
+  // 1. 本日の予定者（通常予定・臨時利用・出勤者）
   var scheduled=list.filter(function(u){return isScheduledToday(u,date);});
-  var others=list.filter(function(u){
+
+  // 2. 欠席・お休みの利用者（実際に欠席等の記録がある人のみ）
+  var absents=list.filter(function(u){
     var att=attMap[String(u.id||'').trim()];
-    if(att && att.status==='調整休') return false;
-    return !isScheduledToday(u,date);
+    return att && ['欠席','体調不良','通院'].indexOf(att.status)>=0;
+  });
+
+  // 3. その他（本日予定なし）
+  var unscheduled=list.filter(function(u){
+    if(isScheduledToday(u,date)) return false;
+    var att=attMap[String(u.id||'').trim()];
+    if(att && ['欠席','体調不良','通院','調整休'].indexOf(att.status)>=0) return false;
+    return true;
   });
 
   function makeItem(u){
     var isActive=String(u.id)===String(curId);
     var att=attMap[String(u.id||'').trim()];
-    var badge='';
+    var badges=[];
 
     var cleanNotes = cleanNotesText(att ? att.notes : '');
     var cleanContent = cleanNotesText(att ? att.content : '');
     var isInputFilled = cleanNotes.length > 0 || cleanContent.length > 0;
 
+    if(isTempUser(u, date)){
+      badges.push('<span class="u-badge" style="background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;font-weight:700">⚡ 臨時</span>');
+    }
+
     if(att && ['欠席','体調不良','通院'].indexOf(att.status)>=0){
-      badge='<span class="u-badge" style="color:#c62828;font-weight:700">❌ '+esc(att.status)+'</span>';
+      badges.push('<span class="u-badge" style="color:#c62828;font-weight:700">❌ '+esc(att.status)+'</span>');
     }else if(att && att.status==='調整休'){
-      badge='<span class="u-badge saved" style="background:#757575;color:#fff">☕ 調整休</span>';
+      badges.push('<span class="u-badge saved" style="background:#757575;color:#fff">☕ 調整休</span>');
     }else if(isInputFilled){
-      badge='<span class="u-badge saved">✅ 入力済</span>';
+      badges.push('<span class="u-badge saved">✅ 入力済</span>');
     }
     return '<div class="user-item'+(isActive?' active':'')+
       '" data-uid="'+u.id+'" onclick="selectUser(this.getAttribute(\'data-uid\'))">'  
       +'<span class="u-name">'+esc(u.name)+'</span>'
-      +badge
+      +badges.join(' ')
       +'</div>';
   }
+
   var html='';
   if(scheduled.length>0){
-    html+='<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:var(--pri);background:#f0f7f0;border-bottom:1px solid #d4e8d4">📅 本日の予定者</div>';
+    html+='<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:var(--pri);background:#f0f7f0;border-bottom:1px solid #d4e8d4">📅 本日の予定者 ('+scheduled.length+'名)</div>';
     scheduled.forEach(function(u){html+=makeItem(u);});
   }
-  if(others.length>0){
-    html+='<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:#c62828;background:#ffebee;border-bottom:1px solid #ffcdd2">欠席利用者</div>';
-    others.forEach(function(u){html+=makeItem(u);});
+  if(absents.length>0){
+    html+='<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:#c62828;background:#ffebee;border-bottom:1px solid #ffcdd2">❌ 欠席・お休み ('+absents.length+'名)</div>';
+    absents.forEach(function(u){html+=makeItem(u);});
+  }
+  if(unscheduled.length>0){
+    if(kw || _showUnscheduledTablet || (scheduled.length===0 && absents.length===0)){
+      html+='<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:#666;background:#f5f5f5;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center">'
+        +'<span>💤 本日予定なし ('+unscheduled.length+'名)</span>'
+        +(kw?'':'<button onclick="_showUnscheduledTablet=false;renderUserList();" style="border:none;background:transparent;color:#888;cursor:pointer;font-size:10px">閉じる▲</button>')
+        +'</div>';
+      unscheduled.forEach(function(u){html+=makeItem(u);});
+    } else {
+      html+='<div style="padding:10px 14px;text-align:center"><button onclick="_showUnscheduledTablet=true;renderUserList();" style="background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-size:11px;color:#666;cursor:pointer">▼ 本日予定なしの利用者 ('+unscheduled.length+'名) を表示</button></div>';
+    }
   }
   el('user-list').innerHTML=html||'<p style="padding:16px;color:var(--sub);font-size:12px">該当者なし</p>';
 }
