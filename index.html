@@ -7467,7 +7467,9 @@ async function loadW(){try{showLoading('w-tbl','工賃を計算中...');var attR
   var bd=bcDeduct*bentoPrice;
   var bdNext=bcNext*bentoPrice;
   var bdDaily=bcDaily*bentoPrice;
-  return{u:u,d:recs.length,tH:tH,tW:tW,bt:bt,kk:kk,bonus:bonus,alDetails:alResult.details,tTrans:tTrans,bc:bc,bcDeduct:bcDeduct,bcDaily:bcDaily,bcNext:bcNext,bd:bd,bdNext:bdNext,bdDaily:bdDaily,total:tW+bonus-bd+tTrans};
+  var copayLimit = parseInt(String(u.copayAmount || '0').replace(/[,円]/g, '')) || 0;
+  var copayDed = (copayLimit > 0 && recs.length > 0) ? Math.min(copayLimit, Math.floor(recs.length * 604 * 10.54 * 0.1)) : 0;
+  return{u:u,d:recs.length,tH:tH,tW:tW,bt:bt,kk:kk,bonus:bonus,alDetails:alResult.details,tTrans:tTrans,bc:bc,bcDeduct:bcDeduct,bcDaily:bcDaily,bcNext:bcNext,bd:bd,bdNext:bdNext,bdDaily:bdDaily,copayLimit:copayLimit,copayDed:copayDed,total:tW+bonus-bd-copayDed+tTrans};
 }).filter(function(d){return d.d>0;});
 var g=data.reduce(function(s,d){return s+d.total;},0);
 var th=data.reduce(function(s,d){return s+d.tH;},0);
@@ -7477,11 +7479,12 @@ var totalBonus=data.reduce(function(s,d){return s+d.bonus;},0);
 var totalTrans=data.reduce(function(s,d){return s+d.tTrans;},0);
 var totalBento=data.reduce(function(s,d){return s+d.bd;},0);
 var totalBentoAll=data.reduce(function(s,d){return s+d.bc;},0);
+var totalCopay=data.reduce(function(s,d){return s+d.copayDed;},0);
 
   var totalWage=data.reduce(function(s,d){return s+d.tW;},0);
-  document.getElementById('w-st').innerHTML='<div class="stat"><div class="stat-l">対象者</div><div class="stat-v">'+data.length+'</div></div><div class="stat" style="border-color:#1565c0"><div class="stat-l">総時間</div><div class="stat-v" style="color:#1565c0">'+th.toFixed(1)+'h</div></div><div class="stat" style="border-color:var(--acc)"><div class="stat-l">工賃額</div><div class="stat-v" style="color:var(--acc)">¥'+Math.round(totalWage).toLocaleString()+'</div></div><div class="stat" style="border-color:var(--grn)"><div class="stat-l">🎁 手当合計</div><div class="stat-v" style="color:var(--grn)">¥'+totalBonus.toLocaleString()+'</div></div><div class="stat" style="border-color:#2e7d32"><div class="stat-l">💵 交通費(現金)</div><div class="stat-v" style="color:#2e7d32">¥'+totalTrans.toLocaleString()+'</div></div><div class="stat" style="border-color:#c62828"><div class="stat-l">🍱弁当控除</div><div class="stat-v" style="color:#c62828">-¥'+totalBento.toLocaleString()+'</div><div class="stat-s">全'+totalBentoAll+'食 (控除対象)</div></div><div class="stat" style="border-color:var(--pri)"><div class="stat-l">支給合計</div><div class="stat-v" style="color:var(--pri)">¥'+Math.round(g).toLocaleString()+'</div></div>';
+  document.getElementById('w-st').innerHTML='<div class="stat"><div class="stat-l">対象者</div><div class="stat-v">'+data.length+'</div></div><div class="stat" style="border-color:#1565c0"><div class="stat-l">総時間</div><div class="stat-v" style="color:#1565c0">'+th.toFixed(1)+'h</div></div><div class="stat" style="border-color:var(--acc)"><div class="stat-l">工賃額</div><div class="stat-v" style="color:var(--acc)">¥'+Math.round(totalWage).toLocaleString()+'</div></div><div class="stat" style="border-color:var(--grn)"><div class="stat-l">🎁 手当合計</div><div class="stat-v" style="color:var(--grn)">¥'+totalBonus.toLocaleString()+'</div></div><div class="stat" style="border-color:#2e7d32"><div class="stat-l">💵 交通費(現金)</div><div class="stat-v" style="color:#2e7d32">¥'+totalTrans.toLocaleString()+'</div></div><div class="stat" style="border-color:#c62828"><div class="stat-l">🍱弁当控除</div><div class="stat-v" style="color:#c62828">-¥'+totalBento.toLocaleString()+'</div><div class="stat-s">全'+totalBentoAll+'食 (控除対象)</div></div>'+(totalCopay>0?'<div class="stat" style="border-color:#b71c1c"><div class="stat-l">👤自己負担控除</div><div class="stat-v" style="color:#b71c1c">-¥'+totalCopay.toLocaleString()+'</div></div>':'')+'<div class="stat" style="border-color:var(--pri)"><div class="stat-l">支給合計</div><div class="stat-v" style="color:var(--pri)">¥'+Math.round(g).toLocaleString()+'</div></div>';
   document.getElementById('w-tbl').innerHTML=data.length===0?'<p style="color:var(--sub);padding:20px;text-align:center">記録なし</p>':
-    '<table style="font-size:12px;width:100%"><thead><tr style="background:#f5f0ea"><th style="padding:10px 8px;text-align:left">氏名</th><th style="padding:10px 4px;text-align:center;width:60px">日数</th><th style="padding:10px 4px;text-align:center;width:50px">時間</th><th style="padding:10px 8px;text-align:right;width:70px">工賃</th><th style="padding:10px 8px;text-align:right;width:70px">手当</th><th style="padding:10px 8px;text-align:right;width:65px">弁当代</th><th style="padding:10px 8px;text-align:right;width:80px">交通費(現金)</th><th style="padding:10px 8px;text-align:right;width:85px">合計</th></tr></thead><tbody>'+
+    '<table style="font-size:12px;width:100%"><thead><tr style="background:#f5f0ea"><th style="padding:10px 8px;text-align:left">氏名</th><th style="padding:10px 4px;text-align:center;width:60px">日数</th><th style="padding:10px 4px;text-align:center;width:50px">時間</th><th style="padding:10px 8px;text-align:right;width:70px">工賃</th><th style="padding:10px 8px;text-align:right;width:70px">手当</th><th style="padding:10px 8px;text-align:right;width:65px">弁当代</th><th style="padding:10px 8px;text-align:right;width:75px">自己負担</th><th style="padding:10px 8px;text-align:right;width:80px">交通費(現金)</th><th style="padding:10px 8px;text-align:right;width:85px">合計</th></tr></thead><tbody>'+
     data.map(function(d,idx){
       var rowBg=idx%2===0?'#fff':'#fafafa';
       var rid='wr-'+idx;
@@ -7499,11 +7502,12 @@ var totalBentoAll=data.reduce(function(s,d){return s+d.bc;},0);
       row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee">¥'+Math.round(d.tW).toLocaleString()+'</td>';
       row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee">'+(d.bonus>0?'<span style="color:var(--grn);font-weight:700">¥'+d.bonus.toLocaleString()+'</span>':'<span style="color:#ccc">−</span>')+'</td>';
       row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee">'+(d.bd>0?'<span style="color:#c62828">-¥'+d.bd.toLocaleString()+'</span>':'<span style="color:#ccc">−</span>')+'</td>';
+      row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee">'+(d.copayDed>0?'<span style="color:#b71c1c">-¥'+d.copayDed.toLocaleString()+'</span>':'<span style="color:#ccc">−</span>')+'</td>';
       row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee">'+(d.tTrans>0?'<span style="color:#2e7d32;font-weight:700">¥'+d.tTrans.toLocaleString()+'</span>':'<span style="color:#ccc">−</span>')+'</td>';
       row+='<td style="padding:10px 8px;text-align:right;border-bottom:1px solid #eee;font-weight:700;color:var(--pri);font-size:15px">¥'+Math.round(d.total).toLocaleString()+'</td></tr>';
 
       // 展開行（詳細）
-      var detail='<tr id="'+rid+'" style="display:none;background:#f9f7f4"><td colspan="8" style="padding:16px 20px;border-bottom:2px solid #e0d6cc">';
+      var detail='<tr id="'+rid+'" style="display:none;background:#f9f7f4"><td colspan="9" style="padding:16px 20px;border-bottom:2px solid #e0d6cc">';
       detail+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">';
 
       // 左：出席情報
@@ -7522,6 +7526,9 @@ var totalBentoAll=data.reduce(function(s,d){return s+d.bc;},0);
         if(d.bcDaily>0)bDetails.push('当日精算: '+d.bcDaily+'食 (¥'+d.bdDaily.toLocaleString()+')');
         if(d.bcNext>0)bDetails.push('翌月請求: '+d.bcNext+'食 (¥'+d.bdNext.toLocaleString()+')');
         detail+='<div style="margin-top:12px;padding-top:8px;border-top:1px solid #eee"><div style="font-size:11px;font-weight:700;color:var(--pri);margin-bottom:4px">🍱 弁当 (全'+d.bc+'食)</div><div style="font-size:11px;color:#888">'+bDetails.join(' / ')+'</div></div>';
+      }
+      if(d.copayDed>0){
+        detail+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid #eee"><div style="font-size:11px;font-weight:700;color:#b71c1c;margin-bottom:2px">👤 利用者負担額（自己負担控除）</div><div style="font-size:12px;font-weight:700;color:#b71c1c">-¥'+d.copayDed.toLocaleString()+' <span style="font-size:10px;color:#888;font-weight:400">(上限: ¥'+d.copayLimit.toLocaleString()+')</span></div></div>';
       }
       detail+='</div>';
 
@@ -8511,17 +8518,20 @@ async function loadE(){
       var alResult=_useNew?calcAllowances(u,att,eM,kk):{total:kk.kaikin?KAIKIN_BONUS:0,details:[]};
       var bonus=alResult.total;
       var bd=bc*bentoPrice;
-      return{n:u.name,d:r.length,h:h,w:w,kk:kk.kaikin,bonus:bonus,bc:bc,bd:bd,total:w+bonus-bd};
+      var copayLimit = parseInt(String(u.copayAmount || '0').replace(/[,円]/g, '')) || 0;
+      var copayDed = (copayLimit > 0 && r.length > 0) ? Math.min(copayLimit, Math.floor(r.length * 604 * 10.54 * 0.1)) : 0;
+      return{n:u.name,d:r.length,h:h,w:w,kk:kk.kaikin,bonus:bonus,bc:bc,bd:bd,copayDed:copayDed,total:w+bonus-bd-copayDed};
     }).filter(function(x){return x.d>0;});
     var grandWage=d.reduce(function(s,x){return s+Math.round(x.w);},0);
     var grandBonus=d.reduce(function(s,x){return s+x.bonus;},0);
     var grandBento=d.reduce(function(s,x){return s+x.bd;},0);
+    var grandCopay=d.reduce(function(s,x){return s+x.copayDed;},0);
     var grandTotal=d.reduce(function(s,x){return s+Math.round(x.total);},0);
     if(!isCurrent()) return;
     document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">'+fmtMonth(eM)+' 工賃明細書</span></div><p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'　　手当設定準拠　　弁当代: ¥'+bentoPrice.toLocaleString()+'/食</p>'+
-      '<table><thead><tr><th>No.</th><th>氏名</th><th>日数</th><th>時間</th><th style="text-align:right">工賃</th><th style="text-align:center">皆勤</th><th style="text-align:right">手当</th><th style="text-align:right">弁当代</th><th style="text-align:right">合計</th></tr></thead><tbody>'+
-      d.map(function(x,i){return'<tr><td>'+(i+1)+'</td><td>'+esc(x.n)+'</td><td>'+x.d+'日</td><td>'+x.h.toFixed(1)+'h</td><td style="text-align:right">¥'+Math.round(x.w).toLocaleString()+'</td><td style="text-align:center">'+(x.kk?'🏆':'−')+'</td><td style="text-align:right">'+(x.bonus>0?'¥'+x.bonus.toLocaleString():'−')+'</td><td style="text-align:right;color:#c00">'+(x.bd>0?'-¥'+x.bd.toLocaleString():'−')+'</td><td style="text-align:right;font-weight:700">¥'+Math.round(x.total).toLocaleString()+'</td></tr>';}).join('')+
-      '</tbody>'+(d.length>0?'<tfoot><tr style="font-weight:700;background:var(--bg)"><td colspan="4">合計</td><td style="text-align:right">¥'+grandWage.toLocaleString()+'</td><td></td><td style="text-align:right">¥'+grandBonus.toLocaleString()+'</td><td style="text-align:right;color:#c00">'+(grandBento>0?'-¥'+grandBento.toLocaleString():'−')+'</td><td style="text-align:right">¥'+grandTotal.toLocaleString()+'</td></tr></tfoot>':'')+'</table>';
+      '<table><thead><tr><th>No.</th><th>氏名</th><th>日数</th><th>時間</th><th style="text-align:right">工賃</th><th style="text-align:center">皆勤</th><th style="text-align:right">手当</th><th style="text-align:right">弁当代</th><th style="text-align:right">自己負担</th><th style="text-align:right">合計</th></tr></thead><tbody>'+
+      d.map(function(x,i){return'<tr><td>'+(i+1)+'</td><td>'+esc(x.n)+'</td><td>'+x.d+'日</td><td>'+x.h.toFixed(1)+'h</td><td style="text-align:right">¥'+Math.round(x.w).toLocaleString()+'</td><td style="text-align:center">'+(x.kk?'🏆':'−')+'</td><td style="text-align:right">'+(x.bonus>0?'¥'+x.bonus.toLocaleString():'−')+'</td><td style="text-align:right;color:#c00">'+(x.bd>0?'-¥'+x.bd.toLocaleString():'−')+'</td><td style="text-align:right;color:#b71c1c">'+(x.copayDed>0?'-¥'+x.copayDed.toLocaleString():'−')+'</td><td style="text-align:right;font-weight:700">¥'+Math.round(x.total).toLocaleString()+'</td></tr>';}).join('')+
+      '</tbody>'+(d.length>0?'<tfoot><tr style="font-weight:700;background:var(--bg)"><td colspan="4">合計</td><td style="text-align:right">¥'+grandWage.toLocaleString()+'</td><td></td><td style="text-align:right">¥'+grandBonus.toLocaleString()+'</td><td style="text-align:right;color:#c00">'+(grandBento>0?'-¥'+grandBento.toLocaleString():'−')+'</td><td style="text-align:right;color:#b71c1c">'+(grandCopay>0?'-¥'+grandCopay.toLocaleString():'−')+'</td><td style="text-align:right">¥'+grandTotal.toLocaleString()+'</td></tr></tfoot>':'')+'</table>';
   } else if(eT==='annualDetail'){
     // 年度工賃支払明細書
     var selFY=document.getElementById('eFY-sel');
@@ -9477,12 +9487,16 @@ function renderWageDetail(wd,fn){
       adjRows++;
       h+='<tr><td style="'+B+'padding:2px 5px">弁当代（工賃控除）</td><td style="'+B+'padding:2px 5px;text-align:right">'+(u.bentoDeductCount||u.bentoCount)+'</td><td style="'+B+'padding:2px 5px;text-align:right">¥'+u.bentoPrice.toLocaleString()+'</td><td style="'+B+'padding:2px 5px;text-align:right;color:#c00">-¥'+u.bentoDed.toLocaleString()+'</td></tr>';
     }
+    if((u.copayDed||0)>0){
+      adjRows++;
+      h+='<tr><td style="'+B+'padding:2px 5px;color:#b71c1c">利用者負担額（自己負担控除）</td><td style="'+B+'padding:2px 5px;text-align:right">1ヶ月</td><td style="'+B+'padding:2px 5px;text-align:right">¥'+(u.copayLimit||u.copayDed).toLocaleString()+'</td><td style="'+B+'padding:2px 5px;text-align:right;color:#b71c1c">-¥'+u.copayDed.toLocaleString()+'</td></tr>';
+    }
     // 空行で2行に揃える
     var emptyAdj=Math.max(0,2-adjRows);
     for(var ei2=0;ei2<emptyAdj;ei2++){
       h+='<tr><td style="'+B+'padding:2px 5px;height:16px"></td><td style="'+B+'padding:2px 5px"></td><td style="'+B+'padding:2px 5px"></td><td style="'+B+'padding:2px 5px"></td></tr>';
     }
-    var adjSub=u.bonus-(u.bentoDed||0)+(u.transportAllowance||0);
+    var adjSub=u.bonus-(u.bentoDed||0)-(u.copayDed||0)+(u.transportAllowance||0);
     h+='</tbody><tfoot>';
     h+='<tr><td colspan="3" style="'+B+'padding:2px 5px;text-align:right;font-weight:700;background:#f5f0ea;-webkit-print-color-adjust:exact;print-color-adjust:exact">小計</td>';
     h+='<td style="'+B+'padding:2px 5px;text-align:right;font-weight:700;background:#f5f0ea;-webkit-print-color-adjust:exact;print-color-adjust:exact'+(adjSub<0?';color:#c00':'')+'">'+( adjSub>=0?'¥'+adjSub.toLocaleString():'-¥'+Math.abs(adjSub).toLocaleString())+'</td></tr>';

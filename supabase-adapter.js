@@ -1197,7 +1197,10 @@ async function _calcWageDetailPerUser(ym){
     }
     if(!pmRaw) pmRaw = user.bentoPaymentMethod || '工賃払い';
 
-    result.push({id:user.id,name:user.name,bentoPaymentMethod:pmRaw,days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,transportAllowance:tTrans,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,bentoPrice:bentoPrice,total:wSub+bonus-bcDeduct*bentoPrice+tTrans});
+    var copayLimit = parseInt(String(user.copayAmount || '0').replace(/[,円]/g, '')) || 0;
+    var copayDed = (copayLimit > 0 && recs.length > 0) ? Math.min(copayLimit, Math.floor(recs.length * 604 * 10.54 * 0.1)) : 0;
+
+    result.push({id:user.id,name:user.name,bentoPaymentMethod:pmRaw,days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,transportAllowance:tTrans,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,bentoPrice:bentoPrice,copayLimit:copayLimit,copayDed:copayDed,total:wSub+bonus-bcDeduct*bentoPrice-copayDed+tTrans});
   });
   return{ym:ym,companyName:companyName,payDate:payDateStr,users:result,bentoPrice:bentoPrice};
 }
