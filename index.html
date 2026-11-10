@@ -8630,6 +8630,7 @@ function renderSimFullUI(container){
   h += '  <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
   h += '    <span class="card-t">🔮 '+fmtMonth(_simState.ym)+' 利用者別工賃シミュレーション一覧</span>';
   h += '    <div class="no-print" style="display:flex;gap:6px">';
+  h += '      <button class="bp" onclick="addVirtualSimUser()" style="font-size:12px;padding:5px 12px;background:#2e7d32;border-color:#2e7d32" title="新しい利用者が増えた場合の試算用に追加">👤＋ 架空の利用者を追加</button>';
   h += '      <button class="bg" onclick="exportWageSimulationCsv()" style="font-size:12px;padding:5px 10px">📥 CSV出力</button>';
   h += '      <button class="bp" onclick="printWageSimulation()" style="font-size:12px;padding:5px 10px">🖨️ 印刷 / PDF</button>';
   h += '    </div>';
@@ -8639,6 +8640,7 @@ function renderSimFullUI(container){
   h += '  </div>';
   h += '  <div style="margin-top:12px;font-size:11px;color:var(--sub);line-height:1.6" class="no-print">';
   h += '    ※このシミュレーターでの変更内容は画面の仮想メモリ上でのみ計算され、本番データ（出欠や確定工賃など）には一切保存されません。安心していくらでもお試しいただけます。<br>';
+  h += '    ※「👤＋ 架空の利用者を追加」ボタンで、新規利用者が増えた場合の工賃や売上原資への影響を何名でも試算できます（✕ボタンで削除可能）。<br>';
   h += '    ※「手当」列は、金額を直接打ち込んで変更することも、⚙️ボタンから登録手当（皆勤・精勤・自力来所・交通費など）をチェック選択することも可能です。<br>';
   h += '    ※「按分後工賃」は、工賃総額が想定売上（工賃原資）を超過した場合に、売上枠内に収まるよう各利用者の積算工賃比率で比例配分した試算金額です。';
   h += '  </div>';
@@ -8677,7 +8679,7 @@ function renderSimTableHTML(){
   var st = _simState;
   var dows = ['月','火','水','木','金','土'];
   var h = '<table style="width:100%;font-size:13px"><thead><tr>' +
-    '  <th style="min-width:100px">氏名</th>' +
+    '  <th style="min-width:130px">氏名</th>' +
     '  <th style="min-width:180px;text-align:center">通所曜日 (タップでON/OFF)</th>' +
     '  <th style="width:75px;text-align:center">日数</th>' +
     '  <th style="width:110px;text-align:center">1日時間</th>' +
@@ -8694,8 +8696,18 @@ function renderSimTableHTML(){
   } else {
     st.users.forEach(function(u){
       var uid = esc(u.userId);
-      h += '<tr id="sim-row-'+uid+'">';
-      h += '  <td style="font-weight:700">'+esc(u.name)+'</td>';
+      h += '<tr id="sim-row-'+uid+'" '+(u.isVirtual?'style="background:#f9fbfd"':'')+'>';
+      if(u.isVirtual){
+        h += '  <td style="font-weight:700">';
+        h += '    <div style="display:flex;align-items:center;gap:4px">';
+        h += '      <span style="font-size:10px;background:#e3f2fd;color:#1565c0;padding:2px 5px;border-radius:4px;font-weight:700;white-space:nowrap">架空</span>';
+        h += '      <input type="text" class="sim-input-sm" value="'+esc(u.name)+'" style="width:105px;font-weight:700;padding:2px 4px" onchange="updateSimUserName(\''+uid+'\',this.value)" title="氏名を自由に変更できます">';
+        h += '      <button type="button" onclick="removeVirtualSimUser(\''+uid+'\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:14px;padding:0 2px;line-height:1" title="この架空利用者を削除">✕</button>';
+        h += '    </div>';
+        h += '  </td>';
+      } else {
+        h += '  <td style="font-weight:700">'+esc(u.name)+'</td>';
+      }
       // 曜日ピルボタングループ
       h += '  <td style="text-align:center"><div class="sim-dow-group">';
       dows.forEach(function(d){
@@ -9060,6 +9072,88 @@ function applySimBulk(action){
   toast('⚡ 一括シミュレーションを反映しました');
 }
 
+function addVirtualSimUser(){
+  if(!_simState || !_simState.users) return;
+  var vCount = _simState.users.filter(function(u){ return u.isVirtual; }).length + 1;
+  var newUid = 'virt_' + Date.now();
+  var daysArr = ['月','火','水','木','金'];
+  var calcDays = daysArr.reduce(function(sum, d){ return sum + (_simState.dowCounts[d] || 0); }, 0);
+  var wtObj = (S.workTypes && S.workTypes[0]) ? S.workTypes[0] : { rate: 200, id: '' };
+  var masterAllowances = (typeof getAllowances === 'function') ? getAllowances().filter(function(a){ return a.enabled !== false; }) : [];
+
+  var items = [];
+  masterAllowances.forEach(function(ma, idx){
+    items.push({
+      id: 'al_' + idx,
+      name: ma.name,
+      amount: Number(ma.amount) || 0,
+      condition: ma.condition,
+      conditionValue: ma.conditionValue || '',
+      checked: (ma.condition === 'kaikin' || ma.condition === 'all')
+    });
+  });
+  items.push({
+    id: 'trans',
+    name: '交通費手当',
+    unitPrice: 0,
+    amount: 0,
+    checked: false,
+    isTrans: true
+  });
+  items.push({
+    id: 'custom',
+    name: 'その他手当加算',
+    amount: 0,
+    checked: false,
+    isCustom: true
+  });
+
+  var newUser = {
+    userId: newUid,
+    name: '架空利用者 ' + vCount,
+    isVirtual: true,
+    days: daysArr,
+    workDays: calcDays,
+    dailyHours: 4.0,
+    workTypeId: wtObj.id,
+    rate: Number(wtObj.rate) || 200,
+    allowanceItems: items,
+    totalAllowance: 0,
+    allowanceDesc: '',
+    totalHours: 0,
+    baseWage: 0,
+    grossWage: 0,
+    allocatedWage: 0,
+    diffWage: 0
+  };
+  calcUserTotalAllowance(newUser);
+  _simState.users.push(newUser);
+
+  var tblArea = document.getElementById('sim-table-area');
+  if(tblArea) tblArea.innerHTML = renderSimTableHTML();
+  updateSimDOMAll();
+  toast('👤 架空の利用者「' + newUser.name + '」を追加しました');
+}
+
+function removeVirtualSimUser(uid){
+  if(!_simState || !_simState.users) return;
+  var idx = _simState.users.findIndex(function(u){ return String(u.userId) === String(uid); });
+  if(idx < 0) return;
+  var targetName = _simState.users[idx].name;
+  _simState.users.splice(idx, 1);
+
+  var tblArea = document.getElementById('sim-table-area');
+  if(tblArea) tblArea.innerHTML = renderSimTableHTML();
+  updateSimDOMAll();
+  toast('🗑️ 架空利用者「' + targetName + '」を削除しました');
+}
+
+function updateSimUserName(uid, val){
+  var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
+  if(!u) return;
+  u.name = val.trim() || '架空利用者';
+}
+
 async function resetWageSimulator(){
   var ok = await cConfirm('現在の利用者の標準スケジュールと単価設定でシミュレーターを初期化しますか？');
   if(!ok) return;
@@ -9079,7 +9173,7 @@ function exportWageSimulationCsv(){
   ];
   _simState.users.forEach(function(u){
     rows.push([
-      u.name,
+      u.name + (u.isVirtual ? ' (架空)' : ''),
       u.days.join('/'),
       u.workDays,
       u.dailyHours,
@@ -9134,7 +9228,7 @@ function printWageSimulation(){
   var rowsHtml = st.users.map(function(u, idx){
     return '<tr>' +
       '<td style="text-align:center">' + (idx + 1) + '</td>' +
-      '<td style="font-weight:700">' + esc(u.name) + '</td>' +
+      '<td style="font-weight:700">' + esc(u.name) + (u.isVirtual ? ' <span style="font-size:10px;color:#1565c0;font-weight:700">[架空]</span>' : '') + '</td>' +
       '<td style="text-align:center">' + esc(u.days.join(',')) + '</td>' +
       '<td style="text-align:right">' + u.workDays + '日</td>' +
       '<td style="text-align:right">' + u.dailyHours + 'h</td>' +
