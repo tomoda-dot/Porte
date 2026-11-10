@@ -120,6 +120,15 @@ tr:hover td{background:var(--hov)}
 .author-badge-wrap{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px;min-height:22px}
 .author-badge{display:inline-flex;align-items:center;padding:2px 10px;border:1.5px solid #2e7d32;border-radius:12px;background:#f1f8e9;color:#1b5e20;font-size:11px;font-weight:700;letter-spacing:0.5px}
 .author-arrow{color:#8a7a6a;font-size:12px;font-weight:700}
+.sim-dow-group{display:inline-flex;gap:3px;align-items:center}
+.sim-dow-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:4px;border:1px solid var(--bdr);background:#fff;color:var(--sub);font-size:11px;font-weight:700;cursor:pointer;user-select:none;transition:all .15s}
+.sim-dow-btn.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.sim-step-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;border:1px solid var(--bdr);background:#fff;color:#555;font-size:11px;cursor:pointer;font-weight:700;line-height:1}
+.sim-step-btn:hover{background:#f0ebe3}
+.sim-input-sm{padding:4px 6px;border:1px solid var(--bdr);border-radius:6px;font-size:13px;text-align:right}
+.sim-badge-alert{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.sim-badge-alert.ok{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9}
+.sim-badge-alert.ng{background:#ffebee;color:#c62828;border:1px solid #ffcdd2}
 </style>
 <script>
 var _earlyError = null;
@@ -7364,12 +7373,15 @@ function getWagesSubTabs(){
   return '<div class="filter-tabs no-print" style="margin-bottom:16px">' +
     '<button class="filter-tab'+(S.wagesSubTab==='calc'?' active':'')+'" onclick="switchWagesSubTab(\'calc\')">📊 工賃計算・集計</button>' +
     '<button class="filter-tab'+(S.wagesSubTab==='adjust'?' active':'')+'" onclick="switchWagesSubTab(\'adjust\')">⏱️ 手当・時間調整</button>' +
+    '<button class="filter-tab'+(S.wagesSubTab==='simulator'?' active':'')+'" onclick="switchWagesSubTab(\'simulator\')">🔮 工賃シミュレーター</button>' +
     '</div>';
 }
 async function renderWages(c){
   if(!S.wagesSubTab || S.wagesSubTab==='settings')S.wagesSubTab='calc';
   if(S.wagesSubTab==='adjust'){
     renderWageAdjustments(c);
+  }else if(S.wagesSubTab==='simulator'){
+    renderWageSimulator(c);
   }else{
     c.innerHTML='<div class="hd-row"><h2>💰 工賃管理</h2><input type="month" value="'+wM+'" onchange="wM=this.value;loadW()"></div>'+
       getWagesSubTabs()+
@@ -8301,6 +8313,634 @@ async function saveUserWageAdjustments(userId){
     unlockUI();
   }
 }
+
+// ═══ 🔮 工賃シミュレーター ═══
+var _simState = null;
+
+function getMonthDowCounts(ym, closedDays){
+  var p = ym.split('-');
+  var y = Number(p[0]), m = Number(p[1]);
+  var dim = new Date(y, m, 0).getDate();
+  var counts = {'月':0,'火':0,'水':0,'木':0,'金':0,'土':0,'日':0};
+  closedDays = closedDays || [];
+  for(var d=1; d<=dim; d++){
+    var ds = ym + '-' + String(d).padStart(2,'0');
+    if(closedDays.indexOf(ds) >= 0) continue;
+    var dw = new Date(y, m-1, d).getDay();
+    var dwj = ['日','月','火','水','木','金','土'][dw];
+    counts[dwj] = (counts[dwj]||0) + 1;
+  }
+  return counts;
+}
+
+function calcDefaultDailyHours(u, ds){
+  var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, ds) : u;
+  var s = (sc && sc.scheduleStart) || (u && u.scheduleStart) || '10:00';
+  var e = (sc && sc.scheduleEnd) || (u && u.scheduleEnd) || '15:30';
+  var b = (sc && sc.breakMin !== undefined && sc.breakMin !== null && sc.breakMin !== '') ? Number(sc.breakMin) : 60;
+  function toM(t){ var p=String(t).split(':').map(Number); return (p[0]||0)*60 + (p[1]||0); }
+  var mins = Math.max(0, toM(e) - toM(s) - b);
+  return Math.round(mins / 60 * 10) / 10;
+}
+
+function getDefaultKaikinAmount(){
+  var als = (typeof getAllowances === 'function') ? getAllowances() : [];
+  var kk = als.find(function(a){ return a.enabled !== false && (a.name||'').indexOf('皆勤') >= 0; });
+  if(kk && kk.amount) return Number(kk.amount);
+  return Number(S.settings.kaikinBonus) || 1000;
+}
+
+async function initWageSimulator(ym, forceReset){
+  if(_simState && _simState.ym === ym && !forceReset){
+    return;
+  }
+  var closedDays = [];
+  try {
+    closedDays = await cachedGas('getClosedDays', ym) || [];
+  } catch(e){}
+  var dowCounts = getMonthDowCounts(ym, closedDays);
+  var activeUsers = S.users.filter(function(u){ return isUserActive(u, ym); });
+  var defaultKaikin = getDefaultKaikinAmount();
+
+  var usersData = activeUsers.map(function(u){
+    var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, ym+'-01') : u;
+    var rawDays = (sc && sc.scheduleDays) ? sc.scheduleDays : (u.scheduleDays || '');
+    var daysArr = rawDays.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    if(daysArr.length === 0){
+      daysArr = ['月','火','水','木','金'];
+    }
+    var calcDays = daysArr.reduce(function(sum, d){ return sum + (dowCounts[d] || 0); }, 0);
+    var dHours = calcDefaultDailyHours(u, ym+'-01');
+    var wtId = (sc && sc.workTypeId) ? sc.workTypeId : (u.workTypeId || (S.workTypes[0] ? S.workTypes[0].id : ''));
+    var wtObj = S.workTypes.find(function(w){ return String(w.id) === String(wtId); }) || S.workTypes[0] || { rate: 200 };
+    var rate = Number(wtObj.rate) || 200;
+
+    return {
+      userId: u.id,
+      name: u.name,
+      days: daysArr,
+      workDays: calcDays,
+      dailyHours: dHours,
+      workTypeId: wtId,
+      rate: rate,
+      hasKaikin: true,
+      kaikinAmount: defaultKaikin,
+      otherAllowance: 0,
+      totalHours: 0,
+      baseWage: 0,
+      totalAllowance: 0,
+      grossWage: 0,
+      allocatedWage: 0,
+      diffWage: 0
+    };
+  });
+
+  _simState = {
+    ym: ym,
+    revenue: (_simState && _simState.revenue) ? _simState.revenue : 500000,
+    mode: 'auto',
+    closedDays: closedDays,
+    dowCounts: dowCounts,
+    users: usersData
+  };
+
+  recalcWageSimulation();
+}
+
+function recalcWageSimulation(){
+  if(!_simState || !_simState.users) return;
+  var totalGross = 0;
+  var totalHours = 0;
+  var activeCount = 0;
+
+  _simState.users.forEach(function(u){
+    u.workDays = Math.max(0, Number(u.workDays) || 0);
+    u.dailyHours = Math.max(0, Number(u.dailyHours) || 0);
+    u.rate = Math.max(0, Number(u.rate) || 0);
+    u.kaikinAmount = Math.max(0, Number(u.kaikinAmount) || 0);
+    u.otherAllowance = Number(u.otherAllowance) || 0;
+
+    u.totalHours = Math.round(u.workDays * u.dailyHours * 10) / 10;
+    u.baseWage = Math.floor(u.totalHours * u.rate);
+    u.totalAllowance = (u.hasKaikin ? u.kaikinAmount : 0) + u.otherAllowance;
+    u.grossWage = Math.max(0, u.baseWage + u.totalAllowance);
+
+    if(u.workDays > 0 && u.dailyHours > 0){
+      activeCount++;
+    }
+    totalGross += u.grossWage;
+    totalHours += u.totalHours;
+  });
+
+  _simState.totalGross = totalGross;
+  _simState.totalHours = Math.round(totalHours * 10) / 10;
+  _simState.activeCount = activeCount;
+  _simState.avgGross = activeCount > 0 ? Math.round(totalGross / activeCount) : 0;
+
+  var rev = Number(_simState.revenue) || 0;
+  var isOver = (rev > 0 && totalGross > rev);
+  _simState.isOver = isOver;
+  _simState.coverageRate = rev > 0 ? Math.round(totalGross / rev * 1000) / 10 : 0;
+
+  if(_simState.mode === 'auto' && isOver && totalGross > 0){
+    var ratio = rev / totalGross;
+    var allocatedSum = 0;
+    _simState.users.forEach(function(u){
+      u.allocatedWage = Math.floor(u.grossWage * ratio);
+      allocatedSum += u.allocatedWage;
+      u.diffWage = u.allocatedWage - u.grossWage;
+    });
+    var rem = rev - allocatedSum;
+    if(rem > 0 && _simState.users.length > 0){
+      var maxUser = _simState.users.reduce(function(prev, curr){
+        return (curr.grossWage > prev.grossWage) ? curr : prev;
+      }, _simState.users[0]);
+      if(maxUser){
+        maxUser.allocatedWage += rem;
+        maxUser.diffWage = maxUser.allocatedWage - maxUser.grossWage;
+        allocatedSum += rem;
+      }
+    }
+    _simState.totalAllocated = allocatedSum;
+    _simState.avgAllocated = activeCount > 0 ? Math.round(allocatedSum / activeCount) : 0;
+  } else {
+    _simState.users.forEach(function(u){
+      u.allocatedWage = u.grossWage;
+      u.diffWage = 0;
+    });
+    _simState.totalAllocated = totalGross;
+    _simState.avgAllocated = _simState.avgGross;
+  }
+}
+
+async function renderWageSimulator(c){
+  c.innerHTML = '<div class="hd-row"><h2>💰 工賃管理</h2><input type="month" value="'+wM+'" onchange="wM=this.value;renderWageSimulator(document.getElementById(\'content\'))"></div>' +
+    getWagesSubTabs() +
+    '<div id="sim-main-container">読み込み中...</div>';
+
+  var container = document.getElementById('sim-main-container');
+  showLoading(container, 'シミュレーターデータを準備中...');
+  try {
+    await initWageSimulator(wM, false);
+    renderSimFullUI(container);
+  } catch(e) {
+    container.innerHTML = '<div class="card" style="color:#c62828">読み込みエラー: ' + esc(e) + '</div>';
+  }
+}
+
+function renderSimFullUI(container){
+  var h = '';
+  // コントロールバー
+  h += '<div class="card no-print" style="margin-bottom:14px;background:#fbf9f6;border:1.5px solid #e2d9cd">';
+  h += '  <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px">';
+  h += '    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+  h += '      <span style="font-weight:700;font-size:13px;color:var(--pri)">💼 想定生産活動売上（工賃原資）:</span>';
+  h += '      <div style="display:inline-flex;align-items:center;gap:4px">';
+  h += '        <span style="font-weight:700;color:var(--sub)">¥</span>';
+  h += '        <input type="number" id="sim-rev-input" value="'+(_simState.revenue||0)+'" step="10000" min="0" oninput="setSimRevenue(this.value)" style="width:130px;padding:6px 10px;font-size:15px;font-weight:700;border:1.5px solid var(--bdr);border-radius:6px;text-align:right">';
+  h += '      </div>';
+  h += '      <div style="display:inline-flex;gap:4px">';
+  [300000, 500000, 800000, 1000000].forEach(function(v){
+    h += '      <button class="bg" onclick="setSimRevenue('+v+')" style="font-size:11px;padding:4px 8px;border-radius:4px">'+(v/10000)+'万</button>';
+  });
+  h += '      </div>';
+  h += '    </div>';
+
+  h += '    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
+  h += '      <label style="font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin-bottom:0">';
+  h += '        <input type="checkbox" id="sim-mode-toggle" '+(_simState.mode==='auto'?'checked':'')+' onchange="setSimMode(this.checked?\'auto\':\'raw\')">';
+  h += '        <span>売上超過時に按分配分（原資内調整）</span>';
+  h += '      </label>';
+  h += '      <button class="bg" onclick="resetWageSimulator()" style="font-size:12px;padding:6px 12px;color:#c62828" title="現在の基本スケジュール・作業単価に戻します">🔄 初期値にリセット</button>';
+  h += '    </div>';
+  h += '  </div>';
+
+  // 一括操作ツールバー
+  h += '  <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;display:flex;flex-wrap:wrap;align-items:center;gap:6px">';
+  h += '    <span style="font-size:12px;font-weight:700;color:var(--sub);margin-right:4px">⚡ 全員一括シミュレーション:</span>';
+  h += '    <button class="bg" onclick="applySimBulk(\'addDay\')" style="font-size:11px;padding:4px 8px">日数 +1日</button>';
+  h += '    <button class="bg" onclick="applySimBulk(\'subDay\')" style="font-size:11px;padding:4px 8px">日数 -1日</button>';
+  h += '    <button class="bg" onclick="applySimBulk(\'addHour\')" style="font-size:11px;padding:4px 8px">時間 +30分</button>';
+  h += '    <button class="bg" onclick="applySimBulk(\'subHour\')" style="font-size:11px;padding:4px 8px">時間 -30分</button>';
+  h += '    <button class="bg" onclick="applySimBulk(\'addRate\')" style="font-size:11px;padding:4px 8px">時給 +10円</button>';
+  h += '    <button class="bg" onclick="applySimBulk(\'subRate\')" style="font-size:11px;padding:4px 8px">時給 -10円</button>';
+  h += '    <button class="bg" onclick="applySimBulk(\'allKaikin\')" style="font-size:11px;padding:4px 8px">全員皆勤手当ON</button>';
+  h += '  </div>';
+  h += '</div>';
+
+  // リアルタイムサマリーカード
+  h += '<div class="stats" id="sim-cards-area" style="margin-bottom:16px">';
+  h += renderSimCardsHTML();
+  h += '</div>';
+
+  // テーブルカード
+  h += '<div class="card">';
+  h += '  <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
+  h += '    <span class="card-t">🔮 '+fmtMonth(_simState.ym)+' 利用者別工賃シミュレーション一覧</span>';
+  h += '    <div class="no-print" style="display:flex;gap:6px">';
+  h += '      <button class="bg" onclick="exportWageSimulationCsv()" style="font-size:12px;padding:5px 10px">📥 CSV出力</button>';
+  h += '      <button class="bp" onclick="printWageSimulation()" style="font-size:12px;padding:5px 10px">🖨️ 印刷 / PDF</button>';
+  h += '    </div>';
+  h += '  </div>';
+  h += '  <div class="tbl-wrap" id="sim-table-area">';
+  h += renderSimTableHTML();
+  h += '  </div>';
+  h += '  <div style="margin-top:12px;font-size:11px;color:var(--sub);line-height:1.6" class="no-print">';
+  h += '    ※このシミュレーターでの変更内容は画面の仮想メモリ上でのみ計算され、本番データ（出欠や確定工賃など）には一切保存されません。安心していくらでもお試しいただけます。<br>';
+  h += '    ※「按分後工賃」は、工賃総額が想定売上（工賃原資）を超過した場合に、売上枠内に収まるよう各利用者の積算工賃比率で比例配分した試算金額です。';
+  h += '  </div>';
+  h += '</div>';
+
+  container.innerHTML = h;
+}
+
+function renderSimCardsHTML(){
+  var st = _simState;
+  var rev = Number(st.revenue) || 0;
+  var isOver = st.isOver;
+  var cov = st.coverageRate;
+  var diff = rev - st.totalGross;
+
+  var statusBadge = '';
+  if(rev <= 0){
+    statusBadge = '<span class="sim-badge-alert" style="background:#f5f5f5;color:#666">売上未設定</span>';
+  } else if(!isOver){
+    statusBadge = '<span class="sim-badge-alert ok">✅ 原資範囲内 (余力 +¥' + fmtNum(diff) + ')</span>';
+  } else {
+    statusBadge = '<span class="sim-badge-alert ng">⚠️ 売上超過 -¥' + fmtNum(Math.abs(diff)) + ' (按分配分中)</span>';
+  }
+
+  var h = '';
+  h += '<div class="stat"><div class="stat-l">稼働対象者</div><div class="stat-v">'+st.activeCount+'<span style="font-size:13px;font-weight:400;margin-left:3px">名</span></div><div class="stat-s">全 '+st.users.length+' 名中</div></div>';
+  h += '<div class="stat" style="border-left:3px solid #1976d2"><div class="stat-l">総作業時間</div><div class="stat-v">'+st.totalHours+'<span style="font-size:13px;font-weight:400;margin-left:3px">h</span></div><div class="stat-s">月間積算稼働</div></div>';
+  h += '<div class="stat" style="border-left:3px solid #f57c00"><div class="stat-l">積算総工賃</div><div class="stat-v">¥'+fmtNum(st.totalGross)+'</div><div class="stat-s">通常積算時</div></div>';
+  h += '<div class="stat" style="border-left:3px solid #388e3c"><div class="stat-l">想定売上 (原資)</div><div class="stat-v">¥'+fmtNum(rev)+'</div><div class="stat-s">充当率: '+cov+'%</div></div>';
+  h += '<div class="stat" style="border-left:3px solid '+(isOver?'#c62828':'#2e7d32')+'"><div class="stat-l">按分後総支給</div><div class="stat-v" style="color:'+(isOver?'#c62828':'inherit')+'">¥'+fmtNum(st.totalAllocated)+'</div><div class="stat-s">'+statusBadge+'</div></div>';
+  h += '<div class="stat" style="border-left:3px solid #7b1fa2"><div class="stat-l">平均月額工賃</div><div class="stat-v">¥'+fmtNum(st.avgAllocated)+'</div><div class="stat-s">積算時: ¥'+fmtNum(st.avgGross)+'</div></div>';
+  return h;
+}
+
+function renderSimTableHTML(){
+  var st = _simState;
+  var dows = ['月','火','水','木','金','土'];
+  var h = '<table style="width:100%;font-size:13px"><thead><tr>' +
+    '  <th style="min-width:100px">氏名</th>' +
+    '  <th style="min-width:180px;text-align:center">通所曜日 (タップでON/OFF)</th>' +
+    '  <th style="width:75px;text-align:center">日数</th>' +
+    '  <th style="width:110px;text-align:center">1日時間</th>' +
+    '  <th style="width:90px;text-align:center">総時間</th>' +
+    '  <th style="width:110px;text-align:center">時給</th>' +
+    '  <th style="width:120px;text-align:center">手当</th>' +
+    '  <th style="width:95px;text-align:right">積算工賃</th>' +
+    '  <th style="width:95px;text-align:right;background:#f9fbf9">按分後工賃</th>' +
+    '  <th style="width:85px;text-align:right">差額</th>' +
+    '</tr></thead><tbody>';
+
+  if(!st.users || st.users.length === 0){
+    h += '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--sub)">対象の利用者がいません</td></tr>';
+  } else {
+    st.users.forEach(function(u){
+      var uid = esc(u.userId);
+      h += '<tr id="sim-row-'+uid+'">';
+      h += '  <td style="font-weight:700">'+esc(u.name)+'</td>';
+      // 曜日ピルボタングループ
+      h += '  <td style="text-align:center"><div class="sim-dow-group">';
+      dows.forEach(function(d){
+        var isOn = (u.days.indexOf(d) >= 0);
+        h += '  <button type="button" class="sim-dow-btn '+(isOn?'on':'')+'" onclick="toggleSimDow(\''+uid+'\',\''+d+'\')">'+d+'</button>';
+      });
+      h += '  </div></td>';
+      // 日数
+      h += '  <td style="text-align:center"><input type="number" min="0" max="31" class="sim-input-sm" id="sim-days-'+uid+'" value="'+u.workDays+'" style="width:50px" onchange="updateSimUser(\''+uid+'\',\'workDays\',this.value)"></td>';
+      // 1日時間
+      h += '  <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:2px">';
+      h += '    <button type="button" class="sim-step-btn" onclick="stepSimUser(\''+uid+'\',\'dailyHours\',-0.5)">-</button>';
+      h += '    <input type="number" step="0.5" min="0" max="24" class="sim-input-sm" id="sim-hours-'+uid+'" value="'+u.dailyHours+'" style="width:50px" onchange="updateSimUser(\''+uid+'\',\'dailyHours\',this.value)">';
+      h += '    <button type="button" class="sim-step-btn" onclick="stepSimUser(\''+uid+'\',\'dailyHours\',0.5)">+</button>';
+      h += '  </div></td>';
+      // 総時間
+      h += '  <td style="text-align:center;font-weight:600" id="sim-tot-h-'+uid+'">'+u.totalHours+'h</td>';
+      // 時給
+      h += '  <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:2px">';
+      h += '    <span style="font-size:11px;color:var(--sub)">¥</span>';
+      h += '    <input type="number" step="10" min="0" class="sim-input-sm" id="sim-rate-'+uid+'" value="'+u.rate+'" style="width:65px" onchange="updateSimUser(\''+uid+'\',\'rate\',this.value)">';
+      h += '  </div></td>';
+      // 手当
+      h += '  <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:4px">';
+      h += '    <label style="font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:2px;margin-bottom:0" title="皆勤手当 ¥'+fmtNum(u.kaikinAmount)+'"><input type="checkbox" id="sim-kk-'+uid+'" '+(u.hasKaikin?'checked':'')+' onchange="updateSimUser(\''+uid+'\',\'hasKaikin\',this.checked)">皆勤</label>';
+      h += '    <input type="number" step="500" min="0" class="sim-input-sm" id="sim-oth-'+uid+'" value="'+u.otherAllowance+'" style="width:55px" placeholder="加算" title="その他手当" onchange="updateSimUser(\''+uid+'\',\'otherAllowance\',this.value)">';
+      h += '  </div></td>';
+      // 積算工賃
+      h += '  <td style="text-align:right;font-weight:700" id="sim-gross-'+uid+'">¥'+fmtNum(u.grossWage)+'</td>';
+      // 按分後工賃
+      h += '  <td style="text-align:right;font-weight:700;color:'+(u.diffWage<0?'#c62828':'#1b5e20')+';background:#f9fbf9" id="sim-alloc-'+uid+'">¥'+fmtNum(u.allocatedWage)+'</td>';
+      // 差額
+      h += '  <td style="text-align:right;font-size:12px;color:'+(u.diffWage<0?'#c62828':'var(--sub)')+'" id="sim-diff-'+uid+'">'+(u.diffWage<0?'-¥'+fmtNum(Math.abs(u.diffWage)):(u.diffWage>0?'+¥'+fmtNum(u.diffWage):'-'))+'</td>';
+      h += '</tr>';
+    });
+  }
+
+  // 合計フッター
+  var totalDays = st.users.reduce(function(s,u){ return s + u.workDays; }, 0);
+  var totalGross = st.totalGross || 0;
+  var totalAlloc = st.totalAllocated || 0;
+  var totalDiff = totalAlloc - totalGross;
+
+  h += '</tbody><tfoot style="background:#fcfaf7;font-weight:700;border-top:2px solid var(--bdr)"><tr>';
+  h += '  <td>合計 ('+st.users.length+'名)</td>';
+  h += '  <td style="text-align:center">-</td>';
+  h += '  <td style="text-align:center" id="sim-foot-days">'+totalDays+'日</td>';
+  h += '  <td style="text-align:center">-</td>';
+  h += '  <td style="text-align:center" id="sim-foot-h">'+st.totalHours+'h</td>';
+  h += '  <td style="text-align:center">-</td>';
+  h += '  <td style="text-align:center">-</td>';
+  h += '  <td style="text-align:right" id="sim-foot-gross">¥'+fmtNum(totalGross)+'</td>';
+  h += '  <td style="text-align:right;color:'+(totalDiff<0?'#c62828':'#1b5e20')+';background:#f9fbf9" id="sim-foot-alloc">¥'+fmtNum(totalAlloc)+'</td>';
+  h += '  <td style="text-align:right;font-size:12px;color:'+(totalDiff<0?'#c62828':'var(--sub)')+'" id="sim-foot-diff">'+(totalDiff<0?'-¥'+fmtNum(Math.abs(totalDiff)):(totalDiff>0?'+¥'+fmtNum(totalDiff):'-'))+'</td>';
+  h += '</tr></tfoot></table>';
+  return h;
+}
+
+function updateSimDOMRow(uid){
+  var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
+  if(!u) return;
+  var totHEl = document.getElementById('sim-tot-h-' + uid);
+  if(totHEl) totHEl.textContent = u.totalHours + 'h';
+  var grossEl = document.getElementById('sim-gross-' + uid);
+  if(grossEl) grossEl.textContent = '¥' + fmtNum(u.grossWage);
+  var allocEl = document.getElementById('sim-alloc-' + uid);
+  if(allocEl){
+    allocEl.textContent = '¥' + fmtNum(u.allocatedWage);
+    allocEl.style.color = (u.diffWage < 0 ? '#c62828' : '#1b5e20');
+  }
+  var diffEl = document.getElementById('sim-diff-' + uid);
+  if(diffEl){
+    diffEl.textContent = (u.diffWage < 0 ? '-¥' + fmtNum(Math.abs(u.diffWage)) : (u.diffWage > 0 ? '+¥' + fmtNum(u.diffWage) : '-'));
+    diffEl.style.color = (u.diffWage < 0 ? '#c62828' : 'var(--sub)');
+  }
+}
+
+function updateSimDOMAll(){
+  recalcWageSimulation();
+  var cardsArea = document.getElementById('sim-cards-area');
+  if(cardsArea) cardsArea.innerHTML = renderSimCardsHTML();
+
+  _simState.users.forEach(function(u){
+    updateSimDOMRow(u.userId);
+  });
+
+  var totalDays = _simState.users.reduce(function(s,u){ return s + u.workDays; }, 0);
+  var totalGross = _simState.totalGross || 0;
+  var totalAlloc = _simState.totalAllocated || 0;
+  var totalDiff = totalAlloc - totalGross;
+
+  var fDays = document.getElementById('sim-foot-days'); if(fDays) fDays.textContent = totalDays + '日';
+  var fH = document.getElementById('sim-foot-h'); if(fH) fH.textContent = _simState.totalHours + 'h';
+  var fGross = document.getElementById('sim-foot-gross'); if(fGross) fGross.textContent = '¥' + fmtNum(totalGross);
+  var fAlloc = document.getElementById('sim-foot-alloc');
+  if(fAlloc){
+    fAlloc.textContent = '¥' + fmtNum(totalAlloc);
+    fAlloc.style.color = (totalDiff < 0 ? '#c62828' : '#1b5e20');
+  }
+  var fDiff = document.getElementById('sim-foot-diff');
+  if(fDiff){
+    fDiff.textContent = (totalDiff < 0 ? '-¥' + fmtNum(Math.abs(totalDiff)) : (totalDiff > 0 ? '+¥' + fmtNum(totalDiff) : '-'));
+    fDiff.style.color = (totalDiff < 0 ? '#c62828' : 'var(--sub)');
+  }
+}
+
+function toggleSimDow(uid, dow){
+  var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
+  if(!u) return;
+  var idx = u.days.indexOf(dow);
+  if(idx >= 0){
+    u.days.splice(idx, 1);
+  } else {
+    u.days.push(dow);
+  }
+  u.workDays = u.days.reduce(function(sum, d){ return sum + (_simState.dowCounts[d] || 0); }, 0);
+  var daysInput = document.getElementById('sim-days-' + uid);
+  if(daysInput) daysInput.value = u.workDays;
+
+  var row = document.getElementById('sim-row-' + uid);
+  if(row){
+    var btns = row.querySelectorAll('.sim-dow-btn');
+    var dows = ['月','火','水','木','金','土'];
+    btns.forEach(function(btn, i){
+      var d = dows[i];
+      if(u.days.indexOf(d) >= 0){
+        btn.classList.add('on');
+      } else {
+        btn.classList.remove('on');
+      }
+    });
+  }
+  updateSimDOMAll();
+}
+
+function updateSimUser(uid, field, val){
+  var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
+  if(!u) return;
+  if(field === 'hasKaikin'){
+    u.hasKaikin = !!val;
+  } else {
+    u[field] = Number(val) || 0;
+  }
+  updateSimDOMAll();
+}
+
+function stepSimUser(uid, field, step){
+  var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
+  if(!u) return;
+  var cur = Number(u[field]) || 0;
+  var next = Math.max(0, Math.round((cur + step) * 10) / 10);
+  u[field] = next;
+  var inputEl = document.getElementById('sim-' + (field === 'dailyHours' ? 'hours' : 'days') + '-' + uid);
+  if(inputEl) inputEl.value = next;
+  updateSimDOMAll();
+}
+
+function setSimRevenue(val){
+  _simState.revenue = Math.max(0, Number(val) || 0);
+  var inputEl = document.getElementById('sim-rev-input');
+  if(inputEl && String(inputEl.value) !== String(_simState.revenue)){
+    inputEl.value = _simState.revenue;
+  }
+  updateSimDOMAll();
+}
+
+function setSimMode(mode){
+  _simState.mode = mode;
+  updateSimDOMAll();
+}
+
+function applySimBulk(action){
+  if(!_simState || !_simState.users) return;
+  _simState.users.forEach(function(u){
+    if(action === 'addDay'){
+      u.workDays = Math.min(31, u.workDays + 1);
+      var el = document.getElementById('sim-days-' + u.userId); if(el) el.value = u.workDays;
+    } else if(action === 'subDay'){
+      u.workDays = Math.max(0, u.workDays - 1);
+      var el = document.getElementById('sim-days-' + u.userId); if(el) el.value = u.workDays;
+    } else if(action === 'addHour'){
+      u.dailyHours = Math.round((u.dailyHours + 0.5) * 10) / 10;
+      var el = document.getElementById('sim-hours-' + u.userId); if(el) el.value = u.dailyHours;
+    } else if(action === 'subHour'){
+      u.dailyHours = Math.max(0, Math.round((u.dailyHours - 0.5) * 10) / 10);
+      var el = document.getElementById('sim-hours-' + u.userId); if(el) el.value = u.dailyHours;
+    } else if(action === 'addRate'){
+      u.rate = u.rate + 10;
+      var el = document.getElementById('sim-rate-' + u.userId); if(el) el.value = u.rate;
+    } else if(action === 'subRate'){
+      u.rate = Math.max(0, u.rate - 10);
+      var el = document.getElementById('sim-rate-' + u.userId); if(el) el.value = u.rate;
+    } else if(action === 'allKaikin'){
+      u.hasKaikin = true;
+      var el = document.getElementById('sim-kk-' + u.userId); if(el) el.checked = true;
+    }
+  });
+  updateSimDOMAll();
+  toast('⚡ 一括シミュレーションを反映しました');
+}
+
+async function resetWageSimulator(){
+  var ok = await cConfirm('現在の利用者の標準スケジュールと単価設定でシミュレーターを初期化しますか？');
+  if(!ok) return;
+  await initWageSimulator(_simState.ym, true);
+  var container = document.getElementById('sim-main-container');
+  if(container) renderSimFullUI(container);
+  toast('🔄 初期値にリセットしました');
+}
+
+function exportWageSimulationCsv(){
+  if(!_simState || !_simState.users || _simState.users.length === 0){
+    toast('⚠️ 出力対象のデータがありません');
+    return;
+  }
+  var rows = [
+    ['氏名', '通所曜日', '月間日数', '1日作業時間(h)', '月間総時間(h)', '時給(円)', '皆勤手当', 'その他手当', '積算工賃(円)', '按分後工賃(円)', '按分差額(円)']
+  ];
+  _simState.users.forEach(function(u){
+    rows.push([
+      u.name,
+      u.days.join('/'),
+      u.workDays,
+      u.dailyHours,
+      u.totalHours,
+      u.rate,
+      u.hasKaikin ? u.kaikinAmount : 0,
+      u.otherAllowance,
+      u.grossWage,
+      u.allocatedWage,
+      u.diffWage
+    ]);
+  });
+  rows.push([
+    '合計',
+    '-',
+    _simState.users.reduce(function(s,u){ return s + u.workDays; }, 0),
+    '-',
+    _simState.totalHours,
+    '-',
+    '-',
+    '-',
+    _simState.totalGross,
+    _simState.totalAllocated,
+    (_simState.totalAllocated - _simState.totalGross)
+  ]);
+
+  var csvContent = rows.map(function(r){
+    return r.map(function(cell){
+      var str = String(cell == null ? '' : cell);
+      if(str.indexOf(',') >= 0 || str.indexOf('"') >= 0 || str.indexOf('\n') >= 0){
+        str = '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }).join(',');
+  }).join('\r\n');
+
+  var bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+  var blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '工賃シミュレーション_' + _simState.ym + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function printWageSimulation(){
+  if(!_simState) return;
+  var st = _simState;
+  var rowsHtml = st.users.map(function(u, idx){
+    return '<tr>' +
+      '<td style="text-align:center">' + (idx + 1) + '</td>' +
+      '<td style="font-weight:700">' + esc(u.name) + '</td>' +
+      '<td style="text-align:center">' + esc(u.days.join(',')) + '</td>' +
+      '<td style="text-align:right">' + u.workDays + '日</td>' +
+      '<td style="text-align:right">' + u.dailyHours + 'h</td>' +
+      '<td style="text-align:right">' + u.totalHours + 'h</td>' +
+      '<td style="text-align:right">¥' + fmtNum(u.rate) + '</td>' +
+      '<td style="text-align:right">¥' + fmtNum(u.totalAllowance) + '</td>' +
+      '<td style="text-align:right;font-weight:700">¥' + fmtNum(u.grossWage) + '</td>' +
+      '<td style="text-align:right;font-weight:700;color:' + (u.diffWage < 0 ? '#c62828' : '#2e7d32') + '">¥' + fmtNum(u.allocatedWage) + '</td>' +
+      '<td style="text-align:right;font-size:11px">' + (u.diffWage < 0 ? '-¥' + fmtNum(Math.abs(u.diffWage)) : '-') + '</td>' +
+      '</tr>';
+  }).join('');
+
+  var totalDays = st.users.reduce(function(s,u){ return s + u.workDays; }, 0);
+  var totalDiff = st.totalAllocated - st.totalGross;
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>工賃シミュレーション - ' + esc(st.ym) + '</title>' +
+    '<style>' +
+    'body{font-family:sans-serif;padding:20px;color:#333;font-size:12px;}' +
+    'h1{font-size:18px;margin-bottom:6px;}' +
+    '.meta{font-size:12px;color:#666;margin-bottom:14px;display:flex;justify-content:space-between;border-bottom:1px solid #ccc;padding-bottom:8px;}' +
+    '.summary-box{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px;}' +
+    '.summary-item{border:1px solid #ddd;padding:8px;border-radius:4px;background:#f9f9f9;text-align:center;}' +
+    '.summary-label{font-size:11px;color:#666;margin-bottom:2px;}' +
+    '.summary-val{font-size:15px;font-weight:700;color:#111;}' +
+    'table{width:100%;border-collapse:collapse;margin-top:10px;}' +
+    'th,td{border:1px solid #bbb;padding:6px 8px;font-size:11px;}' +
+    'th{background:#f0ebe3;}' +
+    'tfoot td{background:#faf8f5;font-weight:700;border-top:2px solid #666;}' +
+    '@media print{@page{size:landscape;margin:10mm;}}' +
+    '</style></head><body>' +
+    '<h1>🔮 工賃シミュレーション結果報告（' + fmtMonth(st.ym) + '）</h1>' +
+    '<div class="meta"><span>事業所名: ' + esc(S.settings.facilityName||'ひとつぎ') + '</span><span>出力日時: ' + fmtDateTime(new Date()) + '</span></div>' +
+    '<div class="summary-box">' +
+    '  <div class="summary-item"><div class="summary-label">対象人数</div><div class="summary-val">' + st.activeCount + ' 名</div></div>' +
+    '  <div class="summary-item"><div class="summary-label">総作業時間</div><div class="summary-val">' + st.totalHours + ' h</div></div>' +
+    '  <div class="summary-item"><div class="summary-label">積算総工賃</div><div class="summary-val">¥' + fmtNum(st.totalGross) + '</div></div>' +
+    '  <div class="summary-item"><div class="summary-label">想定売上 (原資)</div><div class="summary-val">¥' + fmtNum(st.revenue) + '</div></div>' +
+    '  <div class="summary-item"><div class="summary-label">按分後総支給</div><div class="summary-val">¥' + fmtNum(st.totalAllocated) + '</div></div>' +
+    '  <div class="summary-item"><div class="summary-label">平均月額工賃</div><div class="summary-val">¥' + fmtNum(st.avgAllocated) + '</div></div>' +
+    '</div>' +
+    '<table><thead><tr>' +
+    '  <th style="width:30px">#</th><th>氏名</th><th>通所曜日</th><th>日数</th><th>1日時間</th><th>総時間</th><th>時給</th><th>手当</th><th>積算工賃</th><th>按分後工賃</th><th>差額</th>' +
+    '</tr></thead><tbody>' + rowsHtml + '</tbody>' +
+    '<tfoot><tr>' +
+    '  <td colspan="3">合計 (' + st.users.length + '名)</td>' +
+    '  <td style="text-align:right">' + totalDays + '日</td>' +
+    '  <td>-</td>' +
+    '  <td style="text-align:right">' + st.totalHours + 'h</td>' +
+    '  <td>-</td><td>-</td>' +
+    '  <td style="text-align:right">¥' + fmtNum(st.totalGross) + '</td>' +
+    '  <td style="text-align:right">¥' + fmtNum(st.totalAllocated) + '</td>' +
+    '  <td style="text-align:right">' + (totalDiff < 0 ? '-¥' + fmtNum(Math.abs(totalDiff)) : '-') + '</td>' +
+    '</tr></tfoot></table>' +
+    '<div style="margin-top:12px;font-size:10px;color:#777">※本試算結果はシミュレーションであり、確定工賃とは異なる場合があります。</div>' +
+    '<script>window.onload=function(){window.print();};<\/script>' +
+    '</body></html>';
+
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
 
 // ═══ 帳票 ═══
 var eM=today().slice(0,7),eT='menu';
