@@ -8629,10 +8629,11 @@ function renderSimFullUI(container){
   h += '<div class="card">';
   h += '  <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
   h += '    <span class="card-t">🔮 '+fmtMonth(_simState.ym)+' 利用者別工賃シミュレーション一覧</span>';
-  h += '    <div class="no-print" style="display:flex;gap:6px">';
+  h += '    <div class="no-print" style="display:flex;gap:6px;flex-wrap:wrap">';
   h += '      <button class="bp" onclick="addVirtualSimUser()" style="font-size:12px;padding:5px 12px;background:#2e7d32;border-color:#2e7d32" title="新しい利用者が増えた場合の試算用に追加">👤＋ 架空の利用者を追加</button>';
+  h += '      <button class="bp" onclick="openSimNoticeModal()" style="font-size:12px;padding:5px 12px;background:#6a1b9a;border-color:#6a1b9a" title="各個人向けの按分工賃決定通知書・案内文・証明書を印刷">📜 個人別按分案内文・証明書</button>';
   h += '      <button class="bg" onclick="exportWageSimulationCsv()" style="font-size:12px;padding:5px 10px">📥 CSV出力</button>';
-  h += '      <button class="bp" onclick="printWageSimulation()" style="font-size:12px;padding:5px 10px">🖨️ 印刷 / PDF</button>';
+  h += '      <button class="bp" onclick="printWageSimulation()" style="font-size:12px;padding:5px 10px">🖨️ 一覧印刷 / PDF</button>';
   h += '    </div>';
   h += '  </div>';
   h += '  <div class="tbl-wrap" id="sim-table-area">';
@@ -8641,6 +8642,7 @@ function renderSimFullUI(container){
   h += '  <div style="margin-top:12px;font-size:11px;color:var(--sub);line-height:1.6" class="no-print">';
   h += '    ※このシミュレーターでの変更内容は画面の仮想メモリ上でのみ計算され、本番データ（出欠や確定工賃など）には一切保存されません。安心していくらでもお試しいただけます。<br>';
   h += '    ※「👤＋ 架空の利用者を追加」ボタンで、新規利用者が増えた場合の工賃や売上原資への影響を何名でも試算できます（✕ボタンで削除可能）。<br>';
+  h += '    ※「📜 個人別按分案内文・証明書」ボタンから、各個人に手渡し・郵送できる**公的な按分工賃決定通知書・計算結果証明書（A4縦・受領書付き）**を一括または個別に印刷できます。<br>';
   h += '    ※「手当」列は、金額を直接打ち込んで変更することも、⚙️ボタンから登録手当（皆勤・精勤・自力来所・交通費など）をチェック選択することも可能です。<br>';
   h += '    ※「按分後工賃」は、工賃総額が想定売上（工賃原資）を超過した場合に、売上枠内に収まるよう各利用者の積算工賃比率で比例配分した試算金額です。';
   h += '  </div>';
@@ -8689,10 +8691,11 @@ function renderSimTableHTML(){
     '  <th style="width:95px;text-align:right">積算工賃</th>' +
     '  <th style="width:95px;text-align:right;background:#f9fbf9">按分後工賃</th>' +
     '  <th style="width:85px;text-align:right">差額</th>' +
+    '  <th style="width:65px;text-align:center" class="no-print">案内文</th>' +
     '</tr></thead><tbody>';
 
   if(!st.users || st.users.length === 0){
-    h += '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--sub)">対象の利用者がいません</td></tr>';
+    h += '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--sub)">対象の利用者がいません</td></tr>';
   } else {
     st.users.forEach(function(u){
       var uid = esc(u.userId);
@@ -8747,6 +8750,8 @@ function renderSimTableHTML(){
       h += '  <td style="text-align:right;font-weight:700;color:'+(u.diffWage<0?'#c62828':'#1b5e20')+';background:#f9fbf9" id="sim-alloc-'+uid+'">¥'+fmtNum(u.allocatedWage)+'</td>';
       // 差額
       h += '  <td style="text-align:right;font-size:12px;color:'+(u.diffWage<0?'#c62828':'var(--sub)')+'" id="sim-diff-'+uid+'">'+(u.diffWage<0?'-¥'+fmtNum(Math.abs(u.diffWage)):(u.diffWage>0?'+¥'+fmtNum(u.diffWage):'-'))+'</td>';
+      // 案内文
+      h += '  <td style="text-align:center" class="no-print"><button type="button" class="bg" onclick="openSimNoticeModal(\''+uid+'\')" style="font-size:11px;padding:3px 7px" title="この利用者の按分案内文・証明書を表示・印刷">📜 印刷</button></td>';
       h += '</tr>';
     });
   }
@@ -8768,6 +8773,7 @@ function renderSimTableHTML(){
   h += '  <td style="text-align:right" id="sim-foot-gross">¥'+fmtNum(totalGross)+'</td>';
   h += '  <td style="text-align:right;color:'+(totalDiff<0?'#c62828':'#1b5e20')+';background:#f9fbf9" id="sim-foot-alloc">¥'+fmtNum(totalAlloc)+'</td>';
   h += '  <td style="text-align:right;font-size:12px;color:'+(totalDiff<0?'#c62828':'var(--sub)')+'" id="sim-foot-diff">'+(totalDiff<0?'-¥'+fmtNum(Math.abs(totalDiff)):(totalDiff>0?'+¥'+fmtNum(totalDiff):'-'))+'</td>';
+  h += '  <td style="text-align:center" class="no-print">-</td>';
   h += '</tr></tfoot></table>';
   return h;
 }
@@ -9290,6 +9296,370 @@ function printWageSimulation(){
 
   var w = window.open('', '_blank');
   w.document.write(html);
+  w.document.close();
+}
+
+// ═══ 工賃シミュレーター：個人別按分案内文・証明書 ═══
+
+function getSimNoticeOptions(){
+  var t = new Date();
+  var defaultIssue = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+  var ym = (_simState && _simState.ym) ? _simState.ym : today().slice(0,7);
+  var yy = Number(ym.split('-')[0]), mm = Number(ym.split('-')[1]);
+  var pm = mm + 1, py = yy; if(pm > 12){ pm = 1; py++; }
+  var defaultPay = py + '-' + String(pm).padStart(2,'0') + '-23';
+
+  return {
+    issueDate: window._simNoticeIssueDate || defaultIssue,
+    payDate: window._simNoticePayDate || defaultPay,
+    facilityName: S.settings.facilityName || '就労継続支援Ｂ型事業所 Porte',
+    companyName: S.settings.companyName || '',
+    managerName: S.settings.managerName || (getSession()||{}).name || '管理者'
+  };
+}
+
+function fmtDateJPText(ds){
+  if(!ds) return '';
+  var p = ds.split('-');
+  return Number(p[0]) + '年' + Number(p[1]) + '月' + Number(p[2]) + '日';
+}
+
+function generateSimNoticeSheetHTML(u, opt){
+  var st = _simState;
+  var isOver = st.isOver;
+  var ymText = fmtMonth(st.ym);
+  var issueDateJP = fmtDateJPText(opt.issueDate);
+  var payDateJP = fmtDateJPText(opt.payDate);
+  var facName = esc(opt.facilityName);
+  var compName = opt.companyName ? esc(opt.companyName) + '<br>' : '';
+  var mgrName = esc(opt.managerName);
+
+  // 原資・配分状況メッセージ
+  var coveragePct = st.revenue > 0 ? (Math.round(st.totalGross / st.revenue * 1000) / 10) : 0;
+  var allocRateText = '';
+  if(st.mode === 'auto' && isOver){
+    var allocRatio = st.totalGross > 0 ? (Math.round(st.revenue / st.totalGross * 1000) / 10) : 100;
+    allocRateText = '<span style="color:#c62828;font-weight:700">⚠️ 売上原資超過に伴う按分配分を実施（按分比率: ' + allocRatio + '%）</span>';
+  } else {
+    allocRateText = '<span style="color:#2e7d32;font-weight:700">✅ 生産活動売上（原資）範囲内での満額支給（原資充当率: ' + coveragePct + '%）</span>';
+  }
+
+  var diffText = '±¥0';
+  if(u.diffWage < 0){
+    diffText = '<span style="color:#c62828;font-weight:700">-¥' + fmtNum(Math.abs(u.diffWage)) + '</span>';
+  } else if(u.diffWage > 0){
+    diffText = '<span style="color:#2e7d32;font-weight:700">+¥' + fmtNum(u.diffWage) + '</span>';
+  }
+
+  var virtualBadge = u.isVirtual ? '<span style="font-size:11px;color:#1565c0;background:#e3f2fd;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:700">【試算・架空利用者】</span>' : '';
+
+  var h = '<div class="sim-notice-page">' +
+    // 最上部（日付・宛名・差出人）
+    '  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">' +
+    '    <div style="margin-top:8px">' +
+    '      <div style="font-size:18px;font-weight:700;border-bottom:2px solid #222;padding-bottom:3px;letter-spacing:1px;display:inline-block">' +
+             esc(u.name) + ' <span style="font-size:14px;font-weight:normal;margin-left:4px">様</span>' +
+    '      </div>' + virtualBadge +
+    '    </div>' +
+    '    <div style="text-align:right;font-size:11px;line-height:1.5">' +
+    '      <div style="margin-bottom:4px">' + issueDateJP + '</div>' +
+    '      <div>' + compName + '<strong>' + facName + '</strong></div>' +
+    '      <div style="margin-top:2px">管理者　' + mgrName + '　<span style="display:inline-block;width:28px;height:28px;border:1px solid #999;border-radius:50%;text-align:center;line-height:28px;font-size:10px;color:#999;vertical-align:middle">印</span></div>' +
+    '    </div>' +
+    '  </div>' +
+
+    // 表題
+    '  <div style="text-align:center;margin:16px 0 14px">' +
+    '    <div style="display:inline-block;font-size:17px;font-weight:700;letter-spacing:3px;padding:4px 24px;border-top:2px solid #222;border-bottom:2px solid #222">' +
+    '      工賃支給額決定通知書 兼 按分計算結果のご案内' +
+    '    </div>' +
+    '  </div>' +
+
+    // 時候の挨拶・前文
+    '  <div style="font-size:11px;line-height:1.75;margin-bottom:14px;text-indent:1em;color:#222">' +
+    '    拝啓　時下ますますご清祥のこととお慶び申し上げます。日頃より当事業所の作業および生産活動に真摯に取り組んでいただき、心より御礼申し上げます。<br>' +
+    '    さて、当事業所の工賃支払規程に基づき、<strong>' + ymText + '度</strong>の生産活動実績および工賃原資に応じた工賃支給額（按分計算結果）を下記のとおり決定いたしましたので通知並びに証明申し上げます。内容をご確認いただきますようお願い申し上げます。' +
+    '  </div>' +
+
+    // 記
+    '  <div style="text-align:center;font-size:13px;font-weight:700;margin-bottom:6px;letter-spacing:6px">記</div>' +
+
+    // セクション1: 事業所全体の生産活動状況
+    '  <div style="font-size:11.5px;font-weight:700;margin:10px 0 4px;padding:3px 8px;background:#f2ede4;border-left:4px solid var(--pri)">' +
+    '    １．事業所全体の生産活動状況（工賃原資の透明性）' +
+    '  </div>' +
+    '  <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:11px">' +
+    '    <tr>' +
+    '      <th style="border:1px solid #999;background:#faf7f2;padding:5px 8px;width:26%;text-align:left">対象月度</th>' +
+    '      <td style="border:1px solid #999;padding:5px 8px;font-weight:700">' + ymText + '度</td>' +
+    '      <th style="border:1px solid #999;background:#faf7f2;padding:5px 8px;width:26%;text-align:left">生産活動売上（工賃原資）</th>' +
+    '      <td style="border:1px solid #999;padding:5px 8px;font-weight:700;text-align:right">¥' + fmtNum(st.revenue) + '</td>' +
+    '    </tr>' +
+    '    <tr>' +
+    '      <th style="border:1px solid #999;background:#faf7f2;padding:5px 8px;text-align:left">通常積算工賃総額</th>' +
+    '      <td style="border:1px solid #999;padding:5px 8px;text-align:right;font-weight:700">¥' + fmtNum(st.totalGross) + ' (' + st.activeCount + '名分)</td>' +
+    '      <th style="border:1px solid #999;background:#faf7f2;padding:5px 8px;text-align:left">配分調整状況</th>' +
+    '      <td style="border:1px solid #999;padding:5px 8px">' + allocRateText + '</td>' +
+    '    </tr>' +
+    '  </table>' +
+
+    // セクション2: ご本人の作業実績および工賃決定内訳
+    '  <div style="font-size:11.5px;font-weight:700;margin:10px 0 4px;padding:3px 8px;background:#f2ede4;border-left:4px solid var(--pri)">' +
+    '    ２．' + esc(u.name) + ' 様の作業実績および工賃決定内訳' +
+    '  </div>' +
+    '  <table style="width:100%;border-collapse:collapse;margin-bottom:8px;font-size:11px">' +
+    '    <thead>' +
+    '      <tr style="background:#faf7f2">' +
+    '        <th style="border:1px solid #999;padding:5px;width:18%">通所日数</th>' +
+    '        <th style="border:1px solid #999;padding:5px;width:20%">総作業時間</th>' +
+    '        <th style="border:1px solid #999;padding:5px;width:18%">基準時給</th>' +
+    '        <th style="border:1px solid #999;padding:5px;width:22%">基本作業工賃</th>' +
+    '        <th style="border:1px solid #999;padding:5px;width:22%">各種手当計</th>' +
+    '      </tr>' +
+    '    </thead>' +
+    '    <tbody>' +
+    '      <tr>' +
+    '        <td style="border:1px solid #999;padding:6px;text-align:center;font-weight:700">' + u.workDays + ' 日</td>' +
+    '        <td style="border:1px solid #999;padding:6px;text-align:center">' + u.totalHours + ' 時間</td>' +
+    '        <td style="border:1px solid #999;padding:6px;text-align:right">¥' + fmtNum(u.rate) + '</td>' +
+    '        <td style="border:1px solid #999;padding:6px;text-align:right">¥' + fmtNum(u.baseWage) + '</td>' +
+    '        <td style="border:1px solid #999;padding:6px;text-align:right">¥' + fmtNum(u.totalAllowance) + '<div style="font-size:9.5px;color:#555">' + esc(u.allowanceDesc) + '</div></td>' +
+    '      </tr>' +
+    '    </tbody>' +
+    '  </table>' +
+
+    // 計算まとめテーブル（積算・按分差額・最終支給額）
+    '  <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:11.5px">' +
+    '    <tr style="background:#fdfcfb">' +
+    '      <td style="border:1.5px solid #666;padding:7px 10px;width:55%;font-weight:600">通常積算工賃（作業工賃 ＋ 手当合計）</td>' +
+    '      <td style="border:1.5px solid #666;padding:7px 10px;width:45%;text-align:right;font-weight:700;font-size:13px">¥' + fmtNum(u.grossWage) + '</td>' +
+    '    </tr>' +
+    '    <tr style="background:#fdfcfb">' +
+    '      <td style="border:1.5px solid #666;padding:7px 10px;font-weight:600">按分調整額（原資枠内への配分調整）</td>' +
+    '      <td style="border:1.5px solid #666;padding:7px 10px;text-align:right;font-size:12.5px">' + diffText + '</td>' +
+    '    </tr>' +
+    '    <tr style="background:#e8f5e9;border:2.5px solid #2e7d32">' +
+    '      <td style="border:2px solid #2e7d32;padding:10px;font-weight:800;font-size:13.5px;color:#1b5e20">' +
+    '        ★ 今月度 工賃支給額（差引支給額）' +
+    '      </td>' +
+    '      <td style="border:2px solid #2e7d32;padding:10px;text-align:right;font-weight:900;font-size:20px;color:#1b5e20;font-family:sans-serif">' +
+    '        ¥' + fmtNum(u.allocatedWage) +
+    '      </td>' +
+    '    </tr>' +
+    '  </table>' +
+
+    // 支給予定日
+    '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:11px">' +
+    '    <div><strong>支給予定日：</strong> ' + payDateJP + '</div>' +
+    '    <div style="font-size:10px;color:#555">※金融機関振込または現金支給</div>' +
+    '  </div>' +
+
+    // 証明文
+    '  <div style="border:1px dashed #777;background:#fafafa;padding:8px 10px;margin-bottom:12px;font-size:10px;line-height:1.6;color:#333">' +
+    '    <strong>【証明事項】</strong><br>' +
+    '    上記の工賃算定および支給額は、障害者の日常生活及び社会生活を総合的に支援するための法律に基づく指定就労継続支援Ｂ型事業所の運営基準並びに当事業所の工賃支払規程に則り、生産活動実績に照らして適正かつ公平に算定・按分配分されたものであることを証明いたします。<br>' +
+    '    ※算定内容や作業時間についてご不明な点がございましたら、いつでも担当職員までお気軽にお申し出ください。' +
+    '  </div>' +
+
+    // 切り取り線 & 受領書
+    '  <div style="margin-top:auto;padding-top:10px;border-top:1.5px dashed #888">' +
+    '    <div style="text-align:right;font-size:9px;color:#888;margin-bottom:4px">✂ 切り取り線</div>' +
+    '    <div style="text-align:center;font-size:13px;font-weight:700;margin-bottom:6px;letter-spacing:2px">' +
+    '      工賃支給額決定通知書（兼 按分配分証明書） 受領書' +
+    '    </div>' +
+    '    <div style="font-size:10.5px;margin-bottom:8px">' +
+    '      ' + facName + '　管理者 殿' +
+    '    </div>' +
+    '    <div style="font-size:10px;line-height:1.5;margin-bottom:10px">' +
+    '      私は、' + ymText + '度の工賃支給額決定通知書を受領し、記載された作業実績および按分配分計算結果を確認・同意いたしました。' +
+    '    </div>' +
+    '    <div style="display:flex;justify-content:space-between;align-items:flex-end;font-size:10.5px;margin-top:10px">' +
+    '      <div style="width:40%">' +
+    '        受領日：令和　　年　　月　　日' +
+    '      </div>' +
+    '      <div style="width:58%;text-align:right">' +
+    '        ご本人氏名（自署または代筆）：_________________________ <span style="display:inline-block;width:24px;height:24px;border:1px solid #aaa;border-radius:50%;text-align:center;line-height:24px;font-size:9px;color:#aaa;vertical-align:middle">印</span>' +
+    '      </div>' +
+    '    </div>' +
+    '  </div>' +
+    '</div>';
+
+  return h;
+}
+
+function openSimNoticeModal(targetUserId){
+  if(!_simState || !_simState.users || _simState.users.length === 0){
+    toast('⚠️ シミュレーションデータがありません');
+    return;
+  }
+  var exist = document.getElementById('sim-notice-modal');
+  if(exist) exist.remove();
+
+  window._simNoticeTargetId = targetUserId || 'all';
+
+  var modal = document.createElement('div');
+  modal.id = 'sim-notice-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:9999;display:flex;justify-content:center;align-items:center;padding:16px;box-sizing:border-box';
+  modal.onclick = function(e){ if(e.target === modal) closeSimNoticeModal(); };
+
+  document.body.appendChild(modal);
+  renderSimNoticeModalContent();
+}
+
+function closeSimNoticeModal(){
+  var m = document.getElementById('sim-notice-modal');
+  if(m) m.remove();
+}
+
+function renderSimNoticeModalContent(){
+  var modal = document.getElementById('sim-notice-modal');
+  if(!modal || !_simState) return;
+  var st = _simState;
+  var opt = getSimNoticeOptions();
+  var targetId = window._simNoticeTargetId || 'all';
+
+  var targetUsers = [];
+  if(targetId === 'all'){
+    targetUsers = st.users;
+  } else {
+    var found = st.users.find(function(x){ return String(x.userId) === String(targetId); });
+    if(found) targetUsers = [found];
+  }
+
+  var userOptionsHtml = '<option value="all" '+(targetId==='all'?'selected':'')+'>👥 全員分を一括印刷（'+st.users.length+'名分）</option>';
+  st.users.forEach(function(u){
+    var isSel = (String(u.userId) === String(targetId));
+    userOptionsHtml += '<option value="'+esc(u.userId)+'" '+(isSel?'selected':'')+'>👤 '+esc(u.name)+(u.isVirtual?' (架空)':'')+' (¥'+fmtNum(u.allocatedWage)+')</option>';
+  });
+
+  var previewSheetsHtml = '';
+  targetUsers.forEach(function(u){
+    previewSheetsHtml += generateSimNoticeSheetHTML(u, opt);
+  });
+
+  var h = '<div style="background:#fff;border-radius:12px;width:860px;max-width:96vw;height:92vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,0.3);overflow:hidden">' +
+    // モーダルヘッダー
+    '  <div style="padding:14px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;background:#faf8f5">' +
+    '    <div style="display:flex;align-items:center;gap:8px">' +
+    '      <span style="font-size:20px">📜</span>' +
+    '      <div>' +
+    '        <div style="font-size:16px;font-weight:700;color:var(--pri)">工賃支給額決定通知書・按分証明書 印刷プレビュー</div>' +
+    '        <div style="font-size:11px;color:var(--sub)">'+fmtMonth(st.ym)+'度 按分結果の公的案内文・証明書（受領書付き）</div>' +
+    '      </div>' +
+    '    </div>' +
+    '    <button onclick="closeSimNoticeModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--sub);line-height:1">✕</button>' +
+    '  </div>' +
+
+    // コントロールツールバー
+    '  <div style="padding:10px 20px;background:#f5f0ea;border-bottom:1px solid #e0d8cc;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px">' +
+    '    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">' +
+    '      <label style="font-size:12px;font-weight:700;color:var(--pri)">印刷対象:' +
+    '        <select id="sim-notice-user-sel" style="margin-left:4px;padding:5px 10px;font-size:12px;font-weight:600;border:1px solid #ccc;border-radius:4px" onchange="window._simNoticeTargetId=this.value;renderSimNoticeModalContent()">' +
+             userOptionsHtml +
+    '        </select>' +
+    '      </label>' +
+    '      <label style="font-size:12px;color:var(--sub)">発行日:' +
+    '        <input type="date" value="'+opt.issueDate+'" style="margin-left:4px;padding:4px 8px;font-size:12px;border:1px solid #ccc;border-radius:4px" onchange="window._simNoticeIssueDate=this.value;renderSimNoticeModalContent()">' +
+    '      </label>' +
+    '      <label style="font-size:12px;color:var(--sub)">支給予定日:' +
+    '        <input type="date" value="'+opt.payDate+'" style="margin-left:4px;padding:4px 8px;font-size:12px;border:1px solid #ccc;border-radius:4px" onchange="window._simNoticePayDate=this.value;renderSimNoticeModalContent()">' +
+    '      </label>' +
+    '    </div>' +
+    '    <div style="display:flex;gap:8px">' +
+    '      <button class="bp" onclick="printSimNotices()" style="font-size:13px;padding:6px 16px;background:#6a1b9a;border-color:#6a1b9a;font-weight:700">🖨️ 印刷実行 / PDF保存</button>' +
+    '      <button class="bg" onclick="closeSimNoticeModal()" style="font-size:12px;padding:6px 12px">閉じる</button>' +
+    '    </div>' +
+    '  </div>' +
+
+    // プレビューエリア（スクロール）
+    '  <div style="flex:1;overflow-y:auto;padding:24px;background:#8d8d8d">' +
+    '    <style>' +
+    '      .sim-notice-page {' +
+    '        background:#fff;' +
+    '        width:100%;' +
+    '        max-width:210mm;' +
+    '        min-height:280mm;' +
+    '        margin:0 auto 24px;' +
+    '        padding:15mm 18mm;' +
+    '        box-sizing:border-box;' +
+    '        font-family:\"Hiragino Mincho ProN\", \"Yu Mincho\", \"MS 明朝\", serif;' +
+    '        color:#111;' +
+    '        box-shadow:0 6px 18px rgba(0,0,0,0.3);' +
+    '        display:flex;' +
+    '        flex-direction:column;' +
+    '        justify-content:space-between;' +
+    '      }' +
+    '    </style>' +
+         previewSheetsHtml +
+    '  </div>' +
+    '</div>';
+
+  modal.innerHTML = h;
+}
+
+function printSimNotices(){
+  if(!_simState || !_simState.users) return;
+  var st = _simState;
+  var opt = getSimNoticeOptions();
+  var targetId = window._simNoticeTargetId || 'all';
+
+  var targetUsers = [];
+  if(targetId === 'all'){
+    targetUsers = st.users;
+  } else {
+    var found = st.users.find(function(x){ return String(x.userId) === String(targetId); });
+    if(found) targetUsers = [found];
+  }
+
+  if(targetUsers.length === 0){
+    toast('⚠️ 印刷対象の利用者がいません');
+    return;
+  }
+
+  var sheetsHtml = '';
+  targetUsers.forEach(function(u){
+    sheetsHtml += generateSimNoticeSheetHTML(u, opt);
+  });
+
+  var docHtml = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>工賃支給額決定通知書（按分配分証明書） - ' + esc(st.ym) + '</title>' +
+    '<style>' +
+    '  @page {' +
+    '    size: A4 portrait;' +
+    '    margin: 12mm 15mm 12mm 15mm;' +
+    '  }' +
+    '  * { box-sizing: border-box; }' +
+    '  body {' +
+    '    font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS 明朝", serif;' +
+    '    color: #111;' +
+    '    margin: 0;' +
+    '    padding: 0;' +
+    '    background: #fff;' +
+    '    font-size: 11pt;' +
+    '  }' +
+    '  .sim-notice-page {' +
+    '    width: 100%;' +
+    '    min-height: 268mm;' +
+    '    page-break-after: always;' +
+    '    break-after: page;' +
+    '    display: flex;' +
+    '    flex-direction: column;' +
+    '    justify-content: space-between;' +
+    '    padding: 4mm 0;' +
+    '    box-sizing: border-box;' +
+    '  }' +
+    '  .sim-notice-page:last-child {' +
+    '    page-break-after: auto;' +
+    '    break-after: auto;' +
+    '  }' +
+    '</style>' +
+    '</head><body>' +
+    sheetsHtml +
+    '<script>window.onload = function(){ setTimeout(function(){ window.print(); }, 250); };<\/script>' +
+    '</body></html>';
+
+  var w = window.open('', '_blank');
+  w.document.write(docHtml);
   w.document.close();
 }
 
