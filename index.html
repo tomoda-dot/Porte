@@ -11591,7 +11591,7 @@ function drawStaffRequestsUI(allReqs){
       (r.status === 'pending' ?
         '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">'+
           (r.source === 'paid_request' ?
-            '<button class="bp" style="background:#2e7d32;padding:6px 16px;font-size:12px;font-weight:700" onclick="approvePLR(\''+r.id+'\')">✅ 承認する</button>'+
+            '<button class="bp" style="background:#2e7d32;padding:6px 16px;font-size:12px;font-weight:700" onclick="approvePLR(\''+r.id+'\',\''+r.staffId+'\',\''+r.date+'\',\''+(r.paidType||r.type||'有給')+'\')">✅ 承認する</button>'+
             '<button class="bg" style="color:#c62828;border-color:#fca5a5;padding:6px 14px;font-size:12px;font-weight:700" onclick="rejectPLR(\''+r.id+'\')">❌ 却下</button>'
           :
             '<button class="bp" style="background:#2e7d32;padding:6px 16px;font-size:12px;font-weight:700" onclick="approveCR(\''+r.id+'\')">✅ 承認する</button>'+
@@ -12708,6 +12708,19 @@ async function delVh(id){if(!await cConfirm('この車両を削除しますか�
 
 // ═══ 有給申請 承認・却下 ═══
 async function approvePLR(reqId, staffId, date, type){
+  // 引数が省略されている場合は申請テーブルから自動取得して補完
+  if(!staffId || !date || !type){
+    try{
+      var allReqs = await gas('getPaidLeaveRequests');
+      var targetReq = (allReqs||[]).find(function(r){ return r.id === reqId; });
+      if(targetReq){
+        staffId = staffId || targetReq.staffId;
+        date = date || targetReq.date;
+        type = type || targetReq.type || targetReq.paidType || '有給';
+      }
+    }catch(e){}
+  }
+
   if(!await cConfirm('この有給申請を承認しますか？\n\n承認するとシフトと有給取得記録に自動反映されます。'))return;
   if(!lockUI())return;
   try{
@@ -12737,9 +12750,18 @@ async function approvePLR(reqId, staffId, date, type){
     await gas('addPaidLeaveUsage',{staffId:staffId,date:date,days:days,reason:reasonLabel,grantId:grantId});
     // 5. シフトに反映
     await gas('saveShiftCell',{staffId:staffId,date:date,pattern:patName});
+    // 6. メモリキャッシュを即時更新
+    if(!_shiftData[staffId]) _shiftData[staffId]={};
+    _shiftData[staffId][date]=patName;
+    _plUsages[staffId]=await gas('getPaidLeaveUsages',staffId)||[];
+
     toast('✅ 承認しました。シフト・有給記録に反映しました');
     if(S.tab==='staff' && _staffTab==='requests'){
       renderStaffRequests();
+    }else if(S.tab==='staff' && _staffTab==='shift'){
+      renderShiftManagement();
+    }else if(S.tab==='staff' && _staffTab==='paid'){
+      renderPaidLeave();
     }else{
       renderDashboard(document.getElementById('content'));
     }
@@ -13147,6 +13169,8 @@ async function execBulkDow(){
         var ds=_shiftYM+'-'+String(d).padStart(2,'0');
         var dow=new Date(y,m-1,d).getDay();
         if(closedDays0.indexOf(ds)>=0)continue; // 閉所日はスキップ
+        var curPat=(_shiftData[s.id]||{})[ds]||'';
+        if(curPat==='有給'||curPat==='有給（午前半休）'||curPat==='有給（午後半休）')continue; // 有給設定日は保護
         if(dows.indexOf(dow)>=0){
           saves.push({staffId:s.id,date:ds,pattern:patName});
         }
@@ -13158,7 +13182,7 @@ async function execBulkDow(){
       if(saves[i].pattern===''){delete _shiftData[saves[i].staffId][saves[i].date];}
       else{_shiftData[saves[i].staffId][saves[i].date]=saves[i].pattern;}
     }
-    toast('✅ '+saves.length+'件を設定しました（閉所日は除く）');
+    toast('✅ '+saves.length+'件を設定しました（閉所日・有給日は除く）');
     closeModal('st-modal');
     renderShiftManagement();
   }catch(e){await cAlert('エラー: '+e);}finally{unlockUI();}
@@ -13195,6 +13219,8 @@ async function execBulkStaff(){
       var isClosedDay=closedCache2[ym2].indexOf(ds)>=0;
       if(!isClosedDay&&(!skipHoliday||(dow!==0&&dow!==6))){
         targets.forEach(function(s){
+          var curPat=(_shiftData[s.id]||{})[ds]||'';
+          if(curPat==='有給'||curPat==='有給（午前半休）'||curPat==='有給（午後半休）')return; // 有給設定日は保護
           saves.push({staffId:s.id,date:ds,pattern:patName});
         });
       }
@@ -13206,7 +13232,7 @@ async function execBulkStaff(){
       if(saves[i].pattern===''){delete _shiftData[saves[i].staffId][saves[i].date];}
       else{_shiftData[saves[i].staffId][saves[i].date]=saves[i].pattern;}
     }
-    toast('✅ '+saves.length+'件を設定しました（閉所日は除く）');
+    toast('✅ '+saves.length+'件を設定しました（閉所日・有給日は除く）');
     closeModal('st-modal');
     renderShiftManagement();
   }catch(e){await cAlert('エラー: '+e);}finally{unlockUI();}
@@ -13219,7 +13245,7 @@ async function copyPrevMonthShift(){
   if(prevM<1){prevM=12;prevY--;}
   var prevYM=prevY+'-'+String(prevM).padStart(2,'0');
 
-  if(!await cConfirm(prevY+'年'+prevM+'月のシフトを'+y+'年'+m+'月にコピーしますか？\n\n※既存のシフトは上書きされます。'))return;
+  if(!await cConfirm(prevY+'年'+prevM+'月のシフトを'+y+'年'+m+'月にコピーしますか？\n\n※既存のシフトは上書きされます（設定済みの有給は保護されます）。'))return;
 
   if(!lockUI())return;
   try{
@@ -13245,6 +13271,8 @@ async function copyPrevMonthShift(){
       var ds=_shiftYM+'-'+String(d).padStart(2,'0');
       var dow=new Date(y,m-1,d).getDay();
       Object.keys(prevDowMap).forEach(function(staffId){
+        var curPat=(_shiftData[staffId]||{})[ds]||'';
+        if(curPat==='有給'||curPat==='有給（午前半休）'||curPat==='有給（午後半休）')return; // 当月の有給設定日は保護
         var dowPats=prevDowMap[staffId][dow]||[];
         if(dowPats.length===0)return;
         // 最頻値を使う
@@ -13334,11 +13362,25 @@ function openShiftCell(staffId,date){
   var s=S.staff.find(function(x){return x.id===staffId;})||{};
   var dow=['日','月','火','水','木','金','土'][new Date(date).getDay()];
 
+  var usages=_plUsages[staffId]||[];
+  var plTarget=usages.find(function(u){return u.date===date;});
+  var hasPaid=(current==='有給'||current==='有給（午前半休）'||current==='有給（午後半休）'||!!plTarget);
+
+  var paidWarningHtml='';
+  if(hasPaid){
+    paidWarningHtml='<div style="background:#fff3e0;border:1.5px solid #ffb74d;color:#e65100;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:700;margin-bottom:14px;line-height:1.5">'+
+      '⚠️ この日は【有給休暇】が登録されています。'+
+      '<div style="font-size:11px;font-weight:400;color:#bf360c;margin-top:3px">'+
+        '※日勤や休みなど別のシフトに変更すると、有給取得記録も取り消され、有給残日数が元に戻ります。'+
+      '</div></div>';
+  }
+
   document.getElementById('st-modal').innerHTML=
     '<div class="overlay" onclick="closeModal(\'st-modal\')">'+
     '<div class="modal" style="width:360px" onclick="event.stopPropagation()">'+
     '<div class="modal-hd"><h3>シフト設定</h3><button class="modal-close" onclick="closeModal(\'st-modal\')">✕</button></div>'+
-    '<p style="font-size:14px;font-weight:600;color:var(--pri);margin-bottom:16px">'+esc(s.name)+' — '+fmtDate(date)+'（'+dow+'）</p>'+
+    '<p style="font-size:14px;font-weight:600;color:var(--pri);margin-bottom:12px">'+esc(s.name)+' — '+fmtDate(date)+'（'+dow+'）</p>'+
+    paidWarningHtml+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">'+
     pats.map(function(p){
       var isCur=current===p.name;
@@ -13359,20 +13401,45 @@ function openShiftCell(staffId,date){
 }
 
 async function saveShiftCell(staffId,date,pattern){
+  var cur=(_shiftData[staffId]||{})[date]||'';
+  var s=S.staff.find(function(x){return x.id===staffId;})||{};
+  var sName=s.name||'スタッフ';
+
+  // 該当日の有給取得記録があるか確認
+  if(!_plUsages[staffId]){
+    try{_plUsages[staffId]=await gas('getPaidLeaveUsages',staffId)||[];}catch(e){_plUsages[staffId]=[];}
+  }
+  var usages=_plUsages[staffId]||[];
+  var plTarget=usages.find(function(u){return u.date===date;});
+  var hasPaid=(cur==='有給'||cur==='有給（午前半休）'||cur==='有給（午後半休）'||!!plTarget);
+
+  // 有給が設定されている日を、別のシフト（日勤・休み・クリア等）に変更する場合
+  var isTargetPaid=(pattern==='有給'||pattern==='有給（午前半休）'||pattern==='有給（午後半休）');
+  if(hasPaid && !isTargetPaid && pattern!==cur){
+    var patLabel=pattern===''?'「クリア（未設定）」':pattern==='休'?'「休み」':'「'+pattern+'」';
+    var confirmMsg='⚠️ 有給休暇の変更確認\n\n'+
+                   sName+' さんの '+fmtDate(date)+' には有給休暇が登録されています。\n\n'+
+                   'シフトを '+patLabel+' に変更すると、\n'+
+                   '有給取得記録も取り消され、有給残日数が復元されます。\n\n'+
+                   '本当にシフトを変更しますか？';
+    if(!await cConfirm(confirmMsg)){
+      return; // キャンセルされたら変更しない
+    }
+
+    // 承諾された場合：該当日の有給取得記録を削除
+    if(plTarget){
+      try{
+        await gas('deletePaidLeaveUsage',plTarget.id);
+        _plUsages[staffId]=usages.filter(function(u){return u.id!==plTarget.id;});
+      }catch(e){
+        console.error('有給取得記録削除エラー:',e);
+      }
+    }
+  }
+
   if(!lockUI())return;
   try{
-    // クリアの場合、有給取得記録も削除
     if(pattern===''||pattern==='クリア'){
-      var cur=(_shiftData[staffId]||{})[date]||'';
-      if(cur==='有給'||cur==='有給（午前半休）'||cur==='有給（午後半休）'){
-        // 該当日の有給取得記録を削除
-        var usages=_plUsages[staffId]||[];
-        var target=usages.find(function(u){return u.date===date;});
-        if(target){
-          try{await gas('deletePaidLeaveUsage',target.id);}catch(e){}
-          _plUsages[staffId]=usages.filter(function(u){return u.id!==target.id;});
-        }
-      }
       await gas('saveShiftCell',{staffId:staffId,date:date,pattern:''});
       if(!_shiftData[staffId])_shiftData[staffId]={};
       delete _shiftData[staffId][date];
@@ -13382,6 +13449,7 @@ async function saveShiftCell(staffId,date,pattern){
       _shiftData[staffId][date]=pattern;
     }
     closeModal('st-modal');
+    toast(hasPaid && !isTargetPaid ? '✅ シフトを変更し、有給取得記録を取り消しました' : '✅ シフトを保存しました');
     renderShiftManagement();
   }catch(e){await cAlert('保存失敗: '+e);}finally{unlockUI();}
 }
