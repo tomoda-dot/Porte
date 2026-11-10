@@ -89,6 +89,10 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
 #btn-save:disabled{opacity:.6;cursor:not-allowed;}
 #btn-cancel{padding:12px 20px;background:#fff;color:var(--sub);border:1.5px solid var(--bdr);border-radius:10px;font-size:15px;cursor:pointer;touch-action:manipulation;}
 
+.author-badge-wrap{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:6px;min-height:22px;}
+.author-badge{display:inline-flex;align-items:center;padding:2px 10px;border:1.5px solid #2e7d32;border-radius:12px;background:#f1f8e9;color:#1b5e20;font-size:11px;font-weight:700;letter-spacing:0.5px;}
+.author-arrow{color:#8a7a6a;font-size:12px;font-weight:700;}
+
 /* 状態バッジ */
 .status-opts{display:flex;gap:8px;flex-wrap:wrap;}
 .status-opt{flex:1;min-width:80px;padding:10px 4px;border:2px solid var(--bdr);border-radius:8px;background:#fff;color:var(--sub);font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
@@ -303,7 +307,83 @@ function show(id){ var e=el(id); if(e)e.style.display='block'; }
 function hide(id){ var e=el(id); if(e)e.style.display='none'; }
 function cleanNotesText(str){
   if(!str) return '';
-  return String(str).replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
+  return String(str).replace(/\s*<!--(ADJ|AUTH):.*?-->\s*/g, '').trim();
+}
+
+// スタッフ名から短縮名（苗字）を取得
+function getShortStaffName(name){
+  if(!name) return '';
+  name = String(name).trim();
+  if(name.indexOf(' ') >= 0 || name.indexOf('　') >= 0){
+    return name.split(/[\s　]+/)[0];
+  }
+  if(name.length === 4){
+    return name.slice(0, 2);
+  }
+  return name.length > 3 ? name.slice(0, 2) : name;
+}
+
+// テキストから <!--AUTH:...--> メタデータを抽出
+function extractAuthorMeta(text){
+  if(!text || typeof text !== 'string') return { text: '', created: '', updated: '' };
+  var m = text.match(/<!--AUTH:(.*?)-->/);
+  var clean = cleanNotesText(text);
+  if(!m) return { text: clean, created: '', updated: '' };
+  try {
+    var obj = JSON.parse(m[1]);
+    return { text: clean, created: obj.created || '', updated: obj.updated || '' };
+  } catch(e) {
+    return { text: clean, created: '', updated: '' };
+  }
+}
+
+// 変更を検知してメタデータ付きテキストを生成
+function buildAuthorText(newRawText, originalMeta, currentStaffName){
+  var cleanNew = String(newRawText || '').replace(/\s*<!--(ADJ|AUTH):.*?-->\s*/g, '').trim();
+  if(!cleanNew) return '';
+
+  var shortName = getShortStaffName(currentStaffName);
+  var created = originalMeta ? originalMeta.created : '';
+  var updated = originalMeta ? originalMeta.updated : '';
+  var cleanOrig = originalMeta ? originalMeta.text : '';
+
+  // 文章が1文字も変わっていない場合は既存のメタデータをそのまま維持
+  if(cleanNew === cleanOrig && created){
+    var metaObj = { created: created };
+    if(updated && updated !== created) metaObj.updated = updated;
+    return cleanNew + ' <!--AUTH:' + JSON.stringify(metaObj) + '-->';
+  }
+
+  // 文章が変更された場合
+  if(!shortName){
+    return cleanNew + (created ? ' <!--AUTH:' + JSON.stringify({created: created, updated: updated}) + '-->' : '');
+  }
+
+  if(!created){
+    created = shortName;
+    updated = '';
+  } else if(shortName !== created){
+    updated = shortName;
+  } else {
+    updated = '';
+  }
+
+  var metaObj = { created: created };
+  if(updated && updated !== created) metaObj.updated = updated;
+  return cleanNew + ' <!--AUTH:' + JSON.stringify(metaObj) + '-->';
+}
+
+// バッジHTMLの描画（[ 友田 ] または [ 友田 ] → [ 太中 ]）
+function renderAuthorBadgeHTML(authorMeta){
+  if(!authorMeta || !authorMeta.created) return '';
+  var h = '<div class="author-badge-wrap">';
+  h += '<span class="author-badge">' + esc(authorMeta.created) + '</span>';
+  if(authorMeta.updated && authorMeta.updated !== authorMeta.created){
+    h += '<span class="author-arrow">→</span>';
+    h += '<span class="author-badge">' + esc(authorMeta.updated) + '</span>';
+  }
+  h += '</div>';
+  return h;
 }
 
 function calcWorkTime(){
@@ -884,7 +964,11 @@ async function selectUser(userId){
       else if(pStr === 'true' || rawPickup === true) transportVal = '往復';
     }
     if(el('f-transport')) el('f-transport').value = transportVal;
+    window._tbCurNotesMeta = extractAuthorMeta(att ? (att.notes||'') : '');
+    window._tbCurContentMeta = extractAuthorMeta(rep ? (rep.content||'') : '');
+
     if(el('f-att-notes')) el('f-att-notes').value = att ? cleanNotesText(att.notes||'') : '';
+    if(el('f-notes-author')) el('f-notes-author').innerHTML = renderAuthorBadgeHTML(window._tbCurNotesMeta);
 
     // 作業種別 AM / PM
     var rawAm = rep ? (rep.workTypeId || rep.workAM) : (att ? att.workTypeId : (sc ? sc.workTypeId : ''));
@@ -893,7 +977,8 @@ async function selectUser(userId){
     if(el('f-work-am')) el('f-work-am').value = resolveWtId(rawAm);
     if(el('f-work-pm')) el('f-work-pm').value = resolveWtId(rawPm);
 
-    if(el('f-content')) el('f-content').value = rep ? rep.content||'' : '';
+    if(el('f-content')) el('f-content').value = rep ? cleanNotesText(rep.content||'') : '';
+    if(el('f-content-author')) el('f-content-author').innerHTML = renderAuthorBadgeHTML(window._tbCurContentMeta);
     if(el('f-condition')) el('f-condition').value = rep ? (rep.condition || rep.mood || '普通') : '普通';
 
     var labelEl = el('user-date-label');
@@ -949,11 +1034,13 @@ function buildFormHTML(){
   +'<button onclick="applyTemplate()" style="padding:8px 14px;background:var(--bg);border:1.5px solid var(--bdr);border-radius:8px;font-size:13px;cursor:pointer">適用</button>'
   +'</div>'
   +'<textarea id="f-content" placeholder="本日の作業実績や様子を記入..." style="min-height:120px"></textarea>'
+  +'<div id="f-content-author"></div>'
   +'</div>'
   +'<div class="field"><label>体調</label><select id="f-condition"><option value="普通">普通</option><option value="良好">良好</option><option value="不良">不良</option><option value="要観察">要観察</option></select></div>'
   +'</div>'
   +'<div class="card"><div class="card-title"><span>📋 欠席事項</span></div>'
-  +'<div class="field" style="margin-bottom:0"><label>出欠備考</label><textarea id="f-att-notes" placeholder="欠席理由や連絡事項..."></textarea></div>'
+  +'<div class="field" style="margin-bottom:0"><label>出欠備考</label><textarea id="f-att-notes" placeholder="欠席理由や連絡事項..."></textarea>'
+  +'<div id="f-notes-author"></div></div>'
   +'</div>'
   +'<div class="save-bar">'
   +'<button id="btn-cancel" onclick="cancelForm()">キャンセル</button>'
@@ -1039,6 +1126,12 @@ async function saveForm(){
 
     var userObj=USERS.find(function(u){return String(u.id)===String(userId);});
 
+    var curStaffName = (ME && ME.name) ? ME.name : '';
+    var rawNotes = el('f-att-notes') ? el('f-att-notes').value : '';
+    var finalNotes = buildAuthorText(rawNotes, window._tbCurNotesMeta, curStaffName);
+    var rawContent = el('f-content') ? el('f-content').value : '';
+    var finalContent = buildAuthorText(rawContent, window._tbCurContentMeta, curStaffName);
+
     // 出欠データ
     var attData={
       userId: userId,
@@ -1053,7 +1146,7 @@ async function saveForm(){
       mealRate: (['出席','遅刻','早退'].indexOf(CURRENT_STATUS)>=0 && el('f-bento') && el('f-bento').value !== 'なし') ? (el('f-meal-rate') ? el('f-meal-rate').value : '10割') : '-',
       bentoPaymentMethod: userObj ? (userObj.bentoPaymentMethod || '工賃払い') : '工賃払い',
       pickup: transport,
-      notes: el('f-att-notes').value || null
+      notes: finalNotes || null
     };
 
     // 日報データ
@@ -1062,16 +1155,19 @@ async function saveForm(){
       date: date,
       workTypeId: amTypeId,
       workTypeIdPm: pmTypeId,
-      content: el('f-content').value || '',
+      content: finalContent || '',
       condition: el('f-condition').value || '普通',
       mood: el('f-condition').value || '普通',
-      notes: el('f-content').value || null
+      notes: finalContent || null
     };
 
     await Promise.all([
       gas('upsertAttendance', attData),
       gas('upsertDailyReport', repData)
     ]);
+
+    window._tbCurNotesMeta = null;
+    window._tbCurContentMeta = null;
 
     // 完了表示
     SAVED_DATES[userId+'_'+date]=true;
