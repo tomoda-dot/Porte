@@ -8317,6 +8317,20 @@ async function saveUserWageAdjustments(userId){
 // ═══ 🔮 工賃シミュレーター ═══
 var _simState = null;
 
+function fmtNum(n){
+  if(n === null || n === undefined || isNaN(n)) return '0';
+  return Math.round(Number(n)).toLocaleString();
+}
+
+function fmtDateTime(d){
+  if(!d) return '';
+  var dt = (d instanceof Date) ? d : new Date(d);
+  if(isNaN(dt.getTime())) return String(d);
+  var y = dt.getFullYear(), m = String(dt.getMonth()+1).padStart(2,'0'), day = String(dt.getDate()).padStart(2,'0');
+  var h = String(dt.getHours()).padStart(2,'0'), min = String(dt.getMinutes()).padStart(2,'0');
+  return y + '/' + m + '/' + day + ' ' + h + ':' + min;
+}
+
 function getMonthDowCounts(ym, closedDays){
   var p = ym.split('-');
   var y = Number(p[0]), m = Number(p[1]);
