@@ -8384,7 +8384,7 @@ async function initWageSimulator(ym, forceReset){
   } catch(e){}
   var dowCounts = getMonthDowCounts(ym, closedDays);
   var activeUsers = S.users.filter(function(u){ return isUserActive(u, ym); });
-  var defaultKaikin = getDefaultKaikinAmount();
+  var masterAllowances = (typeof getAllowances === 'function') ? getAllowances().filter(function(a){ return a.enabled !== false; }) : [];
 
   var usersData = activeUsers.map(function(u){
     var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, ym+'-01') : u;
@@ -8399,7 +8399,54 @@ async function initWageSimulator(ym, forceReset){
     var wtObj = S.workTypes.find(function(w){ return String(w.id) === String(wtId); }) || S.workTypes[0] || { rate: 200 };
     var rate = Number(wtObj.rate) || 200;
 
-    return {
+    // 手当アイテムの構築（事業所の手当設定＋交通費＋その他加算）
+    var items = [];
+    masterAllowances.forEach(function(ma, idx){
+      var isKaikin = (ma.condition === 'kaikin');
+      var isAll = (ma.condition === 'all');
+      var isNoPickup = (ma.condition === 'no_pickup');
+      var isDaysOver = (ma.condition === 'days_over');
+      var threshold = parseInt(ma.conditionValue) || 0;
+
+      var defaultChecked = false;
+      if(isKaikin) defaultChecked = true;
+      else if(isAll) defaultChecked = true;
+      else if(isNoPickup && (!sc.pickup || sc.pickup === 'なし')) defaultChecked = true;
+      else if(isDaysOver && calcDays >= threshold) defaultChecked = true;
+
+      items.push({
+        id: 'al_' + idx,
+        name: ma.name,
+        amount: Number(ma.amount) || 0,
+        condition: ma.condition,
+        conditionValue: ma.conditionValue || '',
+        checked: defaultChecked
+      });
+    });
+
+    // 交通費手当
+    var transDaily = (u.transportationAllowance !== undefined && u.transportationAllowance !== null && u.transportationAllowance !== '') ? Number(u.transportationAllowance) : 0;
+    if(transDaily > 0){
+      items.push({
+        id: 'trans',
+        name: '交通費手当',
+        unitPrice: transDaily,
+        amount: transDaily * calcDays,
+        checked: true,
+        isTrans: true
+      });
+    }
+
+    // その他手当加算
+    items.push({
+      id: 'custom',
+      name: 'その他手当加算',
+      amount: 0,
+      checked: false,
+      isCustom: true
+    });
+
+    var userObj = {
       userId: u.id,
       name: u.name,
       days: daysArr,
@@ -8407,16 +8454,17 @@ async function initWageSimulator(ym, forceReset){
       dailyHours: dHours,
       workTypeId: wtId,
       rate: rate,
-      hasKaikin: true,
-      kaikinAmount: defaultKaikin,
-      otherAllowance: 0,
+      allowanceItems: items,
+      totalAllowance: 0,
+      allowanceDesc: '',
       totalHours: 0,
       baseWage: 0,
-      totalAllowance: 0,
       grossWage: 0,
       allocatedWage: 0,
       diffWage: 0
     };
+    calcUserTotalAllowance(userObj);
+    return userObj;
   });
 
   _simState = {
@@ -8431,6 +8479,24 @@ async function initWageSimulator(ym, forceReset){
   recalcWageSimulation();
 }
 
+function calcUserTotalAllowance(u){
+  var sum = 0;
+  var checkedNames = [];
+  (u.allowanceItems || []).forEach(function(item){
+    if(item.isTrans){
+      item.amount = Math.round((Number(item.unitPrice)||0) * (Number(u.workDays)||0));
+    }
+    if(item.checked && Number(item.amount) > 0){
+      sum += Number(item.amount);
+      var shortNm = item.name.replace(/手当$/, '');
+      checkedNames.push(shortNm + ' (¥' + fmtNum(item.amount) + ')');
+    }
+  });
+  u.totalAllowance = sum;
+  u.allowanceDesc = checkedNames.length > 0 ? checkedNames.join(', ') : '手当なし';
+  return sum;
+}
+
 function recalcWageSimulation(){
   if(!_simState || !_simState.users) return;
   var totalGross = 0;
@@ -8441,12 +8507,11 @@ function recalcWageSimulation(){
     u.workDays = Math.max(0, Number(u.workDays) || 0);
     u.dailyHours = Math.max(0, Number(u.dailyHours) || 0);
     u.rate = Math.max(0, Number(u.rate) || 0);
-    u.kaikinAmount = Math.max(0, Number(u.kaikinAmount) || 0);
-    u.otherAllowance = Number(u.otherAllowance) || 0;
+
+    calcUserTotalAllowance(u);
 
     u.totalHours = Math.round(u.workDays * u.dailyHours * 10) / 10;
     u.baseWage = Math.floor(u.totalHours * u.rate);
-    u.totalAllowance = (u.hasKaikin ? u.kaikinAmount : 0) + u.otherAllowance;
     u.grossWage = Math.max(0, u.baseWage + u.totalAllowance);
 
     if(u.workDays > 0 && u.dailyHours > 0){
@@ -8541,14 +8606,17 @@ function renderSimFullUI(container){
 
   // 一括操作ツールバー
   h += '  <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;display:flex;flex-wrap:wrap;align-items:center;gap:6px">';
-  h += '    <span style="font-size:12px;font-weight:700;color:var(--sub);margin-right:4px">⚡ 全員一括シミュレーション:</span>';
+  h += '    <span style="font-size:12px;font-weight:700;color:var(--sub);margin-right:4px">⚡ 一括シミュレーション:</span>';
   h += '    <button class="bg" onclick="applySimBulk(\'addDay\')" style="font-size:11px;padding:4px 8px">日数 +1日</button>';
   h += '    <button class="bg" onclick="applySimBulk(\'subDay\')" style="font-size:11px;padding:4px 8px">日数 -1日</button>';
   h += '    <button class="bg" onclick="applySimBulk(\'addHour\')" style="font-size:11px;padding:4px 8px">時間 +30分</button>';
   h += '    <button class="bg" onclick="applySimBulk(\'subHour\')" style="font-size:11px;padding:4px 8px">時間 -30分</button>';
   h += '    <button class="bg" onclick="applySimBulk(\'addRate\')" style="font-size:11px;padding:4px 8px">時給 +10円</button>';
   h += '    <button class="bg" onclick="applySimBulk(\'subRate\')" style="font-size:11px;padding:4px 8px">時給 -10円</button>';
-  h += '    <button class="bg" onclick="applySimBulk(\'allKaikin\')" style="font-size:11px;padding:4px 8px">全員皆勤手当ON</button>';
+  h += '    <span style="color:#ddd">|</span>';
+  h += '    <button class="bg" onclick="applySimBulk(\'allKaikin\')" style="font-size:11px;padding:4px 8px;color:#2e7d32;font-weight:700">🎁 全員皆勤ON</button>';
+  h += '    <button class="bg" onclick="applySimBulk(\'allSeikin\')" style="font-size:11px;padding:4px 8px;color:#e65100">🎁 全員精勤ON</button>';
+  h += '    <button class="bg" onclick="applySimBulk(\'clearAllowance\')" style="font-size:11px;padding:4px 8px;color:#c62828">手当クリア</button>';
   h += '  </div>';
   h += '</div>';
 
@@ -8571,6 +8639,7 @@ function renderSimFullUI(container){
   h += '  </div>';
   h += '  <div style="margin-top:12px;font-size:11px;color:var(--sub);line-height:1.6" class="no-print">';
   h += '    ※このシミュレーターでの変更内容は画面の仮想メモリ上でのみ計算され、本番データ（出欠や確定工賃など）には一切保存されません。安心していくらでもお試しいただけます。<br>';
+  h += '    ※「手当」列は、金額を直接打ち込んで変更することも、⚙️ボタンから登録手当（皆勤・精勤・自力来所・交通費など）をチェック選択することも可能です。<br>';
   h += '    ※「按分後工賃」は、工賃総額が想定売上（工賃原資）を超過した場合に、売上枠内に収まるよう各利用者の積算工賃比率で比例配分した試算金額です。';
   h += '  </div>';
   h += '</div>';
@@ -8614,7 +8683,7 @@ function renderSimTableHTML(){
     '  <th style="width:110px;text-align:center">1日時間</th>' +
     '  <th style="width:90px;text-align:center">総時間</th>' +
     '  <th style="width:110px;text-align:center">時給</th>' +
-    '  <th style="width:120px;text-align:center">手当</th>' +
+    '  <th style="width:135px;text-align:center">手当</th>' +
     '  <th style="width:95px;text-align:right">積算工賃</th>' +
     '  <th style="width:95px;text-align:right;background:#f9fbf9">按分後工賃</th>' +
     '  <th style="width:85px;text-align:right">差額</th>' +
@@ -8650,10 +8719,16 @@ function renderSimTableHTML(){
       h += '    <input type="number" step="10" min="0" class="sim-input-sm" id="sim-rate-'+uid+'" value="'+u.rate+'" style="width:65px" onchange="updateSimUser(\''+uid+'\',\'rate\',this.value)">';
       h += '  </div></td>';
       // 手当
-      h += '  <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:4px">';
-      h += '    <label style="font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:2px;margin-bottom:0" title="皆勤手当 ¥'+fmtNum(u.kaikinAmount)+'"><input type="checkbox" id="sim-kk-'+uid+'" '+(u.hasKaikin?'checked':'')+' onchange="updateSimUser(\''+uid+'\',\'hasKaikin\',this.checked)">皆勤</label>';
-      h += '    <input type="number" step="500" min="0" class="sim-input-sm" id="sim-oth-'+uid+'" value="'+u.otherAllowance+'" style="width:55px" placeholder="加算" title="その他手当" onchange="updateSimUser(\''+uid+'\',\'otherAllowance\',this.value)">';
-      h += '  </div></td>';
+      h += '  <td style="text-align:center">';
+      h += '    <div style="display:inline-flex;align-items:center;gap:3px">';
+      h += '      <span style="font-size:11px;color:var(--sub)">¥</span>';
+      h += '      <input type="number" step="100" min="0" class="sim-input-sm" id="sim-al-tot-'+uid+'" value="'+u.totalAllowance+'" style="width:65px;font-weight:700;color:#2e7d32" onchange="updateSimUserDirectAllowance(\''+uid+'\',this.value)" title="手当合計（直接編集可能）">';
+      h += '      <button type="button" class="bg" onclick="openSimAllowanceModal(\''+uid+'\')" style="font-size:12px;padding:3px 7px;border-radius:4px;cursor:pointer;background:#f0ebe3" title="手当の内訳をチェック選択">⚙️</button>';
+      h += '    </div>';
+      h += '    <div style="font-size:10px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:125px;cursor:pointer" id="sim-al-desc-'+uid+'" onclick="openSimAllowanceModal(\''+uid+'\')" title="'+esc(u.allowanceDesc)+'（クリックで編集）">';
+      h += esc(u.allowanceDesc || '手当なし');
+      h += '    </div>';
+      h += '  </td>';
       // 積算工賃
       h += '  <td style="text-align:right;font-weight:700" id="sim-gross-'+uid+'">¥'+fmtNum(u.grossWage)+'</td>';
       // 按分後工賃
@@ -8690,6 +8765,15 @@ function updateSimDOMRow(uid){
   if(!u) return;
   var totHEl = document.getElementById('sim-tot-h-' + uid);
   if(totHEl) totHEl.textContent = u.totalHours + 'h';
+  var alTotEl = document.getElementById('sim-al-tot-' + uid);
+  if(alTotEl && String(alTotEl.value) !== String(u.totalAllowance)){
+    alTotEl.value = u.totalAllowance;
+  }
+  var alDescEl = document.getElementById('sim-al-desc-' + uid);
+  if(alDescEl){
+    alDescEl.textContent = u.allowanceDesc || '手当なし';
+    alDescEl.title = (u.allowanceDesc || '手当なし') + '（クリックで編集）';
+  }
   var grossEl = document.getElementById('sim-gross-' + uid);
   if(grossEl) grossEl.textContent = '¥' + fmtNum(u.grossWage);
   var allocEl = document.getElementById('sim-alloc-' + uid);
@@ -8733,6 +8817,144 @@ function updateSimDOMAll(){
   }
 }
 
+function updateSimUserDirectAllowance(uid, val){
+  var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
+  if(!u) return;
+  var newTot = Math.max(0, Number(val) || 0);
+  u.totalAllowance = newTot;
+  // 直接入力時はカスタム手当加算として差額を保持
+  var customItem = u.allowanceItems ? u.allowanceItems.find(function(it){ return it.isCustom; }) : null;
+  if(customItem){
+    var otherCheckedSum = 0;
+    u.allowanceItems.forEach(function(it){
+      if(!it.isCustom && it.checked){
+        otherCheckedSum += Number(it.amount) || 0;
+      }
+    });
+    customItem.amount = Math.max(0, newTot - otherCheckedSum);
+    customItem.checked = (customItem.amount > 0);
+  }
+  u.allowanceDesc = '手当合計: ¥' + fmtNum(newTot);
+  var descEl = document.getElementById('sim-al-desc-' + uid);
+  if(descEl) descEl.textContent = u.allowanceDesc;
+  updateSimDOMAll();
+}
+
+function openSimAllowanceModal(uid){
+  var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
+  if(!u) return;
+  window._simModalTargetUid = uid;
+
+  var h = '<div class="modal-bg" onclick="if(event.target===this)closeModal(\'common-modal\')">' +
+    '<div class="modal-box" style="width:500px;max-width:95vw">' +
+    '<div class="modal-hd"><div style="font-weight:700;font-size:15px">🎁 手当シミュレーション設定 - ' + esc(u.name) + ' 様</div>' +
+    '<button onclick="closeModal(\'common-modal\')" class="modal-x">&times;</button></div>' +
+    '<p style="font-size:12px;color:var(--sub);margin:8px 0 12px">適用する手当にチェックを入れてください。金額の変更も可能です。</p>' +
+    '<div style="display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow-y:auto;padding-right:4px">';
+
+  (u.allowanceItems || []).forEach(function(item, idx){
+    var condDesc = '';
+    if(item.condition === 'kaikin') condDesc = '皆勤（予定日全出席）';
+    else if(item.condition === 'seikin') condDesc = '精勤（欠席2日以内）';
+    else if(item.condition === 'all') condDesc = '全員一律手当';
+    else if(item.condition === 'no_pickup') condDesc = '自力来所（送迎なし）';
+    else if(item.condition === 'days_over') condDesc = '出席' + (item.conditionValue||'') + '日以上';
+    else if(item.isTrans) condDesc = '交通費 (日額 ¥' + fmtNum(item.unitPrice) + ' × ' + u.workDays + '日)';
+    else if(item.isCustom) condDesc = '職能・特別手当など任意の加算';
+
+    h += '<div id="modal-al-card-' + idx + '" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:' + (item.checked ? '#f1f8e9' : '#fff') + ';border:1.5px solid ' + (item.checked ? '#a5d6a7' : 'var(--bdr)') + ';border-radius:8px;gap:10px">' +
+      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;margin-bottom:0">' +
+      '<input type="checkbox" id="modal-al-chk-' + idx + '" ' + (item.checked ? 'checked' : '') + ' onchange="onSimModalItemToggle(' + idx + ')" style="width:18px;height:18px;cursor:pointer">' +
+      '<div>' +
+      '<div style="font-size:13px;font-weight:700;color:var(--pri)">' + esc(item.name) + '</div>' +
+      (condDesc ? '<div style="font-size:11px;color:var(--sub)">' + esc(condDesc) + '</div>' : '') +
+      '</div>' +
+      '</label>' +
+      '<div style="display:inline-flex;align-items:center;gap:3px">' +
+      '<span style="font-size:12px;color:var(--sub);font-weight:700">¥</span>' +
+      '<input type="number" id="modal-al-amt-' + idx + '" value="' + item.amount + '" step="100" min="0" oninput="onSimModalAmountChange(' + idx + ')" style="width:85px;padding:5px 8px;font-size:13px;font-weight:700;text-align:right;border:1px solid var(--bdr);border-radius:6px">' +
+      '</div>' +
+      '</div>';
+  });
+
+  h += '</div>' +
+    '<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid var(--bdr);display:flex;justify-content:space-between;align-items:center">' +
+    '  <div style="font-size:13px;font-weight:700">手当合計: <span style="font-size:17px;color:#2e7d32;font-weight:800" id="modal-al-total-preview">¥' + fmtNum(u.totalAllowance) + '</span></div>' +
+    '  <div style="display:flex;gap:8px">' +
+    '    <button class="bg" onclick="closeModal(\'common-modal\')">キャンセル</button>' +
+    '    <button class="bp" onclick="saveSimAllowanceModal(\'' + uid + '\')">反映する</button>' +
+    '  </div>' +
+    '</div>' +
+    '</div></div>';
+
+  var modalContainer = document.getElementById('common-modal');
+  if(!modalContainer){
+    modalContainer = document.createElement('div');
+    modalContainer.id = 'common-modal';
+    document.body.appendChild(modalContainer);
+  }
+  modalContainer.innerHTML = h;
+}
+
+function onSimModalItemToggle(idx){
+  var chk = document.getElementById('modal-al-chk-' + idx);
+  var card = document.getElementById('modal-al-card-' + idx);
+  if(chk && card){
+    card.style.background = chk.checked ? '#f1f8e9' : '#fff';
+    card.style.borderColor = chk.checked ? '#a5d6a7' : 'var(--bdr)';
+  }
+  recalcSimModalPreview();
+}
+
+function onSimModalAmountChange(idx){
+  var chk = document.getElementById('modal-al-chk-' + idx);
+  var amtInput = document.getElementById('modal-al-amt-' + idx);
+  var card = document.getElementById('modal-al-card-' + idx);
+  if(chk && amtInput && Number(amtInput.value) > 0 && !chk.checked){
+    chk.checked = true;
+    if(card){
+      card.style.background = '#f1f8e9';
+      card.style.borderColor = '#a5d6a7';
+    }
+  }
+  recalcSimModalPreview();
+}
+
+function recalcSimModalPreview(){
+  var uid = window._simModalTargetUid;
+  var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
+  if(!u) return;
+  var sum = 0;
+  (u.allowanceItems || []).forEach(function(item, idx){
+    var chk = document.getElementById('modal-al-chk-' + idx);
+    var amtInput = document.getElementById('modal-al-amt-' + idx);
+    if(chk && chk.checked && amtInput){
+      sum += Number(amtInput.value) || 0;
+    }
+  });
+  var prevEl = document.getElementById('modal-al-total-preview');
+  if(prevEl) prevEl.textContent = '¥' + fmtNum(sum);
+}
+
+function saveSimAllowanceModal(uid){
+  var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
+  if(!u) return;
+
+  (u.allowanceItems || []).forEach(function(item, idx){
+    var chk = document.getElementById('modal-al-chk-' + idx);
+    var amtInput = document.getElementById('modal-al-amt-' + idx);
+    if(chk && amtInput){
+      item.checked = chk.checked;
+      item.amount = Number(amtInput.value) || 0;
+    }
+  });
+
+  calcUserTotalAllowance(u);
+  updateSimDOMAll();
+  closeModal('common-modal');
+  toast('✅ ' + u.name + ' 様の手当設定を反映しました');
+}
+
 function toggleSimDow(uid, dow){
   var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
   if(!u) return;
@@ -8765,11 +8987,7 @@ function toggleSimDow(uid, dow){
 function updateSimUser(uid, field, val){
   var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
   if(!u) return;
-  if(field === 'hasKaikin'){
-    u.hasKaikin = !!val;
-  } else {
-    u[field] = Number(val) || 0;
-  }
+  u[field] = Number(val) || 0;
   updateSimDOMAll();
 }
 
@@ -8820,8 +9038,22 @@ function applySimBulk(action){
       u.rate = Math.max(0, u.rate - 10);
       var el = document.getElementById('sim-rate-' + u.userId); if(el) el.value = u.rate;
     } else if(action === 'allKaikin'){
-      u.hasKaikin = true;
-      var el = document.getElementById('sim-kk-' + u.userId); if(el) el.checked = true;
+      (u.allowanceItems || []).forEach(function(it){
+        if(it.condition === 'kaikin') it.checked = true;
+        if(it.condition === 'seikin') it.checked = false;
+      });
+      calcUserTotalAllowance(u);
+    } else if(action === 'allSeikin'){
+      (u.allowanceItems || []).forEach(function(it){
+        if(it.condition === 'seikin') it.checked = true;
+        if(it.condition === 'kaikin') it.checked = false;
+      });
+      calcUserTotalAllowance(u);
+    } else if(action === 'clearAllowance'){
+      (u.allowanceItems || []).forEach(function(it){
+        it.checked = false;
+      });
+      calcUserTotalAllowance(u);
     }
   });
   updateSimDOMAll();
@@ -8843,7 +9075,7 @@ function exportWageSimulationCsv(){
     return;
   }
   var rows = [
-    ['氏名', '通所曜日', '月間日数', '1日作業時間(h)', '月間総時間(h)', '時給(円)', '皆勤手当', 'その他手当', '積算工賃(円)', '按分後工賃(円)', '按分差額(円)']
+    ['氏名', '通所曜日', '月間日数', '1日作業時間(h)', '月間総時間(h)', '時給(円)', '手当合計(円)', '手当内訳', '積算工賃(円)', '按分後工賃(円)', '按分差額(円)']
   ];
   _simState.users.forEach(function(u){
     rows.push([
@@ -8853,8 +9085,8 @@ function exportWageSimulationCsv(){
       u.dailyHours,
       u.totalHours,
       u.rate,
-      u.hasKaikin ? u.kaikinAmount : 0,
-      u.otherAllowance,
+      u.totalAllowance,
+      u.allowanceDesc,
       u.grossWage,
       u.allocatedWage,
       u.diffWage
@@ -8867,7 +9099,7 @@ function exportWageSimulationCsv(){
     '-',
     _simState.totalHours,
     '-',
-    '-',
+    _simState.users.reduce(function(s,u){ return s + u.totalAllowance; }, 0),
     '-',
     _simState.totalGross,
     _simState.totalAllocated,
@@ -8916,6 +9148,7 @@ function printWageSimulation(){
   }).join('');
 
   var totalDays = st.users.reduce(function(s,u){ return s + u.workDays; }, 0);
+  var totalAllowance = st.users.reduce(function(s,u){ return s + u.totalAllowance; }, 0);
   var totalDiff = st.totalAllocated - st.totalGross;
 
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>工賃シミュレーション - ' + esc(st.ym) + '</title>' +
@@ -8951,7 +9184,8 @@ function printWageSimulation(){
     '  <td style="text-align:right">' + totalDays + '日</td>' +
     '  <td>-</td>' +
     '  <td style="text-align:right">' + st.totalHours + 'h</td>' +
-    '  <td>-</td><td>-</td>' +
+    '  <td>-</td>' +
+    '  <td style="text-align:right">¥' + fmtNum(totalAllowance) + '</td>' +
     '  <td style="text-align:right">¥' + fmtNum(st.totalGross) + '</td>' +
     '  <td style="text-align:right">¥' + fmtNum(st.totalAllocated) + '</td>' +
     '  <td style="text-align:right">' + (totalDiff < 0 ? '-¥' + fmtNum(Math.abs(totalDiff)) : '-') + '</td>' +
