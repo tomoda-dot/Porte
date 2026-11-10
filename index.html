@@ -845,12 +845,22 @@ function doLogout(){
 
 async function loadAll(){
   if(!getSession()){showLogin();return;}
-  try{
+  async function fetchInitWithTimeout(timeoutMs){
     var initPromise = gas('getInitialData');
     var timeoutPromise = new Promise(function(_, reject){
-      setTimeout(function(){ reject(new Error('通信タイムアウト: サーバーからの応答がありません。ネットワーク接続をご確認ください。')); }, 8000);
+      setTimeout(function(){ reject(new Error('通信タイムアウト: サーバーからの応答がありません。ネットワーク接続をご確認ください。')); }, timeoutMs);
     });
-    var init = await Promise.race([initPromise, timeoutPromise]);
+    return Promise.race([initPromise, timeoutPromise]);
+  }
+  try{
+    var init;
+    try {
+      init = await fetchInitWithTimeout(25000);
+    } catch(err) {
+      // コールドスタート時の自動リトライ (1回)
+      console.warn('初回読み込みリトライ中...', err);
+      init = await fetchInitWithTimeout(25000);
+    }
     S.users=init.users||[];S.workTypes=init.workTypes||[];S.settings=init.settings||{};S.staff=init.staff||[];
     S.ready=true;render();
     gas('getDeferredData').then(function(def){
