@@ -8691,11 +8691,10 @@ function renderSimTableHTML(){
     '  <th style="width:95px;text-align:right">積算工賃</th>' +
     '  <th style="width:95px;text-align:right;background:#f9fbf9">按分後工賃</th>' +
     '  <th style="width:85px;text-align:right">差額</th>' +
-    '  <th style="width:65px;text-align:center" class="no-print">案内文</th>' +
     '</tr></thead><tbody>';
 
   if(!st.users || st.users.length === 0){
-    h += '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--sub)">対象の利用者がいません</td></tr>';
+    h += '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--sub)">対象の利用者がいません</td></tr>';
   } else {
     st.users.forEach(function(u){
       var uid = esc(u.userId);
@@ -8750,8 +8749,6 @@ function renderSimTableHTML(){
       h += '  <td style="text-align:right;font-weight:700;color:'+(u.diffWage<0?'#c62828':'#1b5e20')+';background:#f9fbf9" id="sim-alloc-'+uid+'">¥'+fmtNum(u.allocatedWage)+'</td>';
       // 差額
       h += '  <td style="text-align:right;font-size:12px;color:'+(u.diffWage<0?'#c62828':'var(--sub)')+'" id="sim-diff-'+uid+'">'+(u.diffWage<0?'-¥'+fmtNum(Math.abs(u.diffWage)):(u.diffWage>0?'+¥'+fmtNum(u.diffWage):'-'))+'</td>';
-      // 案内文
-      h += '  <td style="text-align:center" class="no-print"><button type="button" class="bg" onclick="openSimNoticeModal(\''+uid+'\')" style="font-size:11px;padding:3px 7px" title="この利用者の按分案内文・証明書を表示・印刷">📜 印刷</button></td>';
       h += '</tr>';
     });
   }
@@ -8773,7 +8770,6 @@ function renderSimTableHTML(){
   h += '  <td style="text-align:right" id="sim-foot-gross">¥'+fmtNum(totalGross)+'</td>';
   h += '  <td style="text-align:right;color:'+(totalDiff<0?'#c62828':'#1b5e20')+';background:#f9fbf9" id="sim-foot-alloc">¥'+fmtNum(totalAlloc)+'</td>';
   h += '  <td style="text-align:right;font-size:12px;color:'+(totalDiff<0?'#c62828':'var(--sub)')+'" id="sim-foot-diff">'+(totalDiff<0?'-¥'+fmtNum(Math.abs(totalDiff)):(totalDiff>0?'+¥'+fmtNum(totalDiff):'-'))+'</td>';
-  h += '  <td style="text-align:center" class="no-print">-</td>';
   h += '</tr></tfoot></table>';
   return h;
 }
