@@ -8469,7 +8469,7 @@ async function initWageSimulator(ym, forceReset){
 
   _simState = {
     ym: ym,
-    revenue: (_simState && _simState.revenue) ? _simState.revenue : 500000,
+    revenue: (forceReset || !_simState || !_simState.revenue || _simState.revenue === 500000) ? 100000 : _simState.revenue,
     mode: 'auto',
     closedDays: closedDays,
     dowCounts: dowCounts,
@@ -8589,7 +8589,7 @@ function renderSimFullUI(container){
   h += '        <input type="number" id="sim-rev-input" value="'+(_simState.revenue||0)+'" step="10000" min="0" oninput="setSimRevenue(this.value)" style="width:130px;padding:6px 10px;font-size:15px;font-weight:700;border:1.5px solid var(--bdr);border-radius:6px;text-align:right">';
   h += '      </div>';
   h += '      <div style="display:inline-flex;gap:4px">';
-  [300000, 500000, 800000, 1000000].forEach(function(v){
+  [50000, 80000, 100000, 150000, 200000, 300000].forEach(function(v){
     h += '      <button class="bg" onclick="setSimRevenue('+v+')" style="font-size:11px;padding:4px 8px;border-radius:4px">'+(v/10000)+'万</button>';
   });
   h += '      </div>';
