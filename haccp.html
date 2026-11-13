@@ -28,26 +28,27 @@ input, select, textarea, button {
 }
 
 :root {
-  --pri: #2d5a37;
-  --pri-light: #e8f5e9;
-  --pri-dark: #1b3d22;
-  --coffee: #5d4037;
-  --coffee-light: #efebe9;
-  --coffee-dark: #3e2723;
-  --accent: #e65100;
-  --bg: #f8f5f0;
+  --pri: #4a2c1d;              /* ディープ・エスプレッソブラウン */
+  --pri-light: #f5ece5;        /* カフェラテ・ミルクフォーム */
+  --pri-dark: #2e170c;         /* ダークロースト・ブラック */
+  --coffee: #684a37;           /* リッチコーヒー */
+  --coffee-light: #efe6df;     /* カプチーノベージュ */
+  --coffee-dark: #381f13;      /* フレンチロースト */
+  --accent: #c06c28;           /* キャラメルアンバー（琥珀色） */
+  --accent-light: #fdf3eb;     /* キャラメルシフォン */
+  --bg: #f8f4ef;               /* まろやかなミルクコーヒーホワイト */
   --card: #ffffff;
-  --bdr: #e0d6cf;
-  --sub: #7d6e63;
-  --shadow-sm: 0 4px 12px rgba(0,0,0,0.06);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
-  --shadow-lg: 0 16px 44px rgba(0,0,0,0.14);
+  --bdr: #e5dacd;              /* ラテベージュ枠線 */
+  --sub: #7a6657;              /* モカグレー */
+  --shadow-sm: 0 4px 12px rgba(56,31,19,0.06);
+  --shadow-md: 0 8px 24px rgba(56,31,19,0.08);
+  --shadow-lg: 0 16px 44px rgba(56,31,19,0.15);
   --radius-card: 26px;
 }
 
 /* ─── ヘッダー ───────────────────────────── */
 header {
-  background: var(--pri);
+  background: linear-gradient(135deg, #381f13 0%, #4a2c1d 55%, #5a3724 100%);
   color: #ffffff;
   padding: 10px 18px;
   display: flex;
@@ -56,7 +57,7 @@ header {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 16px rgba(46,23,12,0.3);
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -86,7 +87,7 @@ header {
 /* ナビゲーション（選ぶ項目：珈琲HACCP と 日報記録） */
 .haccp-nav-pills {
   display: inline-flex;
-  background: rgba(0,0,0,0.22);
+  background: rgba(0,0,0,0.25);
   padding: 4px;
   border-radius: 30px;
   gap: 4px;
@@ -111,14 +112,14 @@ header {
 }
 .haccp-pill.active {
   background: #ffffff;
-  color: var(--pri);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  color: #4a2c1d;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
   transform: scale(1.03);
 }
 
 .top-link-btn {
   background: rgba(255,255,255,0.18);
-  border: 1.5px solid rgba(255,255,255,0.4);
+  border: 1.5px solid rgba(255,255,255,0.35);
   color: #fff;
   padding: 7px 14px;
   border-radius: 20px;
@@ -276,15 +277,15 @@ main {
   transform: scale(0.94);
 }
 .name-card.selected-active {
-  border-color: var(--pri);
-  background: #e8f5e9;
-  box-shadow: 0 6px 18px rgba(45,90,55,0.2);
+  border-color: var(--coffee);
+  background: #fbf7f3;
+  box-shadow: 0 6px 18px rgba(93,64,55,0.2);
 }
 .name-avatar {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #a5d6a7, #388e3c);
+  background: linear-gradient(135deg, #c49a7a, #7a5038);
   color: #ffffff;
   font-size: 20px;
   font-weight: 900;
@@ -292,15 +293,15 @@ main {
   align-items: center;
   justify-content: center;
   margin-bottom: 8px;
-  box-shadow: 0 4px 10px rgba(56,142,60,0.25);
+  box-shadow: 0 4px 10px rgba(122,80,56,0.25);
   transition: transform 0.2s ease;
 }
 .name-card:hover .name-avatar {
   transform: scale(1.1) rotate(6deg);
 }
 .name-card.staff-card .name-avatar {
-  background: linear-gradient(135deg, #bcaaa4, #5d4037);
-  box-shadow: 0 4px 10px rgba(93,64,55,0.25);
+  background: linear-gradient(135deg, #5c3824, #381f13);
+  box-shadow: 0 4px 10px rgba(56,31,19,0.3);
 }
 .name-text {
   font-size: 15px;
@@ -380,46 +381,46 @@ main {
 }
 
 .task-card.c-hygiene {
-  border-color: #81c784;
-  background: linear-gradient(180deg, #ffffff 60%, #f1f8e9 100%);
+  border-color: #8c9e8f;
+  background: linear-gradient(180deg, #ffffff 60%, #f3f7f4 100%);
 }
-.task-card.c-hygiene .task-title { color: #2e7d32; }
-.task-card.c-hygiene .task-btn-action { background: #2e7d32; }
+.task-card.c-hygiene .task-title { color: #3e5a45; }
+.task-card.c-hygiene .task-btn-action { background: #3e5a45; }
 
 .task-card.c-recv {
-  border-color: #90caf9;
-  background: linear-gradient(180deg, #ffffff 60%, #e3f2fd 100%);
+  border-color: #b0a382;
+  background: linear-gradient(180deg, #ffffff 60%, #f9f7f0 100%);
 }
-.task-card.c-recv .task-title { color: #1565c0; }
-.task-card.c-recv .task-btn-action { background: #1565c0; }
+.task-card.c-recv .task-title { color: #6e5f3c; }
+.task-card.c-recv .task-btn-action { background: #6e5f3c; }
 
 .task-card.c-roast {
-  border-color: #ffb74d;
-  background: linear-gradient(180deg, #ffffff 60%, #fff3e0 100%);
+  border-color: #d18d53;
+  background: linear-gradient(180deg, #ffffff 60%, #fef5ee 100%);
 }
-.task-card.c-roast .task-title { color: #e65100; }
-.task-card.c-roast .task-btn-action { background: #e65100; }
+.task-card.c-roast .task-title { color: #af5316; }
+.task-card.c-roast .task-btn-action { background: #af5316; }
 
 .task-card.c-pack {
-  border-color: #ba68c8;
-  background: linear-gradient(180deg, #ffffff 60%, #f3e5f5 100%);
+  border-color: #9e7a63;
+  background: linear-gradient(180deg, #ffffff 60%, #f7f2ed 100%);
 }
-.task-card.c-pack .task-title { color: #7b1fa2; }
-.task-card.c-pack .task-btn-action { background: #7b1fa2; }
+.task-card.c-pack .task-title { color: #67432d; }
+.task-card.c-pack .task-btn-action { background: #67432d; }
 
 .task-card.c-monthly {
-  border-color: #5c6bc0;
-  background: linear-gradient(180deg, #ffffff 60%, #e8eaf6 100%);
+  border-color: #725241;
+  background: linear-gradient(180deg, #ffffff 60%, #f3ece6 100%);
 }
-.task-card.c-monthly .task-title { color: #283593; }
-.task-card.c-monthly .task-btn-action { background: #283593; }
+.task-card.c-monthly .task-title { color: #3d2314; }
+.task-card.c-monthly .task-btn-action { background: #3d2314; }
 
 .task-card.c-abnormal {
-  border-color: #ef5350;
-  background: linear-gradient(180deg, #ffffff 60%, #ffebee 100%);
+  border-color: #c46759;
+  background: linear-gradient(180deg, #ffffff 60%, #fcf0ee 100%);
 }
-.task-card.c-abnormal .task-title { color: #c62828; }
-.task-card.c-abnormal .task-btn-action { background: #c62828; }
+.task-card.c-abnormal .task-title { color: #9c3628; }
+.task-card.c-abnormal .task-btn-action { background: #9c3628; }
 
 /* ─── 3. ポップアップ モーダル（Googleマップ風） ───────── */
 .modal-overlay {
@@ -550,24 +551,24 @@ main {
 .q-progress-bar-bg {
   width: 100%;
   height: 8px;
-  background: #efebe9;
+  background: var(--coffee-light);
   border-radius: 8px;
   overflow: hidden;
 }
 .q-progress-bar-fill {
   height: 100%;
-  background: #2d5a37;
+  background: var(--coffee);
   border-radius: 8px;
   transition: width 0.35s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .gmap-q-category {
   display: inline-block;
-  background: #f5f2ed;
-  color: #6b5d52;
+  background: var(--pri-light);
+  color: var(--coffee-dark);
   font-size: 12px;
   font-weight: 800;
-  padding: 3px 12px;
+  padding: 4px 14px;
   border-radius: 12px;
   margin-bottom: 16px;
   letter-spacing: 0.3px;
@@ -613,22 +614,22 @@ main {
   transform: scale(0.92);
 }
 .yes-no-btn.btn-yes {
-  border-color: #2e7d32;
-  color: #2e7d32;
+  border-color: #356844;
+  color: #356844;
 }
 .yes-no-btn.btn-yes:hover, .yes-no-btn.btn-yes.selected-feedback {
-  background: #2e7d32;
+  background: #356844;
   color: #ffffff;
-  box-shadow: 0 8px 24px rgba(46,125,50,0.3);
+  box-shadow: 0 8px 24px rgba(53,104,68,0.3);
 }
 .yes-no-btn.btn-no {
-  border-color: #c62828;
-  color: #c62828;
+  border-color: #b34739;
+  color: #b34739;
 }
 .yes-no-btn.btn-no:hover, .yes-no-btn.btn-no.selected-feedback {
-  background: #c62828;
+  background: #b34739;
   color: #ffffff;
-  box-shadow: 0 8px 24px rgba(198,40,40,0.3);
+  box-shadow: 0 8px 24px rgba(179,71,57,0.3);
 }
 
 .prev-step-btn {
@@ -678,15 +679,15 @@ main {
   transform: scale(0.94);
 }
 .choice-chip-btn:hover {
-  border-color: var(--pri);
-  background: #f1f8e9;
-  color: var(--pri-dark);
+  border-color: var(--coffee);
+  background: var(--pri-light);
+  color: var(--coffee-dark);
 }
 .choice-chip-btn.active {
-  border-color: var(--pri);
-  background: var(--pri);
+  border-color: var(--coffee);
+  background: var(--coffee);
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(45,90,55,0.25);
+  box-shadow: 0 4px 14px rgba(74,44,29,0.25);
 }
 
 .big-num-wrap {
@@ -886,7 +887,7 @@ main {
 
 .save-action-btn {
   width: 100%;
-  background: var(--pri);
+  background: linear-gradient(135deg, var(--pri), var(--coffee));
   color: #fff;
   border: none;
   border-radius: 20px;
@@ -894,7 +895,7 @@ main {
   font-size: 17px;
   font-weight: 900;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(45,90,55,0.3);
+  box-shadow: 0 6px 20px rgba(56,31,19,0.3);
   margin-top: 14px;
   display: flex;
   align-items: center;
@@ -905,7 +906,7 @@ main {
 .save-action-btn:hover {
   background: var(--pri-dark);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(45,90,55,0.4);
+  box-shadow: 0 8px 24px rgba(56,31,19,0.4);
 }
 .save-action-btn:active {
   transform: scale(0.97);
@@ -919,7 +920,7 @@ main {
 .done-icon-wrap {
   width: 84px;
   height: 84px;
-  background: #e8f5e9;
+  background: var(--pri-light);
   border-radius: 50%;
   margin: 0 auto 16px;
   display: flex;
@@ -985,7 +986,7 @@ main {
   align-items: center;
 }
 .btn-print {
-  background: var(--coffee);
+  background: linear-gradient(135deg, #4a2c1d, #684a37);
   color: #fff;
   border: none;
   border-radius: 16px;
@@ -996,11 +997,11 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 3px 8px rgba(93,64,55,0.25);
+  box-shadow: 0 3px 8px rgba(56,31,19,0.25);
   transition: 0.15s;
 }
 .btn-print:hover {
-  background: var(--coffee-dark);
+  background: #381f13;
   transform: translateY(-1px);
 }
 .btn-csv {
@@ -2000,7 +2001,7 @@ async function renderRecvConfirmStep(body){
 
   var h = '';
   h += '<div class="step-header" style="margin-bottom:16px;">';
-  h += '  <span class="step-tag" style="background:#e3f2fd;color:#1565c0">生豆受入 完了確認</span>';
+  h += '  <span class="step-tag" style="background:#f6f3eb;color:#6e5f3c">生豆受入 完了確認</span>';
   h += '  <h2 class="step-title" style="font-size:20px;">生豆受入の確認</h2>';
   h += '  <p class="step-sub">作業者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
@@ -2026,7 +2027,7 @@ async function renderRecvConfirmStep(body){
   h += '  </div>';
   h += '</div>';
 
-  h += '<button type="button" class="save-action-btn" style="background:#1565c0;" onclick="saveRecvRecord()">';
+  h += '<button type="button" class="save-action-btn" style="background:#6e5f3c;" onclick="saveRecvRecord()">';
   h += '  <span>💾 生豆の受入を記録する</span>';
   h += '</button>';
 
@@ -2116,7 +2117,7 @@ async function renderRoastStep(animType, body){
     h += '    <span>作業者: ' + esc(_worker.name) + ' さん</span>';
     h += '  </div>';
     h += '  <div class="q-progress-bar-bg">';
-    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#e65100;"></div>';
+    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#af5316;"></div>';
     h += '  </div>';
     h += '</div>';
 
@@ -2150,12 +2151,12 @@ async function renderRoastStep(animType, body){
       h += '    </div>';
 
       h += '    <div class="yield-badge-card" id="yield-badge-wrap" style="margin-bottom:18px;">';
-      h += '      <div style="font-size:12px;font-weight:800;color:#e65100">歩留り（できあがり割合）</div>';
-      h += '      <div class="yield-val" id="yield-val-display">' + _roastData.yieldPct + '</div>';
+      h += '      <div style="font-size:12px;font-weight:800;color:#af5316">歩留り（できあがり割合）</div>';
+      h += '      <div class="yield-val" id="yield-val-display" style="color:#af5316;">' + _roastData.yieldPct + '</div>';
       h += '      <div class="yield-comment" id="yield-comment-display">適正範囲内です。美味しく焼き上がりました。</div>';
       h += '    </div>';
 
-      h += '    <button type="button" class="card-next-action-btn" style="background:#e65100;" onclick="submitRoastWeights()">次へ進む ▶</button>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#af5316;" onclick="submitRoastWeights()">次へ進む ▶</button>';
     }
     // Step 2: 焙煎条件・冷却確認（ちょい敬語・はい/いいえ）
     else if(_roastStepIdx === 2){
@@ -2325,7 +2326,7 @@ async function renderRoastConfirmStep(body){
 
   var h = '';
   h += '<div class="step-header" style="margin-bottom:16px;">';
-  h += '  <span class="step-tag" style="background:#fff3e0;color:#e65100">焙煎製造 完了確認</span>';
+  h += '  <span class="step-tag" style="background:#fef5ee;color:#af5316">焙煎製造 完了確認</span>';
   h += '  <h2 class="step-title" style="font-size:20px;">焙煎製造の確認</h2>';
   h += '  <p class="step-sub">作業者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
@@ -2334,7 +2335,7 @@ async function renderRoastConfirmStep(body){
   h += '  <div class="summary-item-row"><span style="font-weight:700;">製造ロットID</span><span style="font-weight:900;color:var(--coffee);">' + esc(nextLot) + '</span></div>';
   h += '  <div class="summary-item-row"><span style="font-weight:700;">産地・銘柄</span><b>' + esc(_roastData.bean) + '</b></div>';
   h += '  <div class="summary-item-row"><span style="font-weight:700;">投入量 ➔ 焙煎後</span><b>' + _roastData.inputG + 'g ➔ ' + _roastData.outputG + 'g</b></div>';
-  h += '  <div class="summary-item-row"><span style="font-weight:700;">歩留り</span><b style="color:#e65100;font-size:16px;">' + _roastData.yieldPct + '</b></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">歩留り</span><b style="color:#af5316;font-size:16px;">' + _roastData.yieldPct + '</b></div>';
   h += '  <div class="summary-item-row ' + (_roastData.conditionStatus === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">焙煎条件・冷却確認</span><span class="badge-result ' + (_roastData.conditionStatus === '良' ? 'ok' : 'ng') + '">' + _roastData.conditionStatus + '</span></div>';
   h += '  <div class="summary-item-row ' + (_roastData.abnormalStatus === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">焙煎異常有無</span><span class="badge-result ' + (_roastData.abnormalStatus === '良' ? 'ok' : 'ng') + '">' + _roastData.abnormalStatus + '</span></div>';
   h += '</div>';
@@ -2349,7 +2350,7 @@ async function renderRoastConfirmStep(body){
   h += '  </div>';
   h += '</div>';
 
-  h += '<button type="button" class="save-action-btn" style="background:#e65100;" onclick="saveRoastRecord()">';
+  h += '<button type="button" class="save-action-btn" style="background:#af5316;" onclick="saveRoastRecord()">';
   h += '  <span>💾 焙煎製造を記録する</span>';
   h += '</button>';
 
@@ -2445,7 +2446,7 @@ async function renderPackStep(animType, body){
     h += '    <span>作業者: ' + esc(_worker.name) + ' さん</span>';
     h += '  </div>';
     h += '  <div class="q-progress-bar-bg">';
-    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#7b1fa2;"></div>';
+    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#67432d;"></div>';
     h += '  </div>';
     h += '</div>';
 
@@ -2482,7 +2483,7 @@ async function renderPackStep(animType, body){
       });
       h += '      </div>';
       h += '    </div>';
-      h += '    <button type="button" class="card-next-action-btn" style="background:#7b1fa2;" onclick="submitPackCount()">次へ進む ▶</button>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#67432d;" onclick="submitPackCount()">次へ進む ▶</button>';
     }
     // Step 2: 賞味期限・密封確認（ちょい敬語・はい/いいえ）
     else if(_packStepIdx === 2){
@@ -2651,7 +2652,7 @@ async function renderPackConfirmStep(body){
 
   var h = '';
   h += '<div class="step-header" style="margin-bottom:16px;">';
-  h += '  <span class="step-tag" style="background:#f3e5f5;color:#7b1fa2">包装・出荷 完了確認</span>';
+  h += '  <span class="step-tag" style="background:#f7f2ed;color:#67432d">包装・出荷 完了確認</span>';
   h += '  <h2 class="step-title" style="font-size:20px;">包装・出荷の確認</h2>';
   h += '  <p class="step-sub">作業者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
@@ -2680,7 +2681,7 @@ async function renderPackConfirmStep(body){
   h += '  </div>';
   h += '</div>';
 
-  h += '<button type="button" class="save-action-btn" style="background:#7b1fa2;" onclick="savePackRecord()">';
+  h += '<button type="button" class="save-action-btn" style="background:#67432d;" onclick="savePackRecord()">';
   h += '  <span>💾 包装・出荷を記録する</span>';
   h += '</button>';
 
@@ -2765,7 +2766,7 @@ async function renderMonthlyStep(animType, body){
     h += '    <span>点検者: ' + esc(_worker.name) + ' さん</span>';
     h += '  </div>';
     h += '  <div class="q-progress-bar-bg">';
-    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#3949ab;"></div>';
+    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#3d2314;"></div>';
     h += '  </div>';
     h += '</div>';
 
@@ -2842,7 +2843,7 @@ async function renderMonthlyStep(animType, body){
         h += '    <button type="button" class="quick-chip-btn" onclick="el(\'f-monthly-notes\').value=\'' + phrase + '\'">' + phrase + '</button>';
       });
       h += '    </div>';
-      h += '    <button type="button" class="card-next-action-btn" style="background:#3949ab;margin-top:14px;" onclick="submitMonthlyNotes()">確認画面へ進む ▶</button>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#3d2314;margin-top:14px;" onclick="submitMonthlyNotes()">確認画面へ進む ▶</button>';
     }
 
     // 戻るボタン
@@ -2935,13 +2936,13 @@ async function renderMonthlyConfirmStep(body){
 
   var h = '';
   h += '<div class="step-header" style="margin-bottom:16px;">';
-  h += '  <span class="step-tag" style="background:#e8eaf6;color:#283593">月次点検 完了確認</span>';
+  h += '  <span class="step-tag" style="background:#f3ece6;color:#3d2314">月次点検 完了確認</span>';
   h += '  <h2 class="step-title" style="font-size:20px;">月次点検記録の確認</h2>';
   h += '  <p class="step-sub">点検実施者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
 
   h += '<div style="margin-bottom:16px;">';
-  h += '  <div class="summary-item-row"><span style="font-weight:700;">対象月</span><span style="font-weight:900;color:#283593;">' + ymLabel + '</span></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">対象月</span><span style="font-weight:900;color:#3d2314;">' + ymLabel + '</span></div>';
   h += '  <div class="summary-item-row ' + (_monthlyData.checkDaily === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">日常記録確認</span><span class="badge-result ' + (_monthlyData.checkDaily === '良' ? 'ok' : 'ng') + '">' + _monthlyData.checkDaily + '</span></div>';
   h += '  <div class="summary-item-row ' + (_monthlyData.checkManufacture === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">製造・出荷記録確認</span><span class="badge-result ' + (_monthlyData.checkManufacture === '良' ? 'ok' : 'ng') + '">' + _monthlyData.checkManufacture + '</span></div>';
   h += '  <div class="summary-item-row ' + (_monthlyData.checkAbnormal === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">異常記録確認</span><span class="badge-result ' + (_monthlyData.checkAbnormal === '良' ? 'ok' : 'ng') + '">' + _monthlyData.checkAbnormal + '</span></div>';
@@ -2961,7 +2962,7 @@ async function renderMonthlyConfirmStep(body){
   h += '  </div>';
   h += '</div>';
 
-  h += '<button type="button" class="save-action-btn" style="background:#283593;" onclick="saveMonthlyRecord()">';
+  h += '<button type="button" class="save-action-btn" style="background:#3d2314;" onclick="saveMonthlyRecord()">';
   h += '  <span>💾 月次点検を記録する</span>';
   h += '</button>';
 
@@ -3050,7 +3051,7 @@ async function renderAbnormalStep(animType, body){
     h += '    <span>記入者: ' + esc(_worker.name) + ' さん</span>';
     h += '  </div>';
     h += '  <div class="q-progress-bar-bg">';
-    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#c62828;"></div>';
+    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#9c3628;"></div>';
     h += '  </div>';
     h += '</div>';
 
@@ -3085,7 +3086,7 @@ async function renderAbnormalStep(animType, body){
         h += '    <button type="button" class="quick-chip-btn" onclick="el(\'f-abnormal-content\').value=\'' + txt + '\'">' + txt + '</button>';
       });
       h += '    </div>';
-      h += '    <button type="button" class="card-next-action-btn" style="background:#c62828;margin-top:14px;" onclick="submitAbnormalContent()">次へ進む ▶</button>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#9c3628;margin-top:14px;" onclick="submitAbnormalContent()">次へ進む ▶</button>';
     }
     // Step 2: 製品の保留・隔離措置（はい/いいえ）
     else if(_abnormalStepIdx === 2){
@@ -3106,7 +3107,7 @@ async function renderAbnormalStep(animType, body){
         h += '    <button type="button" class="quick-chip-btn" onclick="el(\'f-abnormal-cause\').value=\'' + txt + '\'">' + txt + '</button>';
       });
       h += '    </div>';
-      h += '    <button type="button" class="card-next-action-btn" style="background:#c62828;margin-top:14px;" onclick="submitAbnormalCause()">次へ進む ▶</button>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#9c3628;margin-top:14px;" onclick="submitAbnormalCause()">次へ進む ▶</button>';
     }
     // Step 4: 再確認結果（はい/いいえ）
     else if(_abnormalStepIdx === 4){
@@ -3127,7 +3128,7 @@ async function renderAbnormalStep(animType, body){
         h += '    <button type="button" class="quick-chip-btn" onclick="el(\'f-abnormal-prevent\').value=\'' + txt + '\'">' + txt + '</button>';
       });
       h += '    </div>';
-      h += '    <button type="button" class="card-next-action-btn" style="background:#c62828;margin-top:14px;" onclick="submitAbnormalPrevent()">確認画面へ進む ▶</button>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#9c3628;margin-top:14px;" onclick="submitAbnormalPrevent()">確認画面へ進む ▶</button>';
     }
 
     // 戻るボタン
@@ -3284,7 +3285,7 @@ function prevAbnormalStep(){
 async function renderAbnormalConfirmStep(body){
   var h = '';
   h += '<div class="step-header" style="margin-bottom:16px;">';
-  h += '  <span class="step-tag" style="background:#ffebee;color:#c62828">異常・是正記録 完了確認</span>';
+  h += '  <span class="step-tag" style="background:#fcf0ee;color:#9c3628">異常・是正記録 完了確認</span>';
   h += '  <h2 class="step-title" style="font-size:20px;">異常・是正記録の確認</h2>';
   h += '  <p class="step-sub">記録者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
@@ -3293,7 +3294,7 @@ async function renderAbnormalConfirmStep(body){
   h += '  <div class="summary-item-row"><span style="font-weight:700;">発生日</span><b>' + esc(_abnormalData.occurDate) + '</b></div>';
   h += '  <div class="summary-item-row"><span style="font-weight:700;">工程</span><b>' + esc(_abnormalData.processName) + '</b></div>';
   h += '  <div class="summary-item-row"><span style="font-weight:700;">対象ロットID</span><span style="font-weight:900;color:var(--coffee);">' + esc(_abnormalData.lotId || '-') + '</span></div>';
-  h += '  <div class="summary-item-row"><span style="font-weight:700;">異常内容</span><b style="color:#c62828;">' + esc(_abnormalData.abnormalContent) + '</b></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">異常内容</span><b style="color:#9c3628;">' + esc(_abnormalData.abnormalContent) + '</b></div>';
   h += '  <div class="summary-item-row ' + (_abnormalData.holdMeasure === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">保留・隔離措置</span><span class="badge-result ' + (_abnormalData.holdMeasure === '良' ? 'ok' : 'ng') + '">' + _abnormalData.holdMeasure + '</span></div>';
   h += '  <div class="summary-item-row"><span style="font-weight:700;">是正処置・原因究明</span><b>' + esc(_abnormalData.causeAndAction) + '</b></div>';
   h += '  <div class="summary-item-row ' + (_abnormalData.recheckResult === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">再確認結果</span><span class="badge-result ' + (_abnormalData.recheckResult === '良' ? 'ok' : 'ng') + '">' + _abnormalData.recheckResult + '</span></div>';
@@ -3310,7 +3311,7 @@ async function renderAbnormalConfirmStep(body){
   h += '  </div>';
   h += '</div>';
 
-  h += '<button type="button" class="save-action-btn" style="background:#c62828;" onclick="saveAbnormalRecord()">';
+  h += '<button type="button" class="save-action-btn" style="background:#9c3628;" onclick="saveAbnormalRecord()">';
   h += '  <span>💾 異常・是正記録を保存する</span>';
   h += '</button>';
 
@@ -3629,7 +3630,7 @@ async function renderAdminMonthlyTable(c){
   h += '<div class="table-wrap">';
   h += '<table class="admin-table">';
   h += '<thead>';
-  h += '  <tr style="background:#283593;color:#fff;">';
+  h += '  <tr style="background:#3d2314;color:#fff;">';
   h += '    <th colspan="10" style="text-align:left;padding:8px 12px;font-size:13px;letter-spacing:0.5px;">2. 月次点検記録（月末または月1回責任者が点検・記録）</th>';
   h += '  </tr>';
   h += '  <tr>';
@@ -3654,7 +3655,7 @@ async function renderAdminMonthlyTable(c){
     var ymLabel = parts.length === 2 ? parts[0] + '年' + parseInt(parts[1],10) + '月' : r.targetMonth;
 
     h += '<tr>';
-    h += '  <td><b style="color:#283593;">' + esc(ymLabel) + '</b></td>';
+    h += '  <td><b style="color:#3d2314;">' + esc(ymLabel) + '</b></td>';
     h += '  <td>' + (r.checkDaily === '良' ? okBadge : ngBadge) + '</td>';
     h += '  <td>' + (r.checkManufacture === '良' ? okBadge : ngBadge) + '</td>';
     h += '  <td>' + (r.checkAbnormal === '良' ? okBadge : ngBadge) + '</td>';
@@ -3703,7 +3704,7 @@ async function renderAdminAbnormalTable(c){
   h += '<div class="table-wrap">';
   h += '<table class="admin-table">';
   h += '<thead>';
-  h += '  <tr style="background:#c62828;color:#fff;">';
+  h += '  <tr style="background:#9c3628;color:#fff;">';
   h += '    <th colspan="10" style="text-align:left;padding:8px 12px;font-size:13px;letter-spacing:0.5px;">3. 異常・是正記録（異常発生時のみ記入 ※通常時は空欄で可）</th>';
   h += '  </tr>';
   h += '  <tr>';
@@ -3727,9 +3728,9 @@ async function renderAdminAbnormalTable(c){
 
     h += '<tr>';
     h += '  <td><b>' + esc(r.occurDate || '-') + '</b></td>';
-    h += '  <td><span style="background:#ffebee;color:#c62828;padding:2px 8px;border-radius:8px;font-weight:800;font-size:11px;">' + esc(r.processName || '-') + '</span></td>';
+    h += '  <td><span style="background:#fcf0ee;color:#9c3628;padding:2px 8px;border-radius:8px;font-weight:800;font-size:11px;">' + esc(r.processName || '-') + '</span></td>';
     h += '  <td><b style="color:var(--coffee);">' + esc(r.lotId || '-') + '</b></td>';
-    h += '  <td style="text-align:left;padding-left:6px;color:#c62828;font-weight:700;">' + esc(r.abnormalContent || '-') + '</td>';
+    h += '  <td style="text-align:left;padding-left:6px;color:#9c3628;font-weight:700;">' + esc(r.abnormalContent || '-') + '</td>';
     h += '  <td>' + (r.holdMeasure === '良' ? okBadge : ngBadge) + '</td>';
     h += '  <td style="text-align:left;padding-left:6px;">' + esc(r.causeAndAction || '-') + '</td>';
     h += '  <td>' + (r.recheckResult === '良' ? okBadge : ngBadge) + '</td>';
@@ -4019,7 +4020,7 @@ async function printMonthlyHaccpReport(ym){
   html += 'h1 { font-size: 16px; margin: 0 0 6px; }';
   html += 'table.report { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }';
   html += 'table.report th, table.report td { border: 1px solid #000; padding: 6px 4px; text-align: center; }';
-  html += 'table.report th { background: #283593; color: #fff; font-size: 10px; }';
+  html += 'table.report th { background: #3d2314; color: #fff; font-size: 10px; }';
   html += '</style></head><body>';
   html += '<h1>【ひとつぎ珈琲】2. 月次点検記録（月末または月1回責任者が点検・記録）</h1>';
   html += '<div style="margin-bottom:8px;font-size:11px;">事業所名: 就労継続支援B型 ひとつぎ豊中小曽根 ／ 対象年月: ' + ym + '</div>';
@@ -4072,7 +4073,7 @@ async function printAbnormalHaccpReport(ym){
   html += 'h1 { font-size: 16px; margin: 0 0 6px; }';
   html += 'table.report { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }';
   html += 'table.report th, table.report td { border: 1px solid #000; padding: 6px 4px; text-align: center; }';
-  html += 'table.report th { background: #c62828; color: #fff; font-size: 10px; }';
+  html += 'table.report th { background: #9c3628; color: #fff; font-size: 10px; }';
   html += '</style></head><body>';
   html += '<h1>【ひとつぎ珈琲】3. 異常・是正記録（異常発生時のみ記入 ※通常時は空欄で可）</h1>';
   html += '<div style="margin-bottom:8px;font-size:11px;">事業所名: 就労継続支援B型 ひとつぎ豊中小曽根 ／ 対象年月: ' + ym + '</div>';
