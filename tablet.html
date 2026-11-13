@@ -963,17 +963,15 @@ async function bootHaccpGuest(){
 (async function(){
   try{
     var _qp = new URLSearchParams(window.location.search);
-    var isHaccpDirect = (_qp.get('view') === 'haccp' || _qp.get('tab') === 'haccp');
+    if(_qp.get('view') === 'haccp' || _qp.get('tab') === 'haccp'){
+      window.location.replace('haccp.html');
+      return;
+    }
 
     var s=sessionStorage.getItem('tb_me');
     if(s){
       ME=JSON.parse(s);
       await boot();
-      if(isHaccpDirect){
-        switchTabletView('haccp');
-      }
-    } else if(isHaccpDirect){
-      await bootHaccpGuest();
     }
   }catch(e){try{sessionStorage.removeItem('tb_me');}catch(e2){}}
 })();
