@@ -784,6 +784,13 @@ async function boot(){
 
     show('pg-main');
     hide('pg-loading');
+
+    try {
+      var _tqp = new URLSearchParams(window.location.search);
+      if(_tqp.get('view') === 'haccp' || _tqp.get('tab') === 'haccp'){
+        switchTabletView('haccp');
+      }
+    } catch(err){}
   }catch(e){
     hide('pg-loading');
     el('pg-login').style.display='flex';
