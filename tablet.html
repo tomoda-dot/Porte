@@ -254,6 +254,10 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
 }
 .haccp-user-btn:hover,.haccp-user-btn:active{border-color:var(--pri);background:#e8f5e9;color:var(--pri);transform:translateY(-2px);}
 .haccp-user-btn.selected{border-color:var(--pri);background:var(--pri);color:#fff;}
+.haccp-filter-pill{padding:6px 14px;border:1.5px solid var(--bdr);background:#fff;border-radius:20px;font-size:13px;font-weight:700;color:var(--sub);cursor:pointer;transition:all .15s ease;}
+.haccp-filter-pill.active{background:var(--pri);border-color:var(--pri);color:#fff;}
+.haccp-staff-btn{background:#efebe9!important;border-color:#bcaaa4!important;color:#4e342e!important;}
+.haccp-staff-btn:hover,.haccp-staff-btn:active{border-color:#6d4c41!important;background:#d7ccc8!important;color:#3e2723!important;transform:translateY(-2px);}
 </style>
 </head>
 <body>
@@ -278,6 +282,11 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
       </div>
       <div style="margin-top:16px;text-align:center">
         <a href="javascript:void(0)" onclick="showTbTradLogin()" style="font-size:12px;color:var(--pri);text-decoration:underline;font-weight:600">🔑 従来のID・パスワードで入力</a>
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--bdr);text-align:center">
+        <button type="button" onclick="bootHaccpGuest()" style="background:#efebe9;border:1.5px solid #8d6e63;border-radius:24px;padding:9px 20px;color:#4e342e;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(0,0,0,0.06)">
+          <span style="font-size:16px">☕</span> <span>ログイン不要で珈琲HACCPを開く</span>
+        </button>
       </div>
     </div>
 
@@ -822,11 +831,53 @@ document.addEventListener('visibilitychange', function(){
 window.addEventListener('focus', checkTabletDateRollover);
 setInterval(checkTabletDateRollover, 30000);
 
-// セッション復元
+// ─── HACCPゲスト・現場ダイレクト起動 ───
+async function bootHaccpGuest(){
+  el('pg-login').style.display='none';
+  hide('pg-main'); show('pg-loading');
+  try{
+    var results=await Promise.all([
+      gas('getUsers'),
+      gas('getStaff'),
+      gas('getSettings')
+    ]);
+    USERS = results[0] || [];
+    TB_STAFF_LIST = results[1] || [];
+    SETTINGS = results[2] || {};
+
+    ME = { id: 'guest', name: '珈琲HACCP現場', role: '作業記録' };
+
+    var hd = el('hd-staff');
+    if(hd) hd.textContent = '☕ 珈琲HACCP';
+    var sel = el('sel-date');
+    if(sel){ sel.value = today(); sel.max = today(); }
+
+    show('pg-main');
+    hide('pg-loading');
+    switchTabletView('haccp');
+  }catch(e){
+    hide('pg-loading');
+    el('pg-login').style.display='flex';
+    alert('HACCP読み込みエラー: '+(e.message||String(e)));
+  }
+}
+
+// セッション復元 または HACCP直通起動
 (async function(){
   try{
+    var _qp = new URLSearchParams(window.location.search);
+    var isHaccpDirect = (_qp.get('view') === 'haccp' || _qp.get('tab') === 'haccp');
+
     var s=sessionStorage.getItem('tb_me');
-    if(s){ME=JSON.parse(s); await boot();}
+    if(s){
+      ME=JSON.parse(s);
+      await boot();
+      if(isHaccpDirect){
+        switchTabletView('haccp');
+      }
+    } else if(isHaccpDirect){
+      await bootHaccpGuest();
+    }
   }catch(e){try{sessionStorage.removeItem('tb_me');}catch(e2){}}
 })();
 
@@ -1389,6 +1440,11 @@ async function saveHaccpJson(key, data){
 // ─── ビュー切り替え ─────────────────────────────────────
 var _curTabletView = 'daily';
 function switchTabletView(view){
+  if(view === 'daily' && (!ME || ME.id === 'guest')){
+    hide('pg-main');
+    el('pg-login').style.display = 'flex';
+    return;
+  }
   _curTabletView = view;
   var btnDaily = el('tb-tab-daily');
   var btnHaccp = el('tb-tab-haccp');
@@ -1466,9 +1522,19 @@ function resetHaccpWizard(){
   renderHaccpCard();
 }
 
-function selectHaccpWorker(uid, name){
+var _haccpWorkerFilter = 'all';
+function setHaccpWorkerFilter(f){
+  _haccpWorkerFilter = f;
+  renderHaccpCard();
+}
+
+function selectHaccpWorker(uid, name, roleType){
   _haccpState.workerId = uid;
   _haccpState.workerName = name;
+  _haccpState.workerRole = roleType || '利用者';
+  if(roleType === 'スタッフ'){
+    _haccpState.staffName = name;
+  }
   _haccpState.step = 1;
   renderHaccpCard();
 }
@@ -1556,16 +1622,45 @@ function renderHaccpCard(){
   // ─── ステップ 0: 作業者選択 ───
   if(step === 0){
     h += '<div class="haccp-step-badge">ステップ 1 / 2 ： 作業者の選択</div>';
-    h += '<div class="haccp-icon">👤</div>';
+    h += '<div class="haccp-icon">☕</div>';
     h += '<div class="haccp-q-title">きょう作業する人はだれですか？</div>';
-    h += '<div class="haccp-q-desc">自分の名前をタップしてください。</div>';
-    h += '<div class="haccp-user-grid">';
+    h += '<div class="haccp-q-desc">作業する人（利用者様 または スタッフ）の名前をタップしてください。</div>';
+
     var activeUsers = (USERS || []).filter(function(u){ return String(u.status) !== '利用終了'; });
-    activeUsers.forEach(function(u){
-      h += '<button type="button" class="haccp-user-btn" onclick="selectHaccpWorker(\''+esc(u.id)+'\',\''+esc(u.name)+'\')">'+esc(u.name)+'</button>';
-    });
+    var activeStaff = (TB_STAFF_LIST || []).filter(function(s){ return isStaffActive(s); });
+
+    h += '<div style="display:flex;justify-content:center;gap:8px;margin:10px 0 14px;flex-wrap:wrap">';
+    h += '  <button type="button" class="haccp-filter-pill' + (_haccpWorkerFilter === 'all' ? ' active' : '') + '" onclick="setHaccpWorkerFilter(\'all\')">すべて (' + (activeUsers.length + activeStaff.length) + ')</button>';
+    h += '  <button type="button" class="haccp-filter-pill' + (_haccpWorkerFilter === 'users' ? ' active' : '') + '" onclick="setHaccpWorkerFilter(\'users\')">👥 利用者様 (' + activeUsers.length + ')</button>';
+    h += '  <button type="button" class="haccp-filter-pill' + (_haccpWorkerFilter === 'staff' ? ' active' : '') + '" onclick="setHaccpWorkerFilter(\'staff\')">👔 スタッフ (' + activeStaff.length + ')</button>';
     h += '</div>';
-    h += '<div style="margin-top:12px;font-size:12px;color:var(--sub)">※コーヒー作業（生豆ピッキング・焙煎・計量包装等）の担当者</div>';
+
+    h += '<div style="max-height:46vh;overflow-y:auto;padding:4px;width:100%;max-width:560px">';
+
+    if(_haccpWorkerFilter === 'all' || _haccpWorkerFilter === 'users'){
+      if(_haccpWorkerFilter === 'all'){
+        h += '<div style="font-size:13px;font-weight:700;color:var(--pri);margin:6px 0 8px;text-align:left;display:flex;align-items:center;gap:4px"><span>👥</span><span>利用者様</span></div>';
+      }
+      h += '<div class="haccp-user-grid">';
+      activeUsers.forEach(function(u){
+        h += '<button type="button" class="haccp-user-btn" onclick="selectHaccpWorker(\''+esc(u.id)+'\',\''+esc(u.name)+'\',\'利用者\')">'+esc(u.name)+'</button>';
+      });
+      h += '</div>';
+    }
+
+    if(_haccpWorkerFilter === 'all' || _haccpWorkerFilter === 'staff'){
+      if(_haccpWorkerFilter === 'all'){
+        h += '<div style="font-size:13px;font-weight:700;color:#6f4e37;margin:16px 0 8px;text-align:left;display:flex;align-items:center;gap:4px"><span>👔</span><span>スタッフ</span></div>';
+      }
+      h += '<div class="haccp-user-grid">';
+      activeStaff.forEach(function(s){
+        h += '<button type="button" class="haccp-user-btn haccp-staff-btn" onclick="selectHaccpWorker(\''+esc(s.id)+'\',\''+esc(s.name)+'\',\'スタッフ\')">'+esc(s.name)+'</button>';
+      });
+      h += '</div>';
+    }
+
+    h += '</div>';
+    h += '<div style="margin-top:14px;font-size:12px;color:var(--sub)">※生豆ハンドピック・焙煎・計量・粉砕・包装など、コーヒー作業を担当する方を選びます</div>';
     box.innerHTML = h;
     return;
   }
@@ -1578,7 +1673,7 @@ function renderHaccpCard(){
     h += '<div style="display:flex;justify-content:space-between;width:100%;align-items:center;margin-bottom:6px">';
     h += '  <button type="button" onclick="prevHaccpStep()" style="background:none;border:1px solid var(--bdr);border-radius:12px;padding:4px 10px;font-size:12px;color:var(--sub);cursor:pointer">← 前へ</button>';
     h += '  <div class="haccp-step-badge" style="margin-bottom:0">質問 ' + step + ' / ' + totalSteps + '</div>';
-    h += '  <div style="font-size:12px;font-weight:700;color:var(--pri)">作業者: ' + esc(_haccpState.workerName) + '</div>';
+    h += '  <div style="font-size:12px;font-weight:700;color:var(--pri)">作業者: ' + esc(_haccpState.workerName) + ' <span style="font-size:10px;color:var(--sub)">(' + esc(_haccpState.workerRole || '利用者') + ')</span></div>';
     h += '</div>';
 
     // ドットプログレス
@@ -1649,9 +1744,15 @@ function renderHaccpCard(){
     h += '  </div>';
 
     // 職員確認
+    var activeStaff = (TB_STAFF_LIST || []).filter(function(s){ return isStaffActive(s); });
     h += '  <div style="margin-top:8px">';
     h += '    <label style="display:block;font-size:11px;font-weight:700;color:var(--sub);margin-bottom:3px">確認職員名:</label>';
-    h += '    <input type="text" id="haccp-wizard-staff" value="'+esc(curStaff)+'" placeholder="確認した職員の氏名" style="width:100%;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;font-size:13px" onchange="_haccpState.staffName=this.value">';
+    h += '    <select id="haccp-wizard-staff" style="width:100%;padding:8px 10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;background:#fff;font-weight:700" onchange="_haccpState.staffName=this.value">';
+    activeStaff.forEach(function(s){
+      var sel = (s.name === curStaff || (!curStaff && s.name.indexOf('友田') >= 0)) ? ' selected' : '';
+      h += '<option value="' + esc(s.name) + '"' + sel + '>' + esc(s.name) + '</option>';
+    });
+    h += '    </select>';
     h += '  </div>';
     h += '</div>';
 
