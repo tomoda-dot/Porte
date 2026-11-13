@@ -998,6 +998,40 @@ window.addEventListener('DOMContentLoaded', async function(){
   }
 });
 
+// ─── 在籍中判定（辞めた人・管理者アカウントを除外） ───
+function isUserActive(u, targetDate){
+  if(!u) return false;
+  var d = targetDate || todayStr();
+  d = String(d).slice(0, 10);
+  var st = String(u.status || u.userStatus || '').trim();
+  if(['利用終了', '退所', '終了', '契約終了', '非アクティブ', '無効', '削除'].indexOf(st) >= 0){
+    if(!u.endDate || u.endDate <= d) return false;
+  }
+  if(u.isArchived === true || u.active === false) return false;
+  if(u.enrollDate && u.enrollDate > d) return false;
+  if(u.endDate && u.endDate < d) return false;
+  return true;
+}
+
+function isStaffActive(s, targetDate){
+  if(!s) return false;
+  var lid = String(s.loginId || '').toLowerCase().trim();
+  var name = String(s.name || '').toLowerCase().trim();
+  // システム管理用アカウント除外
+  if(lid === 'admin' || lid === 'administrator' || name === 'administrator' || name === 'admin') return false;
+  
+  var d = targetDate || todayStr();
+  d = String(d).slice(0, 10);
+  var st = String(s.status || s.userStatus || '').trim();
+  if(['無効', '非表示', '削除', '退職', '退職済', '離職', '利用終了', '退所'].indexOf(st) >= 0 || s.isRetired === true){
+    if(!s.endDate || s.endDate <= d) return false;
+  }
+  if(s.isArchived === true || s.active === false) return false;
+  if(s.startDate && s.startDate > d) return false;
+  if(s.endDate && s.endDate < d) return false;
+  return true;
+}
+
 async function loadUsersAndStaff(){
   try {
     if(typeof gas === 'function'){
@@ -1005,8 +1039,18 @@ async function loadUsersAndStaff(){
         gas('getUsers').catch(function(){ return []; }),
         gas('getStaff').catch(function(){ return []; })
       ]);
-      if(res[0] && res[0].length > 0) USERS = res[0];
-      if(res[1] && res[1].length > 0) STAFF = res[1];
+      if(res[0] && res[0].length > 0) {
+        USERS = res[0].filter(function(u){ return isUserActive(u); });
+      }
+      if(res[1] && res[1].length > 0) {
+        var activeStaff = res[1].filter(function(s){ return isStaffActive(s); });
+        // 役職順に並べ替え
+        var roleOrder = {'サービス管理責任者': 1, '生活支援員': 2, '職業指導員': 3, '管理者': 4};
+        activeStaff.sort(function(a, b){
+          return (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99);
+        });
+        STAFF = activeStaff;
+      }
     }
   } catch(e){
     console.warn('loadUsersAndStaff error:', e);
@@ -1020,8 +1064,8 @@ async function loadUsersAndStaff(){
   }
   if(STAFF.length === 0){
     STAFF = [
-      { id: 's1', name: '友田浩樹', role: '管理者' },
-      { id: 's2', name: 'スタッフ', role: '担当' }
+      { id: 's1', name: '友田篤賜', role: 'サービス管理責任者' },
+      { id: 's2', name: 'スタッフ', role: '生活支援員' }
     ];
   }
 
