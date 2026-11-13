@@ -41,7 +41,7 @@ input, select, textarea, button {
   --sub: #7d6e63;
   --shadow-sm: 0 4px 12px rgba(0,0,0,0.06);
   --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
-  --shadow-lg: 0 14px 36px rgba(0,0,0,0.12);
+  --shadow-lg: 0 16px 44px rgba(0,0,0,0.14);
   --radius-card: 26px;
 }
 
@@ -143,15 +143,11 @@ main {
   padding: 16px 14px 60px;
 }
 
-/* ─── Googleマップ評価カード風 アニメーション ── */
+/* ─── Googleマップ風 アニメーション ── */
 @keyframes cardPop {
   0% { opacity: 0; transform: scale(0.92) translateY(18px); }
   70% { transform: scale(1.02) translateY(-2px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-@keyframes cardBounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(0.95); }
 }
 @keyframes badgePop {
   0% { transform: scale(0.5); opacity: 0; }
@@ -163,12 +159,8 @@ main {
   80% { transform: scale(1.15) rotate(10deg); }
   100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
-@keyframes confettiFall {
-  0% { transform: translateY(-30px) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(120px) rotate(360deg); opacity: 0; }
-}
 
-.google-card {
+.main-card {
   background: var(--card);
   border: 2px solid var(--bdr);
   border-radius: var(--radius-card);
@@ -176,6 +168,7 @@ main {
   padding: 24px 20px;
   animation: cardPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   position: relative;
+  margin-bottom: 24px;
 }
 
 .step-header {
@@ -207,17 +200,18 @@ main {
 /* 作業者選択バッジバー */
 .worker-bar {
   background: #ffffff;
-  border: 1.5px solid #d7ccc8;
+  border: 2px solid #a5d6a7;
   border-radius: 30px;
-  padding: 6px 14px;
+  padding: 8px 18px;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 18px;
   box-shadow: var(--shadow-sm);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
-  color: var(--coffee-dark);
+  color: #1b5e20;
+  animation: badgePop 0.3s ease;
 }
 .worker-change-btn {
   background: #efebe9;
@@ -225,7 +219,7 @@ main {
   color: #4e342e;
   font-size: 12px;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 16px;
   cursor: pointer;
   transition: 0.15s;
@@ -234,7 +228,7 @@ main {
   background: #d7ccc8;
 }
 
-/* ─── 1. 名前カード一覧 ────────────────────── */
+/* ─── 1. 名前カード一覧（在籍中のみ） ────────── */
 .name-category-title {
   font-size: 15px;
   font-weight: 800;
@@ -270,6 +264,11 @@ main {
 }
 .name-card:active {
   transform: scale(0.94);
+}
+.name-card.selected-active {
+  border-color: var(--pri);
+  background: #e8f5e9;
+  box-shadow: 0 6px 18px rgba(45,90,55,0.2);
 }
 .name-avatar {
   width: 52px;
@@ -308,7 +307,7 @@ main {
 /* ─── 2. 4大作業メニューカード ──────────────── */
 .task-menu-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 16px;
   margin-top: 10px;
 }
@@ -316,7 +315,7 @@ main {
   background: #ffffff;
   border: 3px solid;
   border-radius: 26px;
-  padding: 24px 18px;
+  padding: 22px 16px;
   text-align: center;
   cursor: pointer;
   box-shadow: var(--shadow-md);
@@ -325,7 +324,7 @@ main {
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  min-height: 220px;
+  min-height: 210px;
   position: relative;
   overflow: hidden;
 }
@@ -337,7 +336,7 @@ main {
   transform: scale(0.96);
 }
 .task-icon {
-  font-size: 54px;
+  font-size: 50px;
   line-height: 1;
   margin-bottom: 10px;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
@@ -347,15 +346,15 @@ main {
   transform: scale(1.15) rotate(-6deg);
 }
 .task-title {
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 900;
   margin-bottom: 6px;
 }
 .task-desc {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--sub);
   line-height: 1.4;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .task-btn-action {
   width: 100%;
@@ -398,82 +397,73 @@ main {
 .task-card.c-pack .task-title { color: #7b1fa2; }
 .task-card.c-pack .task-btn-action { background: #7b1fa2; }
 
-/* ─── 3. 詳細カード・質問カード ──────────────── */
-.question-item {
-  background: #fbf9f6;
-  border: 1.5px solid #e0d6cf;
-  border-radius: 18px;
-  padding: 14px 16px;
-  margin-bottom: 12px;
+/* ─── 3. ポップアップ モーダルカード（Googleマップ風） ── */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(30, 20, 15, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  transition: background 0.2s, border-color 0.2s;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.question-item.is-ok {
-  background: #f1f8e9;
-  border-color: #a5d6a7;
-}
-.question-item.is-ng {
-  background: #ffebee;
-  border-color: #ef9a9a;
-}
-.q-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.q-icon {
-  font-size: 26px;
-}
-.q-title {
-  font-size: 16px;
-  font-weight: 800;
-  color: #2b2118;
-}
-.q-desc {
-  font-size: 11px;
-  color: var(--sub);
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.q-btn-group {
-  display: flex;
-  gap: 8px;
-}
-.q-choice-btn {
-  border: 2px solid #d7ccc8;
+.modal-card {
   background: #ffffff;
-  color: #6d4c41;
-  font-size: 14px;
-  font-weight: 800;
-  padding: 8px 16px;
-  border-radius: 24px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  border: 2px solid #e0d6cf;
+  border-radius: 28px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 26px 20px;
+  position: relative;
+  transform: scale(0.85) translateY(24px);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.q-choice-btn:active {
-  transform: scale(0.92);
-}
-.q-choice-btn.active-ok {
-  background: #2e7d32;
-  border-color: #2e7d32;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(46,125,50,0.3);
-  transform: scale(1.05);
-}
-.q-choice-btn.active-ng {
-  background: #c62828;
-  border-color: #c62828;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(198,40,40,0.3);
-  transform: scale(1.05);
+.modal-overlay.active .modal-card {
+  transform: scale(1) translateY(0);
 }
 
+.modal-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: #efebe9;
+  color: #5d4037;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  z-index: 10;
+}
+.modal-close-btn:hover {
+  background: #d7ccc8;
+  transform: scale(1.1);
+}
+
+/* ─── 衛生チェック 質問アイテム（画像2の表現・スタイル完全準拠） ── */
 .all-ok-btn {
   width: 100%;
   background: linear-gradient(135deg, #43a047, #2e7d32);
@@ -498,6 +488,83 @@ main {
 }
 .all-ok-btn:active {
   transform: scale(0.97);
+}
+
+.question-item {
+  background: #f1f8e9;
+  border: 1.5px solid #a5d6a7;
+  border-radius: 20px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.2s;
+}
+.question-item.is-ok {
+  background: #f1f8e9;
+  border-color: #a5d6a7;
+}
+.question-item.is-ng {
+  background: #ffebee;
+  border-color: #ef9a9a;
+}
+.q-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.q-icon {
+  font-size: 26px;
+}
+.q-title {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: #2b2118;
+}
+.q-desc {
+  font-size: 11px;
+  color: var(--sub);
+  margin-top: 1px;
+}
+
+.q-btn-group {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.q-choice-btn {
+  border: 2px solid #d7ccc8;
+  background: #ffffff;
+  color: #6d4c41;
+  font-size: 13.5px;
+  font-weight: 800;
+  padding: 7px 14px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.q-choice-btn:active {
+  transform: scale(0.92);
+}
+.q-choice-btn.active-ok {
+  background: #2e7d32;
+  border-color: #2e7d32;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(46,125,50,0.3);
+  transform: scale(1.05);
+}
+.q-choice-btn.active-ng {
+  background: #c62828;
+  border-color: #c62828;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(198,40,40,0.3);
+  transform: scale(1.05);
 }
 
 .f-row {
@@ -605,8 +672,8 @@ main {
   color: #fff;
   border: none;
   border-radius: 20px;
-  padding: 16px;
-  font-size: 18px;
+  padding: 15px;
+  font-size: 17px;
   font-weight: 900;
   cursor: pointer;
   box-shadow: 0 6px 20px rgba(45,90,55,0.3);
@@ -626,42 +693,25 @@ main {
   transform: scale(0.97);
 }
 
-.back-btn {
-  background: none;
-  border: none;
-  color: var(--sub);
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  margin-bottom: 12px;
-}
-.back-btn:hover {
-  color: #333;
-}
-
-/* ─── 4. 完了カード（Googleマップ クチコミ完了風） ─── */
-.done-card-inner {
+/* ─── 4. 完了モーダル表示 ─── */
+.done-modal-inner {
   text-align: center;
-  padding: 30px 10px;
+  padding: 24px 10px;
 }
 .done-icon-wrap {
-  width: 90px;
-  height: 90px;
+  width: 84px;
+  height: 84px;
   background: #e8f5e9;
   border-radius: 50%;
   margin: 0 auto 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 48px;
+  font-size: 44px;
   animation: iconRotateIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .done-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 900;
   color: var(--pri);
   margin-bottom: 8px;
@@ -669,14 +719,7 @@ main {
 .done-sub {
   font-size: 14px;
   color: var(--sub);
-  margin-bottom: 24px;
-}
-.done-btn-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 320px;
-  margin: 0 auto;
+  margin-bottom: 22px;
 }
 
 /* ─── 5. 日報記録（全履歴＆印刷 管理画面） ────── */
@@ -761,7 +804,7 @@ main {
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12.5px;
   white-space: nowrap;
   text-align: left;
 }
@@ -769,12 +812,12 @@ main {
   background: #efebe9;
   color: var(--coffee-dark);
   font-weight: 800;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-bottom: 2px solid #d7ccc8;
   font-size: 12px;
 }
 .admin-table td {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-bottom: 1px solid #f0eae4;
   color: #333;
 }
@@ -787,7 +830,7 @@ main {
     background: #fff;
     color: #000;
   }
-  header, .admin-toolbar, .haccp-nav-pills, .btn-print, .btn-csv {
+  header, .admin-toolbar, .haccp-nav-pills, .btn-print, .btn-csv, .modal-overlay {
     display: none !important;
   }
   main {
@@ -800,11 +843,11 @@ main {
     box-shadow: none;
   }
   .admin-table {
-    font-size: 10pt;
+    font-size: 9pt;
   }
   .admin-table th, .admin-table td {
     border: 1px solid #000 !important;
-    padding: 6px !important;
+    padding: 4px !important;
   }
 }
 </style>
@@ -839,8 +882,77 @@ main {
        1. 現場カード入力エリア（珈琲HACCP）
        ══════════════════════════════════════════════ -->
   <div id="view-field">
-    <div id="field-container" class="google-card">
-      <!-- JavaScriptで動的描画（名前選択 ➔ 4作業メニュー ➔ 詳細 ➔ 完了） -->
+    <!-- Step 1: 名前カード一覧（在籍中の方のみ） -->
+    <div class="main-card" id="sec-worker-selection">
+      <div class="step-header">
+        <span class="step-tag">Step 1</span>
+        <h2 class="step-title">お名前を えらんでね 😊</h2>
+        <p class="step-sub">タップすると作業カードが開きます</p>
+      </div>
+
+      <div class="name-category-title">👥 利用者さん</div>
+      <div class="name-grid" id="grid-active-users"></div>
+
+      <div class="name-category-title" style="margin-top:24px;">👔 スタッフ</div>
+      <div class="name-grid" id="grid-active-staff"></div>
+    </div>
+
+    <!-- Step 2: 4大作業メニューカード（作業者選択後に表示） -->
+    <div class="main-card" id="sec-task-menu" style="display: none;">
+      <div style="display:flex;justify-content:center;">
+        <div class="worker-bar">
+          <span id="badge-cur-worker">👤 作業するひと: <b>〇〇</b> さん</span>
+          <button type="button" class="worker-change-btn" onclick="resetWorkerSelection()">かえる ↩</button>
+        </div>
+      </div>
+
+      <div class="step-header">
+        <span class="step-tag">Step 2</span>
+        <h2 class="step-title">どの作業を しますか？</h2>
+        <p class="step-sub">カードをタップすると入力モーダルが開きます</p>
+      </div>
+
+      <div class="task-menu-grid">
+        <!-- 1. 衛生チェック -->
+        <div class="task-card c-hygiene" onclick="openHaccpModal('hygiene')">
+          <div>
+            <div class="task-icon">🧼</div>
+            <div class="task-title">衛生チェック</div>
+            <div class="task-desc">体調・手洗い・専用台・器具清掃<br>日々の7項目チェック表</div>
+          </div>
+          <button type="button" class="task-btn-action">開く ▶</button>
+        </div>
+
+        <!-- 2. 生豆受入 -->
+        <div class="task-card c-recv" onclick="openHaccpModal('recv')">
+          <div>
+            <div class="task-icon">📦</div>
+            <div class="task-title">生豆受入</div>
+            <div class="task-desc">生豆が届いたときの記録<br>銘柄と重さ、見た目チェック</div>
+          </div>
+          <button type="button" class="task-btn-action">開く ▶</button>
+        </div>
+
+        <!-- 3. 焙煎製造 -->
+        <div class="task-card c-roast" onclick="openHaccpModal('roast')">
+          <div>
+            <div class="task-icon">🔥</div>
+            <div class="task-title">焙煎製造</div>
+            <div class="task-desc">コーヒー豆を焼く記録<br>歩留り(%)を自動でパッと計算！</div>
+          </div>
+          <button type="button" class="task-btn-action">開く ▶</button>
+        </div>
+
+        <!-- 4. 包装出荷 -->
+        <div class="task-card c-pack" onclick="openHaccpModal('pack')">
+          <div>
+            <div class="task-icon">🎁</div>
+            <div class="task-title">包装・出荷</div>
+            <div class="task-desc">ドリップバッグ・豆・粉の袋詰め<br>賞味期限と個数の記録</div>
+          </div>
+          <button type="button" class="task-btn-action">開く ▶</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -848,11 +960,10 @@ main {
        2. 日報記録（全履歴＆印刷 管理画面）
        ══════════════════════════════════════════════ -->
   <div id="view-admin" style="display: none;">
-    <!-- ツールバー -->
     <div class="admin-toolbar">
       <div class="admin-subtabs">
         <button type="button" class="admin-subtab-btn active" id="subtab-btn-hygiene" onclick="switchAdminSubtab('hygiene')">
-          🧼 日常衛生チェック
+          🧼 日常衛生チェック（7項目）
         </button>
         <button type="button" class="admin-subtab-btn" id="subtab-btn-roast" onclick="switchAdminSubtab('roast')">
           ☕ 焙煎・出荷台帳
@@ -881,6 +992,16 @@ main {
   </div>
 </main>
 
+<!-- ══════════════════════════════════════════════
+     3. Googleマップ風 モーダルカード（ポップアップ）
+     ══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="haccp-modal-overlay" onclick="onModalBackdropClick(event)">
+  <div class="modal-card" id="haccp-modal-card" onclick="event.stopPropagation()">
+    <button type="button" class="modal-close-btn" onclick="closeHaccpModal()" title="閉じる">✕</button>
+    <div id="modal-card-body"></div>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -893,17 +1014,16 @@ var _adminMonth = '';
 
 // 現場カード入力用ステート
 var _worker = null;            // { type: 'user' | 'staff', id: string, name: string }
-var _step = 'worker';          // 'worker' | 'menu' | 'hygiene' | 'recv' | 'roast' | 'pack' | 'done'
-var _doneInfo = {};            // 保存完了時のサマリー情報
 
-// 日常衛生チェック設問（シンプル＆直感）
+// ─── エクセル原本【画像1】完全準拠の日常衛生7項目 ─────
 var HYGIENE_QUESTIONS = [
-  { key: 'q_health',  icon: '😊', title: 'たいちょう', desc: '発熱や下痢、せき等はない？',   labelOk: 'げんき', labelNg: 'だめ' },
-  { key: 'q_hands',   icon: '🧼', title: 'つめ・て',   desc: '爪は短く、手にキズはない？',     labelOk: 'きれい', labelNg: 'だめ' },
-  { key: 'q_clothes', icon: '👕', title: 'ふくそう',   desc: '帽子やエプロンをつけた？',       labelOk: 'OK',     labelNg: 'だめ' },
-  { key: 'q_wash',    icon: '💧', title: 'てあらい',   desc: '消毒・手洗いはしっかりした？',   labelOk: '洗った', labelNg: 'まだ' },
-  { key: 'q_table',   icon: '✨', title: 'さぎょうだい', desc: '作業台や器具はキレイ？',       labelOk: 'キレイ', labelNg: 'まだ' },
-  { key: 'q_foreign', icon: '💍', title: '異物・アクセ', desc: '時計やアクセサリー外した？',     labelOk: 'OK',     labelNg: 'だめ' }
+  { key: 'q_health',  icon: '😊', title: '健康確認（体調・手指傷）', desc: '発熱や下痢、手や指にキズはない？',   labelOk: 'よし',    labelNg: 'だめ' },
+  { key: 'q_wash',    icon: '🧼', title: '手洗い・消毒',             desc: '作業前にしっかり手洗い・アルコール消毒した？', labelOk: '洗った',  labelNg: 'まだ' },
+  { key: 'q_table',   icon: '✨', title: '専用台・器具清掃',         desc: '専用テーブルやミル・器具は清潔？',       labelOk: 'キレイ',  labelNg: 'まだ' },
+  { key: 'q_foreign', icon: '🔍', title: '害虫・異物有無',           desc: '虫や髪の毛・異物の混入はない？',         labelOk: 'なし',    labelNg: 'あり' },
+  { key: 'q_other',   icon: '📋', title: '他作業との区分確認',       desc: '他の作業や私物が混ざっていない？',       labelOk: 'OK',      labelNg: 'だめ' },
+  { key: 'q_fire',    icon: '🧯', title: '設備・火気安全確認',       desc: '焙煎機・シーラー等の電源・火気は安全？', labelOk: '安全',    labelNg: 'だめ' },
+  { key: 'q_clean',   icon: '🧹', title: '作業終了後 清掃・片付',     desc: '作業後のテーブル拭き・器具の片付けOK？', labelOk: 'ピカピカ', labelNg: 'まだ' }
 ];
 
 // 珈琲豆銘柄
@@ -972,7 +1092,6 @@ function switchMainTab(tab){
     if(btnAdmin) btnAdmin.classList.remove('active');
     if(viewField) viewField.style.display = 'block';
     if(viewAdmin) viewAdmin.style.display = 'none';
-    renderFieldCard();
   } else {
     if(btnField) btnField.classList.remove('active');
     if(btnAdmin) btnAdmin.classList.add('active');
@@ -987,8 +1106,8 @@ window.addEventListener('DOMContentLoaded', async function(){
   _adminMonth = curYmStr();
   buildAdminMonthSelect();
 
-  // ログイン不要で即座にデータ読み込み
-  loadUsersAndStaff();
+  // ログイン不要で在籍中データを即座に読み込み
+  await loadUsersAndStaff();
 
   var p = new URLSearchParams(window.location.search);
   if(p.get('tab') === 'admin' || p.get('view') === 'admin'){
@@ -1017,7 +1136,6 @@ function isStaffActive(s, targetDate){
   if(!s) return false;
   var lid = String(s.loginId || '').toLowerCase().trim();
   var name = String(s.name || '').toLowerCase().trim();
-  // システム管理用アカウント除外
   if(lid === 'admin' || lid === 'administrator' || name === 'administrator' || name === 'admin') return false;
   
   var d = targetDate || todayStr();
@@ -1044,7 +1162,6 @@ async function loadUsersAndStaff(){
       }
       if(res[1] && res[1].length > 0) {
         var activeStaff = res[1].filter(function(s){ return isStaffActive(s); });
-        // 役職順に並べ替え
         var roleOrder = {'サービス管理責任者': 1, '生活支援員': 2, '職業指導員': 3, '管理者': 4};
         activeStaff.sort(function(a, b){
           return (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99);
@@ -1059,191 +1176,135 @@ async function loadUsersAndStaff(){
   // フォールバック
   if(USERS.length === 0){
     USERS = [
-      { id: 'u1', name: '利用者様', furigana: 'りようしゃ' }
+      { id: 'u1', name: '髙島直樹', furigana: 'たかしまなおき' },
+      { id: 'u2', name: '岡村芽衣', furigana: 'おかむらめい' },
+      { id: 'u3', name: '松尾未久', furigana: 'マツオミク' },
+      { id: 'u4', name: '宮崎和佳', furigana: 'みやざきわか' }
     ];
   }
   if(STAFF.length === 0){
     STAFF = [
       { id: 's1', name: '友田篤賜', role: 'サービス管理責任者' },
-      { id: 's2', name: 'スタッフ', role: '生活支援員' }
+      { id: 's2', name: '太中静香', role: '生活支援員' },
+      { id: 's3', name: '奥永優斗', role: '生活支援員' },
+      { id: 's4', name: '大倉基揮', role: '職業指導員' },
+      { id: 's5', name: '釘村真弓', role: '職業指導員' }
     ];
   }
 
-  if(_curMainTab === 'field' && _step === 'worker'){
-    renderFieldCard();
-  }
+  renderWorkerSelectionGrid();
 }
 
-// ─── 現場カード入力レンダリング（Googleマップ風） ─────────
-function renderFieldCard(){
-  var c = el('field-container');
-  if(!c) return;
+// ─── 名前カード一覧の描画（在籍中の方のみ） ───────────
+function renderWorkerSelectionGrid(){
+  var uGrid = el('grid-active-users');
+  var sGrid = el('grid-active-staff');
+  if(!uGrid || !sGrid) return;
 
-  if(_step === 'worker'){
-    renderStepWorker(c);
-  } else if(_step === 'menu'){
-    renderStepMenu(c);
-  } else if(_step === 'hygiene'){
-    renderStepHygiene(c);
-  } else if(_step === 'recv'){
-    renderStepRecv(c);
-  } else if(_step === 'roast'){
-    renderStepRoast(c);
-  } else if(_step === 'pack'){
-    renderStepPack(c);
-  } else if(_step === 'done'){
-    renderStepDone(c);
-  }
-}
-
-// ─── Step 1: 名前カード一覧 ────────────────────────────
-function renderStepWorker(c){
-  var h = '';
-  h += '<div class="step-header">';
-  h += '  <span class="step-tag">Step 1</span>';
-  h += '  <h2 class="step-title">お名前を えらんでね 😊</h2>';
-  h += '  <p class="step-sub">カードをタップすると つぎに進みます</p>';
-  h += '</div>';
-
-  // 利用者様
-  h += '<div class="name-category-title">👥 利用者さん</div>';
-  h += '<div class="name-grid">';
-  USERS.forEach(function(u){
+  // 利用者さん
+  uGrid.innerHTML = USERS.map(function(u){
     var init = u.name ? u.name.charAt(0) : '☕';
-    h += '<div class="name-card" onclick="selectWorker(\'user\', \'' + esc(u.id) + '\', \'' + esc(u.name) + '\')">';
-    h += '  <div class="name-avatar">' + esc(init) + '</div>';
-    h += '  <div class="name-text">' + esc(u.name) + '</div>';
-    if(u.furigana) h += '  <div class="name-ruby">' + esc(u.furigana) + '</div>';
-    h += '</div>';
-  });
-  h += '</div>';
+    var isSel = (_worker && _worker.id === u.id) ? ' selected-active' : '';
+    return '<div class="name-card' + isSel + '" onclick="selectWorker(\'user\', \'' + esc(u.id) + '\', \'' + esc(u.name) + '\')">' +
+      '<div class="name-avatar">' + esc(init) + '</div>' +
+      '<div class="name-text">' + esc(u.name) + '</div>' +
+      (u.furigana ? '<div class="name-ruby">' + esc(u.furigana) + '</div>' : '') +
+    '</div>';
+  }).join('');
 
   // スタッフ
-  h += '<div class="name-category-title" style="margin-top:24px;">👔 スタッフ</div>';
-  h += '<div class="name-grid">';
-  STAFF.forEach(function(s){
+  sGrid.innerHTML = STAFF.map(function(s){
     var init = s.name ? s.name.charAt(0) : '👔';
-    h += '<div class="name-card staff-card" onclick="selectWorker(\'staff\', \'' + esc(s.id) + '\', \'' + esc(s.name) + '\')">';
-    h += '  <div class="name-avatar">' + esc(init) + '</div>';
-    h += '  <div class="name-text">' + esc(s.name) + '</div>';
-    h += '  <div class="name-ruby">' + esc(s.role || 'スタッフ') + '</div>';
-    h += '</div>';
-  });
-  h += '</div>';
-
-  c.innerHTML = h;
+    var isSel = (_worker && _worker.id === s.id) ? ' selected-active' : '';
+    return '<div class="name-card staff-card' + isSel + '" onclick="selectWorker(\'staff\', \'' + esc(s.id) + '\', \'' + esc(s.name) + '\')">' +
+      '<div class="name-avatar">' + esc(init) + '</div>' +
+      '<div class="name-text">' + esc(s.name) + '</div>' +
+      '<div class="name-ruby">' + esc(s.role || 'スタッフ') + '</div>' +
+    '</div>';
+  }).join('');
 }
 
 function selectWorker(type, id, name){
   _worker = { type: type, id: id, name: name };
-  _step = 'menu';
-  renderFieldCard();
+  renderWorkerSelectionGrid();
+
+  // バッジ更新＆4大メニュー表示
+  el('badge-cur-worker').innerHTML = '👤 作業するひと: <b>' + esc(name) + '</b> さん';
+  el('sec-task-menu').style.display = 'block';
+
+  // 画面をスムーズにスクロール
+  el('sec-task-menu').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function changeWorker(){
-  _step = 'worker';
-  renderFieldCard();
+function resetWorkerSelection(){
+  _worker = null;
+  renderWorkerSelectionGrid();
+  el('sec-task-menu').style.display = 'none';
+  el('sec-worker-selection').scrollIntoView({ behavior: 'smooth' });
 }
 
-// ─── Step 2: 4大作業メニューカード ─────────────────────
-function renderStepMenu(c){
-  var h = '';
-  h += '<div style="display:flex;justify-content:center;">';
-  h += '  <div class="worker-bar">';
-  h += '    <span>👤 作業するひと: <b>' + esc(_worker.name) + '</b> さん</span>';
-  h += '    <button type="button" class="worker-change-btn" onclick="changeWorker()">かえる ↩</button>';
-  h += '  </div>';
-  h += '</div>';
+// ─── モーダル開閉制御 ─────────────────────────────────
+function openHaccpModal(modalType){
+  if(!_worker){
+    alert('まず作業する方のお名前カードをタップしてください。');
+    el('sec-worker-selection').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
 
-  h += '<div class="step-header">';
-  h += '  <span class="step-tag">Step 2</span>';
-  h += '  <h2 class="step-title">どの作業を しますか？</h2>';
-  h += '  <p class="step-sub">ボタンをタップして 記録をはじめよう</p>';
-  h += '</div>';
+  var ov = el('haccp-modal-overlay');
+  var body = el('modal-card-body');
+  if(!ov || !body) return;
 
-  h += '<div class="task-menu-grid">';
+  if(modalType === 'hygiene'){
+    renderHygieneModal(body);
+  } else if(modalType === 'recv'){
+    renderRecvModal(body);
+  } else if(modalType === 'roast'){
+    renderRoastModal(body);
+  } else if(modalType === 'pack'){
+    renderPackModal(body);
+  }
 
-  // 1. 衛生チェック
-  h += '<div class="task-card c-hygiene" onclick="selectTaskStep(\'hygiene\')">';
-  h += '  <div>';
-  h += '    <div class="task-icon">🧼</div>';
-  h += '    <div class="task-title">衛生チェック</div>';
-  h += '    <div class="task-desc">体調・手洗い・爪・身だしなみ<br>きれいにして作業スタート！</div>';
-  h += '  </div>';
-  h += '  <button type="button" class="task-btn-action">はじめる ▶</button>';
-  h += '</div>';
-
-  // 2. 生豆受入
-  h += '<div class="task-card c-recv" onclick="selectTaskStep(\'recv\')">';
-  h += '  <div>';
-  h += '    <div class="task-icon">📦</div>';
-  h += '    <div class="task-title">生豆受入</div>';
-  h += '    <div class="task-desc">生豆が届いたときの記録<br>銘柄と重さ、見た目チェック</div>';
-  h += '  </div>';
-  h += '  <button type="button" class="task-btn-action">はじめる ▶</button>';
-  h += '</div>';
-
-  // 3. 焙煎製造
-  h += '<div class="task-card c-roast" onclick="selectTaskStep(\'roast\')">';
-  h += '  <div>';
-  h += '    <div class="task-icon">🔥</div>';
-  h += '    <div class="task-title">焙煎製造</div>';
-  h += '    <div class="task-desc">コーヒー豆を焼く記録<br>歩留り(%)を自動でパッと計算！</div>';
-  h += '  </div>';
-  h += '  <button type="button" class="task-btn-action">はじめる ▶</button>';
-  h += '</div>';
-
-  // 4. 包装出荷
-  h += '<div class="task-card c-pack" onclick="selectTaskStep(\'pack\')">';
-  h += '  <div>';
-  h += '    <div class="task-icon">🎁</div>';
-  h += '    <div class="task-title">包装・出荷</div>';
-  h += '    <div class="task-desc">ドリップバッグ・豆・粉の袋詰め<br>賞味期限と個数の記録</div>';
-  h += '  </div>';
-  h += '  <button type="button" class="task-btn-action">はじめる ▶</button>';
-  h += '</div>';
-
-  h += '</div>';
-
-  c.innerHTML = h;
+  ov.classList.add('active');
 }
 
-function selectTaskStep(stepName){
-  _step = stepName;
-  renderFieldCard();
+function closeHaccpModal(){
+  var ov = el('haccp-modal-overlay');
+  if(ov) ov.classList.remove('active');
 }
 
-function backToMenu(){
-  _step = 'menu';
-  renderFieldCard();
+function onModalBackdropClick(e){
+  if(e.target === el('haccp-modal-overlay')){
+    closeHaccpModal();
+  }
 }
 
-// ─── Step 3-1: 🧼 衛生チェック詳細カード ──────────────
+// ═══════════════════════════════════════════════════════
+// モーダル 1: 🧼 衛生チェック（画像2の表現そのまま ＋ 7項目）
+// ═══════════════════════════════════════════════════════
 var _hygieneAnswers = {};
 var _hygieneVerifier = '';
 
-function renderStepHygiene(c){
+function renderHygieneModal(body){
   _hygieneAnswers = {
-    q_health: 'ok', q_hands: 'ok', q_clothes: 'ok',
-    q_wash: 'ok', q_table: 'ok', q_foreign: 'ok'
+    q_health: 'ok', q_wash: 'ok', q_table: 'ok',
+    q_foreign: 'ok', q_other: 'ok', q_fire: 'ok', q_clean: 'ok'
   };
   _hygieneVerifier = STAFF.length > 0 ? STAFF[0].name : '';
 
   var h = '';
-  h += '<button type="button" class="back-btn" onclick="backToMenu()">◀ メニューにもどる</button>';
-
   h += '<div class="step-header">';
   h += '  <span class="step-tag" style="background:#e8f5e9;color:#2e7d32">🧼 衛生チェック</span>';
   h += '  <h2 class="step-title">今日の衛生チェック</h2>';
   h += '  <p class="step-sub">作業するひと: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
 
-  // ぜんぶOK魔法ボタン
+  // ✨ ぜんぶ OK！（ぜんぶ よし）ボタン
   h += '<button type="button" class="all-ok-btn" onclick="setHygieneAllOk()">';
   h += '  <span>✨ ぜんぶ OK！（ぜんぶ よし）</span>';
   h += '</button>';
 
-  // 質問リスト
+  // 7項目の質問リスト（エクセル原本画像1完全準拠）
   h += '<div id="hygiene-q-list">';
   HYGIENE_QUESTIONS.forEach(function(q){
     var val = _hygieneAnswers[q.key] || 'ok';
@@ -1263,9 +1324,15 @@ function renderStepHygiene(c){
   });
   h += '</div>';
 
-  // 確認スタッフ選択
-  h += '<div class="f-row" style="margin-top:20px;">';
-  h += '  <label class="f-label">👔 確認スタッフ（だれに見てもらった？）</label>';
+  // 特記事項（異常内容・対応メモ）
+  h += '<div class="f-row" style="margin-top:14px;">';
+  h += '  <label class="f-label">📝 特記事項（異常内容・対応メモ）</label>';
+  h += '  <input type="text" id="f-hygiene-notes" class="f-input" placeholder="異常がなければ空欄でOKです">';
+  h += '</div>';
+
+  // 確認スタッフ（在籍中スタッフのみ）
+  h += '<div class="f-row">';
+  h += '  <label class="f-label">👔 職員確認（だれに見てもらった？）</label>';
   h += '  <div class="staff-chip-grid">';
   STAFF.forEach(function(s, idx){
     var act = (idx === 0) ? ' active' : '';
@@ -1279,7 +1346,7 @@ function renderStepHygiene(c){
   h += '  <span>💾 衛生チェックを記録する！</span>';
   h += '</button>';
 
-  c.innerHTML = h;
+  body.innerHTML = h;
 }
 
 function setHygieneVal(key, val){
@@ -1317,6 +1384,8 @@ function selectStaffChip(btn, name){
 async function saveHygieneRecord(){
   var ym = curYmStr();
   var key = 'haccp_hygiene_' + ym;
+  var notes = el('f-hygiene-notes') ? el('f-hygiene-notes').value.trim() : '';
+
   var rec = {
     id: 'hyg_' + Date.now(),
     date: todayStr(),
@@ -1324,7 +1393,8 @@ async function saveHygieneRecord(){
     workerId: _worker.id,
     verifierName: _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ'),
     answers: _hygieneAnswers,
-    judge: Object.values(_hygieneAnswers).every(function(v){ return v === 'ok'; }) ? '良' : '否',
+    notes: notes,
+    judge: Object.values(_hygieneAnswers).every(function(v){ return v === 'ok'; }) ? '良' : '不良',
     updatedAt: new Date().toISOString()
   };
 
@@ -1333,24 +1403,23 @@ async function saveHygieneRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    _doneInfo = {
-      title: '衛生チェック 記録完了！',
-      detail: _worker.name + ' さんの衛生チェックを保存しました。きょうも1日元気にがんばりましょう！',
-      icon: '🧼'
-    };
-    _step = 'done';
-    renderFieldCard();
+    showModalDone('衛生チェック 記録完了！', _worker.name + ' さんの衛生点検を記録しました。今日も安全に作業しましょう！', '🧼');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
 }
 
-// ─── Step 3-2: 📦 生豆受入詳細カード ──────────────────
+// ═══════════════════════════════════════════════════════
+// モーダル 2: 📦 生豆受入モーダル
+// ═══════════════════════════════════════════════════════
 var _selectedBean = BEAN_ORIGINS[0];
-function renderStepRecv(c){
-  var h = '';
-  h += '<button type="button" class="back-btn" onclick="backToMenu()">◀ メニューにもどる</button>';
+var _recvStatus = 'ok';
 
+function renderRecvModal(body){
+  _selectedBean = BEAN_ORIGINS[0];
+  _recvStatus = 'ok';
+
+  var h = '';
   h += '<div class="step-header">';
   h += '  <span class="step-tag" style="background:#e3f2fd;color:#1565c0">📦 生豆受入</span>';
   h += '  <h2 class="step-title">生豆が届いたよ！</h2>';
@@ -1379,7 +1448,7 @@ function renderStepRecv(c){
   h += '  <label class="f-label">🔍 豆の状態（袋のやぶれ・カビ・異物なし？）</label>';
   h += '  <div style="display:flex;gap:10px;">';
   h += '    <button type="button" id="recv-chk-ok" class="q-choice-btn active-ok" style="flex:1;justify-content:center;padding:12px;" onclick="setRecvState(\'ok\')">✨ キレイ・OK (良)</button>';
-  h += '    <button type="button" id="recv-chk-ng" class="q-choice-btn" style="flex:1;justify-content:center;padding:12px;" onclick="setRecvState(\'ng\')">😣 だめ (否)</button>';
+  h += '    <button type="button" id="recv-chk-ng" class="q-choice-btn" style="flex:1;justify-content:center;padding:12px;" onclick="setRecvState(\'ng\')">😣 だめ (不良)</button>';
   h += '  </div>';
   h += '</div>';
 
@@ -1399,10 +1468,9 @@ function renderStepRecv(c){
   h += '  <span>💾 生豆の受入を記録する！</span>';
   h += '</button>';
 
-  c.innerHTML = h;
+  body.innerHTML = h;
 }
 
-var _recvStatus = 'ok';
 function setRecvState(val){
   _recvStatus = val;
   var bOk = el('recv-chk-ok');
@@ -1435,7 +1503,7 @@ async function saveRecvRecord(){
     recvDate: todayStr(),
     beanOrigin: _selectedBean,
     recvWeightG: w,
-    recvStatus: _recvStatus === 'ok' ? '良' : '否',
+    recvStatus: _recvStatus === 'ok' ? '良' : '不良',
     workerName: _worker.name,
     verifierName: _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ'),
     stage: 'received',
@@ -1447,23 +1515,19 @@ async function saveRecvRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    _doneInfo = {
-      title: '生豆受入 記録完了！',
-      detail: _selectedBean + '（' + w + 'g）の受入を保存しました。ロット番号: ' + lot,
-      icon: '📦'
-    };
-    _step = 'done';
-    renderFieldCard();
+    showModalDone('生豆受入 記録完了！', _selectedBean + '（' + w + 'g）の受入を保存しました。ロット番号: ' + lot, '📦');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
 }
 
-// ─── Step 3-3: 🔥 焙煎製造詳細カード（歩留り自動計算） ──
-function renderStepRoast(c){
-  var h = '';
-  h += '<button type="button" class="back-btn" onclick="backToMenu()">◀ メニューにもどる</button>';
+// ═══════════════════════════════════════════════════════
+// モーダル 3: 🔥 焙煎製造モーダル（歩留りリアルタイム計算）
+// ═══════════════════════════════════════════════════════
+function renderRoastModal(body){
+  _selectedBean = BEAN_ORIGINS[0];
 
+  var h = '';
   h += '<div class="step-header">';
   h += '  <span class="step-tag" style="background:#fff3e0;color:#e65100">🔥 焙煎製造</span>';
   h += '  <h2 class="step-title">コーヒー豆を焙煎するよ！</h2>';
@@ -1527,7 +1591,7 @@ function renderStepRoast(c){
   h += '  <span>💾 焙煎記録を保存する！</span>';
   h += '</button>';
 
-  c.innerHTML = h;
+  body.innerHTML = h;
   calcYield();
 }
 
@@ -1586,23 +1650,21 @@ async function saveRoastRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    _doneInfo = {
-      title: '焙煎記録 完了！',
-      detail: _selectedBean + '（' + outVal + 'g / 歩留り ' + yPct + '）を保存しました。ロット番号: ' + lot,
-      icon: '🔥'
-    };
-    _step = 'done';
-    renderFieldCard();
+    showModalDone('焙煎記録 完了！', _selectedBean + '（' + outVal + 'g / 歩留り ' + yPct + '）を保存しました。ロット番号: ' + lot, '🔥');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
 }
 
-// ─── Step 3-4: 🎁 包装・出荷詳細カード ────────────────
-function renderStepPack(c){
-  var h = '';
-  h += '<button type="button" class="back-btn" onclick="backToMenu()">◀ メニューにもどる</button>';
+// ═══════════════════════════════════════════════════════
+// モーダル 4: 🎁 包装・出荷モーダル
+// ═══════════════════════════════════════════════════════
+var _packStatus = 'ok';
 
+function renderPackModal(body){
+  _packStatus = 'ok';
+
+  var h = '';
   h += '<div class="step-header">';
   h += '  <span class="step-tag" style="background:#f3e5f5;color:#7b1fa2">🎁 包装・出荷</span>';
   h += '  <h2 class="step-title">袋詰め・出荷の記録</h2>';
@@ -1652,7 +1714,7 @@ function renderStepPack(c){
   h += '  <label class="f-label">🔍 シール・賞味期限印字・密閉チェック</label>';
   h += '  <div style="display:flex;gap:10px;">';
   h += '    <button type="button" id="pack-chk-ok" class="q-choice-btn active-ok" style="flex:1;justify-content:center;padding:12px;" onclick="setPackState(\'ok\')">✨ バッチリOK (良)</button>';
-  h += '    <button type="button" id="pack-chk-ng" class="q-choice-btn" style="flex:1;justify-content:center;padding:12px;" onclick="setPackState(\'ng\')">😣 だめ (否)</button>';
+  h += '    <button type="button" id="pack-chk-ng" class="q-choice-btn" style="flex:1;justify-content:center;padding:12px;" onclick="setPackState(\'ng\')">😣 だめ (不良)</button>';
   h += '  </div>';
   h += '</div>';
 
@@ -1672,10 +1734,9 @@ function renderStepPack(c){
   h += '  <span>💾 包装・出荷を記録する！</span>';
   h += '</button>';
 
-  c.innerHTML = h;
+  body.innerHTML = h;
 }
 
-var _packStatus = 'ok';
 function setPackState(val){
   _packStatus = val;
   var bOk = el('pack-chk-ok');
@@ -1708,7 +1769,7 @@ async function savePackRecord(){
     expDate: expDate,
     shipDate: todayStr(),
     shipDest: pDest,
-    packStatus: _packStatus === 'ok' ? '良' : '否',
+    packStatus: _packStatus === 'ok' ? '良' : '不良',
     workerName: _worker.name,
     verifierName: _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ'),
     judge: '良',
@@ -1721,40 +1782,34 @@ async function savePackRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    _doneInfo = {
-      title: '包装・出荷 記録完了！',
-      detail: pType + '（' + pCount + '個）の包装出荷を保存しました。ロット番号: ' + lot,
-      icon: '🎁'
-    };
-    _step = 'done';
-    renderFieldCard();
+    showModalDone('包装・出荷 記録完了！', pType + '（' + pCount + '個）の包装出荷を保存しました。ロット番号: ' + lot, '🎁');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
 }
 
-// ─── Step 4: かんりょうカード（Googleマップ風） ─────────
-function renderStepDone(c){
-  var h = '';
-  h += '<div class="done-card-inner">';
-  h += '  <div class="done-icon-wrap">' + (_doneInfo.icon || '✨') + '</div>';
-  h += '  <h2 class="done-title">' + esc(_doneInfo.title || '記録できました！') + '</h2>';
-  h += '  <p class="done-sub">' + esc(_doneInfo.detail || 'おつかれさまでした！') + '</p>';
+// ─── 完了モーダル表示 ─────────────────────────────────
+function showModalDone(title, detail, icon){
+  var body = el('modal-card-body');
+  if(!body) return;
 
-  h += '  <div class="done-btn-group">';
-  h += '    <button type="button" class="save-action-btn" onclick="backToMenu()">';
-  h += '      <span>🔄 つづけて別の作業を記録する</span>';
+  var h = '';
+  h += '<div class="done-modal-inner">';
+  h += '  <div class="done-icon-wrap">' + (icon || '✨') + '</div>';
+  h += '  <h2 class="done-title">' + esc(title || '記録できました！') + '</h2>';
+  h += '  <p class="done-sub">' + esc(detail || 'おつかれさまでした！') + '</p>';
+
+  h += '  <div style="display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto;">';
+  h += '    <button type="button" class="save-action-btn" onclick="closeHaccpModal()">';
+  h += '      <span>✕ 閉じる（続けて作業を選ぶ）</span>';
   h += '    </button>';
-  h += '    <button type="button" class="save-action-btn" style="background:#fff;color:var(--coffee);border:2px solid #d7ccc8;" onclick="changeWorker()">';
-  h += '      <span>👤 お名前をかえる</span>';
-  h += '    </button>';
-  h += '    <button type="button" class="save-action-btn" style="background:#efebe9;color:var(--pri);border:none;" onclick="switchMainTab(\'admin\')">';
-  h += '      <span>📋 日報記録（管理画面）をみる</span>';
+  h += '    <button type="button" class="save-action-btn" style="background:#efebe9;color:var(--pri);border:none;" onclick="closeHaccpModal();switchMainTab(\'admin\')">';
+  h += '      <span>📋 日報記録（全履歴）をみる</span>';
   h += '    </button>';
   h += '  </div>';
   h += '</div>';
 
-  c.innerHTML = h;
+  body.innerHTML = h;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1806,7 +1861,7 @@ async function renderAdminView(){
   }
 }
 
-// ─── 衛生チェック 全履歴テーブル ─────────────────────────
+// ─── 衛生チェック 全履歴テーブル（エクセル原本画像1完全準拠） ────
 async function renderAdminHygieneTable(c){
   var ym = _adminMonth || curYmStr();
   var key = 'haccp_hygiene_' + ym;
@@ -1822,16 +1877,18 @@ async function renderAdminHygieneTable(c){
   h += '<table class="admin-table">';
   h += '<thead>';
   h += '  <tr>';
-  h += '    <th>日付</th>';
-  h += '    <th>記録者</th>';
-  h += '    <th>体調</th>';
-  h += '    <th>手・爪</th>';
-  h += '    <th>服装</th>';
-  h += '    <th>手洗い</th>';
-  h += '    <th>作業台</th>';
-  h += '    <th>異物</th>';
+  h += '    <th>作業日</th>';
+  h += '    <th>作業者</th>';
+  h += '    <th>健康確認<br><span style="font-size:10px;font-weight:normal">(体調・手指傷)</span></th>';
+  h += '    <th>手洗い・消毒</th>';
+  h += '    <th>専用台・<br>器具清掃</th>';
+  h += '    <th>害虫・異物<br>有無</th>';
+  h += '    <th>他作業との<br>区分確認</th>';
+  h += '    <th>設備・火気<br>安全確認</th>';
+  h += '    <th>作業終了後<br>清掃・片付</th>';
   h += '    <th>総合判定</th>';
-  h += '    <th>確認スタッフ</th>';
+  h += '    <th>特記事項</th>';
+  h += '    <th>職員確認</th>';
   h += '    <th>操作</th>';
   h += '  </tr>';
   h += '</thead>';
@@ -1840,18 +1897,20 @@ async function renderAdminHygieneTable(c){
   list.forEach(function(r){
     var ans = r.answers || {};
     var okBadge = '<span style="color:#2e7d32;font-weight:800;">良</span>';
-    var ngBadge = '<span style="color:#c62828;font-weight:800;">否</span>';
+    var ngBadge = '<span style="color:#c62828;font-weight:800;">不良</span>';
 
     h += '<tr>';
     h += '  <td><b>' + esc(r.date) + '</b></td>';
-    h += '  <td>' + esc(r.workerName) + '</td>';
+    h += '  <td><b>' + esc(r.workerName) + '</b></td>';
     h += '  <td>' + (ans.q_health === 'ok' ? okBadge : ngBadge) + '</td>';
-    h += '  <td>' + (ans.q_hands === 'ok' ? okBadge : ngBadge) + '</td>';
-    h += '  <td>' + (ans.q_clothes === 'ok' ? okBadge : ngBadge) + '</td>';
     h += '  <td>' + (ans.q_wash === 'ok' ? okBadge : ngBadge) + '</td>';
     h += '  <td>' + (ans.q_table === 'ok' ? okBadge : ngBadge) + '</td>';
     h += '  <td>' + (ans.q_foreign === 'ok' ? okBadge : ngBadge) + '</td>';
-    h += '  <td>' + (r.judge === '良' ? '<span style="background:#e8f5e9;color:#2e7d32;padding:3px 8px;border-radius:10px;font-weight:800;">合格 (良)</span>' : '<span style="background:#ffebee;color:#c62828;padding:3px 8px;border-radius:10px;font-weight:800;">否</span>') + '</td>';
+    h += '  <td>' + (ans.q_other === 'ok' || ans.q_clothes === 'ok' ? okBadge : ngBadge) + '</td>';
+    h += '  <td>' + (ans.q_fire === 'ok' ? okBadge : ngBadge) + '</td>';
+    h += '  <td>' + (ans.q_clean === 'ok' ? okBadge : ngBadge) + '</td>';
+    h += '  <td>' + (r.judge === '良' ? '<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-weight:800;">良</span>' : '<span style="background:#ffebee;color:#c62828;padding:2px 8px;border-radius:10px;font-weight:800;">不良</span>') + '</td>';
+    h += '  <td>' + esc(r.notes || '異常なし') + '</td>';
     h += '  <td>' + esc(r.verifierName || '-') + '</td>';
     h += '  <td><button type="button" onclick="deleteHygieneRecord(\'' + r.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px;font-weight:700;">✕ 削除</button></td>';
     h += '</tr>';
@@ -1946,7 +2005,7 @@ async function deleteRoastRecord(id){
 }
 
 // ═══════════════════════════════════════════════════════
-// 3. 印刷機能（厚生労働省＆エクセル原本完全準拠 A4横）
+// 3. 印刷機能（エクセル原本画像1と完全合致 A4横）
 // ═══════════════════════════════════════════════════════
 async function printCurrentAdminReport(){
   var ym = _adminMonth || curYmStr();
@@ -1957,7 +2016,7 @@ async function printCurrentAdminReport(){
   }
 }
 
-// ① 日常衛生管理点検表 A4横原本印刷
+// ① 日常衛生管理点検表 A4横原本印刷（エクセル原本画像1完全準拠）
 async function printDailyHaccpReport(ym){
   var key = 'haccp_hygiene_' + ym;
   var list = await getHaccpJson(key, []);
@@ -1972,48 +2031,54 @@ async function printDailyHaccpReport(ym){
   }
 
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
-  html += '<title>日常衛生点検表_' + ym + '</title>';
+  html += '<title>HACCP衛生・点検チェック表_' + ym + '</title>';
   html += '<style>';
-  html += '@page { size: A4 landscape; margin: 10mm; }';
-  html += 'body { font-family: "Noto Sans JP", sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; }';
-  html += '.header-wrap { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; border-bottom: 2px solid #000; padding-bottom: 4px; }';
-  html += 'h1 { font-size: 18px; margin: 0; }';
-  html += '.sub-info { font-size: 11px; }';
-  html += '.stamp-box { border: 1px solid #000; border-collapse: collapse; }';
-  html += '.stamp-box td { border: 1px solid #000; width: 50px; height: 50px; text-align: center; vertical-align: top; font-size: 9px; padding: 2px; }';
-  html += 'table.report { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 6px; }';
-  html += 'table.report th, table.report td { border: 1px solid #000; padding: 4px; text-align: center; }';
-  html += 'table.report th { background: #f0f0f0; }';
+  html += '@page { size: A4 landscape; margin: 8mm; }';
+  html += 'body { font-family: "Noto Sans JP", sans-serif; font-size: 10px; color: #000; margin: 0; padding: 0; }';
+  html += 'h1 { font-size: 16px; margin: 0 0 6px; }';
+  html += '.meta-tbl { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px; }';
+  html += '.meta-tbl td { border: 1px solid #000; padding: 4px 6px; }';
+  html += '.meta-lbl { background: #f0f0f0; font-weight: bold; width: 100px; text-align: center; }';
+  html += '.stamp-box { border: 1px solid #000; border-collapse: collapse; margin-left: auto; }';
+  html += '.stamp-box td { border: 1px solid #000; width: 48px; height: 48px; text-align: center; vertical-align: top; font-size: 8.5px; padding: 2px; }';
+  html += 'table.report { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-top: 6px; }';
+  html += 'table.report th, table.report td { border: 1px solid #000; padding: 4px 2px; text-align: center; }';
+  html += 'table.report th { background: #332a24; color: #fff; font-weight: bold; font-size: 9px; }';
   html += '</style></head><body>';
 
-  html += '<div class="header-wrap">';
-  html += '  <div>';
-  html += '    <h1>日常衛生点検チェック表（HACCPの考え方を取り入れた衛生管理）</h1>';
-  html += '    <div class="sub-info">事業所名: 就労継続支援B型事業所 ひとつぎ豊中小曽根（ひとつぎ珈琲） / 対象月: ' + year + '年 ' + month + '月</div>';
-  html += '  </div>';
+  html += '<h1>【ひとつぎ珈琲】HACCP 衛生・点検チェック表（日常衛生・月次点検・異常是正）</h1>';
+
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px;">';
+  html += '  <table class="meta-tbl" style="flex:1;">';
+  html += '    <tr><td class="meta-lbl">事業所名</td><td>就労継続支援B型 ひとつぎ豊中小曽根</td><td class="meta-lbl">作業場所</td><td>訓練・作業室内 コーヒー専用テーブル</td><td class="meta-lbl">衛生管理責任者</td><td>友田 篤賜</td></tr>';
+  html += '    <tr><td class="meta-lbl">対象年月</td><td>' + year + '年 ' + month + '月分</td><td class="meta-lbl">運用ルール</td><td colspan="3">作業日ごとに1行記録（良／不良／該当なし）。異常時は対象品を保留し、下段「異常・是正記録」へ記入。</td></tr>';
+  html += '  </table>';
   html += '  <table class="stamp-box"><tr><td>施設長</td><td>管理者</td><td>担当者</td></tr><tr><td></td><td></td><td></td></tr></table>';
   html += '</div>';
 
+  html += '<div style="background:#efebe9;border:1px solid #000;padding:3px 8px;font-weight:bold;font-size:10px;margin-bottom:4px;">1. 日常衛生記録（作業実施日ごとに記入）</div>';
+
   html += '<table class="report">';
-  html += '<thead><tr><th>日付</th><th>点検者</th><th>体調</th><th>手・爪</th><th>服装</th><th>手洗い</th><th>作業台</th><th>異物</th><th>判定</th><th>特記事項</th><th>確認印</th></tr></thead>';
+  html += '<thead><tr><th>作業日</th><th>作業者</th><th>健康確認<br>(体調・手指傷)</th><th>手洗い<br>・消毒</th><th>専用台・<br>器具清掃</th><th>害虫・異物<br>有無</th><th>他作業との<br>区分確認</th><th>設備・火気<br>安全確認</th><th>作業終了後<br>清掃・片付</th><th>総合判定</th><th>特記事項（異常内容・対応メモ）</th><th>職員確認</th></tr></thead>';
   html += '<tbody>';
 
   if(list.length === 0){
-    html += '<tr><td colspan="11" style="padding:20px;">当月の記録はありません</td></tr>';
+    html += '<tr><td colspan="12" style="padding:20px;">当月の日常衛生記録はありません</td></tr>';
   } else {
     list.forEach(function(r){
       var ans = r.answers || {};
       html += '<tr>';
       html += '  <td>' + esc(r.date) + '</td>';
       html += '  <td>' + esc(r.workerName) + '</td>';
-      html += '  <td>' + (ans.q_health === 'ok' ? '〇' : '✕') + '</td>';
-      html += '  <td>' + (ans.q_hands === 'ok' ? '〇' : '✕') + '</td>';
-      html += '  <td>' + (ans.q_clothes === 'ok' ? '〇' : '✕') + '</td>';
-      html += '  <td>' + (ans.q_wash === 'ok' ? '〇' : '✕') + '</td>';
-      html += '  <td>' + (ans.q_table === 'ok' ? '〇' : '✕') + '</td>';
-      html += '  <td>' + (ans.q_foreign === 'ok' ? '〇' : '✕') + '</td>';
+      html += '  <td>' + (ans.q_health === 'ok' ? '良' : '不良') + '</td>';
+      html += '  <td>' + (ans.q_wash === 'ok' ? '良' : '不良') + '</td>';
+      html += '  <td>' + (ans.q_table === 'ok' ? '良' : '不良') + '</td>';
+      html += '  <td>' + (ans.q_foreign === 'ok' ? '良' : '不良') + '</td>';
+      html += '  <td>' + (ans.q_other === 'ok' || ans.q_clothes === 'ok' ? '良' : '不良') + '</td>';
+      html += '  <td>' + (ans.q_fire === 'ok' ? '良' : '不良') + '</td>';
+      html += '  <td>' + (ans.q_clean === 'ok' ? '良' : '不良') + '</td>';
       html += '  <td>' + esc(r.judge || '良') + '</td>';
-      html += '  <td>' + esc(r.notes || '異常なし') + '</td>';
+      html += '  <td style="text-align:left;padding-left:4px;">' + esc(r.notes || '異常なし') + '</td>';
       html += '  <td>' + esc(r.verifierName || '') + '</td>';
       html += '</tr>';
     });
@@ -2046,21 +2111,21 @@ async function printRoastHaccpReport(ym){
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
   html += '<title>珈琲焙煎出荷管理台帳_' + ym + '</title>';
   html += '<style>';
-  html += '@page { size: A4 landscape; margin: 10mm; }';
+  html += '@page { size: A4 landscape; margin: 8mm; }';
   html += 'body { font-family: "Noto Sans JP", sans-serif; font-size: 10px; color: #000; margin: 0; }';
-  html += '.header-wrap { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; border-bottom: 2px solid #000; padding-bottom: 4px; }';
-  html += 'h1 { font-size: 18px; margin: 0; }';
+  html += '.header-wrap { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px; border-bottom: 2px solid #000; padding-bottom: 4px; }';
+  html += 'h1 { font-size: 16px; margin: 0; }';
   html += '.stamp-box { border: 1px solid #000; border-collapse: collapse; }';
-  html += '.stamp-box td { border: 1px solid #000; width: 50px; height: 50px; text-align: center; vertical-align: top; font-size: 9px; padding: 2px; }';
+  html += '.stamp-box td { border: 1px solid #000; width: 48px; height: 48px; text-align: center; vertical-align: top; font-size: 8.5px; padding: 2px; }';
   html += 'table.report { width: 100%; border-collapse: collapse; font-size: 9.5px; }';
   html += 'table.report th, table.report td { border: 1px solid #000; padding: 4px 3px; text-align: center; }';
-  html += 'table.report th { background: #f0f0f0; }';
+  html += 'table.report th { background: #332a24; color: #fff; font-size: 9px; }';
   html += '</style></head><body>';
 
   html += '<div class="header-wrap">';
   html += '  <div>';
   html += '    <h1>コーヒー豆 焙煎・製造・出荷管理台帳 (HACCP)</h1>';
-  html += '    <div style="font-size:11px;">就労継続支援B型事業所 ひとつぎ豊中小曽根（ひとつぎ珈琲） / 対象月: ' + ym + '</div>';
+  html += '    <div style="font-size:10.5px;">就労継続支援B型 ひとつぎ豊中小曽根（ひとつぎ珈琲） / 責任者: 友田 篤賜 / 対象月: ' + ym + '</div>';
   html += '  </div>';
   html += '  <table class="stamp-box"><tr><td>施設長</td><td>管理者</td><td>担当者</td></tr><tr><td></td><td></td><td></td></tr></table>';
   html += '</div>';
@@ -2108,10 +2173,10 @@ async function exportCurrentAdminCsv(){
   var ym = _adminMonth || curYmStr();
   if(_curAdminSubtab === 'hygiene'){
     var list = await getHaccpJson('haccp_hygiene_' + ym, []);
-    var csv = '\uFEFF日付,点検者,体調,手爪,服装,手洗い,作業台,異物,判定,確認者\n';
+    var csv = '\uFEFF作業日,作業者,健康確認,手洗い消毒,専用台器具清掃,害虫異物有無,他作業区分確認,設備火気安全確認,作業終了後清掃片付,総合判定,特記事項,職員確認\n';
     list.forEach(function(r){
       var ans = r.answers || {};
-      csv += [r.date, r.workerName, ans.q_health, ans.q_hands, ans.q_clothes, ans.q_wash, ans.q_table, ans.q_foreign, r.judge, r.verifierName].join(',') + '\n';
+      csv += [r.date, r.workerName, ans.q_health, ans.q_wash, ans.q_table, ans.q_foreign, (ans.q_other || ans.q_clothes), ans.q_fire, ans.q_clean, r.judge, (r.notes||''), r.verifierName].join(',') + '\n';
     });
     downloadCsv(csv, '日常衛生チェック_' + ym + '.csv');
   } else {
