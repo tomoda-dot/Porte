@@ -636,6 +636,111 @@ main {
   color: #333;
 }
 
+/* ─── 選択肢チップグリッド（生豆・焙煎・包装カード用） ─── */
+.choice-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.choice-chip-btn {
+  background: #ffffff;
+  border: 2px solid #e0d6cf;
+  border-radius: 18px;
+  padding: 16px 10px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #2b2118;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  user-select: none;
+}
+.choice-chip-btn:active {
+  transform: scale(0.94);
+}
+.choice-chip-btn:hover {
+  border-color: var(--pri);
+  background: #f1f8e9;
+  color: var(--pri-dark);
+}
+.choice-chip-btn.active {
+  border-color: var(--pri);
+  background: var(--pri);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(45,90,55,0.25);
+}
+
+.big-num-wrap {
+  margin: 18px 0 24px;
+  text-align: center;
+}
+.big-num-input {
+  width: 100%;
+  max-width: 260px;
+  text-align: center;
+  font-size: 32px;
+  font-weight: 900;
+  padding: 12px 16px;
+  border: 3px solid #e0d6cf;
+  border-radius: 20px;
+  background: #ffffff;
+  color: #2b2118;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.big-num-input:focus {
+  border-color: var(--pri);
+}
+.quick-num-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.quick-num-btn {
+  background: #efebe9;
+  border: 1px solid #d7ccc8;
+  color: #5d4037;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 16px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.quick-num-btn:hover {
+  background: #d7ccc8;
+  transform: translateY(-1px);
+}
+.card-next-action-btn {
+  width: 100%;
+  max-width: 280px;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 20px;
+  font-size: 17px;
+  font-weight: 900;
+  background: var(--pri);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(45,90,55,0.25);
+  transition: all 0.15s;
+  margin: 16px auto 0;
+  display: block;
+}
+.card-next-action-btn:active {
+  transform: scale(0.96);
+}
+.card-next-action-btn:hover {
+  background: var(--pri-dark);
+}
+
 /* ─── 衛生チェック 最終確認ステップ ───────────── */
 .summary-item-row {
   display: flex;
@@ -1384,11 +1489,11 @@ function openHaccpModal(modalType){
   if(modalType === 'hygiene'){
     startHygieneWizard(body);
   } else if(modalType === 'recv'){
-    renderRecvModal(body);
+    startRecvWizard(body);
   } else if(modalType === 'roast'){
-    renderRoastModal(body);
+    startRoastWizard(body);
   } else if(modalType === 'pack'){
-    renderPackModal(body);
+    startPackWizard(body);
   }
 
   ov.classList.add('active');
@@ -1611,51 +1716,264 @@ async function saveHygieneRecord(){
 }
 
 // ═══════════════════════════════════════════════════════
-// モーダル 2: 📦 生豆受入モーダル
+// 共通: 製造ロットID自動採番例：261113-01（年月日-連番）
 // ═══════════════════════════════════════════════════════
-var _selectedBean = BEAN_ORIGINS[0];
-var _recvStatus = '良';
+async function generateNextLotId(){
+  var d = new Date();
+  var yy = String(d.getFullYear()).slice(-2);
+  var mm = pad(d.getMonth() + 1);
+  var dd = pad(d.getDate());
+  var prefix = yy + mm + dd; // 例: "261113"
 
-function renderRecvModal(body){
-  _selectedBean = BEAN_ORIGINS[0];
-  _recvStatus = '良';
+  try {
+    var key = 'haccp_roast_batches';
+    var list = await getHaccpJson(key, []);
+    var count = 1;
+    list.forEach(function(item){
+      if(item && item.lotId && String(item.lotId).startsWith(prefix)){
+        count++;
+      }
+    });
+    return prefix + '-' + pad(count);
+  } catch(e){
+    return prefix + '-01';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// モーダル 2: 生豆受入カード（Googleマップ評価風 ひとつひとつカードアクション）
+// ═══════════════════════════════════════════════════════
+var _recvStepIdx = 0;
+var _recvData = {
+  bean: BEAN_ORIGINS[0],
+  weightKg: 5,
+  supplierLot: '',
+  packageStatus: '良',
+  foreignStatus: '良',
+  verifier: ''
+};
+
+function startRecvWizard(body){
+  _recvStepIdx = 0;
+  _recvData = {
+    bean: BEAN_ORIGINS[0],
+    weightKg: 5,
+    supplierLot: '',
+    packageStatus: '良',
+    foreignStatus: '良',
+    verifier: STAFF.length > 0 ? STAFF[0].name : ''
+  };
+  _isStepAnimating = false;
+  renderRecvStep('in-right', body);
+}
+
+function renderRecvStep(animType, body){
+  if(!body) body = el('modal-card-body');
+  if(!body) return;
+
+  var total = 4; // 0: 銘柄, 1: 数量・仕入先, 2: 包装確認, 3: 異物確認
+  var animClass = (animType === 'in-left') ? ' anim-in-left' : ' anim-in-right';
+
+  // 1問ごとのカード表示
+  if(_recvStepIdx < total){
+    var progressPct = Math.round(((_recvStepIdx + 1) / total) * 100);
+    var h = '';
+
+    h += '<div class="q-progress-wrap">';
+    h += '  <div class="q-progress-header">';
+    h += '    <span>生豆受入 (' + (_recvStepIdx + 1) + ' / ' + total + ')</span>';
+    h += '    <span>作業者: ' + esc(_worker.name) + ' さん</span>';
+    h += '  </div>';
+    h += '  <div class="q-progress-bar-bg">';
+    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%"></div>';
+    h += '  </div>';
+    h += '</div>';
+
+    h += '<div class="gmap-card-wrapper">';
+    h += '  <div id="gmap-card-box" class="gmap-card-box' + animClass + '">';
+
+    // Step 0: 銘柄を選ぶ
+    if(_recvStepIdx === 0){
+      h += '    <div class="gmap-q-category">生豆受入・産地銘柄</div>';
+      h += '    <div class="gmap-q-sentence">生豆の銘柄を選んでください</div>';
+      h += '    <div class="choice-chip-grid">';
+      BEAN_ORIGINS.forEach(function(b){
+        var act = (_recvData.bean === b) ? ' active' : '';
+        h += '    <button type="button" class="choice-chip-btn' + act + '" onclick="selectRecvBean(\'' + esc(b) + '\')">' + esc(b) + '</button>';
+      });
+      h += '    </div>';
+    }
+    // Step 1: 受入量 (kg) と 仕入先
+    else if(_recvStepIdx === 1){
+      h += '    <div class="gmap-q-category">受入数量 (kg)</div>';
+      h += '    <div class="gmap-q-sentence">受入数量を入力してください</div>';
+      h += '    <div class="big-num-wrap">';
+      h += '      <input type="number" id="f-recv-kg" class="big-num-input" value="' + _recvData.weightKg + '" step="0.5" min="0.1">';
+      h += '      <span style="font-size:20px;font-weight:900;margin-left:6px;">kg</span>';
+      h += '      <div class="quick-num-row">';
+      [1, 2, 5, 10, 20].forEach(function(n){
+        h += '      <button type="button" class="quick-num-btn" onclick="el(\'f-recv-kg\').value=' + n + '">' + n + 'kg</button>';
+      });
+      h += '      </div>';
+      h += '    </div>';
+      h += '    <div style="margin-top:16px;text-align:left;">';
+      h += '      <label style="font-size:12px;font-weight:800;color:var(--coffee);">仕入先・生豆ロット（任意）</label>';
+      h += '      <input type="text" id="f-recv-supplier" class="f-input" placeholder="例: 業者名、袋のロット番号" value="' + esc(_recvData.supplierLot) + '">';
+      h += '    </div>';
+      h += '    <button type="button" class="card-next-action-btn" onclick="submitRecvWeight()">次へ進む ▶</button>';
+    }
+    // Step 2: 包装・保管状態（ちょい敬語・はい/いいえ）
+    else if(_recvStepIdx === 2){
+      h += '    <div class="gmap-q-category">包装・保管状態確認</div>';
+      h += '    <div class="gmap-q-sentence">包装袋に破れや汚れはないですか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerRecvPackage(\'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerRecvPackage(\'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 3: カビ・虫・異物判定（ちょい敬語・はい/いいえ）
+    else if(_recvStepIdx === 3){
+      h += '    <div class="gmap-q-category">カビ・虫・異物確認</div>';
+      h += '    <div class="gmap-q-sentence">カビや虫、異物の混入はないですか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerRecvForeign(\'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerRecvForeign(\'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+
+    // 下部：戻るボタン
+    h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
+    if(_recvStepIdx > 0){
+      h += '      <button type="button" class="prev-step-btn" onclick="prevRecvStep()">◀ 前のカードに戻る</button>';
+    } else {
+      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+    }
+    h += '    </div>';
+
+    h += '  </div>';
+    h += '</div>';
+    body.innerHTML = h;
+  }
+  // 全問回答後のサマリー＆保存画面
+  else {
+    renderRecvConfirmStep(body);
+  }
+}
+
+function selectRecvBean(beanName){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _recvData.bean = beanName;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _recvStepIdx = 1;
+    renderRecvStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function submitRecvWeight(){
+  if(_isStepAnimating) return;
+  var val = parseFloat(el('f-recv-kg') ? el('f-recv-kg').value : 5) || 0;
+  if(val <= 0){
+    alert('数量を入力してください');
+    return;
+  }
+  _recvData.weightKg = val;
+  _recvData.supplierLot = el('f-recv-supplier') ? el('f-recv-supplier').value.trim() : '';
+
+  _isStepAnimating = true;
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _recvStepIdx = 2;
+    renderRecvStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function answerRecvPackage(ans){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _recvData.packageStatus = ans;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _recvStepIdx = 3;
+    renderRecvStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function answerRecvForeign(ans){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _recvData.foreignStatus = ans;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _recvStepIdx = 4;
+    renderRecvStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function prevRecvStep(){
+  if(_isStepAnimating || _recvStepIdx <= 0) return;
+  _isStepAnimating = true;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-right');
+  }
+  setTimeout(function(){
+    _recvStepIdx--;
+    renderRecvStep('in-left');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+async function renderRecvConfirmStep(body){
+  var nextLot = await generateNextLotId();
+  _recvData.lotId = nextLot;
 
   var h = '';
-  h += '<div class="step-header">';
-  h += '  <span class="step-tag" style="background:#e3f2fd;color:#1565c0">生豆受入</span>';
-  h += '  <h2 class="step-title" style="font-size:20px;">生豆受入の記録</h2>';
+  h += '<div class="step-header" style="margin-bottom:16px;">';
+  h += '  <span class="step-tag" style="background:#e3f2fd;color:#1565c0">生豆受入 完了確認</span>';
+  h += '  <h2 class="step-title" style="font-size:20px;">生豆受入の確認</h2>';
   h += '  <p class="step-sub">作業者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
 
-  // 銘柄ボタン
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">生豆の銘柄を選択してください</label>';
-  h += '  <div class="bean-selector-grid">';
-  BEAN_ORIGINS.forEach(function(b, idx){
-    var act = (idx === 0) ? ' active' : '';
-    h += '  <button type="button" class="bean-btn' + act + '" onclick="selectBeanBtn(this, \'' + esc(b) + '\')">' + esc(b) + '</button>';
-  });
-  h += '  </div>';
+  h += '<div style="margin-bottom:16px;">';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">製造ロットID</span><span style="font-weight:900;color:var(--coffee);">' + esc(nextLot) + '</span></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">産地・銘柄</span><b>' + esc(_recvData.bean) + '</b></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">受入数量</span><b>' + _recvData.weightKg + ' kg</b></div>';
+  if(_recvData.supplierLot){
+    h += '  <div class="summary-item-row"><span style="font-weight:700;">仕入先・生豆ロット</span><span>' + esc(_recvData.supplierLot) + '</span></div>';
+  }
+  h += '  <div class="summary-item-row ' + (_recvData.packageStatus === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">包装・保管状態</span><span class="badge-result ' + (_recvData.packageStatus === '良' ? 'ok' : 'ng') + '">' + _recvData.packageStatus + '</span></div>';
+  h += '  <div class="summary-item-row ' + (_recvData.foreignStatus === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">カビ・虫・異物判定</span><span class="badge-result ' + (_recvData.foreignStatus === '良' ? 'ok' : 'ng') + '">' + _recvData.foreignStatus + '</span></div>';
   h += '</div>';
 
-  // 重さ
   h += '<div class="f-row">';
-  h += '  <label class="f-label">受入数量 (g または kg)</label>';
-  h += '  <input type="number" id="f-recv-weight" class="f-input" placeholder="例: 5000" value="5000">';
-  h += '</div>';
-
-  // 状態チェック
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">外装・異物・臭気チェック</label>';
-  h += '  <div style="display:flex;gap:12px;">';
-  h += '    <button type="button" id="recv-btn-ok" class="yes-no-btn btn-yes" style="flex:1;padding:14px;font-size:17px;" onclick="setRecvState(\'良\')">良（問題なし）</button>';
-  h += '    <button type="button" id="recv-btn-ng" class="yes-no-btn btn-no" style="flex:1;padding:14px;font-size:17px;" onclick="setRecvState(\'不良\')">不良（異常あり）</button>';
-  h += '  </div>';
-  h += '</div>';
-
-  // 確認スタッフ
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">確認スタッフ</label>';
+  h += '  <label class="f-label">職員確認（確認者を選択してください）</label>';
   h += '  <div class="staff-chip-grid">';
   STAFF.forEach(function(s, idx){
     var act = (idx === 0) ? ' active' : '';
@@ -1664,49 +1982,33 @@ function renderRecvModal(body){
   h += '  </div>';
   h += '</div>';
 
-  // 保存ボタン
   h += '<button type="button" class="save-action-btn" style="background:#1565c0;" onclick="saveRecvRecord()">';
   h += '  <span>💾 生豆の受入を記録する</span>';
   h += '</button>';
 
+  h += '<div style="text-align:center;margin-top:12px;">';
+  h += '  <button type="button" class="prev-step-btn" onclick="prevRecvStep()">◀ 最後のカードに戻る</button>';
+  h += '</div>';
+
   body.innerHTML = h;
-}
-
-function setRecvState(val){
-  _recvStatus = val;
-  var bOk = el('recv-btn-ok');
-  var bNg = el('recv-btn-ng');
-  if(bOk && bNg){
-    if(val === '良'){
-      bOk.style.background = '#2e7d32'; bOk.style.color = '#fff';
-      bNg.style.background = '#fff'; bNg.style.color = '#c62828';
-    } else {
-      bOk.style.background = '#fff'; bOk.style.color = '#2e7d32';
-      bNg.style.background = '#c62828'; bNg.style.color = '#fff';
-    }
-  }
-}
-
-function selectBeanBtn(btn, val){
-  document.querySelectorAll('.bean-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
-  _selectedBean = val;
 }
 
 async function saveRecvRecord(){
   var key = 'haccp_roast_batches';
-  var w = parseFloat(el('f-recv-weight').value) || 0;
-  var lot = 'RC-' + todayStr().replace(/-/g,'') + '-' + pad(Math.floor(Math.random()*90 + 10));
+  var lot = _recvData.lotId || await generateNextLotId();
+  var verifier = _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ');
 
   var rec = {
     id: 'batch_' + Date.now(),
     lotId: lot,
+    beanOrigin: _recvData.bean,
     recvDate: todayStr(),
-    beanOrigin: _selectedBean,
-    recvWeightG: w,
-    recvStatus: _recvStatus,
+    supplierLot: _recvData.supplierLot || '-',
+    recvWeightKg: _recvData.weightKg,
+    recvPackage: _recvData.packageStatus,
+    recvForeign: _recvData.foreignStatus,
     workerName: _worker.name,
-    verifierName: _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ'),
+    verifierName: verifier,
     stage: 'received',
     updatedAt: new Date().toISOString()
   };
@@ -1716,89 +2018,163 @@ async function saveRecvRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    showModalDone('受入記録を保存しました', _selectedBean + '（' + w + 'g）の受入を保存しました。ロット番号: ' + lot, '✓');
+    showModalDone('生豆受入を記録しました', _recvData.bean + '（' + _recvData.weightKg + 'kg）の受入を保存しました。ロット番号: ' + lot, '✓');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
 }
 
 // ═══════════════════════════════════════════════════════
-// モーダル 3: 🔥 焙煎製造モーダル（歩留り自動計算）
+// モーダル 3: 焙煎製造カード（Googleマップ評価風 ひとつひとつカードアクション）
 // ═══════════════════════════════════════════════════════
-function renderRoastModal(body){
-  _selectedBean = BEAN_ORIGINS[0];
+var _roastStepIdx = 0;
+var _roastData = {
+  lotId: '',
+  bean: BEAN_ORIGINS[0],
+  inputG: 500,
+  outputG: 420,
+  yieldPct: '84.0%',
+  conditionStatus: '良',
+  abnormalStatus: '良',
+  verifier: ''
+};
 
-  var h = '';
-  h += '<div class="step-header">';
-  h += '  <span class="step-tag" style="background:#fff3e0;color:#e65100">焙煎製造</span>';
-  h += '  <h2 class="step-title" style="font-size:20px;">焙煎記録の入力</h2>';
-  h += '  <p class="step-sub">作業者: <b>' + esc(_worker.name) + '</b> さん</p>';
-  h += '</div>';
-
-  // 豆の銘柄
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">焙煎する豆を選択してください</label>';
-  h += '  <div class="bean-selector-grid">';
-  BEAN_ORIGINS.forEach(function(b, idx){
-    var act = (idx === 0) ? ' active' : '';
-    h += '  <button type="button" class="bean-btn' + act + '" onclick="selectBeanBtn(this, \'' + esc(b) + '\')">' + esc(b) + '</button>';
-  });
-  h += '  </div>';
-  h += '</div>';
-
-  // 投入量 と 焙煎後重量
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
-  h += '  <div class="f-row">';
-  h += '    <label class="f-label">投入した生豆 (g)</label>';
-  h += '    <input type="number" id="f-roast-in" class="f-input" value="500" oninput="calcYield()">';
-  h += '  </div>';
-  h += '  <div class="f-row">';
-  h += '    <label class="f-label">焙煎後の重さ (g)</label>';
-  h += '    <input type="number" id="f-roast-out" class="f-input" value="420" oninput="calcYield()">';
-  h += '  </div>';
-  h += '</div>';
-
-  // 歩留りリアルタイム計算バッジ
-  h += '<div class="yield-badge-card" id="yield-badge-wrap">';
-  h += '  <div style="font-size:12px;font-weight:800;color:#e65100">歩留り（できあがり割合）</div>';
-  h += '  <div class="yield-val" id="yield-val-display">84.0 %</div>';
-  h += '  <div class="yield-comment" id="yield-comment-display">適正範囲内です。美味しく焼き上がりました。</div>';
-  h += '</div>';
-
-  // 焙煎度
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">焙煎度</label>';
-  h += '  <select id="f-roast-roastdeg" class="f-select">';
-  h += '    <option value="中煎り（シティ）" selected>中煎り（シティ）</option>';
-  h += '    <option value="中深煎り（フルシティ）">中深煎り（フルシティ）</option>';
-  h += '    <option value="深煎り（フレンチ）">深煎り（フレンチ）</option>';
-  h += '    <option value="浅煎り（ハイ）">浅煎り（ハイ）</option>';
-  h += '  </select>';
-  h += '</div>';
-
-  // 確認スタッフ
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">確認スタッフ</label>';
-  h += '  <div class="staff-chip-grid">';
-  STAFF.forEach(function(s, idx){
-    var act = (idx === 0) ? ' active' : '';
-    h += '  <button type="button" class="staff-chip' + act + '" onclick="selectStaffChip(this, \'' + esc(s.name) + '\')">' + esc(s.name) + '</button>';
-  });
-  h += '  </div>';
-  h += '</div>';
-
-  // 保存ボタン
-  h += '<button type="button" class="save-action-btn" style="background:#e65100;" onclick="saveRoastRecord()">';
-  h += '  <span>💾 焙煎記録を保存する</span>';
-  h += '</button>';
-
-  body.innerHTML = h;
-  calcYield();
+async function startRoastWizard(body){
+  _roastStepIdx = 0;
+  _roastData = {
+    lotId: '',
+    bean: BEAN_ORIGINS[0],
+    inputG: 500,
+    outputG: 420,
+    yieldPct: '84.0%',
+    conditionStatus: '良',
+    abnormalStatus: '良',
+    verifier: STAFF.length > 0 ? STAFF[0].name : ''
+  };
+  _isStepAnimating = false;
+  renderRoastStep('in-right', body);
 }
 
-function calcYield(){
-  var inVal = parseFloat(el('f-roast-in').value) || 0;
-  var outVal = parseFloat(el('f-roast-out').value) || 0;
+async function renderRoastStep(animType, body){
+  if(!body) body = el('modal-card-body');
+  if(!body) return;
+
+  var total = 4; // 0: 豆選択, 1: 重量入力, 2: 条件確認, 3: 異常有無
+  var animClass = (animType === 'in-left') ? ' anim-in-left' : ' anim-in-right';
+
+  if(_roastStepIdx < total){
+    var progressPct = Math.round(((_roastStepIdx + 1) / total) * 100);
+    var h = '';
+
+    h += '<div class="q-progress-wrap">';
+    h += '  <div class="q-progress-header">';
+    h += '    <span>焙煎製造 (' + (_roastStepIdx + 1) + ' / ' + total + ')</span>';
+    h += '    <span>作業者: ' + esc(_worker.name) + ' さん</span>';
+    h += '  </div>';
+    h += '  <div class="q-progress-bar-bg">';
+    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#e65100;"></div>';
+    h += '  </div>';
+    h += '</div>';
+
+    h += '<div class="gmap-card-wrapper">';
+    h += '  <div id="gmap-card-box" class="gmap-card-box' + animClass + '">';
+
+    // Step 0: 焙煎する豆を選ぶ
+    if(_roastStepIdx === 0){
+      h += '    <div class="gmap-q-category">焙煎製造・銘柄</div>';
+      h += '    <div class="gmap-q-sentence">焙煎する豆を選んでください</div>';
+      h += '    <div class="choice-chip-grid">';
+      BEAN_ORIGINS.forEach(function(b){
+        var act = (_roastData.bean === b) ? ' active' : '';
+        h += '    <button type="button" class="choice-chip-btn' + act + '" onclick="selectRoastBean(\'' + esc(b) + '\')">' + esc(b) + '</button>';
+      });
+      h += '    </div>';
+    }
+    // Step 1: 投入量 (g) と 焙煎後重量 (g)
+    else if(_roastStepIdx === 1){
+      h += '    <div class="gmap-q-category">重要管理・歩留り</div>';
+      h += '    <div class="gmap-q-sentence">生豆の投入量と焙煎後の重さを入力してください</div>';
+      h += '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">';
+      h += '      <div style="text-align:left;">';
+      h += '        <label style="font-size:12px;font-weight:800;color:var(--coffee);">生豆投入量 (g)</label>';
+      h += '        <input type="number" id="f-roast-in" class="f-input" style="font-size:22px;font-weight:900;text-align:center;" value="' + _roastData.inputG + '" oninput="calcYieldCard()">';
+      h += '      </div>';
+      h += '      <div style="text-align:left;">';
+      h += '        <label style="font-size:12px;font-weight:800;color:var(--coffee);">焙煎後重量 (g)</label>';
+      h += '        <input type="number" id="f-roast-out" class="f-input" style="font-size:22px;font-weight:900;text-align:center;" value="' + _roastData.outputG + '" oninput="calcYieldCard()">';
+      h += '      </div>';
+      h += '    </div>';
+
+      h += '    <div class="yield-badge-card" id="yield-badge-wrap" style="margin-bottom:18px;">';
+      h += '      <div style="font-size:12px;font-weight:800;color:#e65100">歩留り（できあがり割合）</div>';
+      h += '      <div class="yield-val" id="yield-val-display">' + _roastData.yieldPct + '</div>';
+      h += '      <div class="yield-comment" id="yield-comment-display">適正範囲内です。美味しく焼き上がりました。</div>';
+      h += '    </div>';
+
+      h += '    <button type="button" class="card-next-action-btn" style="background:#e65100;" onclick="submitRoastWeights()">次へ進む ▶</button>';
+    }
+    // Step 2: 焙煎条件・冷却確認（ちょい敬語・はい/いいえ）
+    else if(_roastStepIdx === 2){
+      h += '    <div class="gmap-q-category">焙煎条件・冷却確認</div>';
+      h += '    <div class="gmap-q-sentence">焙煎条件や急速冷却は適正にできましたか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerRoastCondition(\'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerRoastCondition(\'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 3: 焙煎異常有無（ちょい敬語・はい/いいえ）
+    else if(_roastStepIdx === 3){
+      h += '    <div class="gmap-q-category">焙煎異常確認</div>';
+      h += '    <div class="gmap-q-sentence">焦げや異臭などの異常はないですか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerRoastAbnormal(\'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerRoastAbnormal(\'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+
+    // 下部：戻るボタン
+    h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
+    if(_roastStepIdx > 0){
+      h += '      <button type="button" class="prev-step-btn" onclick="prevRoastStep()">◀ 前のカードに戻る</button>';
+    } else {
+      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+    }
+    h += '    </div>';
+
+    h += '  </div>';
+    h += '</div>';
+    body.innerHTML = h;
+
+    if(_roastStepIdx === 1){
+      calcYieldCard();
+    }
+  }
+  // 全問回答後の確認画面
+  else {
+    renderRoastConfirmStep(body);
+  }
+}
+
+function selectRoastBean(beanName){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _roastData.bean = beanName;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _roastStepIdx = 1;
+    renderRoastStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function calcYieldCard(){
+  var inVal = parseFloat(el('f-roast-in') ? el('f-roast-in').value : 0) || 0;
+  var outVal = parseFloat(el('f-roast-out') ? el('f-roast-out').value : 0) || 0;
   var displayEl = el('yield-val-display');
   var commentEl = el('yield-comment-display');
   if(!displayEl || !commentEl) return;
@@ -1806,12 +2182,14 @@ function calcYield(){
   if(inVal <= 0 || outVal <= 0){
     displayEl.textContent = '- %';
     commentEl.textContent = '数値を入力すると自動計算します';
+    _roastData.yieldPct = '-';
     return;
   }
 
   var pct = (outVal / inVal) * 100;
-  var pctStr = pct.toFixed(1) + ' %';
+  var pctStr = pct.toFixed(1) + '%';
   displayEl.textContent = pctStr;
+  _roastData.yieldPct = pctStr;
 
   if(pct >= 80 && pct <= 86){
     commentEl.textContent = '適正範囲内です。バッチリ美味しく焼き上がりました。';
@@ -1822,26 +2200,139 @@ function calcYield(){
   }
 }
 
+function submitRoastWeights(){
+  if(_isStepAnimating) return;
+  var inVal = parseFloat(el('f-roast-in') ? el('f-roast-in').value : 0) || 0;
+  var outVal = parseFloat(el('f-roast-out') ? el('f-roast-out').value : 0) || 0;
+  if(inVal <= 0 || outVal <= 0){
+    alert('投入量と焙煎後の重量を正しく入力してください');
+    return;
+  }
+  _roastData.inputG = inVal;
+  _roastData.outputG = outVal;
+  _roastData.yieldPct = ((outVal / inVal) * 100).toFixed(1) + '%';
+
+  _isStepAnimating = true;
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _roastStepIdx = 2;
+    renderRoastStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function answerRoastCondition(ans){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _roastData.conditionStatus = ans;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _roastStepIdx = 3;
+    renderRoastStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function answerRoastAbnormal(ans){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _roastData.abnormalStatus = ans;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _roastStepIdx = 4;
+    renderRoastStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function prevRoastStep(){
+  if(_isStepAnimating || _roastStepIdx <= 0) return;
+  _isStepAnimating = true;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-right');
+  }
+  setTimeout(function(){
+    _roastStepIdx--;
+    renderRoastStep('in-left');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+async function renderRoastConfirmStep(body){
+  var nextLot = await generateNextLotId();
+  _roastData.lotId = nextLot;
+
+  var h = '';
+  h += '<div class="step-header" style="margin-bottom:16px;">';
+  h += '  <span class="step-tag" style="background:#fff3e0;color:#e65100">焙煎製造 完了確認</span>';
+  h += '  <h2 class="step-title" style="font-size:20px;">焙煎製造の確認</h2>';
+  h += '  <p class="step-sub">作業者: <b>' + esc(_worker.name) + '</b> さん</p>';
+  h += '</div>';
+
+  h += '<div style="margin-bottom:16px;">';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">製造ロットID</span><span style="font-weight:900;color:var(--coffee);">' + esc(nextLot) + '</span></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">産地・銘柄</span><b>' + esc(_roastData.bean) + '</b></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">投入量 ➔ 焙煎後</span><b>' + _roastData.inputG + 'g ➔ ' + _roastData.outputG + 'g</b></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">歩留り</span><b style="color:#e65100;font-size:16px;">' + _roastData.yieldPct + '</b></div>';
+  h += '  <div class="summary-item-row ' + (_roastData.conditionStatus === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">焙煎条件・冷却確認</span><span class="badge-result ' + (_roastData.conditionStatus === '良' ? 'ok' : 'ng') + '">' + _roastData.conditionStatus + '</span></div>';
+  h += '  <div class="summary-item-row ' + (_roastData.abnormalStatus === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">焙煎異常有無</span><span class="badge-result ' + (_roastData.abnormalStatus === '良' ? 'ok' : 'ng') + '">' + _roastData.abnormalStatus + '</span></div>';
+  h += '</div>';
+
+  h += '<div class="f-row">';
+  h += '  <label class="f-label">職員確認（確認者を選択してください）</label>';
+  h += '  <div class="staff-chip-grid">';
+  STAFF.forEach(function(s, idx){
+    var act = (idx === 0) ? ' active' : '';
+    h += '  <button type="button" class="staff-chip' + act + '" onclick="selectStaffChip(this, \'' + esc(s.name) + '\')">' + esc(s.name) + '</button>';
+  });
+  h += '  </div>';
+  h += '</div>';
+
+  h += '<button type="button" class="save-action-btn" style="background:#e65100;" onclick="saveRoastRecord()">';
+  h += '  <span>💾 焙煎製造を記録する</span>';
+  h += '</button>';
+
+  h += '<div style="text-align:center;margin-top:12px;">';
+  h += '  <button type="button" class="prev-step-btn" onclick="prevRoastStep()">◀ 最後のカードに戻る</button>';
+  h += '</div>';
+
+  body.innerHTML = h;
+}
+
 async function saveRoastRecord(){
   var key = 'haccp_roast_batches';
-  var inVal = parseFloat(el('f-roast-in').value) || 0;
-  var outVal = parseFloat(el('f-roast-out').value) || 0;
-  var yPct = inVal > 0 ? ((outVal / inVal) * 100).toFixed(1) + '%' : '-';
-  var rDeg = el('f-roast-roastdeg').value;
-  var lot = 'RO-' + todayStr().replace(/-/g,'') + '-' + pad(Math.floor(Math.random()*90 + 10));
+  var lot = _roastData.lotId || await generateNextLotId();
+  var verifier = _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ');
 
   var rec = {
     id: 'batch_' + Date.now(),
     lotId: lot,
+    beanOrigin: _roastData.bean,
     roastDate: todayStr(),
-    beanOrigin: _selectedBean,
-    inputG: inVal,
-    outputG: outVal,
-    yieldPct: yPct,
-    roastDegree: rDeg,
+    inputG: _roastData.inputG,
+    outputG: _roastData.outputG,
+    yieldPct: _roastData.yieldPct,
+    roastCondition: _roastData.conditionStatus,
+    roastAbnormal: _roastData.abnormalStatus,
     workerName: _worker.name,
-    verifierName: _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ'),
-    judge: '良',
+    verifierName: verifier,
     stage: 'roasted',
     updatedAt: new Date().toISOString()
   };
@@ -1851,77 +2342,292 @@ async function saveRoastRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    showModalDone('焙煎記録を保存しました', _selectedBean + '（' + outVal + 'g / 歩留り ' + yPct + '）を保存しました。ロット番号: ' + lot, '✓');
+    showModalDone('焙煎製造を記録しました', _roastData.bean + '（' + _roastData.outputG + 'g / 歩留り ' + _roastData.yieldPct + '）を保存しました。ロット番号: ' + lot, '✓');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
 }
 
 // ═══════════════════════════════════════════════════════
-// モーダル 4: 🎁 包装・出荷モーダル
+// モーダル 4: 包装・出荷カード（Googleマップ評価風 ひとつひとつカードアクション）
 // ═══════════════════════════════════════════════════════
-var _packStatus = '良';
+var _packStepIdx = 0;
+var _packData = {
+  lotId: '',
+  bean: BEAN_ORIGINS[0],
+  packForm: 'ドリップバッグ',
+  packCount: 20,
+  sealStatus: '良',
+  labelStatus: '良',
+  packDest: 'だがし屋 店頭販売',
+  notes: '',
+  verifier: ''
+};
 
-function renderPackModal(body){
-  _packStatus = '良';
+var PACK_FORMS = ['豆', '粉', 'ドリップバッグ', 'ギフトセット'];
+var PACK_DESTS = ['だがし屋 店頭販売', '事業所 窓口販売', 'イベント出店・卸', '自主保管'];
+
+async function startPackWizard(body){
+  _packStepIdx = 0;
+  _packData = {
+    lotId: '',
+    bean: BEAN_ORIGINS[0],
+    packForm: 'ドリップバッグ',
+    packCount: 20,
+    sealStatus: '良',
+    labelStatus: '良',
+    packDest: 'だがし屋 店頭販売',
+    notes: '',
+    verifier: STAFF.length > 0 ? STAFF[0].name : ''
+  };
+  _isStepAnimating = false;
+  renderPackStep('in-right', body);
+}
+
+async function renderPackStep(animType, body){
+  if(!body) body = el('modal-card-body');
+  if(!body) return;
+
+  var total = 5; // 0: 銘柄, 1: 形態と個数, 2: 密封確認, 3: ラベル確認, 4: 出荷先
+  var animClass = (animType === 'in-left') ? ' anim-in-left' : ' anim-in-right';
+
+  if(_packStepIdx < total){
+    var progressPct = Math.round(((_packStepIdx + 1) / total) * 100);
+    var h = '';
+
+    h += '<div class="q-progress-wrap">';
+    h += '  <div class="q-progress-header">';
+    h += '    <span>包装・出荷 (' + (_packStepIdx + 1) + ' / ' + total + ')</span>';
+    h += '    <span>作業者: ' + esc(_worker.name) + ' さん</span>';
+    h += '  </div>';
+    h += '  <div class="q-progress-bar-bg">';
+    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#7b1fa2;"></div>';
+    h += '  </div>';
+    h += '</div>';
+
+    h += '<div class="gmap-card-wrapper">';
+    h += '  <div id="gmap-card-box" class="gmap-card-box' + animClass + '">';
+
+    // Step 0: 包装する銘柄を選ぶ
+    if(_packStepIdx === 0){
+      h += '    <div class="gmap-q-category">包装・出荷銘柄</div>';
+      h += '    <div class="gmap-q-sentence">包装する豆を選んでください</div>';
+      h += '    <div class="choice-chip-grid">';
+      BEAN_ORIGINS.forEach(function(b){
+        var act = (_packData.bean === b) ? ' active' : '';
+        h += '    <button type="button" class="choice-chip-btn' + act + '" onclick="selectPackBean(\'' + esc(b) + '\')">' + esc(b) + '</button>';
+      });
+      h += '    </div>';
+    }
+    // Step 1: 包装形態と個数
+    else if(_packStepIdx === 1){
+      h += '    <div class="gmap-q-category">包装形態・数量</div>';
+      h += '    <div class="gmap-q-sentence">包装の形と個数を教えてください</div>';
+      h += '    <div class="choice-chip-grid" style="margin-bottom:16px;">';
+      PACK_FORMS.forEach(function(f){
+        var act = (_packData.packForm === f) ? ' active' : '';
+        h += '    <button type="button" class="choice-chip-btn' + act + '" onclick="selectPackFormChip(this, \'' + esc(f) + '\')">' + esc(f) + '</button>';
+      });
+      h += '    </div>';
+      h += '    <div class="big-num-wrap">';
+      h += '      <label style="font-size:13px;font-weight:800;color:var(--coffee);display:block;margin-bottom:6px;">個数・パック数</label>';
+      h += '      <input type="number" id="f-pack-count" class="big-num-input" value="' + _packData.packCount + '" min="1">';
+      h += '      <div class="quick-num-row">';
+      [5, 10, 20, 30, 50].forEach(function(n){
+        h += '      <button type="button" class="quick-num-btn" onclick="el(\'f-pack-count\').value=' + n + '">' + n + '個</button>';
+      });
+      h += '      </div>';
+      h += '    </div>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#7b1fa2;" onclick="submitPackCount()">次へ進む ▶</button>';
+    }
+    // Step 2: 賞味期限・密封確認（ちょい敬語・はい/いいえ）
+    else if(_packStepIdx === 2){
+      h += '    <div class="gmap-q-category">賞味期限・密封確認</div>';
+      h += '    <div class="gmap-q-sentence">賞味期限の印字や袋の密封は問題ないですか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerPackSeal(\'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerPackSeal(\'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 3: ラベル・表示確認（ちょい敬語・はい/いいえ）
+    else if(_packStepIdx === 3){
+      h += '    <div class="gmap-q-category">ラベル・表示確認</div>';
+      h += '    <div class="gmap-q-sentence">品名や原材料などのラベル表示は正しいですか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerPackLabel(\'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerPackLabel(\'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 4: 保管・出荷先
+    else if(_packStepIdx === 4){
+      h += '    <div class="gmap-q-category">保管・出荷先</div>';
+      h += '    <div class="gmap-q-sentence">出荷・保管先を選んでください</div>';
+      h += '    <div class="choice-chip-grid">';
+      PACK_DESTS.forEach(function(dst){
+        var act = (_packData.packDest === dst) ? ' active' : '';
+        h += '    <button type="button" class="choice-chip-btn' + act + '" onclick="selectPackDestChip(\'' + esc(dst) + '\')">' + esc(dst) + '</button>';
+      });
+      h += '    </div>';
+    }
+
+    // 下部：戻るボタン
+    h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
+    if(_packStepIdx > 0){
+      h += '      <button type="button" class="prev-step-btn" onclick="prevPackStep()">◀ 前のカードに戻る</button>';
+    } else {
+      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+    }
+    h += '    </div>';
+
+    h += '  </div>';
+    h += '</div>';
+    body.innerHTML = h;
+  }
+  // 全問回答後の確認画面
+  else {
+    renderPackConfirmStep(body);
+  }
+}
+
+function selectPackBean(beanName){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _packData.bean = beanName;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _packStepIdx = 1;
+    renderPackStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function selectPackFormChip(btn, formName){
+  document.querySelectorAll('.choice-chip-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  _packData.packForm = formName;
+}
+
+function submitPackCount(){
+  if(_isStepAnimating) return;
+  var cnt = parseInt(el('f-pack-count') ? el('f-pack-count').value : 0, 10) || 0;
+  if(cnt <= 0){
+    alert('数量を入力してください');
+    return;
+  }
+  _packData.packCount = cnt;
+
+  _isStepAnimating = true;
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _packStepIdx = 2;
+    renderPackStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function answerPackSeal(ans){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _packData.sealStatus = ans;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _packStepIdx = 3;
+    renderPackStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function answerPackLabel(ans){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _packData.labelStatus = ans;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _packStepIdx = 4;
+    renderPackStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function selectPackDestChip(destName){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _packData.packDest = destName;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _packStepIdx = 5;
+    renderPackStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function prevPackStep(){
+  if(_isStepAnimating || _packStepIdx <= 0) return;
+  _isStepAnimating = true;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-right');
+  }
+  setTimeout(function(){
+    _packStepIdx--;
+    renderPackStep('in-left');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+async function renderPackConfirmStep(body){
+  var nextLot = await generateNextLotId();
+  _packData.lotId = nextLot;
 
   var h = '';
-  h += '<div class="step-header">';
-  h += '  <span class="step-tag" style="background:#f3e5f5;color:#7b1fa2">包装・出荷</span>';
-  h += '  <h2 class="step-title" style="font-size:20px;">包装・出荷記録</h2>';
+  h += '<div class="step-header" style="margin-bottom:16px;">';
+  h += '  <span class="step-tag" style="background:#f3e5f5;color:#7b1fa2">包装・出荷 完了確認</span>';
+  h += '  <h2 class="step-title" style="font-size:20px;">包装・出荷の確認</h2>';
   h += '  <p class="step-sub">作業者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
 
-  // 形態
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">パッケージの種類</label>';
-  h += '  <select id="f-pack-type" class="f-select">';
-  h += '    <option value="ドリップバッグ (1杯分)" selected>ドリップバッグ (1杯分)</option>';
-  h += '    <option value="豆のまま (100g/200g)">豆のまま (100g/200g)</option>';
-  h += '    <option value="粉・挽き豆 (100g/200g)">粉・挽き豆 (100g/200g)</option>';
-  h += '    <option value="ギフトセット">ギフトセット</option>';
-  h += '  </select>';
+  h += '<div style="margin-bottom:16px;">';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">製造ロットID</span><span style="font-weight:900;color:var(--coffee);">' + esc(nextLot) + '</span></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">産地・銘柄</span><b>' + esc(_packData.bean) + '</b></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">形態 / 数量</span><b>' + esc(_packData.packForm) + ' / ' + _packData.packCount + ' 個</b></div>';
+  h += '  <div class="summary-item-row ' + (_packData.sealStatus === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">賞味期限・密封確認</span><span class="badge-result ' + (_packData.sealStatus === '良' ? 'ok' : 'ng') + '">' + _packData.sealStatus + '</span></div>';
+  h += '  <div class="summary-item-row ' + (_packData.labelStatus === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">ラベル・表示確認</span><span class="badge-result ' + (_packData.labelStatus === '良' ? 'ok' : 'ng') + '">' + _packData.labelStatus + '</span></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">保管・出荷先</span><b>' + esc(_packData.packDest) + '</b></div>';
   h += '</div>';
 
-  // 個数
   h += '<div class="f-row">';
-  h += '  <label class="f-label">包装数量（袋・個）</label>';
-  h += '  <input type="number" id="f-pack-count" class="f-input" value="20">';
+  h += '  <label class="f-label">特記事項・備考（任意）</label>';
+  h += '  <input type="text" id="f-pack-notes" class="f-input" placeholder="異常や連絡事項があれば記入してください">';
   h += '</div>';
 
-  // 賞味期限
-  var expDate = new Date();
-  expDate.setDate(expDate.getDate() + 90);
-  var expStr = expDate.getFullYear() + '-' + pad(expDate.getMonth()+1) + '-' + pad(expDate.getDate());
-
   h += '<div class="f-row">';
-  h += '  <label class="f-label">賞味期限（通常3ヶ月後）</label>';
-  h += '  <input type="date" id="f-pack-exp" class="f-input" value="' + expStr + '">';
-  h += '</div>';
-
-  // 出荷先
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">出荷先</label>';
-  h += '  <select id="f-pack-dest" class="f-select">';
-  h += '    <option value="だがし屋 店頭販売" selected>だがし屋 店頭販売</option>';
-  h += '    <option value="事業所 窓口販売">事業所 窓口販売</option>';
-  h += '    <option value="イベント出店">イベント出店</option>';
-  h += '    <option value="ご注文・ギフト">ご注文・ギフト</option>';
-  h += '  </select>';
-  h += '</div>';
-
-  // シール・袋チェック
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">シール印字・密閉チェック</label>';
-  h += '  <div style="display:flex;gap:12px;">';
-  h += '    <button type="button" id="pack-btn-ok" class="yes-no-btn btn-yes" style="flex:1;padding:14px;font-size:17px;" onclick="setPackState(\'良\')">良（問題なし）</button>';
-  h += '    <button type="button" id="pack-btn-ng" class="yes-no-btn btn-no" style="flex:1;padding:14px;font-size:17px;" onclick="setPackState(\'不良\')">不良（異常あり）</button>';
-  h += '  </div>';
-  h += '</div>';
-
-  // 確認スタッフ
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">確認スタッフ</label>';
+  h += '  <label class="f-label">職員確認（確認者を選択してください）</label>';
   h += '  <div class="staff-chip-grid">';
   STAFF.forEach(function(s, idx){
     var act = (idx === 0) ? ' active' : '';
@@ -1930,50 +2636,36 @@ function renderPackModal(body){
   h += '  </div>';
   h += '</div>';
 
-  // 保存ボタン
   h += '<button type="button" class="save-action-btn" style="background:#7b1fa2;" onclick="savePackRecord()">';
   h += '  <span>💾 包装・出荷を記録する</span>';
   h += '</button>';
 
-  body.innerHTML = h;
-}
+  h += '<div style="text-align:center;margin-top:12px;">';
+  h += '  <button type="button" class="prev-step-btn" onclick="prevPackStep()">◀ 最後のカードに戻る</button>';
+  h += '</div>';
 
-function setPackState(val){
-  _packStatus = val;
-  var bOk = el('pack-btn-ok');
-  var bNg = el('pack-btn-ng');
-  if(bOk && bNg){
-    if(val === '良'){
-      bOk.style.background = '#2e7d32'; bOk.style.color = '#fff';
-      bNg.style.background = '#fff'; bNg.style.color = '#c62828';
-    } else {
-      bOk.style.background = '#fff'; bOk.style.color = '#2e7d32';
-      bNg.style.background = '#c62828'; bNg.style.color = '#fff';
-    }
-  }
+  body.innerHTML = h;
 }
 
 async function savePackRecord(){
   var key = 'haccp_roast_batches';
-  var pType = el('f-pack-type').value;
-  var pCount = parseInt(el('f-pack-count').value, 10) || 0;
-  var expDate = el('f-pack-exp').value;
-  var pDest = el('f-pack-dest').value;
-  var lot = 'PK-' + todayStr().replace(/-/g,'') + '-' + pad(Math.floor(Math.random()*90 + 10));
+  var lot = _packData.lotId || await generateNextLotId();
+  var notes = el('f-pack-notes') ? el('f-pack-notes').value.trim() : '';
+  var verifier = _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ');
 
   var rec = {
     id: 'batch_' + Date.now(),
     lotId: lot,
+    beanOrigin: _packData.bean,
     packDate: todayStr(),
-    packType: pType,
-    packCount: pCount,
-    expDate: expDate,
-    shipDate: todayStr(),
-    shipDest: pDest,
-    packStatus: _packStatus,
+    packForm: _packData.packForm,
+    packCount: _packData.packCount,
+    packSeal: _packData.sealStatus,
+    packLabel: _packData.labelStatus,
+    packDest: _packData.packDest,
+    notes: notes || '-',
     workerName: _worker.name,
-    verifierName: _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ'),
-    judge: '良',
+    verifierName: verifier,
     stage: 'packed',
     updatedAt: new Date().toISOString()
   };
@@ -1983,7 +2675,7 @@ async function savePackRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    showModalDone('包装出荷を保存しました', pType + '（' + pCount + '個）の包装出荷を保存しました。ロット番号: ' + lot, '✓');
+    showModalDone('包装・出荷を記録しました', _packData.bean + '（' + _packData.packForm + ' ' + _packData.packCount + '個）を保存しました。ロット番号: ' + lot, '✓');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
@@ -2134,7 +2826,7 @@ async function deleteHygieneRecord(id){
   renderAdminView();
 }
 
-// ─── 焙煎ロット 全履歴テーブル ─────────────────────────
+// ─── 焙煎ロット 全履歴テーブル（エクセル原本画像2完全準拠 2段ヘッダー・20項目） ─────
 async function renderAdminRoastTable(c){
   var key = 'haccp_roast_batches';
   var list = await getHaccpJson(key, []);
@@ -2146,45 +2838,81 @@ async function renderAdminRoastTable(c){
   });
 
   if(filtered.length === 0){
-    c.innerHTML = '<div style="text-align:center;padding:50px;color:var(--sub);background:#fff;border-radius:18px;border:1.5px solid var(--bdr);">この月の焙煎・受入・出荷ロット記録はありません。</div>';
+    c.innerHTML = '<div style="text-align:center;padding:50px;color:var(--sub);background:#fff;border-radius:18px;border:1.5px solid var(--bdr);">この月の焙煎・出荷台帳記録はありません。</div>';
     return;
   }
 
   var h = '';
   h += '<div class="table-wrap">';
-  h += '<table class="admin-table">';
+  h += '<table class="admin-table" style="font-size:12px;">';
   h += '<thead>';
+  h += '  <tr style="background:#5d4037;color:#fff;">';
+  h += '    <th colspan="2" style="background:#3e2723;">共通・ロット通番</th>';
+  h += '    <th colspan="5" style="background:#4e342e;">① 生豆受入記録（仕入時・使用ロット確認）</th>';
+  h += '    <th colspan="6" style="background:#5d4037;">② 焙煎製造記録（重要管理・歩留確認）</th>';
+  h += '    <th colspan="7" style="background:#263238;">③ 包装・出荷記録（計量・密封・表示・出荷）</th>';
+  h += '    <th rowspan="2" style="background:#1b2428;">操作</th>';
+  h += '  </tr>';
   h += '  <tr>';
-  h += '    <th>ロットNo</th>';
-  h += '    <th>日付</th>';
-  h += '    <th>工程</th>';
-  h += '    <th>銘柄/内容</th>';
-  h += '    <th>投入量</th>';
-  h += '    <th>焙煎後</th>';
-  h += '    <th>歩留り</th>';
-  h += '    <th>焙煎度/包装</th>';
-  h += '    <th>記録者</th>';
-  h += '    <th>確認者</th>';
-  h += '    <th>操作</th>';
+  // 共通
+  h += '    <th>製造ロットID</th>';
+  h += '    <th>産地・銘柄</th>';
+  // ① 受入
+  h += '    <th>受入日</th>';
+  h += '    <th>仕入先・生豆ロット</th>';
+  h += '    <th>受入量<br>(kg)</th>';
+  h += '    <th>包装・保管状態</th>';
+  h += '    <th>カビ・虫・異物判定</th>';
+  // ② 焙煎
+  h += '    <th>焙煎日</th>';
+  h += '    <th>投入量<br>(g)</th>';
+  h += '    <th>焙煎後<br>(g)</th>';
+  h += '    <th>歩留り<br>(%)</th>';
+  h += '    <th>焙煎条件・冷却確認</th>';
+  h += '    <th>焙煎異常有無</th>';
+  // ③ 包装
+  h += '    <th>包装日</th>';
+  h += '    <th>形態<br>(豆/粉)</th>';
+  h += '    <th>個数</th>';
+  h += '    <th>賞味期限・密封確認</th>';
+  h += '    <th>ラベル・表示確認</th>';
+  h += '    <th>保管・出荷先</th>';
+  h += '    <th>職員確認・備考</th>';
   h += '  </tr>';
   h += '</thead>';
   h += '<tbody>';
 
   filtered.forEach(function(b){
-    var dateStr = b.roastDate || b.recvDate || b.packDate || '-';
-    var stageLabel = (b.stage === 'received') ? '受入' : (b.stage === 'roasted') ? '焙煎' : (b.stage === 'packed') ? '包装' : 'ロット';
+    var okBadge = '<span style="color:#2e7d32;font-weight:800;">良</span>';
+    var ngBadge = '<span style="color:#c62828;font-weight:800;">不良</span>';
+    var dash = '<span style="color:#9e9e9e;">-</span>';
 
     h += '<tr>';
-    h += '  <td><span style="font-weight:800;color:var(--coffee)">' + esc(b.lotId || '-') + '</span></td>';
-    h += '  <td>' + esc(dateStr) + '</td>';
-    h += '  <td><span style="background:#efebe9;padding:2px 8px;border-radius:8px;font-weight:700;">' + stageLabel + '</span></td>';
-    h += '  <td><b>' + esc(b.beanOrigin || b.packType || '-') + '</b></td>';
-    h += '  <td>' + (b.inputG ? b.inputG + 'g' : (b.recvWeightG ? b.recvWeightG + 'g' : '-')) + '</td>';
-    h += '  <td>' + (b.outputG ? b.outputG + 'g' : '-') + '</td>';
-    h += '  <td><b style="color:#e65100;">' + esc(b.yieldPct || '-') + '</b></td>';
-    h += '  <td>' + esc(b.roastDegree || (b.packCount ? b.packCount + '個' : '-')) + '</td>';
-    h += '  <td>' + esc(b.workerName || '-') + '</td>';
-    h += '  <td>' + esc(b.verifierName || '-') + '</td>';
+    // 共通
+    h += '  <td><span style="font-weight:800;color:var(--coffee);">' + esc(b.lotId || '-') + '</span></td>';
+    h += '  <td><b>' + esc(b.beanOrigin || '-') + '</b></td>';
+    // ① 受入
+    h += '  <td>' + esc(b.recvDate || dash) + '</td>';
+    h += '  <td>' + esc(b.supplierLot || dash) + '</td>';
+    h += '  <td>' + (b.recvWeightKg ? b.recvWeightKg + ' kg' : dash) + '</td>';
+    h += '  <td>' + (b.recvPackage ? (b.recvPackage === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    h += '  <td>' + (b.recvForeign ? (b.recvForeign === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    // ② 焙煎
+    h += '  <td>' + esc(b.roastDate || dash) + '</td>';
+    h += '  <td>' + (b.inputG ? b.inputG + ' g' : dash) + '</td>';
+    h += '  <td>' + (b.outputG ? b.outputG + ' g' : dash) + '</td>';
+    h += '  <td><b style="color:#e65100;">' + esc(b.yieldPct || dash) + '</b></td>';
+    h += '  <td>' + (b.roastCondition ? (b.roastCondition === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    h += '  <td>' + (b.roastAbnormal ? (b.roastAbnormal === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    // ③ 包装
+    h += '  <td>' + esc(b.packDate || dash) + '</td>';
+    h += '  <td>' + esc(b.packForm || dash) + '</td>';
+    h += '  <td>' + (b.packCount ? b.packCount + ' 個' : dash) + '</td>';
+    h += '  <td>' + (b.packSeal ? (b.packSeal === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    h += '  <td>' + (b.packLabel ? (b.packLabel === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    h += '  <td>' + esc(b.packDest || dash) + '</td>';
+    h += '  <td><b>' + esc(b.verifierName || '-') + '</b>' + (b.notes && b.notes !== '-' ? '<br><span style="font-size:10px;color:var(--sub);">' + esc(b.notes) + '</span>' : '') + '</td>';
+    // 操作
     h += '  <td><button type="button" onclick="deleteRoastRecord(\'' + b.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px;font-weight:700;">✕ 削除</button></td>';
     h += '</tr>';
   });
@@ -2197,7 +2925,7 @@ async function renderAdminRoastTable(c){
 }
 
 async function deleteRoastRecord(id){
-  if(!confirm('このロット記録を削除しますか？')) return;
+  if(!confirm('この台帳レコードを削除しますか？')) return;
   var key = 'haccp_roast_batches';
   var list = await getHaccpJson(key, []);
   list = list.filter(function(x){ return x.id !== id; });
@@ -2206,7 +2934,7 @@ async function deleteRoastRecord(id){
 }
 
 // ═══════════════════════════════════════════════════════
-// 3. 印刷機能（エクセル原本画像1と完全合致 A4横）
+// 3. 印刷機能（エクセル原本画像1＆画像2と完全合致 A4横）
 // ═══════════════════════════════════════════════════════
 async function printCurrentAdminReport(){
   var ym = _adminMonth || curYmStr();
@@ -2294,7 +3022,7 @@ async function printDailyHaccpReport(ym){
   setTimeout(function(){ win.print(); }, 400);
 }
 
-// ② 焙煎・製造・出荷管理台帳 A4横原本印刷
+// ② 焙煎・出荷台帳 A4横原本印刷（エクセル原本画像2完全準拠）
 async function printRoastHaccpReport(ym){
   var key = 'haccp_roast_batches';
   var list = await getHaccpJson(key, []);
@@ -2310,52 +3038,73 @@ async function printRoastHaccpReport(ym){
   }
 
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
-  html += '<title>珈琲焙煎出荷管理台帳_' + ym + '</title>';
+  html += '<title>HACCP焙煎出荷台帳_' + ym + '</title>';
   html += '<style>';
-  html += '@page { size: A4 landscape; margin: 8mm; }';
-  html += 'body { font-family: "Noto Sans JP", sans-serif; font-size: 10px; color: #000; margin: 0; }';
-  html += '.header-wrap { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px; border-bottom: 2px solid #000; padding-bottom: 4px; }';
-  html += 'h1 { font-size: 16px; margin: 0; }';
-  html += '.stamp-box { border: 1px solid #000; border-collapse: collapse; }';
-  html += '.stamp-box td { border: 1px solid #000; width: 48px; height: 48px; text-align: center; vertical-align: top; font-size: 8.5px; padding: 2px; }';
-  html += 'table.report { width: 100%; border-collapse: collapse; font-size: 9.5px; }';
-  html += 'table.report th, table.report td { border: 1px solid #000; padding: 4px 3px; text-align: center; }';
-  html += 'table.report th { background: #332a24; color: #fff; font-size: 9px; }';
+  html += '@page { size: A4 landscape; margin: 6mm; }';
+  html += 'body { font-family: "Noto Sans JP", sans-serif; font-size: 8.5px; color: #000; margin: 0; padding: 0; }';
+  html += 'h1 { font-size: 14px; margin: 0 0 4px; }';
+  html += '.meta-tbl { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 8.5px; }';
+  html += '.meta-tbl td { border: 1px solid #000; padding: 3px 5px; }';
+  html += '.meta-lbl { background: #f0f0f0; font-weight: bold; width: 90px; text-align: center; }';
+  html += '.stamp-box { border: 1px solid #000; border-collapse: collapse; margin-left: auto; }';
+  html += '.stamp-box td { border: 1px solid #000; width: 44px; height: 44px; text-align: center; vertical-align: top; font-size: 8px; padding: 2px; }';
+  html += 'table.report { width: 100%; border-collapse: collapse; font-size: 8px; }';
+  html += 'table.report th, table.report td { border: 1px solid #000; padding: 3px 2px; text-align: center; }';
+  html += 'table.report th { background: #3e2723; color: #fff; font-size: 8px; }';
   html += '</style></head><body>';
 
-  html += '<div class="header-wrap">';
-  html += '  <div>';
-  html += '    <h1>コーヒー豆 焙煎・製造・出荷管理台帳 (HACCP)</h1>';
-  html += '    <div style="font-size:10.5px;">就労継続支援B型 ひとつぎ豊中小曽根（ひとつぎ珈琲） / 責任者: 友田 篤賜 / 対象月: ' + ym + '</div>';
-  html += '  </div>';
+  html += '<h1>【ひとつぎ珈琲】HACCP 焙煎・出荷台帳（生豆受入 ～ 焙煎製造 ～ 包装出荷 ロット管理）</h1>';
+
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;">';
+  html += '  <table class="meta-tbl" style="flex:1;">';
+  html += '    <tr><td class="meta-lbl">事業所名</td><td>就労継続支援B型 ひとつぎ豊中小曽根</td><td class="meta-lbl">管理目的</td><td>生豆の受入から焙煎・包装・出荷までを1行で紐づけ、ロット追跡（トレーサビリティ）と品質を管理</td><td class="meta-lbl">責任者</td><td>友田 篤賜</td></tr>';
+  html += '    <tr><td class="meta-lbl">記録ルール</td><td colspan="5">・製造ロットID例：261113-01（年月日-連番）　・良否／確認欄は「良／不良」を入力　・異常時は備考欄に記録（担当者確認）</td></tr>';
+  html += '  </table>';
   html += '  <table class="stamp-box"><tr><td>施設長</td><td>管理者</td><td>担当者</td></tr><tr><td></td><td></td><td></td></tr></table>';
   html += '</div>';
 
   html += '<table class="report">';
-  html += '<thead><tr><th>ロットNo</th><th>日付</th><th>工程</th><th>銘柄/産地</th><th>受入量</th><th>投入量</th><th>焙煎後</th><th>歩留り</th><th>焙煎度</th><th>包装形態</th><th>数量</th><th>賞味期限</th><th>出荷先</th><th>担当者</th><th>確認印</th></tr></thead>';
+  html += '<thead>';
+  html += '  <tr>';
+  html += '    <th colspan="2" style="background:#2b1d14;">共通・ロット通番</th>';
+  html += '    <th colspan="5" style="background:#3e2723;">① 生豆受入記録（仕入時・使用ロット確認）</th>';
+  html += '    <th colspan="6" style="background:#4e342e;">② 焙煎製造記録（重要管理・歩留確認）</th>';
+  html += '    <th colspan="7" style="background:#263238;">③ 包装・出荷記録（計量・密封・表示・出荷）</th>';
+  html += '  </tr>';
+  html += '  <tr>';
+  html += '    <th>製造ロットID</th><th>産地・銘柄</th>';
+  html += '    <th>受入日</th><th>仕入先・生豆ロット</th><th>受入量(kg)</th><th>包装・保管状態</th><th>カビ・虫・異物判定</th>';
+  html += '    <th>焙煎日</th><th>投入量(g)</th><th>焙煎後(g)</th><th>歩留り(%)</th><th>焙煎条件・冷却確認</th><th>焙煎異常有無</th>';
+  html += '    <th>包装日</th><th>形態(豆/粉)</th><th>個数</th><th>賞味期限・密封確認</th><th>ラベル・表示確認</th><th>保管・出荷先</th><th>職員確認・備考</th>';
+  html += '  </tr>';
+  html += '</thead>';
   html += '<tbody>';
 
   if(filtered.length === 0){
-    html += '<tr><td colspan="15" style="padding:20px;">当月の記録はありません</td></tr>';
+    html += '<tr><td colspan="20" style="padding:16px;">当月の記録はありません</td></tr>';
   } else {
     filtered.forEach(function(b){
-      var d = b.roastDate || b.recvDate || b.packDate || '-';
       html += '<tr>';
       html += '  <td>' + esc(b.lotId || '-') + '</td>';
-      html += '  <td>' + esc(d) + '</td>';
-      html += '  <td>' + esc(b.stage || '-') + '</td>';
       html += '  <td>' + esc(b.beanOrigin || '-') + '</td>';
-      html += '  <td>' + (b.recvWeightG ? b.recvWeightG + 'g' : '-') + '</td>';
-      html += '  <td>' + (b.inputG ? b.inputG + 'g' : '-') + '</td>';
-      html += '  <td>' + (b.outputG ? b.outputG + 'g' : '-') + '</td>';
+      html += '  <td>' + esc(b.recvDate || '-') + '</td>';
+      html += '  <td>' + esc(b.supplierLot || '-') + '</td>';
+      html += '  <td>' + (b.recvWeightKg ? b.recvWeightKg : '-') + '</td>';
+      html += '  <td>' + esc(b.recvPackage || '-') + '</td>';
+      html += '  <td>' + esc(b.recvForeign || '-') + '</td>';
+      html += '  <td>' + esc(b.roastDate || '-') + '</td>';
+      html += '  <td>' + (b.inputG ? b.inputG : '-') + '</td>';
+      html += '  <td>' + (b.outputG ? b.outputG : '-') + '</td>';
       html += '  <td>' + esc(b.yieldPct || '-') + '</td>';
-      html += '  <td>' + esc(b.roastDegree || '-') + '</td>';
-      html += '  <td>' + esc(b.packType || '-') + '</td>';
-      html += '  <td>' + (b.packCount ? b.packCount + '個' : '-') + '</td>';
-      html += '  <td>' + esc(b.expDate || '-') + '</td>';
-      html += '  <td>' + esc(b.shipDest || '-') + '</td>';
-      html += '  <td>' + esc(b.workerName || '-') + '</td>';
-      html += '  <td>' + esc(b.verifierName || '') + '</td>';
+      html += '  <td>' + esc(b.roastCondition || '-') + '</td>';
+      html += '  <td>' + esc(b.roastAbnormal || '-') + '</td>';
+      html += '  <td>' + esc(b.packDate || '-') + '</td>';
+      html += '  <td>' + esc(b.packForm || '-') + '</td>';
+      html += '  <td>' + (b.packCount ? b.packCount : '-') + '</td>';
+      html += '  <td>' + esc(b.packSeal || '-') + '</td>';
+      html += '  <td>' + esc(b.packLabel || '-') + '</td>';
+      html += '  <td>' + esc(b.packDest || '-') + '</td>';
+      html += '  <td>' + esc(b.verifierName || '') + (b.notes && b.notes !== '-' ? ' ' + esc(b.notes) : '') + '</td>';
       html += '</tr>';
     });
   }
@@ -2382,12 +3131,11 @@ async function exportCurrentAdminCsv(){
     downloadCsv(csv, '日常衛生チェック_' + ym + '.csv');
   } else {
     var list = await getHaccpJson('haccp_roast_batches', []);
-    var csv = '\uFEFFロットNo,日付,工程,銘柄,受入量g,投入量g,焙煎後g,歩留り,焙煎度,包装形態,個数,賞味期限,出荷先,作業者,確認者\n';
+    var csv = '\uFEFF製造ロットID,産地銘柄,受入日,仕入先生豆ロット,受入量kg,包装保管状態,カビ虫異物判定,焙煎日,投入量g,焙煎後g,歩留り,焙煎条件冷却確認,焙煎異常有無,包装日,形態,個数,賞味期限密封確認,ラベル表示確認,保管出荷先,職員確認備考\n';
     list.forEach(function(b){
-      var d = b.roastDate || b.recvDate || b.packDate || '';
-      csv += [b.lotId, d, b.stage, b.beanOrigin, b.recvWeightG, b.inputG, b.outputG, b.yieldPct, b.roastDegree, b.packType, b.packCount, b.expDate, b.shipDest, b.workerName, b.verifierName].join(',') + '\n';
+      csv += [b.lotId, b.beanOrigin, (b.recvDate||''), (b.supplierLot||''), (b.recvWeightKg||''), (b.recvPackage||''), (b.recvForeign||''), (b.roastDate||''), (b.inputG||''), (b.outputG||''), (b.yieldPct||''), (b.roastCondition||''), (b.roastAbnormal||''), (b.packDate||''), (b.packForm||''), (b.packCount||''), (b.packSeal||''), (b.packLabel||''), (b.packDest||''), ((b.verifierName||'') + ' ' + (b.notes||''))].join(',') + '\n';
     });
-    downloadCsv(csv, '焙煎出荷台帳_' + ym + '.csv');
+    downloadCsv(csv, 'HACCP焙煎出荷台帳_' + ym + '.csv');
   }
 }
 
