@@ -883,7 +883,7 @@ async function loadAll(){
   }
 }
 
-var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['bmi','⚖️','BMI測定管理'],['transport','🚐','送迎管理'],['wages','💰','工賃管理'],['export','📄','帳票出力'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
+var TABS=[['dashboard','📊','ダッシュボード'],['calendar','📅','カレンダー'],['users','👥','利用者管理'],['planSchedule','📋','予定表'],['trials','🔰','見学・体験'],['attendance','📝','出欠・日報'],['bmi','⚖️','BMI測定管理'],['transport','🚐','送迎管理'],['wages','💰','工賃管理'],['haccp','☕','珈琲HACCP'],['export','📄','帳票出力'],['timecard','⏰','タイムカード'],['staff','👔','スタッフ'],['settings','⚙️','設定']];
 
 var _shellRendered=false;
 function render(){
@@ -9657,6 +9657,960 @@ function printSimNotices(){
   var w = window.open('', '_blank');
   w.document.write(docHtml);
   w.document.close();
+}
+
+
+// ═══════════════════════════════════════════════════
+// ☕ 珈琲HACCP 管理システム（ひとつぎ珈琲）
+// ═══════════════════════════════════════════════════
+
+var _haccpMonth = today().slice(0, 7);
+var _haccpSubTab = 'daily';
+
+// Supabase JSONストレージ ヘルパー (PC版)
+async function getHaccpJson(key, defVal){
+  try {
+    var sb = (typeof _getSupabase === 'function') ? _getSupabase() : supabase;
+    if(!sb && window.supabase && window.supabase.createClient){
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+    var r = await sb.from('設定').select('value').eq('key', key).limit(1);
+    if(r.data && r.data.length > 0 && r.data[0].value){
+      return JSON.parse(r.data[0].value);
+    }
+  } catch(e){
+    console.warn('getHaccpJson (' + key + '):', e);
+  }
+  return defVal;
+}
+
+async function saveHaccpJson(key, data){
+  try {
+    var sb = (typeof _getSupabase === 'function') ? _getSupabase() : supabase;
+    if(!sb && window.supabase && window.supabase.createClient){
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+    var valStr = JSON.stringify(data);
+    var chk = await sb.from('設定').select('key').eq('key', key).limit(1);
+    if(chk.data && chk.data.length > 0){
+      var ur = await sb.from('設定').update({ value: valStr }).eq('key', key);
+      if(ur.error) throw ur.error;
+    } else {
+      var ir = await sb.from('設定').insert([{ key: key, value: valStr }]);
+      if(ir.error) throw ir.error;
+    }
+    return true;
+  } catch(e){
+    console.error('saveHaccpJson (' + key + '):', e);
+    throw e;
+  }
+}
+
+// ─── メインレンダラー ──────────────────────────────
+async function renderHaccp(c){
+  var h = '<div class="hd-row">' +
+    '  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">' +
+    '    <h2>☕ 珈琲HACCP 衛生・ロット管理</h2>' +
+    '    <span style="font-size:12px;color:var(--sub);background:#f0ebe3;padding:4px 10px;border-radius:12px;font-weight:700">ひとつぎ珈琲</span>' +
+    '  </div>' +
+    '  <div style="display:flex;gap:10px;align-items:center">' +
+    '    <label style="font-size:12px;color:var(--sub);font-weight:700">対象月度:</label>' +
+    '    <input type="month" value="' + _haccpMonth + '" onchange="_haccpMonth=this.value;renderHaccp(document.getElementById(\'content\'))" style="padding:5px 8px;font-size:13px;font-weight:700">' +
+    '  </div>' +
+    '</div>';
+
+  // サブタブ切り替え
+  h += '<div class="filter-tabs no-print" style="margin-bottom:16px">' +
+    '  <button class="filter-tab' + (_haccpSubTab === 'daily' ? ' active' : '') + '" onclick="_haccpSubTab=\'daily\';renderHaccp(document.getElementById(\'content\'))">🧼 ① 日常衛生チェック表</button>' +
+    '  <button class="filter-tab' + (_haccpSubTab === 'roast' ? ' active' : '') + '" onclick="_haccpSubTab=\'roast\';renderHaccp(document.getElementById(\'content\'))">☕ ② 焙煎・出荷台帳</button>' +
+    '  <button class="filter-tab' + (_haccpSubTab === 'monthly' ? ' active' : '') + '" onclick="_haccpSubTab=\'monthly\';renderHaccp(document.getElementById(\'content\'))">📅 ③ 月次点検・異常是正</button>' +
+    '</div>';
+
+  h += '<div id="haccp-body">読み込み中...</div>';
+  c.innerHTML = h;
+
+  var body = document.getElementById('haccp-body');
+  if(_haccpSubTab === 'daily'){
+    await renderHaccpDailyTab(body);
+  } else if(_haccpSubTab === 'roast'){
+    await renderHaccpRoastTab(body);
+  } else if(_haccpSubTab === 'monthly'){
+    await renderHaccpMonthlyTab(body);
+  }
+}
+
+// ─── サブタブ1: 日常衛生チェック表 ────────────────────────
+async function renderHaccpDailyTab(container){
+  showLoading(container, '日常衛生チェックデータを読み込み中...');
+  var list = await getHaccpJson('haccp_hygiene_' + _haccpMonth, []);
+
+  var ymLabel = _haccpMonth.replace('-', '年') + '月分';
+  var facName = S.settings.facilityName || '就労継続支援B型 ひとつぎ豊中小曽根';
+
+  var h = '<div class="card" style="padding:16px 20px;margin-bottom:16px;">' +
+    // エクセル準拠ヘッダー情報
+    '  <div style="background:#faf8f5;border:1.5px solid #ded5cc;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:11.5px;line-height:1.6">' +
+    '    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #e5ded5;padding-bottom:6px;margin-bottom:6px">' +
+    '      <div><strong>事業所名：</strong>' + esc(facName) + '　|　<strong>作業場所：</strong>訓練・作業室内 コーヒー専用テーブル</div>' +
+    '      <div><strong>衛生管理責任者：</strong>友田 篤賜</div>' +
+    '    </div>' +
+    '    <div><strong>運用ルール：</strong>作業日ごとに1行記録（良／不良／該当なし）。異常時は対象品を保留し、下段「異常・是正記録」へ記入。</div>' +
+    '  </div>' +
+
+    // アクションバー
+    '  <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
+    '    <span class="card-t">1. 日常衛生記録（' + ymLabel + ' / 全 ' + list.length + ' 件）</span>' +
+    '    <div class="no-print" style="display:flex;gap:6px;flex-wrap:wrap">' +
+    '      <button class="bp" onclick="openHaccpDailyModal()" style="font-size:12px;padding:5px 12px;background:#2e7d32;border-color:#2e7d32">＋ 手動で記録を追加</button>' +
+    '      <button class="bp" onclick="printHaccpDailyReport(\'' + _haccpMonth + '\')" style="font-size:12px;padding:5px 12px;background:#6a1b9a;border-color:#6a1b9a">🖨️ エクセル様式で印刷 / PDF</button>' +
+    '      <button class="bg" onclick="exportHaccpDailyCsv(\'' + _haccpMonth + '\')" style="font-size:12px;padding:5px 10px">📥 CSV出力</button>' +
+    '    </div>' +
+    '  </div>' +
+
+    // テーブル
+    '  <div class="tbl-wrap">' +
+    '    <table style="width:100%;font-size:12px;border-collapse:collapse">' +
+    '      <thead><tr style="background:#5d4037;color:#fff;text-align:center">' +
+    '        <th style="padding:6px;border:1px solid #795548;width:75px">作業日</th>' +
+    '        <th style="padding:6px;border:1px solid #795548;width:110px">作業者</th>' +
+    '        <th style="padding:6px;border:1px solid #795548">健康確認<br><span style="font-size:9px">(体調・手指傷)</span></th>' +
+    '        <th style="padding:6px;border:1px solid #795548">手洗い<br><span style="font-size:9px">・消毒</span></th>' +
+    '        <th style="padding:6px;border:1px solid #795548">専用台・<br><span style="font-size:9px">器具清掃</span></th>' +
+    '        <th style="padding:6px;border:1px solid #795548">害虫・異物<br><span style="font-size:9px">有無</span></th>' +
+    '        <th style="padding:6px;border:1px solid #795548">他作業との<br><span style="font-size:9px">区分確認</span></th>' +
+    '        <th style="padding:6px;border:1px solid #795548">設備・火気<br><span style="font-size:9px">安全確認</span></th>' +
+    '        <th style="padding:6px;border:1px solid #795548">作業終了後<br><span style="font-size:9px">清掃・片付</span></th>' +
+    '        <th style="padding:6px;border:1px solid #795548;min-width:140px">特記事項 (異常内容・対応メモ)</th>' +
+    '        <th style="padding:6px;border:1px solid #795548;width:80px">職員確認</th>' +
+    '        <th style="padding:6px;border:1px solid #795548;width:75px" class="no-print">操作</th>' +
+    '      </tr></thead><tbody>';
+
+  if(list.length === 0){
+    h += '<tr><td colspan="12" style="text-align:center;padding:30px;color:var(--sub)">' + ymLabel + ' の日常衛生チェック記録はまだありません。<br><span style="font-size:11px">タブレット画面の「☕ 珈琲HACCP」から利用者がカードを押すと自動で蓄積されます。</span></td></tr>';
+  } else {
+    // 日付昇順でソート
+    var sorted = list.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    sorted.forEach(function(r){
+      var isDefect = (r.healthCheck==='不良'||r.handWash==='不良'||r.tableClean==='不良'||r.pestForeign==='不良'||r.areaSeparation==='不良'||r.fireSafety==='不良');
+      h += '<tr style="' + (isDefect ? 'background:#ffebee' : '') + '">';
+      h += '  <td style="text-align:center;font-weight:700">' + esc(r.date.slice(5)) + '</td>';
+      h += '  <td style="font-weight:700">' + esc(r.workerName) + '</td>';
+      h += '  <td style="text-align:center;font-weight:700;color:' + (r.healthCheck==='良'?'#2e7d32':'#c62828') + '">' + esc(r.healthCheck||'-') + '</td>';
+      h += '  <td style="text-align:center;font-weight:700;color:' + (r.handWash==='良'?'#2e7d32':'#c62828') + '">' + esc(r.handWash||'-') + '</td>';
+      h += '  <td style="text-align:center;font-weight:700;color:' + (r.tableClean==='良'?'#2e7d32':'#c62828') + '">' + esc(r.tableClean||'-') + '</td>';
+      h += '  <td style="text-align:center;font-weight:700;color:' + (r.pestForeign==='良'?'#2e7d32':'#c62828') + '">' + esc(r.pestForeign||'-') + '</td>';
+      h += '  <td style="text-align:center;font-weight:700;color:' + (r.areaSeparation==='良'?'#2e7d32':'#c62828') + '">' + esc(r.areaSeparation||'-') + '</td>';
+      h += '  <td style="text-align:center;font-weight:700;color:' + (r.fireSafety==='良'?'#2e7d32':'#c62828') + '">' + esc(r.fireSafety||'-') + '</td>';
+      h += '  <td style="text-align:center;font-weight:700;color:' + (r.afterClean==='良'?'#2e7d32':'#c62828') + '">' + esc(r.afterClean||'-') + '</td>';
+      h += '  <td style="font-size:11px">' + esc(r.notes || '') + '</td>';
+      h += '  <td style="text-align:center;font-weight:600">' + esc(r.staffName || '') + '</td>';
+      h += '  <td style="text-align:center" class="no-print">' +
+           '    <button type="button" class="bg" onclick="openHaccpDailyModal(\'' + r.id + '\')" style="font-size:10px;padding:2px 6px">編集</button>' +
+           '    <button type="button" onclick="deleteHaccpDailyRecordPc(\'' + r.id + '\',\'' + r.date + '\')" style="font-size:10px;padding:2px 6px;color:#c62828;border:none;background:none;cursor:pointer">✕</button>' +
+           '  </td>';
+      h += '</tr>';
+    });
+  }
+
+  h += '    </tbody></table>' +
+       '  </div>' +
+       '</div>';
+
+  container.innerHTML = h;
+}
+
+// ─── サブタブ2: 焙煎・出荷ロット台帳 ───────────────────────
+async function renderHaccpRoastTab(container){
+  showLoading(container, '焙煎・出荷ロット台帳を読み込み中...');
+  var list = await getHaccpJson('haccp_roast_batches', []);
+
+  var h = '<div class="card" style="padding:16px 20px;margin-bottom:16px;">' +
+    // エクセル準拠ヘッダー情報
+    '  <div style="background:#faf8f5;border:1.5px solid #ded5cc;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:11.5px;line-height:1.6">' +
+    '    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #e5ded5;padding-bottom:6px;margin-bottom:6px">' +
+    '      <div><strong>管理目的：</strong>生豆の受入から焙煎・包装・出荷までを1行で行う、ロット追跡（トレーサビリティ）と品質を管理</div>' +
+    '      <div><strong>責任者：</strong>友田 篤賜</div>' +
+    '    </div>' +
+    '    <div><strong>記録ルール：</strong>製造ロットID例：261113-01（年月日-連番）／ 判定欄は「良／不良」を入力 ／ 異常時は特記事項に記載。</div>' +
+    '  </div>' +
+
+    // アクションバー
+    '  <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
+    '    <span class="card-t">2. 焙煎・出荷台帳（全 ' + list.length + ' ロット）</span>' +
+    '    <div class="no-print" style="display:flex;gap:6px;flex-wrap:wrap">' +
+    '      <button class="bp" onclick="openHaccpRoastModal()" style="font-size:12px;padding:5px 12px;background:#2e7d32;border-color:#2e7d32">＋ 新規ロット追加</button>' +
+    '      <button class="bp" onclick="printHaccpRoastReport()" style="font-size:12px;padding:5px 12px;background:#6a1b9a;border-color:#6a1b9a">🖨️ エクセル様式で印刷 / PDF (A4横)</button>' +
+    '      <button class="bg" onclick="exportHaccpRoastCsv()" style="font-size:12px;padding:5px 10px">📥 CSV出力</button>' +
+    '    </div>' +
+    '  </div>' +
+
+    // テーブル（エクセル画像1と完全一致）
+    '  <div class="tbl-wrap" style="overflow-x:auto">' +
+    '    <table style="width:100%;font-size:11px;border-collapse:collapse;white-space:nowrap">' +
+    '      <thead>' +
+    '        <tr style="background:#4e342e;color:#fff;text-align:center">' +
+    '          <th colspan="2" style="border:1px solid #5d4037;padding:5px">共通・ロット識別</th>' +
+    '          <th colspan="5" style="border:1px solid #5d4037;padding:5px">① 生豆受入記録 (生入荷・使用ロット確定)</th>' +
+    '          <th colspan="6" style="border:1px solid #5d4037;padding:5px">② 焙煎製造記録 (重量管理・品質確認)</th>' +
+    '          <th colspan="7" style="border:1px solid #5d4037;padding:5px">③ 包装・出荷記録 (計量・密封・表示・出荷)</th>' +
+    '          <th style="border:1px solid #5d4037;padding:5px" class="no-print">操作</th>' +
+    '        </tr>' +
+    '        <tr style="background:#efebe9;color:#333;font-size:10.5px;text-align:center">' +
+    '          <th style="border:1px solid #ccc;padding:5px">製造ロットID</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">産地・品種</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">受入日</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">仕入先・生豆ロット</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">受入量(kg)</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">包装・保管</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">カビ虫判定</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">焙煎日</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">投入量(g)</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">焙煎後(g)</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">歩留り(%)</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">冷却確認</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">焙煎異常</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">包装日</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">形態</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">個数</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">密封確認</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">ラベル賞味期限</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">出荷日</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px">出荷備考</th>' +
+    '          <th style="border:1px solid #ccc;padding:5px" class="no-print">操作</th>' +
+    '        </tr>' +
+    '      </thead><tbody>';
+
+  if(list.length === 0){
+    h += '<tr><td colspan="21" style="text-align:center;padding:30px;color:var(--sub)">焙煎・出荷ロット記録はまだありません。「＋ 新規ロット追加」またはタブレットから記録してください。</td></tr>';
+  } else {
+    list.forEach(function(b){
+      h += '<tr>';
+      h += '  <td style="font-weight:700;color:var(--pri)">' + esc(b.lotId) + '</td>';
+      h += '  <td style="font-weight:600">' + esc(b.beanOrigin) + '</td>';
+      h += '  <td>' + esc(b.recvDate || '-') + '</td>';
+      h += '  <td>' + esc(b.supplierLot || '-') + '</td>';
+      h += '  <td style="text-align:right">' + (b.recvKg ? b.recvKg + 'kg' : '-') + '</td>';
+      h += '  <td style="text-align:center">' + esc(b.pkgStatus || '-') + '</td>';
+      h += '  <td style="text-align:center">' + esc(b.defectCheck || '-') + '</td>';
+      h += '  <td>' + esc(b.roastDate || '-') + '</td>';
+      h += '  <td style="text-align:right">' + (b.inputG ? b.inputG + 'g' : '-') + '</td>';
+      h += '  <td style="text-align:right">' + (b.outputG ? b.outputG + 'g' : '-') + '</td>';
+      h += '  <td style="text-align:right;font-weight:700;color:var(--pri)">' + esc(b.yieldPct || '-') + '</td>';
+      h += '  <td style="text-align:center">' + esc(b.coolingCheck || '-') + '</td>';
+      h += '  <td style="text-align:center;color:' + (b.roastDefect==='有'?'#c62828':'#2e7d32') + '">' + esc(b.roastDefect || '-') + '</td>';
+      h += '  <td>' + esc(b.packDate || '-') + '</td>';
+      h += '  <td style="text-align:center">' + esc(b.packType || '-') + '</td>';
+      h += '  <td style="text-align:right">' + (b.packCount || '-') + '</td>';
+      h += '  <td style="text-align:center">' + esc(b.sealCheck || '-') + '</td>';
+      h += '  <td style="text-align:center">' + esc(b.labelCheck || '-') + '</td>';
+      h += '  <td>' + esc(b.shipDate || '-') + '</td>';
+      h += '  <td>' + esc(b.shipNotes || '') + '</td>';
+      h += '  <td style="text-align:center" class="no-print">' +
+           '    <button type="button" class="bg" onclick="openHaccpRoastModal(\'' + b.id + '\')" style="font-size:10px;padding:2px 6px">編集</button>' +
+           '    <button type="button" onclick="deleteHaccpRoastPc(\'' + b.id + '\')" style="font-size:10px;padding:2px 6px;color:#c62828;border:none;background:none;cursor:pointer">✕</button>' +
+           '  </td>';
+      h += '</tr>';
+    });
+  }
+
+  h += '    </tbody></table>' +
+       '  </div>' +
+       '</div>';
+
+  container.innerHTML = h;
+}
+
+// ─── サブタブ3: 月次点検・異常是正 ─────────────────────────
+async function renderHaccpMonthlyTab(container){
+  showLoading(container, '月次点検・異常是正記録を読み込み中...');
+  var curYear = _haccpMonth.slice(0, 4);
+  var monthlyList = await getHaccpJson('haccp_monthly_' + curYear, []);
+  var incidentList = await getHaccpJson('haccp_incidents', []);
+
+  var curMonthCheck = monthlyList.find(function(m){ return m.ym === _haccpMonth; }) || {
+    ym: _haccpMonth,
+    dailyCheck: '良',
+    mfgCheck: '良',
+    incidentCheck: '良',
+    eduCheck: '良',
+    pestControlCheck: '良',
+    reflection: '',
+    checkDate: today(),
+    managerName: '友田 篤賜'
+  };
+
+  var h = '';
+
+  // 2. 月次点検記録（エクセル画像3の上段）
+  h += '<div class="card" style="padding:18px 20px;margin-bottom:20px;">' +
+    '  <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+    '    <span class="card-t">2. 月次点検記録（月末または月1回責任者が点検・記録）</span>' +
+    '    <span style="font-size:12px;font-weight:700;color:var(--pri)">対象年月: ' + _haccpMonth + '度</span>' +
+    '  </div>' +
+    '  <form onsubmit="event.preventDefault();saveHaccpMonthlyRecordForm();">' +
+    '    <div style="background:#faf8f5;border:1.5px solid var(--bdr);border-radius:10px;padding:14px;margin-bottom:12px">' +
+    '      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px">' +
+    '        <div><label style="font-size:11px;font-weight:700;color:var(--sub)">日常記録確認</label><select id="hm-daily" style="width:100%"><option value="良"' + (curMonthCheck.dailyCheck==='良'?' selected':'') + '>良</option><option value="不良"' + (curMonthCheck.dailyCheck==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '        <div><label style="font-size:11px;font-weight:700;color:var(--sub)">製造・出荷確認</label><select id="hm-mfg" style="width:100%"><option value="良"' + (curMonthCheck.mfgCheck==='良'?' selected':'') + '>良</option><option value="不良"' + (curMonthCheck.mfgCheck==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '        <div><label style="font-size:11px;font-weight:700;color:var(--sub)">異常記録確認</label><select id="hm-inc" style="width:100%"><option value="良"' + (curMonthCheck.incidentCheck==='良'?' selected':'') + '>良</option><option value="不良"' + (curMonthCheck.incidentCheck==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '        <div><label style="font-size:11px;font-weight:700;color:var(--sub)">衛生教育・健康管理</label><select id="hm-edu" style="width:100%"><option value="良"' + (curMonthCheck.eduCheck==='良'?' selected':'') + '>良</option><option value="不良"' + (curMonthCheck.eduCheck==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '        <div><label style="font-size:11px;font-weight:700;color:var(--sub)">設備防虫定期点検</label><select id="hm-pest" style="width:100%"><option value="良"' + (curMonthCheck.pestControlCheck==='良'?' selected':'') + '>良</option><option value="不良"' + (curMonthCheck.pestControlCheck==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '      </div>' +
+    '      <div class="field" style="margin-bottom:10px">' +
+    '        <label style="font-size:11px;font-weight:700;color:var(--sub)">改善事項・振り返り</label>' +
+    '        <input type="text" id="hm-reflection" value="' + esc(curMonthCheck.reflection || '') + '" placeholder="今月の総括、改善点検など">' +
+    '      </div>' +
+    '      <div style="display:flex;justify-content:space-between;align-items:center">' +
+    '        <div style="display:flex;gap:16px;align-items:center">' +
+    '          <label style="font-size:12px;color:var(--sub)">確認日: <input type="date" id="hm-date" value="' + (curMonthCheck.checkDate || today()) + '"></label>' +
+    '          <label style="font-size:12px;color:var(--sub)">責任者確認: <input type="text" id="hm-manager" value="' + esc(curMonthCheck.managerName || '友田 篤賜') + '" style="width:120px"></label>' +
+    '        </div>' +
+    '        <button type="submit" class="bp" style="padding:8px 20px;font-weight:700">💾 月次点検を保存</button>' +
+    '      </div>' +
+    '    </div>' +
+    '  </form>' +
+    '</div>';
+
+  // 3. 異常・是正記録（エクセル画像3の下段）
+  h += '<div class="card" style="padding:18px 20px;">' +
+    '  <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+    '    <span class="card-t">3. 異常・是正記録（異常発生時のみ記入 ※通常時は空欄で可）</span>' +
+    '    <button type="button" class="bp" onclick="openHaccpIncidentModal()" style="font-size:12px;padding:5px 12px;background:#c62828;border-color:#c62828">＋ 異常・是正記録を追加</button>' +
+    '  </div>' +
+    '  <div class="tbl-wrap">' +
+    '    <table style="width:100%;font-size:11.5px;border-collapse:collapse">' +
+    '      <thead><tr style="background:#5d4037;color:#fff;text-align:center">' +
+    '        <th style="padding:6px;border:1px solid #795548;width:80px">発生日</th>' +
+    '        <th style="padding:6px;border:1px solid #795548;width:80px">工程</th>' +
+    '        <th style="padding:6px;border:1px solid #795548;width:90px">対象ロットID</th>' +
+    '        <th style="padding:6px;border:1px solid #795548">異常内容</th>' +
+    '        <th style="padding:6px;border:1px solid #795548">製品の保留・隔離措置</th>' +
+    '        <th style="padding:6px;border:1px solid #795548">是正処置・原因究明</th>' +
+    '        <th style="padding:6px;border:1px solid #795548">再確認結果</th>' +
+    '        <th style="padding:6px;border:1px solid #795548">再発防止策</th>' +
+    '        <th style="padding:6px;border:1px solid #795548;width:90px">責任者/完了日</th>' +
+    '        <th style="padding:6px;border:1px solid #795548;width:60px" class="no-print">操作</th>' +
+    '      </tr></thead><tbody>';
+
+  if(incidentList.length === 0){
+    h += '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--sub)">登録された異常・是正記録はありません（すべて正常運用されています）。</td></tr>';
+  } else {
+    incidentList.forEach(function(inc){
+      h += '<tr>';
+      h += '  <td style="text-align:center;font-weight:700">' + esc(inc.date || '-') + '</td>';
+      h += '  <td>' + esc(inc.process || '-') + '</td>';
+      h += '  <td style="font-weight:700;color:var(--pri)">' + esc(inc.lotId || '-') + '</td>';
+      h += '  <td style="color:#c62828;font-weight:600">' + esc(inc.issueDesc || '-') + '</td>';
+      h += '  <td>' + esc(inc.holdAction || '-') + '</td>';
+      h += '  <td>' + esc(inc.correctiveAction || '-') + '</td>';
+      h += '  <td>' + esc(inc.recheckResult || '-') + '</td>';
+      h += '  <td>' + esc(inc.prevention || '-') + '</td>';
+      h += '  <td style="text-align:center;font-size:10.5px">' + esc(inc.manager || '') + '<br>' + esc(inc.completeDate || '') + '</td>';
+      h += '  <td style="text-align:center" class="no-print">' +
+           '    <button type="button" class="bg" onclick="openHaccpIncidentModal(\'' + inc.id + '\')" style="font-size:10px;padding:2px 6px">編集</button>' +
+           '    <button type="button" onclick="deleteHaccpIncidentPc(\'' + inc.id + '\')" style="font-size:10px;padding:2px 6px;color:#c62828;border:none;background:none;cursor:pointer">✕</button>' +
+           '  </td>';
+      h += '</tr>';
+    });
+  }
+
+  h += '    </tbody></table>' +
+       '  </div>' +
+       '</div>';
+
+  container.innerHTML = h;
+}
+
+async function saveHaccpMonthlyRecordForm(){
+  var curYear = _haccpMonth.slice(0, 4);
+  var record = {
+    ym: _haccpMonth,
+    dailyCheck: el('hm-daily').value,
+    mfgCheck: el('hm-mfg').value,
+    incidentCheck: el('hm-inc').value,
+    eduCheck: el('hm-edu').value,
+    pestControlCheck: el('hm-pest').value,
+    reflection: el('hm-reflection').value,
+    checkDate: el('hm-date').value,
+    managerName: el('hm-manager').value
+  };
+
+  var key = 'haccp_monthly_' + curYear;
+  var list = await getHaccpJson(key, []);
+  var idx = list.findIndex(function(x){ return x.ym === record.ym; });
+  if(idx >= 0) list[idx] = record;
+  else list.push(record);
+  await saveHaccpJson(key, list);
+
+  toast('✅ ' + _haccpMonth + '度の月次点検記録を保存しました！');
+}
+
+// ─── モーダル編集（日常衛生 / 焙煎ロット / 異常是正） ─────────
+async function openHaccpDailyModal(editId){
+  var list = await getHaccpJson('haccp_hygiene_' + _haccpMonth, []);
+  var r = editId ? list.find(function(x){ return x.id === editId; }) : null;
+
+  var dateVal = r ? r.date : today();
+  var workerVal = r ? r.workerName : '';
+  var staffVal = r ? r.staffName : ((getSession()||{}).name || '友田 篤賜');
+  var notesVal = r ? r.notes : '';
+
+  var h = '<div id="haccp-edit-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;justify-content:center;align-items:center;padding:16px">' +
+    '<div style="background:#fff;border-radius:12px;width:560px;max-width:95vw;padding:22px;box-shadow:0 8px 24px rgba(0,0,0,0.25)">' +
+    '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #eee;padding-bottom:8px">' +
+    '    <h3 style="font-size:16px;font-weight:700;color:var(--pri)">' + (r ? '日常衛生記録の編集' : '日常衛生記録の手動追加') + '</h3>' +
+    '    <button onclick="closeModal(\'common-modal\')" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>' +
+    '  </div>' +
+    '  <form onsubmit="event.preventDefault();submitHaccpDailyModal(\'' + (r ? r.id : '') + '\')">' +
+    '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">' +
+    '      <div class="field"><label>作業日</label><input type="date" id="med-date" value="' + dateVal + '" required></div>' +
+    '      <div class="field"><label>作業者名</label><input type="text" id="med-worker" value="' + esc(workerVal) + '" required placeholder="利用者氏名"></div>' +
+    '    </div>' +
+    '    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:#faf8f5;padding:10px;border-radius:8px;margin-bottom:10px">' +
+    '      <div><label style="font-size:11px">健康確認</label><select id="med-health"><option value="良"' + (r&&r.healthCheck==='不良'?'':' selected') + '>良</option><option value="不良"' + (r&&r.healthCheck==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '      <div><label style="font-size:11px">手洗い消毒</label><select id="med-wash"><option value="良"' + (r&&r.handWash==='不良'?'':' selected') + '>良</option><option value="不良"' + (r&&r.handWash==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '      <div><label style="font-size:11px">専用台器具</label><select id="med-clean"><option value="良"' + (r&&r.tableClean==='不良'?'':' selected') + '>良</option><option value="不良"' + (r&&r.tableClean==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '      <div><label style="font-size:11px">害虫異物</label><select id="med-pest"><option value="良"' + (r&&r.pestForeign==='不良'?'':' selected') + '>良</option><option value="不良"' + (r&&r.pestForeign==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '      <div><label style="font-size:11px">他作業区分</label><select id="med-area"><option value="良"' + (r&&r.areaSeparation==='不良'?'':' selected') + '>良</option><option value="不良"' + (r&&r.areaSeparation==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '      <div><label style="font-size:11px">設備火気</label><select id="med-fire"><option value="良"' + (r&&r.fireSafety==='不良'?'':' selected') + '>良</option><option value="不良"' + (r&&r.fireSafety==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '    </div>' +
+    '    <div class="field" style="margin-bottom:8px"><label>特記事項 (異常内容・対応メモ)</label><input type="text" id="med-notes" value="' + esc(notesVal) + '" placeholder="特記事項があれば入力"></div>' +
+    '    <div class="field" style="margin-bottom:14px"><label>確認職員名</label><input type="text" id="med-staff" value="' + esc(staffVal) + '" required></div>' +
+    '    <div style="display:flex;justify-content:flex-end;gap:10px">' +
+    '      <button type="button" class="bg" onclick="closeModal(\'common-modal\')">キャンセル</button>' +
+    '      <button type="submit" class="bp">保存</button>' +
+    '    </div>' +
+    '  </form>' +
+    '</div></div>';
+
+  document.getElementById('common-modal').innerHTML = h;
+}
+
+async function submitHaccpDailyModal(editId){
+  var dateStr = el('med-date').value;
+  var ym = dateStr.slice(0, 7);
+  var key = 'haccp_hygiene_' + ym;
+  var list = await getHaccpJson(key, []);
+
+  var record = {
+    id: editId || ('hh_' + Date.now() + Math.random().toString(36).substr(2,4)),
+    date: dateStr,
+    workerId: '',
+    workerName: el('med-worker').value,
+    healthCheck: el('med-health').value,
+    handWash: el('med-wash').value,
+    tableClean: el('med-clean').value,
+    pestForeign: el('med-pest').value,
+    areaSeparation: el('med-area').value,
+    fireSafety: el('med-fire').value,
+    afterClean: '良',
+    notes: el('med-notes').value,
+    staffName: el('med-staff').value,
+    createdAt: new Date().toISOString()
+  };
+
+  var idx = list.findIndex(function(x){ return x.id === record.id; });
+  if(idx >= 0) list[idx] = record;
+  else list.unshift(record);
+
+  await saveHaccpJson(key, list);
+  closeModal('common-modal');
+  toast('✅ 衛生記録を保存しました');
+  renderHaccpDailyTab(document.getElementById('haccp-body'));
+}
+
+async function deleteHaccpDailyRecordPc(id, date){
+  if(!confirm('この日常衛生記録を削除してもよろしいですか？')) return;
+  var ym = date.slice(0, 7);
+  var key = 'haccp_hygiene_' + ym;
+  var list = await getHaccpJson(key, []);
+  list = list.filter(function(x){ return x.id !== id; });
+  await saveHaccpJson(key, list);
+  toast('削除しました');
+  renderHaccpDailyTab(document.getElementById('haccp-body'));
+}
+
+// 焙煎ロットモーダル
+async function openHaccpRoastModal(editId){
+  var list = await getHaccpJson('haccp_roast_batches', []);
+  var b = editId ? list.find(function(x){ return x.id === editId; }) : null;
+
+  var t = new Date();
+  var yy = String(t.getFullYear()).slice(2);
+  var mm = String(t.getMonth()+1).padStart(2,'0');
+  var dd = String(t.getDate()).padStart(2,'0');
+  var defLot = yy + mm + dd + '-01';
+
+  var h = '<div id="haccp-roast-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;justify-content:center;align-items:center;padding:16px;overflow-y:auto">' +
+    '<div style="background:#fff;border-radius:12px;width:720px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:22px;box-shadow:0 8px 24px rgba(0,0,0,0.25)">' +
+    '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #eee;padding-bottom:8px">' +
+    '    <h3 style="font-size:16px;font-weight:700;color:var(--pri)">' + (b ? 'ロット台帳の編集 (' + esc(b.lotId) + ')' : '新規ロット台帳の追加') + '</h3>' +
+    '    <button onclick="closeModal(\'common-modal\')" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>' +
+    '  </div>' +
+    '  <form onsubmit="event.preventDefault();submitHaccpRoastModal(\'' + (b ? b.id : '') + '\')">' +
+    '    <div class="grid2" style="margin-bottom:10px">' +
+    '      <div class="field"><label>製造ロットID <span style="color:#c62828">*</span></label><input type="text" id="mro-lot" value="' + esc(b ? b.lotId : defLot) + '" required style="font-weight:700"></div>' +
+    '      <div class="field"><label>産地・銘柄・品種 <span style="color:#c62828">*</span></label><input type="text" id="mro-origin" value="' + esc(b ? b.beanOrigin : '') + '" required placeholder="例: エチオピア イルガチェフェ G1"></div>' +
+    '    </div>' +
+    '    <div style="background:#faf8f5;border:1px solid #ded5cc;border-radius:8px;padding:10px;margin-bottom:10px">' +
+    '      <div style="font-size:12px;font-weight:700;color:var(--pri);margin-bottom:6px">① 生豆受入記録</div>' +
+    '      <div class="grid3">' +
+    '        <div class="field"><label>受入日</label><input type="date" id="mro-recv-date" value="' + (b ? b.recvDate : today()) + '"></div>' +
+    '        <div class="field"><label>仕入先ロット</label><input type="text" id="mro-supp-lot" value="' + esc(b ? b.supplierLot : '') + '"></div>' +
+    '        <div class="field"><label>受入量(kg)</label><input type="number" step="0.1" id="mro-recv-kg" value="' + (b ? b.recvKg : '') + '"></div>' +
+    '      </div>' +
+    '      <div class="grid2">' +
+    '        <div class="field"><label>包装状態</label><select id="mro-pkg"><option value="良"' + (b&&b.pkgStatus==='不良'?'':' selected') + '>良</option><option value="不良"' + (b&&b.pkgStatus==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '        <div class="field"><label>カビ虫判定</label><select id="mro-defect"><option value="良"' + (b&&b.defectCheck==='不良'?'':' selected') + '>良</option><option value="不良"' + (b&&b.defectCheck==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '      </div>' +
+    '    </div>' +
+    '    <div style="background:#faf8f5;border:1px solid #ded5cc;border-radius:8px;padding:10px;margin-bottom:10px">' +
+    '      <div style="font-size:12px;font-weight:700;color:var(--pri);margin-bottom:6px">② 焙煎製造記録</div>' +
+    '      <div class="grid3">' +
+    '        <div class="field"><label>焙煎日</label><input type="date" id="mro-roast-date" value="' + (b ? b.roastDate : today()) + '"></div>' +
+    '        <div class="field"><label>投入量(g)</label><input type="number" id="mro-in-g" value="' + (b ? b.inputG : '') + '" oninput="calcRoastModalYield()"></div>' +
+    '        <div class="field"><label>焙煎後(g)</label><input type="number" id="mro-out-g" value="' + (b ? b.outputG : '') + '" oninput="calcRoastModalYield()"></div>' +
+    '      </div>' +
+    '      <div class="grid3">' +
+    '        <div class="field"><label>歩留り(%)</label><input type="text" id="mro-yield" value="' + esc(b ? b.yieldPct : '') + '" readonly style="background:#eee;font-weight:700"></div>' +
+    '        <div class="field"><label>冷却確認</label><select id="mro-cool"><option value="良"' + (b&&b.coolingCheck==='不良'?'':' selected') + '>良</option><option value="不良"' + (b&&b.coolingCheck==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '        <div class="field"><label>焙煎異常</label><select id="mro-rdefect"><option value="無"' + (b&&b.roastDefect==='有'?'':' selected') + '>無</option><option value="有"' + (b&&b.roastDefect==='有'?' selected':'') + '>有</option></select></div>' +
+    '      </div>' +
+    '    </div>' +
+    '    <div style="background:#faf8f5;border:1px solid #ded5cc;border-radius:8px;padding:10px;margin-bottom:14px">' +
+    '      <div style="font-size:12px;font-weight:700;color:var(--pri);margin-bottom:6px">③ 包装・出荷記録</div>' +
+    '      <div class="grid3">' +
+    '        <div class="field"><label>包装日</label><input type="date" id="mro-pack-date" value="' + (b ? b.packDate : today()) + '"></div>' +
+    '        <div class="field"><label>形態</label><select id="mro-pack-type"><option value="豆"' + (b&&b.packType==='豆'?' selected':'') + '>豆</option><option value="粉"' + (b&&b.packType==='粉'?' selected':'') + '>粉</option><option value="ドリップバッグ"' + (b&&b.packType==='ドリップバッグ'?' selected':'') + '>ドリップバッグ</option></select></div>' +
+    '        <div class="field"><label>個数</label><input type="number" id="mro-pack-cnt" value="' + (b ? b.packCount : '') + '"></div>' +
+    '      </div>' +
+    '      <div class="grid3">' +
+    '        <div class="field"><label>密封確認</label><select id="mro-seal"><option value="良"' + (b&&b.sealCheck==='不良'?'':' selected') + '>良</option><option value="不良"' + (b&&b.sealCheck==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '        <div class="field"><label>ラベル賞味期限</label><select id="mro-label"><option value="良"' + (b&&b.labelCheck==='不良'?'':' selected') + '>良</option><option value="不良"' + (b&&b.labelCheck==='不良'?' selected':'') + '>不良</option></select></div>' +
+    '        <div class="field"><label>出荷日</label><input type="date" id="mro-ship-date" value="' + (b ? b.shipDate : '') + '"></div>' +
+    '      </div>' +
+    '      <div class="field"><label>出荷確認・備考</label><input type="text" id="mro-notes" value="' + esc(b ? b.shipNotes : '') + '"></div>' +
+    '    </div>' +
+    '    <div style="display:flex;justify-content:flex-end;gap:10px">' +
+    '      <button type="button" class="bg" onclick="closeModal(\'common-modal\')">キャンセル</button>' +
+    '      <button type="submit" class="bp">保存</button>' +
+    '    </div>' +
+    '  </form>' +
+    '</div></div>';
+
+  document.getElementById('common-modal').innerHTML = h;
+}
+
+function calcRoastModalYield(){
+  var inp = Number(el('mro-in-g').value) || 0;
+  var out = Number(el('mro-out-g').value) || 0;
+  var yEl = el('mro-yield');
+  if(!yEl) return;
+  if(inp > 0 && out > 0){
+    yEl.value = (Math.round((out / inp) * 1000) / 10) + '%';
+  } else {
+    yEl.value = '';
+  }
+}
+
+async function submitHaccpRoastModal(editId){
+  var list = await getHaccpJson('haccp_roast_batches', []);
+  var record = {
+    id: editId || ('hr_' + Date.now() + Math.random().toString(36).substr(2,4)),
+    lotId: el('mro-lot').value,
+    beanOrigin: el('mro-origin').value,
+    recvDate: el('mro-recv-date').value,
+    supplierLot: el('mro-supp-lot').value,
+    recvKg: Number(el('mro-recv-kg').value) || 0,
+    pkgStatus: el('mro-pkg').value,
+    defectCheck: el('mro-defect').value,
+    roastDate: el('mro-roast-date').value,
+    inputG: Number(el('mro-in-g').value) || 0,
+    outputG: Number(el('mro-out-g').value) || 0,
+    yieldPct: el('mro-yield').value,
+    coolingCheck: el('mro-cool').value,
+    roastDefect: el('mro-rdefect').value,
+    packDate: el('mro-pack-date').value,
+    packType: el('mro-pack-type').value,
+    packCount: Number(el('mro-pack-cnt').value) || 0,
+    sealCheck: el('mro-seal').value,
+    labelCheck: el('mro-label').value,
+    shipDate: el('mro-ship-date').value,
+    shipNotes: el('mro-notes').value,
+    createdAt: new Date().toISOString()
+  };
+
+  var idx = list.findIndex(function(x){ return x.id === record.id; });
+  if(idx >= 0) list[idx] = record;
+  else list.unshift(record);
+
+  await saveHaccpJson('haccp_roast_batches', list);
+  closeModal('common-modal');
+  toast('✅ ロット台帳を保存しました');
+  renderHaccpRoastTab(document.getElementById('haccp-body'));
+}
+
+async function deleteHaccpRoastPc(id){
+  if(!confirm('このロット台帳を削除してもよろしいですか？')) return;
+  var list = await getHaccpJson('haccp_roast_batches', []);
+  list = list.filter(function(x){ return x.id !== id; });
+  await saveHaccpJson('haccp_roast_batches', list);
+  toast('削除しました');
+  renderHaccpRoastTab(document.getElementById('haccp-body'));
+}
+
+// 異常是正モーダル
+async function openHaccpIncidentModal(editId){
+  var list = await getHaccpJson('haccp_incidents', []);
+  var inc = editId ? list.find(function(x){ return x.id === editId; }) : null;
+
+  var h = '<div id="haccp-inc-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;justify-content:center;align-items:center;padding:16px">' +
+    '<div style="background:#fff;border-radius:12px;width:600px;max-width:96vw;padding:22px;box-shadow:0 8px 24px rgba(0,0,0,0.25)">' +
+    '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #eee;padding-bottom:8px">' +
+    '    <h3 style="font-size:16px;font-weight:700;color:#c62828">異常・是正処置の記録</h3>' +
+    '    <button onclick="closeModal(\'common-modal\')" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>' +
+    '  </div>' +
+    '  <form onsubmit="event.preventDefault();submitHaccpIncidentModal(\'' + (inc ? inc.id : '') + '\')">' +
+    '    <div class="grid3" style="margin-bottom:8px">' +
+    '      <div class="field"><label>発生日</label><input type="date" id="minc-date" value="' + (inc ? inc.date : today()) + '" required></div>' +
+    '      <div class="field"><label>工程</label><input type="text" id="minc-process" value="' + esc(inc ? inc.process : '焙煎製造') + '" required></div>' +
+    '      <div class="field"><label>対象ロットID</label><input type="text" id="minc-lot" value="' + esc(inc ? inc.lotId : '') + '"></div>' +
+    '    </div>' +
+    '    <div class="field" style="margin-bottom:8px"><label>異常内容</label><input type="text" id="minc-desc" value="' + esc(inc ? inc.issueDesc : '') + '" required placeholder="温度上昇不足、欠点豆混入等"></div>' +
+    '    <div class="field" style="margin-bottom:8px"><label>製品の保留・隔離措置</label><input type="text" id="minc-hold" value="' + esc(inc ? inc.holdAction : '') + '" placeholder="該当バッチの出荷保留など"></div>' +
+    '    <div class="field" style="margin-bottom:8px"><label>是正処置・原因究明</label><input type="text" id="minc-correct" value="' + esc(inc ? inc.correctiveAction : '') + '" placeholder="バーナー清掃、再選別の実施など"></div>' +
+    '    <div class="grid2" style="margin-bottom:8px">' +
+    '      <div class="field"><label>再確認結果</label><input type="text" id="minc-recheck" value="' + esc(inc ? inc.recheckResult : '正常確認') + '"></div>' +
+    '      <div class="field"><label>再発防止策</label><input type="text" id="minc-prevent" value="' + esc(inc ? inc.prevention : '') + '"></div>' +
+    '    </div>' +
+    '    <div class="grid2" style="margin-bottom:14px">' +
+    '      <div class="field"><label>責任者氏名</label><input type="text" id="minc-mgr" value="' + esc(inc ? inc.manager : '友田 篤賜') + '"></div>' +
+    '      <div class="field"><label>完了確認日</label><input type="date" id="minc-cdate" value="' + (inc ? inc.completeDate : today()) + '"></div>' +
+    '    </div>' +
+    '    <div style="display:flex;justify-content:flex-end;gap:10px">' +
+    '      <button type="button" class="bg" onclick="closeModal(\'common-modal\')">キャンセル</button>' +
+    '      <button type="submit" class="bp">保存</button>' +
+    '    </div>' +
+    '  </form>' +
+    '</div></div>';
+
+  document.getElementById('common-modal').innerHTML = h;
+}
+
+async function submitHaccpIncidentModal(editId){
+  var list = await getHaccpJson('haccp_incidents', []);
+  var record = {
+    id: editId || ('hi_' + Date.now() + Math.random().toString(36).substr(2,4)),
+    date: el('minc-date').value,
+    process: el('minc-process').value,
+    lotId: el('minc-lot').value,
+    issueDesc: el('minc-desc').value,
+    holdAction: el('minc-hold').value,
+    correctiveAction: el('minc-correct').value,
+    recheckResult: el('minc-recheck').value,
+    prevention: el('minc-prevent').value,
+    manager: el('minc-mgr').value,
+    completeDate: el('minc-cdate').value,
+    createdAt: new Date().toISOString()
+  };
+
+  var idx = list.findIndex(function(x){ return x.id === record.id; });
+  if(idx >= 0) list[idx] = record;
+  else list.unshift(record);
+
+  await saveHaccpJson('haccp_incidents', list);
+  closeModal('common-modal');
+  toast('✅ 異常・是正記録を保存しました');
+  renderHaccpMonthlyTab(document.getElementById('haccp-body'));
+}
+
+async function deleteHaccpIncidentPc(id){
+  if(!confirm('この異常・是正記録を削除してもよろしいですか？')) return;
+  var list = await getHaccpJson('haccp_incidents', []);
+  list = list.filter(function(x){ return x.id !== id; });
+  await saveHaccpJson('haccp_incidents', list);
+  toast('削除しました');
+  renderHaccpMonthlyTab(document.getElementById('haccp-body'));
+}
+
+// ─── 帳票印刷（エクセル原本と完全同一レイアウト） ─────────────
+async function printHaccpDailyReport(ym){
+  var ymLabel = ym.replace('-', '年') + '月分';
+  var facName = S.settings.facilityName || '就労継続支援B型 ひとつぎ豊中小曽根';
+  var list = await getHaccpJson('haccp_hygiene_' + ym, []);
+  var curYear = ym.slice(0, 4);
+  var monthlyList = await getHaccpJson('haccp_monthly_' + curYear, []);
+  var mCheck = monthlyList.find(function(x){ return x.ym === ym; }) || {};
+  var incidentList = await getHaccpJson('haccp_incidents', []);
+  var mIncidents = incidentList.filter(function(x){ return x.date && x.date.startsWith(ym); });
+
+  // 1. 日常衛生記録の行（最大31日分枠）
+  var sorted = list.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+  var rowsHtml = '';
+  var rowCount = Math.max(sorted.length, 12);
+  for(var i = 0; i < rowCount; i++){
+    var r = sorted[i] || {};
+    rowsHtml += '<tr>' +
+      '<td style="text-align:center;padding:3px">' + (r.date ? r.date.slice(5) : '') + '</td>' +
+      '<td style="padding:3px 6px">' + esc(r.workerName || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(r.healthCheck || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(r.handWash || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(r.tableClean || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(r.pestForeign || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(r.areaSeparation || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(r.fireSafety || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(r.afterClean || '') + '</td>' +
+      '<td style="padding:3px 6px;font-size:9.5px">' + esc(r.notes || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(r.staffName || '') + '</td>' +
+      '</tr>';
+  }
+
+  // 2. 月次点検行
+  var monthlyRow = '<tr>' +
+    '<td style="text-align:center;padding:4px">' + ymLabel + '</td>' +
+    '<td style="text-align:center;padding:4px">' + esc(mCheck.dailyCheck || '良') + '</td>' +
+    '<td style="text-align:center;padding:4px">' + esc(mCheck.mfgCheck || '良') + '</td>' +
+    '<td style="text-align:center;padding:4px">' + esc(mCheck.incidentCheck || '良') + '</td>' +
+    '<td style="text-align:center;padding:4px">' + esc(mCheck.eduCheck || '良') + '</td>' +
+    '<td style="text-align:center;padding:4px">' + esc(mCheck.pestControlCheck || '良') + '</td>' +
+    '<td style="padding:4px 6px">' + esc(mCheck.reflection || '日常衛生・製造点検ともに良好に実施。') + '</td>' +
+    '<td style="text-align:center;padding:4px">' + esc(mCheck.checkDate || '') + '</td>' +
+    '<td style="text-align:center;padding:4px">' + esc(mCheck.managerName || '友田 篤賜') + '</td>' +
+    '</tr>';
+
+  // 3. 異常是正行
+  var incRows = '';
+  if(mIncidents.length === 0){
+    incRows = '<tr><td colspan="9" style="text-align:center;padding:6px;color:#888">異常発生なし（正常運用）</td></tr>';
+  } else {
+    mIncidents.forEach(function(inc){
+      incRows += '<tr>' +
+        '<td style="text-align:center;padding:3px">' + esc(inc.date || '') + '</td>' +
+        '<td style="padding:3px">' + esc(inc.process || '') + '</td>' +
+        '<td style="padding:3px">' + esc(inc.lotId || '') + '</td>' +
+        '<td style="padding:3px">' + esc(inc.issueDesc || '') + '</td>' +
+        '<td style="padding:3px">' + esc(inc.holdAction || '') + '</td>' +
+        '<td style="padding:3px">' + esc(inc.correctiveAction || '') + '</td>' +
+        '<td style="padding:3px">' + esc(inc.recheckResult || '') + '</td>' +
+        '<td style="padding:3px">' + esc(inc.prevention || '') + '</td>' +
+        '<td style="text-align:center;padding:3px">' + esc(inc.manager || '') + '</td>' +
+        '</tr>';
+    });
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>【ひとつぎ珈琲】HACCP 衛生・点検チェック表 - ' + ymLabel + '</title>' +
+    '<style>' +
+    '  @page { size: A4 portrait; margin: 10mm 12mm; }' +
+    '  * { box-sizing: border-box; }' +
+    '  body { font-family: "MS 明朝", "Yu Mincho", serif; color: #111; font-size: 10pt; line-height: 1.3; margin: 0; padding: 10px; }' +
+    '  h1 { font-size: 14pt; margin: 0 0 6px 0; font-weight: 700; }' +
+    '  table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }' +
+    '  th, td { border: 1px solid #333; }' +
+    '  th { background: #f2ede7; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+    '  .sec-hd { font-weight: 700; font-size: 10pt; margin: 10px 0 4px; padding: 2px 6px; background: #e8e0d5; -webkit-print-color-adjust: exact; print-color-adjust: exact; border-left: 4px solid #5d4037; }' +
+    '</style></head><body>' +
+    '<h1>【ひとつぎ珈琲】HACCP 衛生・点検チェック表（日常衛生・月次点検・異常是正）</h1>' +
+    '<table>' +
+    '  <tr>' +
+    '    <th style="width:14%;padding:4px">事業所名</th><td style="width:26%;padding:4px">' + esc(facName) + '</td>' +
+    '    <th style="width:12%;padding:4px">作業場所</th><td style="width:24%;padding:4px">訓練・作業室内 コーヒー専用テーブル</td>' +
+    '    <th style="width:14%;padding:4px">衛生管理責任者</th><td style="width:10%;padding:4px;text-align:center">友田 篤賜</td>' +
+    '  </tr>' +
+    '  <tr>' +
+    '    <th style="padding:4px">対象年月</th><td style="padding:4px;font-weight:700">' + ymLabel + '</td>' +
+    '    <th style="padding:4px">運用ルール</th><td colspan="3" style="padding:4px;font-size:8.5pt">作業日ごとに1行記録（良／不良／該当なし）。異常時は対象品を保留し、下段「異常・是正記録」へ記入。</td>' +
+    '  </tr>' +
+    '</table>' +
+
+    '<div class="sec-hd">1. 日常衛生記録（作業実施日ごとに記入）</div>' +
+    '<table>' +
+    '  <thead><tr>' +
+    '    <th style="width:6%">作業日</th><th style="width:14%">作業者</th>' +
+    '    <th style="width:8%">健康確認<br><span style="font-size:7.5pt">(体調・手指傷)</span></th>' +
+    '    <th style="width:8%">手洗い<br><span style="font-size:7.5pt">・消毒</span></th>' +
+    '    <th style="width:8%">専用台・<br><span style="font-size:7.5pt">器具清掃</span></th>' +
+    '    <th style="width:8%">害虫・異物<br><span style="font-size:7.5pt">有無</span></th>' +
+    '    <th style="width:8%">他作業との<br><span style="font-size:7.5pt">区分確認</span></th>' +
+    '    <th style="width:8%">設備・火気<br><span style="font-size:7.5pt">安全確認</span></th>' +
+    '    <th style="width:8%">作業終了後<br><span style="font-size:7.5pt">清掃・片付</span></th>' +
+    '    <th style="width:16%">特記事項 (異常内容・対応メモ)</th>' +
+    '    <th style="width:8%">職員確認</th>' +
+    '  </tr></thead><tbody>' + rowsHtml + '</tbody>' +
+    '</table>' +
+
+    '<div class="sec-hd">2. 月次点検記録（月末または月1回責任者が点検・記録）</div>' +
+    '<table>' +
+    '  <thead><tr>' +
+    '    <th style="width:10%">対象月</th><th style="width:8%">日常記録<br>確認</th><th style="width:8%">製造・出荷<br>記録確認</th><th style="width:8%">異常記録<br>確認</th><th style="width:10%">衛生教育・<br>健康管理</th><th style="width:10%">設備・防虫防鼠<br>定期点検</th><th style="width:30%">改善事項・振り返り</th><th style="width:8%">確認日</th><th style="width:8%">責任者確認</th>' +
+    '  </tr></thead><tbody>' + monthlyRow + '</tbody>' +
+    '</table>' +
+
+    '<div class="sec-hd">3. 異常・是正記録（異常発生時のみ記入 ※通常時は空欄で可）</div>' +
+    '<table>' +
+    '  <thead><tr>' +
+    '    <th style="width:8%">発生日</th><th style="width:9%">工程</th><th style="width:10%">対象ロットID</th><th style="width:15%">異常内容</th><th style="width:14%">製品の保留・隔離措置</th><th style="width:16%">是正処置・原因究明</th><th style="width:10%">再確認結果</th><th style="width:10%">再発防止策</th><th style="width:8%">責任者</th>' +
+    '  </tr></thead><tbody>' + incRows + '</tbody>' +
+    '</table>' +
+
+    '<script>window.onload=function(){ setTimeout(function(){ window.print(); }, 200); };<\/script>' +
+    '</body></html>';
+
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+async function printHaccpRoastReport(){
+  var facName = S.settings.facilityName || '就労継続支援B型 ひとつぎ豊中小曽根';
+  var list = await getHaccpJson('haccp_roast_batches', []);
+
+  var rowsHtml = '';
+  var rowCount = Math.max(list.length, 12);
+  for(var i = 0; i < rowCount; i++){
+    var b = list[i] || {};
+    rowsHtml += '<tr>' +
+      '<td style="text-align:center;font-weight:700;padding:3px">' + esc(b.lotId || '') + '</td>' +
+      '<td style="padding:3px 5px">' + esc(b.beanOrigin || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.recvDate || '') + '</td>' +
+      '<td style="padding:3px 5px">' + esc(b.supplierLot || '') + '</td>' +
+      '<td style="text-align:right;padding:3px">' + (b.recvKg ? b.recvKg + 'kg' : '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.pkgStatus || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.defectCheck || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.roastDate || '') + '</td>' +
+      '<td style="text-align:right;padding:3px">' + (b.inputG ? b.inputG + 'g' : '') + '</td>' +
+      '<td style="text-align:right;padding:3px">' + (b.outputG ? b.outputG + 'g' : '') + '</td>' +
+      '<td style="text-align:right;font-weight:700;padding:3px">' + esc(b.yieldPct || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.coolingCheck || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.roastDefect || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.packDate || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.packType || '') + '</td>' +
+      '<td style="text-align:right;padding:3px">' + (b.packCount || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.sealCheck || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.labelCheck || '') + '</td>' +
+      '<td style="text-align:center;padding:3px">' + esc(b.shipDate || '') + '</td>' +
+      '<td style="padding:3px 5px;font-size:8pt">' + esc(b.shipNotes || '') + '</td>' +
+      '</tr>';
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>【ひとつぎ珈琲】HACCP 焙煎・出荷台帳</title>' +
+    '<style>' +
+    '  @page { size: A4 landscape; margin: 8mm 10mm; }' +
+    '  * { box-sizing: border-box; }' +
+    '  body { font-family: "MS 明朝", "Yu Mincho", serif; color: #111; font-size: 8.5pt; line-height: 1.25; margin: 0; padding: 10px; }' +
+    '  h1 { font-size: 13pt; margin: 0 0 6px 0; font-weight: 700; }' +
+    '  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 8pt; white-space: nowrap; }' +
+    '  th, td { border: 1px solid #333; }' +
+    '  th { background: #efebe9; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+    '</style></head><body>' +
+    '<h1>【ひとつぎ珈琲】HACCP 焙煎・出荷台帳（生豆受入 〜 焙煎製造 〜 包装出荷 ロット管理）</h1>' +
+    '<table>' +
+    '  <tr>' +
+    '    <th style="width:8%;padding:3px">事業所名</th><td style="width:22%;padding:3px">' + esc(facName) + '</td>' +
+    '    <th style="width:8%;padding:3px">管理目的</th><td style="width:46%;padding:3px">生豆の受入から焙煎・包装・出荷までを1行で行う、ロット追跡（トレーサビリティ）と品質を管理</td>' +
+    '    <th style="width:8%;padding:3px">責任者</th><td style="width:8%;padding:3px;text-align:center">友田 篤賜</td>' +
+    '  </tr>' +
+    '  <tr>' +
+    '    <th style="padding:3px">記録ルール</th><td colspan="5" style="padding:3px">・製造ロットID例：261113-01（年月日-連番）　・判定／確認欄は「良／不良」を入力　・異常時等は特記事項欄等に記載（調整等可）</td>' +
+    '  </tr>' +
+    '</table>' +
+
+    '<table>' +
+    '  <thead>' +
+    '    <tr style="background:#4e342e;color:#fff;text-align:center">' +
+    '      <th colspan="2" style="border:1px solid #333;padding:4px">共通・ロット識別</th>' +
+    '      <th colspan="5" style="border:1px solid #333;padding:4px">① 生豆受入記録 (生入荷・使用ロット確定)</th>' +
+    '      <th colspan="6" style="border:1px solid #333;padding:4px">② 焙煎製造記録 (重量管理・品質確認)</th>' +
+    '      <th colspan="7" style="border:1px solid #333;padding:4px">③ 包装・出荷記録 (計量・密封・表示・出荷)</th>' +
+    '    </tr>' +
+    '    <tr style="background:#efebe9;color:#222;text-align:center">' +
+    '      <th style="width:6%">製造ロットID</th><th style="width:10%">産地・品種</th>' +
+    '      <th style="width:5%">受入日</th><th style="width:8%">仕入先・生豆ロット</th><th style="width:4%">受入量(kg)</th><th style="width:4%">包装・保管</th><th style="width:4%">カビ虫判定</th>' +
+    '      <th style="width:5%">焙煎日</th><th style="width:4%">投入量(g)</th><th style="width:4%">焙煎後(g)</th><th style="width:4%">歩留り(%)</th><th style="width:4%">冷却確認</th><th style="width:4%">焙煎異常</th>' +
+    '      <th style="width:5%">包装日</th><th style="width:4%">形態</th><th style="width:3%">個数</th><th style="width:4%">密封確認</th><th style="width:4%">ラベル賞味期限</th><th style="width:5%">出荷日</th><th style="width:10%">出荷確認・備考</th>' +
+    '    </tr>' +
+    '  </thead><tbody>' + rowsHtml + '</tbody>' +
+    '</table>' +
+
+    '<script>window.onload=function(){ setTimeout(function(){ window.print(); }, 200); };<\/script>' +
+    '</body></html>';
+
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+// ─── CSV出力 ───────────────────────────────────────
+async function exportHaccpDailyCsv(ym){
+  var list = await getHaccpJson('haccp_hygiene_' + ym, []);
+  var headers = ['作業日','作業者','健康確認','手洗い消毒','専用台器具清掃','害虫異物有無','他作業区分','設備火気安全','作業後清掃片付','特記事項','確認職員'];
+  var lines = [headers.join(',')];
+  list.forEach(function(r){
+    lines.push([
+      r.date||'',
+      '"'+(r.workerName||'').replace(/"/g,'""')+'"',
+      r.healthCheck||'',
+      r.handWash||'',
+      r.tableClean||'',
+      r.pestForeign||'',
+      r.areaSeparation||'',
+      r.fireSafety||'',
+      r.afterClean||'',
+      '"'+(r.notes||'').replace(/"/g,'""')+'"',
+      '"'+(r.staffName||'').replace(/"/g,'""')+'"'
+    ].join(','));
+  });
+  var csvStr = '\uFEFF' + lines.join('\r\n');
+  var blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'ひとつぎ珈琲_日常衛生記録_' + ym + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function exportHaccpRoastCsv(){
+  var list = await getHaccpJson('haccp_roast_batches', []);
+  var headers = ['製造ロットID','産地品種','受入日','仕入先生豆ロット','受入量(kg)','包装保管状態','カビ虫判定','焙煎日','投入量(g)','焙煎後(g)','歩留り(%)','冷却確認','焙煎異常','包装日','形態','個数','密封確認','ラベル賞味期限','出荷日','出荷備考'];
+  var lines = [headers.join(',')];
+  list.forEach(function(b){
+    lines.push([
+      b.lotId||'',
+      '"'+(b.beanOrigin||'').replace(/"/g,'""')+'"',
+      b.recvDate||'',
+      '"'+(b.supplierLot||'').replace(/"/g,'""')+'"',
+      b.recvKg||'',
+      b.pkgStatus||'',
+      b.defectCheck||'',
+      b.roastDate||'',
+      b.inputG||'',
+      b.outputG||'',
+      b.yieldPct||'',
+      b.coolingCheck||'',
+      b.roastDefect||'',
+      b.packDate||'',
+      b.packType||'',
+      b.packCount||'',
+      b.sealCheck||'',
+      b.labelCheck||'',
+      b.shipDate||'',
+      '"'+(b.shipNotes||'').replace(/"/g,'""')+'"'
+    ].join(','));
+  });
+  var csvStr = '\uFEFF' + lines.join('\r\n');
+  var blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'ひとつぎ珈琲_焙煎出荷ロット台帳.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 

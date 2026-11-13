@@ -159,6 +159,101 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
   #btn-save{flex:1;padding:12px 10px;font-size:15px;}
   #btn-cancel{padding:12px 12px;font-size:13px;}
 }
+
+/* 珈琲HACCP ナビゲーション & カードウィザード スタイル */
+.tb-nav-tabs{display:inline-flex;background:rgba(255,255,255,0.18);border-radius:24px;padding:3px;gap:4px;}
+.tb-nav-btn{background:none;border:none;color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;transition:.2s;}
+.tb-nav-btn.active{background:#fff;color:var(--pri);box-shadow:0 2px 6px rgba(0,0,0,0.15);}
+
+#layout-haccp{display:none;height:calc(100vh - 58px);height:calc(100dvh - 58px);overflow-y:auto;background:var(--bg);padding:16px;}
+.haccp-sub-nav{display:flex;justify-content:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.haccp-sub-btn{padding:8px 18px;border-radius:24px;border:1.5px solid var(--bdr);background:#fff;color:var(--sub);font-size:13px;font-weight:700;cursor:pointer;transition:.2s;}
+.haccp-sub-btn.active{background:var(--pri);color:#fff;border-color:var(--pri);box-shadow:0 2px 8px rgba(61,90,62,0.25);}
+
+/* カードめくりウィザード */
+.haccp-card-wrap{max-width:620px;margin:10px auto 30px;perspective:1000px;}
+.haccp-card{
+  background:#fff;
+  border-radius:24px;
+  padding:32px 24px;
+  box-shadow:0 8px 32px rgba(61,90,62,0.12);
+  border:2px solid #ede5dc;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  min-height:430px;
+  position:relative;
+  transition:all .3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.haccp-progress-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:18px;}
+.haccp-dot{width:12px;height:12px;border-radius:50%;background:#e0d6cf;transition:.2s;}
+.haccp-dot.active{background:var(--pri);transform:scale(1.3);}
+.haccp-dot.passed{background:#81c784;}
+.haccp-step-badge{font-size:12px;font-weight:700;color:var(--sub);background:#f5f0ea;padding:3px 10px;border-radius:12px;margin-bottom:12px;}
+
+.haccp-icon{font-size:68px;line-height:1;margin:10px 0;animation:popBounce .6s ease;}
+@keyframes popBounce{0%{transform:scale(0.5);opacity:0;}70%{transform:scale(1.15);}100%{transform:scale(1);opacity:1;}}
+
+.haccp-q-title{font-size:22px;font-weight:800;color:#2e442f;margin-bottom:8px;line-height:1.35;}
+.haccp-q-desc{font-size:15px;color:#5c5046;line-height:1.6;margin-bottom:24px;max-width:480px;}
+
+.haccp-btn-row{display:flex;gap:14px;width:100%;max-width:500px;margin-top:auto;}
+.haccp-btn-yes{
+  flex:1.4;
+  padding:18px 20px;
+  background:#2e7d32;
+  color:#fff;
+  border:none;
+  border-radius:18px;
+  font-size:19px;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 4px 14px rgba(46,125,50,0.35);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  touch-action:manipulation;
+  transition:all .15s ease;
+}
+.haccp-btn-yes:active{transform:scale(0.97);box-shadow:0 2px 6px rgba(46,125,50,0.2);}
+.haccp-btn-no{
+  flex:1;
+  padding:18px 16px;
+  background:#f7f3ee;
+  color:#795548;
+  border:2px solid #d7ccc8;
+  border-radius:18px;
+  font-size:16px;
+  font-weight:700;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  touch-action:manipulation;
+  transition:all .15s ease;
+}
+.haccp-btn-no:active{transform:scale(0.97);background:#ede0d4;}
+
+/* 利用者選択グリッド */
+.haccp-user-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:12px;width:100%;max-height:280px;overflow-y:auto;padding:8px 4px;margin-bottom:12px;}
+.haccp-user-btn{
+  background:#f9f8f5;
+  border:2px solid var(--bdr);
+  border-radius:14px;
+  padding:14px 8px;
+  text-align:center;
+  font-size:15px;
+  font-weight:700;
+  color:#333;
+  cursor:pointer;
+  transition:.2s;
+}
+.haccp-user-btn:hover,.haccp-user-btn:active{border-color:var(--pri);background:#e8f5e9;color:var(--pri);transform:translateY(-2px);}
+.haccp-user-btn.selected{border-color:var(--pri);background:var(--pri);color:#fff;}
 </style>
 </head>
 <body>
@@ -234,7 +329,13 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
 <!-- メイン -->
 <div id="pg-main">
   <header>
-    <div class="hd-title">📋 日報入力</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="hd-title" id="tb-main-title">ひとつぎ</div>
+      <div class="tb-nav-tabs">
+        <button id="tb-tab-daily" class="tb-nav-btn active" onclick="switchTabletView('daily')">📝 日報入力</button>
+        <button id="tb-tab-haccp" class="tb-nav-btn" onclick="switchTabletView('haccp')">☕ 珈琲HACCP</button>
+      </div>
+    </div>
     <div style="display:flex;align-items:center;gap:12px">
       <div class="hd-staff" id="hd-staff"></div>
       <button id="btn-logout">ログアウト</button>
@@ -279,6 +380,37 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
     </div>
   </div><!-- /content-area -->
 </div><!-- /layout -->
+
+<!-- ☕ 珈琲HACCP画面 -->
+<div id="layout-haccp">
+  <!-- HACCP サブナビゲーション -->
+  <div class="haccp-sub-nav">
+    <button class="haccp-sub-btn active" id="btn-sub-wizard" onclick="switchHaccpSubTab('wizard')">🧼 衛生チェック（カード）</button>
+    <button class="haccp-sub-btn" id="btn-sub-roast" onclick="switchHaccpSubTab('roast')">☕ 焙煎・出荷ロット記録</button>
+    <button class="haccp-sub-btn" id="btn-sub-list" onclick="switchHaccpSubTab('list')">📋 本日の衛生記録一覧</button>
+  </div>
+
+  <!-- 1. 衛生チェックカードウィザード -->
+  <div id="haccp-sec-wizard">
+    <div class="haccp-card-wrap">
+      <div class="haccp-card" id="haccp-card-box">
+        読み込み中...
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 焙煎・出荷ロット記録フォーム -->
+  <div id="haccp-sec-roast" style="display:none;max-width:760px;margin:0 auto 40px;">
+    <!-- 焙煎・出荷フォーム（JSで動的生成） -->
+    <div id="haccp-roast-container"></div>
+  </div>
+
+  <!-- 3. 本日の衛生記録一覧 -->
+  <div id="haccp-sec-list" style="display:none;max-width:760px;margin:0 auto 40px;">
+    <!-- 本日のリスト（JSで動的生成） -->
+    <div id="haccp-list-container"></div>
+  </div>
+</div><!-- /layout-haccp -->
 </div><!-- /pg-main -->
 <script>
 'use strict';
@@ -1203,6 +1335,656 @@ document.addEventListener('touchend', function(e) {
   }
   _lastTouchEndTablet = now;
 }, { passive: false });
+
+// ══════════════════════════════════════════════════════════════════
+// ☕ 珈琲HACCP タブレットシステム（衛生チェックカード＆焙煎ロット管理）
+// ══════════════════════════════════════════════════════════════════
+
+// Supabase JSONストレージ ヘルパー
+async function getHaccpJson(key, defVal){
+  try {
+    var sb = (typeof _getSupabase === 'function') ? _getSupabase() : supabase;
+    if(!sb && window.supabase && window.supabase.createClient){
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+    var r = await sb.from('設定').select('value').eq('key', key).limit(1);
+    if(r.data && r.data.length > 0 && r.data[0].value){
+      return JSON.parse(r.data[0].value);
+    }
+  } catch(e){
+    console.warn('getHaccpJson (' + key + '):', e);
+  }
+  return defVal;
+}
+
+async function saveHaccpJson(key, data){
+  try {
+    var sb = (typeof _getSupabase === 'function') ? _getSupabase() : supabase;
+    if(!sb && window.supabase && window.supabase.createClient){
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+    var valStr = JSON.stringify(data);
+    var chk = await sb.from('設定').select('key').eq('key', key).limit(1);
+    if(chk.data && chk.data.length > 0){
+      var ur = await sb.from('設定').update({ value: valStr }).eq('key', key);
+      if(ur.error) throw ur.error;
+    } else {
+      var ir = await sb.from('設定').insert([{ key: key, value: valStr }]);
+      if(ir.error) throw ir.error;
+    }
+    return true;
+  } catch(e){
+    console.error('saveHaccpJson (' + key + '):', e);
+    throw e;
+  }
+}
+
+// ─── ビュー切り替え ─────────────────────────────────────
+var _curTabletView = 'daily';
+function switchTabletView(view){
+  _curTabletView = view;
+  var btnDaily = el('tb-tab-daily');
+  var btnHaccp = el('tb-tab-haccp');
+  var lyDaily = el('layout');
+  var lyHaccp = el('layout-haccp');
+
+  if(view === 'daily'){
+    if(btnDaily) btnDaily.classList.add('active');
+    if(btnHaccp) btnHaccp.classList.remove('active');
+    if(lyDaily) lyDaily.style.display = 'flex';
+    if(lyHaccp) lyHaccp.style.display = 'none';
+  } else {
+    if(btnDaily) btnDaily.classList.remove('active');
+    if(btnHaccp) btnHaccp.classList.add('active');
+    if(lyDaily) lyDaily.style.display = 'none';
+    if(lyHaccp) lyHaccp.style.display = 'block';
+    initHaccpView();
+  }
+}
+
+var _curHaccpSubTab = 'wizard';
+function switchHaccpSubTab(tab){
+  _curHaccpSubTab = tab;
+  ['wizard','roast','list'].forEach(function(t){
+    var b = el('btn-sub-' + t);
+    var s = el('haccp-sec-' + t);
+    if(b) b.classList.toggle('active', t === tab);
+    if(s) s.style.display = (t === tab) ? 'block' : 'none';
+  });
+
+  if(tab === 'wizard'){
+    renderHaccpCard();
+  } else if(tab === 'roast'){
+    renderHaccpRoastForm();
+  } else if(tab === 'list'){
+    renderHaccpTodayList();
+  }
+}
+
+function initHaccpView(){
+  switchHaccpSubTab(_curHaccpSubTab || 'wizard');
+}
+
+// ─── 1. 衛生チェック カードウィザード ────────────────────
+var _haccpState = {
+  step: 0,
+  workerId: '',
+  workerName: '',
+  healthCheck: '良',
+  handWash: '良',
+  tableClean: '良',
+  pestForeign: '良',
+  areaSeparation: '良',
+  fireSafety: '良',
+  afterClean: '良',
+  notes: '',
+  staffName: ''
+};
+
+function resetHaccpWizard(){
+  _haccpState = {
+    step: 0,
+    workerId: '',
+    workerName: '',
+    healthCheck: '良',
+    handWash: '良',
+    tableClean: '良',
+    pestForeign: '良',
+    areaSeparation: '良',
+    fireSafety: '良',
+    afterClean: '良',
+    notes: '',
+    staffName: (ME && ME.name) ? ME.name : ''
+  };
+  renderHaccpCard();
+}
+
+function selectHaccpWorker(uid, name){
+  _haccpState.workerId = uid;
+  _haccpState.workerName = name;
+  _haccpState.step = 1;
+  renderHaccpCard();
+}
+
+function answerHaccpStep(itemKey, val){
+  _haccpState[itemKey] = val;
+  _haccpState.step++;
+  renderHaccpCard();
+}
+
+function prevHaccpStep(){
+  if(_haccpState.step > 0){
+    _haccpState.step--;
+    renderHaccpCard();
+  }
+}
+
+// カードの質問定義 (全6問 + 作業者選択 + 完了)
+var HACCP_QUESTIONS = [
+  null, // step 0 は作業者選択
+  {
+    key: 'healthCheck',
+    num: 1,
+    icon: '🌡️',
+    title: '体調はどうですか？',
+    desc: '熱があったり、お腹が痛いところはありませんか？<br>手や指にキズ・手荒れはありませんか？',
+    yesText: '😊 元気・キズなし（良）',
+    noText: '😣 体調が悪い・キズあり'
+  },
+  {
+    key: 'handWash',
+    num: 2,
+    icon: '🧼',
+    title: '手は洗いましたか？',
+    desc: '石けんで指の間や爪、手首まで丁寧に洗って、<br>アルコール消毒をしっかりしましたか？',
+    yesText: '🧼 洗った・消毒した（良）',
+    noText: '❌ まだ洗っていない'
+  },
+  {
+    key: 'tableClean',
+    num: 3,
+    icon: '✨',
+    title: 'テーブルと道具は拭きましたか？',
+    desc: 'コーヒー専用テーブルと使う器具を、<br>きれいにアルコール清掃しましたか？',
+    yesText: '✨ キレイに拭いた（良）',
+    noText: '❌ まだ拭いていない'
+  },
+  {
+    key: 'pestForeign',
+    num: 4,
+    icon: '🔍',
+    title: 'ゴミや虫はいませんか？',
+    desc: 'テーブルや道具、生豆のまわりに、<br>ゴミ・ホコリ・虫などの異物はありませんか？',
+    yesText: '⭕ キレイ・問題なし（良）',
+    noText: '⚠️ ゴミや虫を見つけた'
+  },
+  {
+    key: 'areaSeparation',
+    num: 5,
+    icon: '☕',
+    title: '他の荷物は片付けましたか？',
+    desc: 'コーヒー専用テーブルに、<br>関係のない別の作業の物は置かれていませんか？',
+    yesText: '⭕ きれいに分けた（良）',
+    noText: '❌ 別の物が置いてある'
+  },
+  {
+    key: 'fireSafety',
+    num: 6,
+    icon: '🔥',
+    title: '機械や火の周りは安全ですか？',
+    desc: '焙煎機やコードの周りに燃えやすい物はなく、<br>安全に作業をスタートできますか？',
+    yesText: '⭕ 安全確認よし（良）',
+    noText: '⚠️ 心配なところがある'
+  }
+];
+
+function renderHaccpCard(){
+  var box = el('haccp-card-box');
+  if(!box) return;
+
+  var step = _haccpState.step;
+  var totalSteps = 6;
+  var h = '';
+
+  // ─── ステップ 0: 作業者選択 ───
+  if(step === 0){
+    h += '<div class="haccp-step-badge">ステップ 1 / 2 ： 作業者の選択</div>';
+    h += '<div class="haccp-icon">👤</div>';
+    h += '<div class="haccp-q-title">きょう作業する人はだれですか？</div>';
+    h += '<div class="haccp-q-desc">自分の名前をタップしてください。</div>';
+    h += '<div class="haccp-user-grid">';
+    var activeUsers = (USERS || []).filter(function(u){ return String(u.status) !== '利用終了'; });
+    activeUsers.forEach(function(u){
+      h += '<button type="button" class="haccp-user-btn" onclick="selectHaccpWorker(\''+esc(u.id)+'\',\''+esc(u.name)+'\')">'+esc(u.name)+'</button>';
+    });
+    h += '</div>';
+    h += '<div style="margin-top:12px;font-size:12px;color:var(--sub)">※コーヒー作業（生豆ピッキング・焙煎・計量包装等）の担当者</div>';
+    box.innerHTML = h;
+    return;
+  }
+
+  // ─── ステップ 1〜6: 質問カード ───
+  if(step >= 1 && step <= 6){
+    var q = HACCP_QUESTIONS[step];
+
+    // プログレスバー
+    h += '<div style="display:flex;justify-content:space-between;width:100%;align-items:center;margin-bottom:6px">';
+    h += '  <button type="button" onclick="prevHaccpStep()" style="background:none;border:1px solid var(--bdr);border-radius:12px;padding:4px 10px;font-size:12px;color:var(--sub);cursor:pointer">← 前へ</button>';
+    h += '  <div class="haccp-step-badge" style="margin-bottom:0">質問 ' + step + ' / ' + totalSteps + '</div>';
+    h += '  <div style="font-size:12px;font-weight:700;color:var(--pri)">作業者: ' + esc(_haccpState.workerName) + '</div>';
+    h += '</div>';
+
+    // ドットプログレス
+    h += '<div class="haccp-progress-bar">';
+    for(var i = 1; i <= totalSteps; i++){
+      var cls = 'haccp-dot';
+      if(i < step) cls += ' passed';
+      else if(i === step) cls += ' active';
+      h += '<span class="'+cls+'"></span>';
+    }
+    h += '</div>';
+
+    // 質問内容
+    h += '<div class="haccp-icon">' + q.icon + '</div>';
+    h += '<div class="haccp-q-title">' + q.title + '</div>';
+    h += '<div class="haccp-q-desc">' + q.desc + '</div>';
+
+    // ボタン列
+    h += '<div class="haccp-btn-row">';
+    h += '  <button type="button" class="haccp-btn-yes" onclick="answerHaccpStep(\''+q.key+'\',\'良\')">' + q.yesText + '</button>';
+    h += '  <button type="button" class="haccp-btn-no" onclick="answerHaccpStep(\''+q.key+'\',\'不良\')">' + q.noText + '</button>';
+    h += '</div>';
+
+    box.innerHTML = h;
+    return;
+  }
+
+  // ─── ステップ 7: 完了確認・保存カード ───
+  if(step === 7){
+    var hasDefect = (
+      _haccpState.healthCheck === '不良' ||
+      _haccpState.handWash === '不良' ||
+      _haccpState.tableClean === '不良' ||
+      _haccpState.pestForeign === '不良' ||
+      _haccpState.areaSeparation === '不良' ||
+      _haccpState.fireSafety === '不良'
+    );
+
+    var curStaff = _haccpState.staffName || (ME && ME.name) || '';
+
+    h += '<div style="display:flex;justify-content:flex-start;width:100%;margin-bottom:4px">';
+    h += '  <button type="button" onclick="prevHaccpStep()" style="background:none;border:1px solid var(--bdr);border-radius:12px;padding:4px 10px;font-size:12px;color:var(--sub);cursor:pointer">← 戻る</button>';
+    h += '</div>';
+
+    h += '<div class="haccp-icon">' + (hasDefect ? '⚠️' : '🎉') + '</div>';
+    h += '<div class="haccp-q-title">' + (hasDefect ? 'チェック完了（要確認事項あり）' : '衛生チェック完了！') + '</div>';
+    h += '<div class="haccp-q-desc">' +
+           esc(_haccpState.workerName) + ' さん、おつかれさまでした！<br>' +
+           (hasDefect ? '<span style="color:#c62828;font-weight:700">※不良と回答した項目があります。担当職員に確認してください。</span>' : 'きょうも安全においしいコーヒーを作りましょう！') +
+         '</div>';
+
+    // サマリー表示
+    h += '<div style="width:100%;max-width:480px;background:#f9f8f5;border:1.5px solid var(--bdr);border-radius:14px;padding:12px 16px;text-align:left;font-size:13px;margin-bottom:16px">';
+    h += '  <div style="font-weight:700;margin-bottom:6px;color:var(--pri);border-bottom:1px solid #eee;padding-bottom:4px">【入力結果の確認】</div>';
+    h += '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px">';
+    h += '    <div>体調手指: <b style="color:'+(_haccpState.healthCheck==='良'?'#2e7d32':'#c62828')+'">'+_haccpState.healthCheck+'</b></div>';
+    h += '    <div>手洗い消毒: <b style="color:'+(_haccpState.handWash==='良'?'#2e7d32':'#c62828')+'">'+_haccpState.handWash+'</b></div>';
+    h += '    <div>専用台器具: <b style="color:'+(_haccpState.tableClean==='良'?'#2e7d32':'#c62828')+'">'+_haccpState.tableClean+'</b></div>';
+    h += '    <div>害虫異物: <b style="color:'+(_haccpState.pestForeign==='良'?'#2e7d32':'#c62828')+'">'+_haccpState.pestForeign+'</b></div>';
+    h += '    <div>作業区分: <b style="color:'+(_haccpState.areaSeparation==='良'?'#2e7d32':'#c62828')+'">'+_haccpState.areaSeparation+'</b></div>';
+    h += '    <div>設備火気: <b style="color:'+(_haccpState.fireSafety==='良'?'#2e7d32':'#c62828')+'">'+_haccpState.fireSafety+'</b></div>';
+    h += '  </div>';
+
+    // 特記事項
+    h += '  <div style="margin-top:10px">';
+    h += '    <label style="display:block;font-size:11px;font-weight:700;color:var(--sub);margin-bottom:3px">特記事項・異常対応メモ（任意）:</label>';
+    h += '    <input type="text" id="haccp-wizard-notes" placeholder="異常内容や対応があれば入力" value="'+esc(_haccpState.notes)+'" style="width:100%;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;font-size:13px" onchange="_haccpState.notes=this.value">';
+    h += '  </div>';
+
+    // 職員確認
+    h += '  <div style="margin-top:8px">';
+    h += '    <label style="display:block;font-size:11px;font-weight:700;color:var(--sub);margin-bottom:3px">確認職員名:</label>';
+    h += '    <input type="text" id="haccp-wizard-staff" value="'+esc(curStaff)+'" placeholder="確認した職員の氏名" style="width:100%;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;font-size:13px" onchange="_haccpState.staffName=this.value">';
+    h += '  </div>';
+    h += '</div>';
+
+    // 保存ボタン
+    h += '<div style="width:100%;max-width:480px">';
+    h += '  <button type="button" id="btn-save-haccp-wizard" onclick="submitHaccpWizard()" style="width:100%;padding:16px;background:var(--pri);color:#fff;border:none;border-radius:16px;font-size:18px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(61,90,62,0.35)">💾 衛生記録を保存する</button>';
+    h += '</div>';
+
+    box.innerHTML = h;
+    return;
+  }
+}
+
+async function submitHaccpWizard(){
+  var btn = el('btn-save-haccp-wizard');
+  if(btn){ btn.disabled = true; btn.textContent = '保存中...'; }
+
+  try {
+    var todayStr = today();
+    var ym = todayStr.slice(0,7);
+    var key = 'haccp_hygiene_' + ym;
+
+    var notesEl = el('haccp-wizard-notes');
+    var staffEl = el('haccp-wizard-staff');
+    if(notesEl) _haccpState.notes = notesEl.value;
+    if(staffEl) _haccpState.staffName = staffEl.value;
+
+    var record = {
+      id: 'hh_' + Date.now() + Math.random().toString(36).substr(2,4),
+      date: todayStr,
+      workerId: _haccpState.workerId,
+      workerName: _haccpState.workerName,
+      healthCheck: _haccpState.healthCheck,
+      handWash: _haccpState.handWash,
+      tableClean: _haccpState.tableClean,
+      pestForeign: _haccpState.pestForeign,
+      areaSeparation: _haccpState.areaSeparation,
+      fireSafety: _haccpState.fireSafety,
+      afterClean: _haccpState.afterClean || '良',
+      notes: _haccpState.notes || '',
+      staffName: _haccpState.staffName || (ME && ME.name) || '友田 篤賜',
+      createdAt: new Date().toISOString()
+    };
+
+    var list = await getHaccpJson(key, []);
+    list.unshift(record);
+    await saveHaccpJson(key, list);
+
+    // 成功演出
+    var box = el('haccp-card-box');
+    if(box){
+      box.innerHTML = '<div class="haccp-icon">✨</div>' +
+        '<div class="haccp-q-title" style="color:var(--pri)">保存しました！</div>' +
+        '<div class="haccp-q-desc">' + esc(record.workerName) + ' さんの本日の衛生記録をSupabaseに安全に保存しました。</div>' +
+        '<div style="margin-top:20px;display:flex;gap:12px;width:100%;max-width:400px">' +
+        '  <button type="button" class="haccp-btn-yes" onclick="resetHaccpWizard()" style="padding:14px;font-size:16px">👤 別の人のチェックを行う</button>' +
+        '  <button type="button" class="haccp-btn-no" onclick="switchHaccpSubTab(\'list\')" style="padding:14px;font-size:15px">📋 一覧を見る</button>' +
+        '</div>';
+    }
+  } catch(e){
+    alert('保存エラー: ' + (e.message || String(e)));
+    if(btn){ btn.disabled = false; btn.textContent = '💾 衛生記録を保存する'; }
+  }
+}
+
+// ─── 2. 焙煎・出荷ロット記録フォーム ─────────────────────
+function renderHaccpRoastForm(){
+  var c = el('haccp-roast-container');
+  if(!c) return;
+
+  var t = new Date();
+  var todayStr = today();
+  var yy = String(t.getFullYear()).slice(2);
+  var mm = String(t.getMonth()+1).padStart(2,'0');
+  var dd = String(t.getDate()).padStart(2,'0');
+  var defLotId = yy + mm + dd + '-01';
+
+  var h = '<div class="card" style="padding:24px 20px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:2px solid var(--pri);padding-bottom:10px">' +
+    '  <div>' +
+    '    <h2 style="font-size:18px;font-weight:700;color:var(--pri);margin-bottom:2px">☕ 珈琲 焙煎・出荷ロット記録</h2>' +
+    '    <p style="font-size:12px;color:var(--sub)">生豆受入から焙煎製造、計量包装・出荷までのトレーサビリティ記録</p>' +
+    '  </div>' +
+    '</div>' +
+
+    '<form id="form-haccp-roast" onsubmit="event.preventDefault();submitHaccpRoast();">' +
+    // 基本・ロット識別
+    '  <div style="background:#faf8f5;border:1.5px solid #e0d6cf;border-radius:12px;padding:14px;margin-bottom:16px">' +
+    '    <div style="font-weight:700;font-size:13px;color:var(--pri);margin-bottom:10px">【共通・ロット識別】</div>' +
+    '    <div class="grid2">' +
+    '      <div class="field">' +
+    '        <label>製造ロットID（年月日-連番） <span style="color:#c62828">*</span></label>' +
+    '        <div style="display:flex;gap:6px">' +
+    '          <input type="text" id="hr-lot-id" value="'+defLotId+'" required style="font-weight:700">' +
+    '          <button type="button" class="bg" onclick="generateNextLotId()" style="font-size:11px;padding:4px 8px;white-space:nowrap">自動採番</button>' +
+    '        </div>' +
+    '      </div>' +
+    '      <div class="field">' +
+    '        <label>産地・銘柄・品種 <span style="color:#c62828">*</span></label>' +
+    '        <input type="text" id="hr-bean-origin" placeholder="例: エチオピア イルガチェフェ G1" required>' +
+    '        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">' +
+    '          <button type="button" class="bg" onclick="el(\'hr-bean-origin\').value=\'エチオピア\'" style="font-size:10px;padding:2px 6px">エチオピア</button>' +
+    '          <button type="button" class="bg" onclick="el(\'hr-bean-origin\').value=\'ブラジル ショコラ\'" style="font-size:10px;padding:2px 6px">ブラジル</button>' +
+    '          <button type="button" class="bg" onclick="el(\'hr-bean-origin\').value=\'コロンビア スプレモ\'" style="font-size:10px;padding:2px 6px">コロンビア</button>' +
+    '          <button type="button" class="bg" onclick="el(\'hr-bean-origin\').value=\'グアテマラ SHB\'" style="font-size:10px;padding:2px 6px">グアテマラ</button>' +
+    '        </div>' +
+    '      </div>' +
+    '    </div>' +
+    '  </div>' +
+
+    // ① 生豆受入記録
+    '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">' +
+    '    <div style="font-weight:700;font-size:13px;color:var(--pri);margin-bottom:10px">① 生豆受入記録（生入荷・使用ロット確定）</div>' +
+    '    <div class="grid3">' +
+    '      <div class="field"><label>受入日</label><input type="date" id="hr-recv-date" value="'+todayStr+'"></div>' +
+    '      <div class="field"><label>仕入先・生豆ロット</label><input type="text" id="hr-supp-lot" placeholder="仕入先名/袋ロット"></div>' +
+    '      <div class="field"><label>受入量 (kg)</label><input type="number" step="0.1" id="hr-recv-kg" placeholder="例: 5.0"></div>' +
+    '    </div>' +
+    '    <div class="grid2">' +
+    '      <div class="field"><label>包装・保管状態</label><select id="hr-pkg-status"><option value="良">良（清潔・密封）</option><option value="不良">不良</option></select></div>' +
+    '      <div class="field"><label>カビ・虫・異物判定</label><select id="hr-defect-check"><option value="良">良（異物・欠点豆なし）</option><option value="不良">不良（要ピッキング）</option></select></div>' +
+    '    </div>' +
+    '  </div>' +
+
+    // ② 焙煎製造記録
+    '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">' +
+    '    <div style="font-weight:700;font-size:13px;color:var(--pri);margin-bottom:10px">② 焙煎製造記録（重量管理・品質確認）</div>' +
+    '    <div class="grid3">' +
+    '      <div class="field"><label>焙煎日</label><input type="date" id="hr-roast-date" value="'+todayStr+'"></div>' +
+    '      <div class="field"><label>投入量 (g)</label><input type="number" id="hr-input-g" placeholder="例: 1000" oninput="calcRoastYield()"></div>' +
+    '      <div class="field"><label>焙煎後重量 (g)</label><input type="number" id="hr-output-g" placeholder="例: 840" oninput="calcRoastYield()"></div>' +
+    '    </div>' +
+    '    <div class="grid3">' +
+    '      <div class="field">' +
+    '        <label>歩留り (%)</label>' +
+    '        <input type="text" id="hr-yield-pct" readonly style="background:#f5f0ea;font-weight:700;color:var(--pri)">' +
+    '      </div>' +
+    '      <div class="field"><label>焙煎条件・冷却確認</label><select id="hr-cooling-check"><option value="良">良（適正冷却・香気良好）</option><option value="不良">不良</option></select></div>' +
+    '      <div class="field"><label>焙煎異常有無</label><select id="hr-roast-defect"><option value="無">無（正常完了）</option><option value="有">有（焦げ・未煎等）</option></select></div>' +
+    '    </div>' +
+    '  </div>' +
+
+    // ③ 包装・出荷記録
+    '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:16px">' +
+    '    <div style="font-weight:700;font-size:13px;color:var(--pri);margin-bottom:10px">③ 包装・出荷記録（計量・密封・表示・出荷）</div>' +
+    '    <div class="grid3">' +
+    '      <div class="field"><label>包装日</label><input type="date" id="hr-pack-date" value="'+todayStr+'"></div>' +
+    '      <div class="field"><label>形態</label><select id="hr-pack-type"><option value="豆">豆</option><option value="粉">粉（中挽き等）</option><option value="ドリップバッグ">ドリップバッグ</option></select></div>' +
+    '      <div class="field"><label>個数・袋数</label><input type="number" id="hr-pack-count" placeholder="例: 10"></div>' +
+    '    </div>' +
+    '    <div class="grid3">' +
+    '      <div class="field"><label>密閉度・密封確認</label><select id="hr-seal-check"><option value="良">良（シーラー完全密封）</option><option value="不良">不良</option></select></div>' +
+    '      <div class="field"><label>ラベル・賞味期限</label><select id="hr-label-check"><option value="良">良（表示適正）</option><option value="不良">不良</option></select></div>' +
+    '      <div class="field"><label>保管・出荷日</label><input type="date" id="hr-ship-date"></div>' +
+    '    </div>' +
+    '    <div class="field"><label>出荷確認・備考</label><input type="text" id="hr-ship-notes" placeholder="出荷先、特記事項など"></div>' +
+    '  </div>' +
+
+    '  <div style="display:flex;justify-content:flex-end;gap:12px">' +
+    '    <button type="submit" id="btn-save-roast" class="bp" style="padding:14px 28px;font-size:16px;font-weight:700">💾 ロット台帳を保存</button>' +
+    '  </div>' +
+    '</form>' +
+    '</div>';
+
+  c.innerHTML = h;
+}
+
+function calcRoastYield(){
+  var inp = Number(el('hr-input-g').value) || 0;
+  var out = Number(el('hr-output-g').value) || 0;
+  var yEl = el('hr-yield-pct');
+  if(!yEl) return;
+  if(inp > 0 && out > 0){
+    var pct = Math.round((out / inp) * 1000) / 10;
+    yEl.value = pct + '%';
+  } else {
+    yEl.value = '';
+  }
+}
+
+async function generateNextLotId(){
+  var t = new Date();
+  var yy = String(t.getFullYear()).slice(2);
+  var mm = String(t.getMonth()+1).padStart(2,'0');
+  var dd = String(t.getDate()).padStart(2,'0');
+  var prefix = yy + mm + dd;
+
+  var batches = await getHaccpJson('haccp_roast_batches', []);
+  var todays = batches.filter(function(b){ return b.lotId && String(b.lotId).startsWith(prefix); });
+  var nextSeq = todays.length + 1;
+  var nextLot = prefix + '-' + String(nextSeq).padStart(2,'0');
+  var lotEl = el('hr-lot-id');
+  if(lotEl) lotEl.value = nextLot;
+}
+
+async function submitHaccpRoast(){
+  var btn = el('btn-save-roast');
+  if(btn){ btn.disabled = true; btn.textContent = '保存中...'; }
+  try {
+    var record = {
+      id: 'hr_' + Date.now() + Math.random().toString(36).substr(2,4),
+      lotId: el('hr-lot-id').value,
+      beanOrigin: el('hr-bean-origin').value,
+      recvDate: el('hr-recv-date').value,
+      supplierLot: el('hr-supp-lot').value,
+      recvKg: Number(el('hr-recv-kg').value) || 0,
+      pkgStatus: el('hr-pkg-status').value,
+      defectCheck: el('hr-defect-check').value,
+      roastDate: el('hr-roast-date').value,
+      inputG: Number(el('hr-input-g').value) || 0,
+      outputG: Number(el('hr-output-g').value) || 0,
+      yieldPct: el('hr-yield-pct').value,
+      coolingCheck: el('hr-cooling-check').value,
+      roastDefect: el('hr-roast-defect').value,
+      packDate: el('hr-pack-date').value,
+      packType: el('hr-pack-type').value,
+      packCount: Number(el('hr-pack-count').value) || 0,
+      sealCheck: el('hr-seal-check').value,
+      labelCheck: el('hr-label-check').value,
+      shipDate: el('hr-ship-date').value,
+      shipNotes: el('hr-ship-notes').value,
+      createdAt: new Date().toISOString()
+    };
+
+    var list = await getHaccpJson('haccp_roast_batches', []);
+    list.unshift(record);
+    await saveHaccpJson('haccp_roast_batches', list);
+
+    alert('✅ ロット「' + record.lotId + '」を台帳に保存しました！');
+    switchHaccpSubTab('list');
+  } catch(e){
+    alert('保存エラー: ' + (e.message || String(e)));
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = '💾 ロット台帳を保存'; }
+  }
+}
+
+// ─── 3. 本日の衛生記録一覧 ──────────────────────────────
+async function renderHaccpTodayList(){
+  var c = el('haccp-list-container');
+  if(!c) return;
+  c.innerHTML = '<div style="text-align:center;padding:30px;color:var(--sub)">読み込み中...</div>';
+
+  var todayStr = today();
+  var ym = todayStr.slice(0,7);
+  var dailyList = await getHaccpJson('haccp_hygiene_' + ym, []);
+  var todays = dailyList.filter(function(x){ return x.date === todayStr; });
+
+  var roastList = await getHaccpJson('haccp_roast_batches', []);
+  var todaysRoast = roastList.filter(function(x){ return x.roastDate === todayStr || x.recvDate === todayStr; });
+
+  var h = '';
+
+  // 本日の衛生チェック
+  h += '<div class="card" style="padding:20px;margin-bottom:16px">';
+  h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">';
+  h += '    <h3 style="font-size:16px;font-weight:700;color:var(--pri)">🧼 本日の衛生チェック記録（' + todayStr + '）</h3>';
+  h += '    <button type="button" class="bp" onclick="resetHaccpWizard();switchHaccpSubTab(\'wizard\')" style="font-size:12px;padding:6px 14px">＋ 新しくチェックする</button>';
+  h += '  </div>';
+
+  if(todays.length === 0){
+    h += '<div style="text-align:center;padding:30px;color:var(--sub);background:#fbf9f6;border-radius:10px">本日の衛生チェック記録はまだありません。</div>';
+  } else {
+    h += '<div style="display:flex;flex-direction:column;gap:10px">';
+    todays.forEach(function(r){
+      h += '<div style="border:1.5px solid var(--bdr);border-radius:12px;padding:12px 16px;background:#fff;display:flex;justify-content:space-between;align-items:center">';
+      h += '  <div>';
+      h += '    <div style="display:flex;align-items:center;gap:8px">';
+      h += '      <span style="font-size:16px;font-weight:800;color:var(--pri)">' + esc(r.workerName) + '</span>';
+      h += '      <span style="font-size:11px;background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-weight:700">全項目 OK</span>';
+      h += '    </div>';
+      h += '    <div style="font-size:12px;color:var(--sub);margin-top:4px">';
+      h += '      確認職員: <b>' + esc(r.staffName) + '</b>' + (r.notes ? ' / 備考: ' + esc(r.notes) : '');
+      h += '    </div>';
+      h += '  </div>';
+      h += '  <button type="button" onclick="deleteHaccpRecord(\''+r.id+'\',\''+r.date+'\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:13px;padding:6px">✕ 削除</button>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+
+  // 本日の焙煎ロット
+  h += '<div class="card" style="padding:20px;">';
+  h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">';
+  h += '    <h3 style="font-size:16px;font-weight:700;color:var(--pri)">☕ 本日の焙煎・出荷ロット（' + todayStr + '）</h3>';
+  h += '    <button type="button" class="bp" onclick="switchHaccpSubTab(\'roast\')" style="font-size:12px;padding:6px 14px">＋ ロット追加</button>';
+  h += '  </div>';
+
+  if(todaysRoast.length === 0){
+    h += '<div style="text-align:center;padding:30px;color:var(--sub);background:#fbf9f6;border-radius:10px">本日の焙煎・出荷ロット記録はありません。</div>';
+  } else {
+    h += '<div style="display:flex;flex-direction:column;gap:10px">';
+    todaysRoast.forEach(function(b){
+      h += '<div style="border:1.5px solid var(--bdr);border-radius:12px;padding:12px 16px;background:#fff;display:flex;justify-content:space-between;align-items:center">';
+      h += '  <div>';
+      h += '    <div style="display:flex;align-items:center;gap:8px">';
+      h += '      <span style="font-size:15px;font-weight:800;color:var(--pri)">ロット: ' + esc(b.lotId) + '</span>';
+      h += '      <span style="font-size:13px;font-weight:700">' + esc(b.beanOrigin) + '</span>';
+      h += '    </div>';
+      h += '    <div style="font-size:12px;color:var(--sub);margin-top:4px">';
+      h += '      投入: ' + (b.inputG||0) + 'g → 焙煎後: ' + (b.outputG||0) + 'g（歩留: <b>' + (b.yieldPct||'-') + '</b>） / 包装: ' + (b.packType||'-') + ' ' + (b.packCount||0) + '個';
+      h += '    </div>';
+      h += '  </div>';
+      h += '  <button type="button" onclick="deleteHaccpRoastBatch(\''+b.id+'\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:13px;padding:6px">✕ 削除</button>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+
+  c.innerHTML = h;
+}
+
+async function deleteHaccpRecord(id, date){
+  if(!confirm('この衛生記録を削除してもよろしいですか？')) return;
+  try {
+    var ym = date.slice(0,7);
+    var key = 'haccp_hygiene_' + ym;
+    var list = await getHaccpJson(key, []);
+    list = list.filter(function(x){ return x.id !== id; });
+    await saveHaccpJson(key, list);
+    renderHaccpTodayList();
+  } catch(e){
+    alert('削除エラー: ' + (e.message || String(e)));
+  }
+}
+
+async function deleteHaccpRoastBatch(id){
+  if(!confirm('このロット台帳記録を削除してもよろしいですか？')) return;
+  try {
+    var key = 'haccp_roast_batches';
+    var list = await getHaccpJson(key, []);
+    list = list.filter(function(x){ return x.id !== id; });
+    await saveHaccpJson(key, list);
+    renderHaccpTodayList();
+  } catch(e){
+    alert('削除エラー: ' + (e.message || String(e)));
+  }
+}
 </script>
 </body>
 </html>
