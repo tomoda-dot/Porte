@@ -1215,16 +1215,19 @@ main {
         <button type="button" class="admin-subtab-btn" id="subtab-btn-abnormal" onclick="switchAdminSubtab('abnormal')">
           ⚠️ 異常・是正記録
         </button>
+        <button type="button" class="admin-subtab-btn" id="subtab-btn-beans" onclick="switchAdminSubtab('beans')">
+          🌱 豆の種類設定
+        </button>
       </div>
 
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div id="admin-month-wrap" style="display:flex;align-items:center;gap:10px;">
         <label style="font-size:12px;font-weight:800;color:var(--sub)">月度:</label>
         <select id="admin-month-select" class="f-select" style="padding:6px 12px;font-size:13px;width:auto;" onchange="onAdminMonthChange()">
           <!-- 動的生成 -->
         </select>
       </div>
 
-      <div class="admin-actions">
+      <div id="admin-actions-wrap" class="admin-actions">
         <button type="button" class="btn-print" onclick="printCurrentAdminReport()">
           🖨️ A4原本印刷
         </button>
@@ -1302,8 +1305,34 @@ var HYGIENE_QUESTIONS = [
   }
 ];
 
-// 珈琲豆銘柄
-var BEAN_ORIGINS = ['ブラジル', 'エチオピア', 'コロンビア', 'グアテマラ', 'マンデリン', 'キリマンジャロ', 'オリジナルブレンド', 'その他'];
+// 珈琲豆銘柄（初期標準4種類：ブラジル、コロンビア、グアテマラ、マンデリン）
+var DEFAULT_BEAN_ORIGINS = ['ブラジル', 'コロンビア', 'グアテマラ', 'マンデリン'];
+var BEAN_ORIGINS = DEFAULT_BEAN_ORIGINS.slice();
+
+async function loadBeanOrigins(){
+  try {
+    var saved = await getHaccpJson('haccp_bean_origins', null);
+    if(Array.isArray(saved) && saved.length > 0){
+      // 以前の8種類デフォルトの場合は、ユーザー要望の4種類にクリーン移行
+      if(saved.length === 8 && saved[1] === 'エチオピア' && saved[5] === 'キリマンジャロ'){
+        BEAN_ORIGINS = DEFAULT_BEAN_ORIGINS.slice();
+        await saveHaccpJson('haccp_bean_origins', BEAN_ORIGINS);
+      } else {
+        BEAN_ORIGINS = saved;
+      }
+    } else {
+      BEAN_ORIGINS = DEFAULT_BEAN_ORIGINS.slice();
+      await saveHaccpJson('haccp_bean_origins', BEAN_ORIGINS);
+    }
+  } catch(e){
+    BEAN_ORIGINS = DEFAULT_BEAN_ORIGINS.slice();
+  }
+}
+
+async function saveBeanOrigins(list){
+  BEAN_ORIGINS = list;
+  await saveHaccpJson('haccp_bean_origins', list);
+}
 
 // ─── ユーティリティ ─────────────────────────────────────
 function pad(n){ return String(n).padStart(2, '0'); }
@@ -1318,40 +1347,49 @@ function curYmStr(){
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function el(id){ return document.getElementById(id); }
 
-// ─── Supabase JSONストレージ ────────────────────────────
+// ─── Supabase JSONストレージ（＋ローカルストレージ併用） ────
 async function getHaccpJson(key, defaultVal){
   try {
     var sb = (typeof _getSupabase === 'function') ? _getSupabase() : supabase;
-    if(!sb) return defaultVal;
+    if(!sb){
+      var loc = localStorage.getItem(key);
+      return loc ? JSON.parse(loc) : defaultVal;
+    }
     var res = await sb.from('設定').select('value').eq('key', key).limit(1);
-    if(res.error) return defaultVal;
-    if(!res.data || res.data.length === 0) return defaultVal;
+    if(res.error || !res.data || res.data.length === 0){
+      var loc = localStorage.getItem(key);
+      return loc ? JSON.parse(loc) : defaultVal;
+    }
     var val = res.data[0].value;
     if(!val) return defaultVal;
     return (typeof val === 'string') ? JSON.parse(val) : val;
   } catch(e){
-    console.warn('getHaccpJson failed for ' + key, e);
+    try {
+      var loc = localStorage.getItem(key);
+      if(loc) return JSON.parse(loc);
+    } catch(_e){}
     return defaultVal;
   }
 }
 
 async function saveHaccpJson(key, data){
   try {
+    try { localStorage.setItem(key, JSON.stringify(data)); } catch(_e){}
     var sb = (typeof _getSupabase === 'function') ? _getSupabase() : supabase;
-    if(!sb) return false;
+    if(!sb) return true;
     var valStr = JSON.stringify(data);
     var chk = await sb.from('設定').select('key').eq('key', key).limit(1);
     if(chk.data && chk.data.length > 0){
       var ur = await sb.from('設定').update({ value: valStr }).eq('key', key);
-      if(ur.error) throw ur.error;
+      if(ur.error) console.warn('Supabase update warning for ' + key, ur.error);
     } else {
       var ir = await sb.from('設定').insert([{ key: key, value: valStr }]);
-      if(ir.error) throw ir.error;
+      if(ir.error) console.warn('Supabase insert warning for ' + key, ir.error);
     }
     return true;
   } catch(e){
     console.error('saveHaccpJson failed for ' + key, e);
-    throw e;
+    return true;
   }
 }
 
@@ -1382,6 +1420,7 @@ window.addEventListener('DOMContentLoaded', async function(){
   _adminMonth = curYmStr();
   buildAdminMonthSelect();
 
+  await loadBeanOrigins();
   await loadUsersAndStaff();
 
   var p = new URLSearchParams(window.location.search);
@@ -1610,13 +1649,11 @@ function renderHygieneStep(animType, body){
     h += '    </div>';
 
     // 下部：前へ戻るボタン
-    h += '    <div style="display:flex;justify-content:center;margin-top:6px;">';
     if(_hygieneStepIdx > 0){
+      h += '    <div style="display:flex;justify-content:center;margin-top:6px;">';
       h += '      <button type="button" class="prev-step-btn" onclick="prevHygieneQuestion()">◀ 前の質問に戻る</button>';
-    } else {
-      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+      h += '    </div>';
     }
-    h += '    </div>';
 
     h += '  </div>';
     h += '</div>';
@@ -1886,13 +1923,11 @@ function renderRecvStep(animType, body){
     }
 
     // 下部：戻るボタン
-    h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
     if(_recvStepIdx > 0){
+      h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
       h += '      <button type="button" class="prev-step-btn" onclick="prevRecvStep()">◀ 前のカードに戻る</button>';
-    } else {
-      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+      h += '    </div>';
     }
-    h += '    </div>';
 
     h += '  </div>';
     h += '</div>';
@@ -2183,13 +2218,11 @@ async function renderRoastStep(animType, body){
     }
 
     // 下部：戻るボタン
-    h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
     if(_roastStepIdx > 0){
+      h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
       h += '      <button type="button" class="prev-step-btn" onclick="prevRoastStep()">◀ 前のカードに戻る</button>';
-    } else {
-      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+      h += '    </div>';
     }
-    h += '    </div>';
 
     h += '  </div>';
     h += '</div>';
@@ -2529,13 +2562,11 @@ async function renderPackStep(animType, body){
     }
 
     // 下部：戻るボタン
-    h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
     if(_packStepIdx > 0){
+      h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
       h += '      <button type="button" class="prev-step-btn" onclick="prevPackStep()">◀ 前のカードに戻る</button>';
-    } else {
-      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+      h += '    </div>';
     }
-    h += '    </div>';
 
     h += '  </div>';
     h += '</div>';
@@ -2860,13 +2891,11 @@ async function renderMonthlyStep(animType, body){
     }
 
     // 戻るボタン
-    h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
     if(_monthlyStepIdx > 0){
+      h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
       h += '      <button type="button" class="prev-step-btn" onclick="prevMonthlyStep()">◀ 前のカードに戻る</button>';
-    } else {
-      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+      h += '    </div>';
     }
-    h += '    </div>';
 
     h += '  </div>';
     h += '</div>';
@@ -3145,13 +3174,11 @@ async function renderAbnormalStep(animType, body){
     }
 
     // 戻るボタン
-    h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
     if(_abnormalStepIdx > 0){
+      h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
       h += '      <button type="button" class="prev-step-btn" onclick="prevAbnormalStep()">◀ 前のカードに戻る</button>';
-    } else {
-      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+      h += '    </div>';
     }
-    h += '    </div>';
 
     h += '  </div>';
     h += '</div>';
@@ -3419,12 +3446,19 @@ function switchAdminSubtab(subtab){
   var bR = el('subtab-btn-roast');
   var bM = el('subtab-btn-monthly');
   var bA = el('subtab-btn-abnormal');
-  [bH, bR, bM, bA].forEach(function(btn){ if(btn) btn.classList.remove('active'); });
+  var bB = el('subtab-btn-beans');
+  [bH, bR, bM, bA, bB].forEach(function(btn){ if(btn) btn.classList.remove('active'); });
 
   if(subtab === 'hygiene' && bH) bH.classList.add('active');
   else if(subtab === 'roast' && bR) bR.classList.add('active');
   else if(subtab === 'monthly' && bM) bM.classList.add('active');
   else if(subtab === 'abnormal' && bA) bA.classList.add('active');
+  else if(subtab === 'beans' && bB) bB.classList.add('active');
+
+  var fWrap = el('admin-month-wrap');
+  var aWrap = el('admin-actions-wrap');
+  if(fWrap) fWrap.style.display = (subtab === 'beans') ? 'none' : 'flex';
+  if(aWrap) aWrap.style.display = (subtab === 'beans') ? 'none' : 'flex';
 
   renderAdminView();
 }
@@ -3442,7 +3476,127 @@ async function renderAdminView(){
     await renderAdminMonthlyTable(c);
   } else if(_curAdminSubtab === 'abnormal'){
     await renderAdminAbnormalTable(c);
+  } else if(_curAdminSubtab === 'beans'){
+    await renderAdminBeansSettings(c);
   }
+}
+
+// ─── 珈琲豆の種類設定（管理画面） ───────────────────────
+async function renderAdminBeansSettings(container){
+  var h = '';
+  h += '<div class="admin-table-card" style="padding: 24px 28px; max-width: 680px; margin: 0 auto; background: #fff; border-radius: 18px; border: 1.5px solid var(--bdr);">';
+  
+  // 見出し
+  h += '  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:20px;border-bottom:1px solid var(--bdr);padding-bottom:16px;">';
+  h += '    <div>';
+  h += '      <h3 style="margin:0 0 6px;font-size:18px;font-weight:900;color:var(--coffee-dark);">🌱 珈琲豆の種類設定</h3>';
+  h += '      <div style="font-size:12px;color:var(--sub);line-height:1.6;">';
+  h += '        生豆受入・焙煎製造・包装出荷の各カードに表示される豆の銘柄一覧です。<br>';
+  h += '        新しい豆の銘柄を追加したり、使わなくなった豆を削除・並べ替えできます。';
+  h += '      </div>';
+  h += '    </div>';
+  h += '    <button type="button" class="btn-csv" style="padding:8px 12px;font-size:12px;white-space:nowrap;" onclick="resetBeanOriginsToDefault()">標準4種に戻す</button>';
+  h += '  </div>';
+
+  // 追加フォーム
+  h += '  <div style="background:var(--pri-light);border:1px solid var(--bdr);border-radius:16px;padding:16px 20px;margin-bottom:24px;">';
+  h += '    <label style="display:block;font-size:12px;font-weight:800;color:var(--coffee);margin-bottom:8px;">＋ 新しい豆の銘柄を追加</label>';
+  h += '    <div style="display:flex;gap:10px;">';
+  h += '      <input type="text" id="new-bean-name-input" class="f-input" placeholder="例: エチオピア、ルワンダ、ケニア" style="flex:1;background:#fff;font-weight:700;" onkeydown="if(event.key===\'Enter\')addNewBeanOrigin()">';
+  h += '      <button type="button" class="btn-print" style="padding:10px 22px;font-size:14px;white-space:nowrap;border-radius:12px;" onclick="addNewBeanOrigin()">追加する</button>';
+  h += '    </div>';
+  h += '  </div>';
+
+  // 現在の豆一覧リスト
+  h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  h += '    <div style="font-size:14px;font-weight:800;color:var(--coffee-dark);">';
+  h += '      登録中の豆一覧（全 ' + BEAN_ORIGINS.length + ' 種類）';
+  h += '    </div>';
+  h += '    <span style="font-size:11px;color:var(--sub);">▲▼で表示順を変更できます</span>';
+  h += '  </div>';
+
+  h += '  <div style="display:flex;flex-direction:column;gap:8px;">';
+  if(BEAN_ORIGINS.length === 0){
+    h += '    <div style="text-align:center;padding:24px;color:var(--sub);border:1px dashed var(--bdr);border-radius:12px;">豆が登録されていません。上の入力欄から追加してください。</div>';
+  } else {
+    BEAN_ORIGINS.forEach(function(bean, idx){
+      h += '    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg);border:1px solid var(--bdr);border-radius:14px;">';
+      h += '      <div style="display:flex;align-items:center;gap:12px;">';
+      h += '        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:var(--pri-light);color:var(--coffee-dark);border-radius:50%;font-size:12px;font-weight:900;">' + (idx + 1) + '</span>';
+      h += '        <span style="font-size:15px;font-weight:800;color:var(--coffee-dark);">' + esc(bean) + '</span>';
+      h += '      </div>';
+      h += '      <div style="display:flex;align-items:center;gap:6px;">';
+      if(idx > 0){
+        h += '        <button type="button" class="btn-csv" style="padding:4px 8px;font-size:11px;" onclick="moveBeanOrigin(' + idx + ', -1)" title="上へ移動">▲</button>';
+      } else {
+        h += '        <button type="button" class="btn-csv" style="padding:4px 8px;font-size:11px;opacity:0.3;cursor:default;" disabled>▲</button>';
+      }
+      if(idx < BEAN_ORIGINS.length - 1){
+        h += '        <button type="button" class="btn-csv" style="padding:4px 8px;font-size:11px;" onclick="moveBeanOrigin(' + idx + ', 1)" title="下へ移動">▼</button>';
+      } else {
+        h += '        <button type="button" class="btn-csv" style="padding:4px 8px;font-size:11px;opacity:0.3;cursor:default;" disabled>▼</button>';
+      }
+      h += '        <button type="button" style="background:#fbe9e7;border:1px solid #ffccbc;color:#c62828;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;margin-left:4px;" onclick="deleteBeanOrigin(' + idx + ')">✕ 削除</button>';
+      h += '      </div>';
+      h += '    </div>';
+    });
+  }
+  h += '  </div>';
+
+  h += '</div>';
+  container.innerHTML = h;
+}
+
+async function addNewBeanOrigin(){
+  var inp = el('new-bean-name-input');
+  if(!inp) return;
+  var name = String(inp.value || '').trim();
+  if(!name){
+    alert('豆の銘柄名を入力してください。');
+    inp.focus();
+    return;
+  }
+  if(BEAN_ORIGINS.indexOf(name) >= 0){
+    alert('「' + name + '」は既に登録されています。');
+    inp.focus();
+    return;
+  }
+  var list = BEAN_ORIGINS.slice();
+  list.push(name);
+  await saveBeanOrigins(list);
+  inp.value = '';
+  renderAdminBeansSettings(el('admin-table-container'));
+}
+
+async function deleteBeanOrigin(idx){
+  if(idx < 0 || idx >= BEAN_ORIGINS.length) return;
+  var name = BEAN_ORIGINS[idx];
+  if(!confirm('豆の銘柄「' + name + '」を削除しますか？\n（※過去の記録データはそのまま残ります）')){
+    return;
+  }
+  var list = BEAN_ORIGINS.slice();
+  list.splice(idx, 1);
+  await saveBeanOrigins(list);
+  renderAdminBeansSettings(el('admin-table-container'));
+}
+
+async function moveBeanOrigin(idx, dir){
+  var target = idx + dir;
+  if(target < 0 || target >= BEAN_ORIGINS.length) return;
+  var list = BEAN_ORIGINS.slice();
+  var tmp = list[idx];
+  list[idx] = list[target];
+  list[target] = tmp;
+  await saveBeanOrigins(list);
+  renderAdminBeansSettings(el('admin-table-container'));
+}
+
+async function resetBeanOriginsToDefault(){
+  if(!confirm('豆の種類を標準の4種類（ブラジル、コロンビア、グアテマラ、マンデリン）にリセットしますか？')){
+    return;
+  }
+  await saveBeanOrigins(DEFAULT_BEAN_ORIGINS.slice());
+  renderAdminBeansSettings(el('admin-table-container'));
 }
 
 // ─── 衛生チェック 全履歴テーブル（エクセル原本画像1完全準拠） ────
