@@ -2001,9 +2001,9 @@ async function initRoastWizard(recordToEdit){
       defectCheck: '良',
       // ② 焙煎製造
       roastDate: todayStr,
-      inputG: '1000',
-      outputG: '840',
-      yieldPct: '84.0%',
+      inputG: '120',
+      outputG: '100',
+      yieldPct: '83.3%',
       coolingCheck: '良',
       roastDefect: '無',
       // ③ 包装出荷
@@ -2304,19 +2304,21 @@ async function renderHaccpRoastForm(){
     h += '  <div>';
     h += '    <label style="display:block;font-size:12px;font-weight:700;color:var(--pri);margin-bottom:3px">生豆投入量 (g):</label>';
     h += '    <input type="number" id="inp-roast-in" value="' + esc(_roastWizardState.inputG) + '" placeholder="例: 1000" oninput="_roastWizardState.inputG=this.value;renderRoastYieldLive();" style="width:100%;padding:12px;border:2px solid var(--bdr);border-radius:10px;font-size:18px;font-weight:800;background:#fff">';
-    h += '    <div style="display:flex;gap:4px;margin-top:4px">';
+    h += '    <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">';
+    h += '      <button type="button" class="bg" onclick="setRoastInputG(\'120\')" style="font-size:10px;padding:2px 6px">120g</button>';
+    h += '      <button type="button" class="bg" onclick="setRoastInputG(\'240\')" style="font-size:10px;padding:2px 6px">240g</button>';
     h += '      <button type="button" class="bg" onclick="setRoastInputG(\'500\')" style="font-size:10px;padding:2px 6px">500g</button>';
     h += '      <button type="button" class="bg" onclick="setRoastInputG(\'1000\')" style="font-size:10px;padding:2px 6px">1000g</button>';
-    h += '      <button type="button" class="bg" onclick="setRoastInputG(\'1200\')" style="font-size:10px;padding:2px 6px">1200g</button>';
     h += '    </div>';
     h += '  </div>';
     h += '  <div>';
     h += '    <label style="display:block;font-size:12px;font-weight:700;color:var(--pri);margin-bottom:3px">焙煎後重量 (g):</label>';
-    h += '    <input type="number" id="inp-roast-out" value="' + esc(_roastWizardState.outputG) + '" placeholder="例: 840" oninput="_roastWizardState.outputG=this.value;renderRoastYieldLive();" style="width:100%;padding:12px;border:2px solid var(--bdr);border-radius:10px;font-size:18px;font-weight:800;background:#fff">';
-    h += '    <div style="display:flex;gap:4px;margin-top:4px">';
+    h += '    <input type="number" id="inp-roast-out" value="' + esc(_roastWizardState.outputG) + '" placeholder="例: 100" oninput="_roastWizardState.outputG=this.value;renderRoastYieldLive();" style="width:100%;padding:12px;border:2px solid var(--bdr);border-radius:10px;font-size:18px;font-weight:800;background:#fff">';
+    h += '    <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">';
+    h += '      <button type="button" class="bg" onclick="setRoastOutputG(\'100\')" style="font-size:10px;padding:2px 6px">100g</button>';
+    h += '      <button type="button" class="bg" onclick="setRoastOutputG(\'200\')" style="font-size:10px;padding:2px 6px">200g</button>';
     h += '      <button type="button" class="bg" onclick="setRoastOutputG(\'420\')" style="font-size:10px;padding:2px 6px">420g</button>';
     h += '      <button type="button" class="bg" onclick="setRoastOutputG(\'840\')" style="font-size:10px;padding:2px 6px">840g</button>';
-    h += '      <button type="button" class="bg" onclick="setRoastOutputG(\'1000\')" style="font-size:10px;padding:2px 6px">1000g</button>';
     h += '    </div>';
     h += '  </div>';
     h += '</div>';

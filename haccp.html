@@ -2076,9 +2076,9 @@ var _roastStepIdx = 0;
 var _roastData = {
   lotId: '',
   bean: BEAN_ORIGINS[0],
-  inputG: 500,
-  outputG: 420,
-  yieldPct: '84.0%',
+  inputG: 120,
+  outputG: 100,
+  yieldPct: '83.3%',
   conditionStatus: '良',
   abnormalStatus: '良',
   verifier: ''
@@ -2089,9 +2089,9 @@ async function startRoastWizard(body){
   _roastData = {
     lotId: '',
     bean: BEAN_ORIGINS[0],
-    inputG: 500,
-    outputG: 420,
-    yieldPct: '84.0%',
+    inputG: 120,
+    outputG: 100,
+    yieldPct: '83.3%',
     conditionStatus: '良',
     abnormalStatus: '良',
     verifier: STAFF.length > 0 ? STAFF[0].name : ''
@@ -2139,7 +2139,7 @@ async function renderRoastStep(animType, body){
     else if(_roastStepIdx === 1){
       h += '    <div class="gmap-q-category">重要管理・歩留り</div>';
       h += '    <div class="gmap-q-sentence">生豆の投入量と焙煎後の重さを入力してください</div>';
-      h += '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">';
+      h += '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">';
       h += '      <div style="text-align:left;">';
       h += '        <label style="font-size:12px;font-weight:800;color:var(--coffee);">生豆投入量 (g)</label>';
       h += '        <input type="number" id="f-roast-in" class="f-input" style="font-size:22px;font-weight:900;text-align:center;" value="' + _roastData.inputG + '" oninput="calcYieldCard()">';
@@ -2149,11 +2149,17 @@ async function renderRoastStep(animType, body){
       h += '        <input type="number" id="f-roast-out" class="f-input" style="font-size:22px;font-weight:900;text-align:center;" value="' + _roastData.outputG + '" oninput="calcYieldCard()">';
       h += '      </div>';
       h += '    </div>';
+      h += '    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;">';
+      h += '      <button type="button" class="quick-num-btn" style="font-size:11px;padding:4px 10px;" onclick="setRoastQuickWeights(120, 100)">標準 120g</button>';
+      h += '      <button type="button" class="quick-num-btn" style="font-size:11px;padding:4px 10px;" onclick="setRoastQuickWeights(240, 200)">240g</button>';
+      h += '      <button type="button" class="quick-num-btn" style="font-size:11px;padding:4px 10px;" onclick="setRoastQuickWeights(360, 300)">360g</button>';
+      h += '      <button type="button" class="quick-num-btn" style="font-size:11px;padding:4px 10px;" onclick="setRoastQuickWeights(500, 420)">500g</button>';
+      h += '    </div>';
 
       h += '    <div class="yield-badge-card" id="yield-badge-wrap" style="margin-bottom:18px;">';
       h += '      <div style="font-size:12px;font-weight:800;color:#af5316">歩留り（できあがり割合）</div>';
       h += '      <div class="yield-val" id="yield-val-display" style="color:#af5316;">' + _roastData.yieldPct + '</div>';
-      h += '      <div class="yield-comment" id="yield-comment-display">適正範囲内です。美味しく焼き上がりました。</div>';
+      h += '      <div class="yield-comment" id="yield-comment-display">適正範囲内です。バッチリ美味しく焼き上がりました。</div>';
       h += '    </div>';
 
       h += '    <button type="button" class="card-next-action-btn" style="background:#af5316;" onclick="submitRoastWeights()">次へ進む ▶</button>';
@@ -2215,6 +2221,14 @@ function selectRoastBean(beanName){
     renderRoastStep('in-right');
     _isStepAnimating = false;
   }, 170);
+}
+
+function setRoastQuickWeights(inG, outG){
+  var inEl = el('f-roast-in');
+  var outEl = el('f-roast-out');
+  if(inEl) inEl.value = inG;
+  if(outEl) outEl.value = outG;
+  calcYieldCard();
 }
 
 function calcYieldCard(){
