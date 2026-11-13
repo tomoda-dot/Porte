@@ -1134,62 +1134,62 @@ main {
       </div>
 
       <div class="task-menu-grid">
-        <!-- 1. 衛生チェック -->
+        <!-- 1. 日常衛生記録 -->
         <div class="task-card c-hygiene" onclick="openHaccpModal('hygiene')">
           <div>
             <div class="task-icon">🧼</div>
-            <div class="task-title">衛生チェック</div>
+            <div class="task-title">日常衛生記録</div>
             <div class="task-desc">体調・手洗い・専用台・器具清掃<br>日々の7項目チェック表</div>
           </div>
           <button type="button" class="task-btn-action">開く ▶</button>
         </div>
 
-        <!-- 2. 生豆受入 -->
+        <!-- 2. 生豆受入記録 -->
         <div class="task-card c-recv" onclick="openHaccpModal('recv')">
           <div>
             <div class="task-icon">📦</div>
-            <div class="task-title">生豆受入</div>
-            <div class="task-desc">生豆が届いたときの記録<br>銘柄と重さ、見た目チェック</div>
+            <div class="task-title">生豆受入記録</div>
+            <div class="task-desc">生豆が届いたときの受入確認<br>銘柄・数量・外観チェック</div>
           </div>
           <button type="button" class="task-btn-action">開く ▶</button>
         </div>
 
-        <!-- 3. 焙煎製造 -->
+        <!-- 3. 焙煎製造記録 -->
         <div class="task-card c-roast" onclick="openHaccpModal('roast')">
           <div>
             <div class="task-icon">🔥</div>
-            <div class="task-title">焙煎製造</div>
-            <div class="task-desc">コーヒー豆を焼く記録<br>歩留り(%)を自動でパッと計算！</div>
+            <div class="task-title">焙煎製造記録</div>
+            <div class="task-desc">コーヒー豆を焙煎する記録<br>歩留り(%)を自動でパッと計算！</div>
           </div>
           <button type="button" class="task-btn-action">開く ▶</button>
         </div>
 
-        <!-- 4. 包装出荷 -->
+        <!-- 4. 包装出荷記録 -->
         <div class="task-card c-pack" onclick="openHaccpModal('pack')">
           <div>
             <div class="task-icon">🎁</div>
-            <div class="task-title">包装・出荷</div>
-            <div class="task-desc">ドリップバッグ・豆・粉の袋詰め<br>賞味期限と個数の記録</div>
+            <div class="task-title">包装出荷記録</div>
+            <div class="task-desc">ドリップバッグ・豆・粉の袋詰め<br>密封・賞味期限・個数記録</div>
           </div>
           <button type="button" class="task-btn-action">開く ▶</button>
         </div>
 
-        <!-- 5. 月次点検記録 -->
+        <!-- 5. 異常是正記録 -->
+        <div class="task-card c-abnormal" onclick="openHaccpModal('abnormal')">
+          <div>
+            <div class="task-icon">⚠️</div>
+            <div class="task-title">異常是正記録</div>
+            <div class="task-desc">異常発生時の専用記録<br>保留措置・原因究明・再発防止策</div>
+          </div>
+          <button type="button" class="task-btn-action">開く ▶</button>
+        </div>
+
+        <!-- 6. 月次点検記録 -->
         <div class="task-card c-monthly" onclick="openHaccpModal('monthly')">
           <div>
             <div class="task-icon">🔍</div>
             <div class="task-title">月次点検記録</div>
             <div class="task-desc">月末・月1回の総点検記録<br>製造・異常・衛生教育・設備</div>
-          </div>
-          <button type="button" class="task-btn-action">開く ▶</button>
-        </div>
-
-        <!-- 6. 異常・是正記録 -->
-        <div class="task-card c-abnormal" onclick="openHaccpModal('abnormal')">
-          <div>
-            <div class="task-icon">⚠️</div>
-            <div class="task-title">異常・是正記録</div>
-            <div class="task-desc">異常発生時の専用記録<br>保留措置・原因究明・再発防止策</div>
           </div>
           <button type="button" class="task-btn-action">開く ▶</button>
         </div>
@@ -1204,16 +1204,25 @@ main {
     <div class="admin-toolbar">
       <div class="admin-subtabs">
         <button type="button" class="admin-subtab-btn active" id="subtab-btn-hygiene" onclick="switchAdminSubtab('hygiene')">
-          🧼 日常衛生チェック（7項目）
+          🧼 日常衛生記録
+        </button>
+        <button type="button" class="admin-subtab-btn" id="subtab-btn-recv" onclick="switchAdminSubtab('recv')">
+          📦 生豆受入記録
         </button>
         <button type="button" class="admin-subtab-btn" id="subtab-btn-roast" onclick="switchAdminSubtab('roast')">
-          ☕ 焙煎・出荷台帳
+          🔥 焙煎製造記録
+        </button>
+        <button type="button" class="admin-subtab-btn" id="subtab-btn-pack" onclick="switchAdminSubtab('pack')">
+          🎁 包装出荷記録
+        </button>
+        <button type="button" class="admin-subtab-btn" id="subtab-btn-abnormal" onclick="switchAdminSubtab('abnormal')">
+          ⚠️ 異常是正記録
         </button>
         <button type="button" class="admin-subtab-btn" id="subtab-btn-monthly" onclick="switchAdminSubtab('monthly')">
           🔍 月次点検記録
         </button>
-        <button type="button" class="admin-subtab-btn" id="subtab-btn-abnormal" onclick="switchAdminSubtab('abnormal')">
-          ⚠️ 異常・是正記録
+        <button type="button" class="admin-subtab-btn" id="subtab-btn-combined" onclick="switchAdminSubtab('combined')">
+          📑 統合台帳
         </button>
         <button type="button" class="admin-subtab-btn" id="subtab-btn-beans" onclick="switchAdminSubtab('beans')">
           🌱 豆の種類設定
@@ -1748,7 +1757,7 @@ function renderHygieneConfirmStep(body){
 
   // 保存ボタン
   h += '<button type="button" class="save-action-btn" onclick="saveHygieneRecord()">';
-  h += '  <span>💾 衛生チェックを記録する</span>';
+  h += '  <span>💾 日常衛生記録を保存する</span>';
   h += '</button>';
 
   // 質問をやり直す
@@ -1790,7 +1799,7 @@ async function saveHygieneRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    showModalDone('記録が完了しました', _worker.name + ' さんの衛生点検を保存しました。今日も安全に作業を行いましょう。', '✓');
+    showModalDone('日常衛生記録を保存しました', _worker.name + ' さんの日常衛生点検を保存しました。今日も安全に作業を行いましょう。', '✓');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
@@ -1862,7 +1871,7 @@ function renderRecvStep(animType, body){
 
     h += '<div class="q-progress-wrap">';
     h += '  <div class="q-progress-header">';
-    h += '    <span>生豆受入 (' + (_recvStepIdx + 1) + ' / ' + total + ')</span>';
+    h += '    <span>生豆受入記録 (' + (_recvStepIdx + 1) + ' / ' + total + ')</span>';
     h += '    <span>作業者: ' + esc(_worker.name) + ' さん</span>';
     h += '  </div>';
     h += '  <div class="q-progress-bar-bg">';
@@ -2035,8 +2044,8 @@ async function renderRecvConfirmStep(body){
 
   var h = '';
   h += '<div class="step-header" style="margin-bottom:16px;">';
-  h += '  <span class="step-tag" style="background:#f6f3eb;color:#6e5f3c">生豆受入 完了確認</span>';
-  h += '  <h2 class="step-title" style="font-size:20px;">生豆受入の確認</h2>';
+  h += '  <span class="step-tag" style="background:#f6f3eb;color:#6e5f3c">生豆受入記録 完了確認</span>';
+  h += '  <h2 class="step-title" style="font-size:20px;">生豆受入記録の確認</h2>';
   h += '  <p class="step-sub">作業者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
 
@@ -2062,7 +2071,7 @@ async function renderRecvConfirmStep(body){
   h += '</div>';
 
   h += '<button type="button" class="save-action-btn" style="background:#6e5f3c;" onclick="saveRecvRecord()">';
-  h += '  <span>💾 生豆の受入を記録する</span>';
+  h += '  <span>💾 生豆受入記録を保存する</span>';
   h += '</button>';
 
   h += '<div style="text-align:center;margin-top:12px;">';
@@ -2097,7 +2106,7 @@ async function saveRecvRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    showModalDone('生豆受入を記録しました', _recvData.bean + '（' + _recvData.weightKg + 'kg）の受入を保存しました。ロット番号: ' + lot, '✓');
+    showModalDone('生豆受入記録を保存しました', _recvData.bean + '（' + _recvData.weightKg + 'kg）の受入を保存しました。ロット番号: ' + lot, '✓');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
@@ -2147,7 +2156,7 @@ async function renderRoastStep(animType, body){
 
     h += '<div class="q-progress-wrap">';
     h += '  <div class="q-progress-header">';
-    h += '    <span>焙煎製造 (' + (_roastStepIdx + 1) + ' / ' + total + ')</span>';
+    h += '    <span>焙煎製造記録 (' + (_roastStepIdx + 1) + ' / ' + total + ')</span>';
     h += '    <span>作業者: ' + esc(_worker.name) + ' さん</span>';
     h += '  </div>';
     h += '  <div class="q-progress-bar-bg">';
@@ -2372,8 +2381,8 @@ async function renderRoastConfirmStep(body){
 
   var h = '';
   h += '<div class="step-header" style="margin-bottom:16px;">';
-  h += '  <span class="step-tag" style="background:#fef5ee;color:#af5316">焙煎製造 完了確認</span>';
-  h += '  <h2 class="step-title" style="font-size:20px;">焙煎製造の確認</h2>';
+  h += '  <span class="step-tag" style="background:#fef5ee;color:#af5316">焙煎製造記録 完了確認</span>';
+  h += '  <h2 class="step-title" style="font-size:20px;">焙煎製造記録の確認</h2>';
   h += '  <p class="step-sub">作業者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
 
@@ -2397,7 +2406,7 @@ async function renderRoastConfirmStep(body){
   h += '</div>';
 
   h += '<button type="button" class="save-action-btn" style="background:#af5316;" onclick="saveRoastRecord()">';
-  h += '  <span>💾 焙煎製造を記録する</span>';
+  h += '  <span>💾 焙煎製造記録を保存する</span>';
   h += '</button>';
 
   h += '<div style="text-align:center;margin-top:12px;">';
@@ -2433,7 +2442,7 @@ async function saveRoastRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    showModalDone('焙煎製造を記録しました', _roastData.bean + '（' + _roastData.outputG + 'g / 歩留り ' + _roastData.yieldPct + '）を保存しました。ロット番号: ' + lot, '✓');
+    showModalDone('焙煎製造記録を保存しました', _roastData.bean + '（' + _roastData.outputG + 'g / 歩留り ' + _roastData.yieldPct + '）を保存しました。ロット番号: ' + lot, '✓');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
@@ -2488,7 +2497,7 @@ async function renderPackStep(animType, body){
 
     h += '<div class="q-progress-wrap">';
     h += '  <div class="q-progress-header">';
-    h += '    <span>包装・出荷 (' + (_packStepIdx + 1) + ' / ' + total + ')</span>';
+    h += '    <span>包装出荷記録 (' + (_packStepIdx + 1) + ' / ' + total + ')</span>';
     h += '    <span>作業者: ' + esc(_worker.name) + ' さん</span>';
     h += '  </div>';
     h += '  <div class="q-progress-bar-bg">';
@@ -2696,8 +2705,8 @@ async function renderPackConfirmStep(body){
 
   var h = '';
   h += '<div class="step-header" style="margin-bottom:16px;">';
-  h += '  <span class="step-tag" style="background:#f7f2ed;color:#67432d">包装・出荷 完了確認</span>';
-  h += '  <h2 class="step-title" style="font-size:20px;">包装・出荷の確認</h2>';
+  h += '  <span class="step-tag" style="background:#f7f2ed;color:#67432d">包装出荷記録 完了確認</span>';
+  h += '  <h2 class="step-title" style="font-size:20px;">包装出荷記録の確認</h2>';
   h += '  <p class="step-sub">作業者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
 
@@ -2726,7 +2735,7 @@ async function renderPackConfirmStep(body){
   h += '</div>';
 
   h += '<button type="button" class="save-action-btn" style="background:#67432d;" onclick="savePackRecord()">';
-  h += '  <span>💾 包装・出荷を記録する</span>';
+  h += '  <span>💾 包装出荷記録を保存する</span>';
   h += '</button>';
 
   h += '<div style="text-align:center;margin-top:12px;">';
@@ -2764,7 +2773,7 @@ async function savePackRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    showModalDone('包装・出荷を記録しました', _packData.bean + '（' + _packData.packForm + ' ' + _packData.packCount + '個）を保存しました。ロット番号: ' + lot, '✓');
+    showModalDone('包装出荷記録を保存しました', _packData.bean + '（' + _packData.packForm + ' ' + _packData.packCount + '個）を保存しました。ロット番号: ' + lot, '✓');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
@@ -2806,7 +2815,7 @@ async function renderMonthlyStep(animType, body){
 
     h += '<div class="q-progress-wrap">';
     h += '  <div class="q-progress-header">';
-    h += '    <span>月次点検 (' + (_monthlyStepIdx + 1) + ' / ' + total + ')</span>';
+    h += '    <span>月次点検記録 (' + (_monthlyStepIdx + 1) + ' / ' + total + ')</span>';
     h += '    <span>点検者: ' + esc(_worker.name) + ' さん</span>';
     h += '  </div>';
     h += '  <div class="q-progress-bar-bg">';
@@ -2978,7 +2987,7 @@ async function renderMonthlyConfirmStep(body){
 
   var h = '';
   h += '<div class="step-header" style="margin-bottom:16px;">';
-  h += '  <span class="step-tag" style="background:#f3ece6;color:#3d2314">月次点検 完了確認</span>';
+  h += '  <span class="step-tag" style="background:#f3ece6;color:#3d2314">月次点検記録 完了確認</span>';
   h += '  <h2 class="step-title" style="font-size:20px;">月次点検記録の確認</h2>';
   h += '  <p class="step-sub">点検実施者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
@@ -3005,7 +3014,7 @@ async function renderMonthlyConfirmStep(body){
   h += '</div>';
 
   h += '<button type="button" class="save-action-btn" style="background:#3d2314;" onclick="saveMonthlyRecord()">';
-  h += '  <span>💾 月次点検を記録する</span>';
+  h += '  <span>💾 月次点検記録を保存する</span>';
   h += '</button>';
 
   h += '<div style="text-align:center;margin-top:12px;">';
@@ -3044,7 +3053,7 @@ async function saveMonthlyRecord(){
     }
     await saveHaccpJson(key, list);
 
-    showModalDone('月次点検を記録しました', _monthlyData.targetMonth + '度 月次点検記録（責任者: ' + manager + '）を保存しました。', '✓');
+    showModalDone('月次点検記録を保存しました', _monthlyData.targetMonth + '度 月次点検記録（責任者: ' + manager + '）を保存しました。', '✓');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
@@ -3089,7 +3098,7 @@ async function renderAbnormalStep(animType, body){
 
     h += '<div class="q-progress-wrap">';
     h += '  <div class="q-progress-header">';
-    h += '    <span>異常・是正 (' + (_abnormalStepIdx + 1) + ' / ' + total + ')</span>';
+    h += '    <span>異常是正記録 (' + (_abnormalStepIdx + 1) + ' / ' + total + ')</span>';
     h += '    <span>記入者: ' + esc(_worker.name) + ' さん</span>';
     h += '  </div>';
     h += '  <div class="q-progress-bar-bg">';
@@ -3325,8 +3334,8 @@ function prevAbnormalStep(){
 async function renderAbnormalConfirmStep(body){
   var h = '';
   h += '<div class="step-header" style="margin-bottom:16px;">';
-  h += '  <span class="step-tag" style="background:#fcf0ee;color:#9c3628">異常・是正記録 完了確認</span>';
-  h += '  <h2 class="step-title" style="font-size:20px;">異常・是正記録の確認</h2>';
+  h += '  <span class="step-tag" style="background:#fcf0ee;color:#9c3628">異常是正記録 完了確認</span>';
+  h += '  <h2 class="step-title" style="font-size:20px;">異常是正記録の確認</h2>';
   h += '  <p class="step-sub">記録者: <b>' + esc(_worker.name) + '</b> さん</p>';
   h += '</div>';
 
@@ -3352,7 +3361,7 @@ async function renderAbnormalConfirmStep(body){
   h += '</div>';
 
   h += '<button type="button" class="save-action-btn" style="background:#9c3628;" onclick="saveAbnormalRecord()">';
-  h += '  <span>💾 異常・是正記録を保存する</span>';
+  h += '  <span>💾 異常是正記録を保存する</span>';
   h += '</button>';
 
   h += '<div style="text-align:center;margin-top:12px;">';
@@ -3387,7 +3396,7 @@ async function saveAbnormalRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    showModalDone('異常・是正を記録しました', '発生工程: ' + _abnormalData.processName + '（責任者: ' + manager + '）の是正処置を記録しました。', '⚠️');
+    showModalDone('異常是正記録を保存しました', '発生工程: ' + _abnormalData.processName + '（責任者: ' + manager + '）の是正処置を記録しました。', '⚠️');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
@@ -3442,18 +3451,14 @@ function onAdminMonthChange(){
 
 function switchAdminSubtab(subtab){
   _curAdminSubtab = subtab;
-  var bH = el('subtab-btn-hygiene');
-  var bR = el('subtab-btn-roast');
-  var bM = el('subtab-btn-monthly');
-  var bA = el('subtab-btn-abnormal');
-  var bB = el('subtab-btn-beans');
-  [bH, bR, bM, bA, bB].forEach(function(btn){ if(btn) btn.classList.remove('active'); });
-
-  if(subtab === 'hygiene' && bH) bH.classList.add('active');
-  else if(subtab === 'roast' && bR) bR.classList.add('active');
-  else if(subtab === 'monthly' && bM) bM.classList.add('active');
-  else if(subtab === 'abnormal' && bA) bA.classList.add('active');
-  else if(subtab === 'beans' && bB) bB.classList.add('active');
+  var subtabs = ['hygiene', 'recv', 'roast', 'pack', 'abnormal', 'monthly', 'combined', 'beans'];
+  subtabs.forEach(function(s){
+    var btn = el('subtab-btn-' + s);
+    if(btn){
+      if(s === subtab) btn.classList.add('active');
+      else btn.classList.remove('active');
+    }
+  });
 
   var fWrap = el('admin-month-wrap');
   var aWrap = el('admin-actions-wrap');
@@ -3470,12 +3475,18 @@ async function renderAdminView(){
 
   if(_curAdminSubtab === 'hygiene'){
     await renderAdminHygieneTable(c);
+  } else if(_curAdminSubtab === 'recv'){
+    await renderAdminRecvTable(c);
   } else if(_curAdminSubtab === 'roast'){
     await renderAdminRoastTable(c);
-  } else if(_curAdminSubtab === 'monthly'){
-    await renderAdminMonthlyTable(c);
+  } else if(_curAdminSubtab === 'pack'){
+    await renderAdminPackTable(c);
   } else if(_curAdminSubtab === 'abnormal'){
     await renderAdminAbnormalTable(c);
+  } else if(_curAdminSubtab === 'monthly'){
+    await renderAdminMonthlyTable(c);
+  } else if(_curAdminSubtab === 'combined'){
+    await renderAdminCombinedTable(c);
   } else if(_curAdminSubtab === 'beans'){
     await renderAdminBeansSettings(c);
   }
@@ -3671,8 +3682,197 @@ async function deleteHygieneRecord(id){
   renderAdminView();
 }
 
-// ─── 焙煎ロット 全履歴テーブル（エクセル原本画像2完全準拠 2段ヘッダー・20項目） ─────
+// ─── 生豆受入記録 専用テーブル ─────────────────────────
+async function renderAdminRecvTable(c){
+  var key = 'haccp_roast_batches';
+  var list = await getHaccpJson(key, []);
+  var ym = _adminMonth || curYmStr();
+  var filtered = list.filter(function(b){
+    var d = b.recvDate || (b.stage === 'received' && b.updatedAt ? b.updatedAt.slice(0, 10) : '');
+    var isRecv = Boolean(b.recvDate || b.recvWeightKg || b.stage === 'received');
+    return isRecv && (!d || d.slice(0, 7) === ym);
+  });
+
+  if(filtered.length === 0){
+    c.innerHTML = '<div style="text-align:center;padding:50px;color:var(--sub);background:#fff;border-radius:18px;border:1.5px solid var(--bdr);">この月の生豆受入記録はありません。</div>';
+    return;
+  }
+
+  var h = '';
+  h += '<div class="table-wrap">';
+  h += '<table class="admin-table" style="font-size:12px;">';
+  h += '<thead>';
+  h += '  <tr style="background:#4e342e;color:#fff;">';
+  h += '    <th>受入日</th>';
+  h += '    <th>製造ロットID</th>';
+  h += '    <th>産地・銘柄</th>';
+  h += '    <th>仕入先・生豆ロット</th>';
+  h += '    <th>受入量 (kg)</th>';
+  h += '    <th>包装・保管状態</th>';
+  h += '    <th>カビ・虫・異物判定</th>';
+  h += '    <th>作業者</th>';
+  h += '    <th>職員確認</th>';
+  h += '    <th>操作</th>';
+  h += '  </tr>';
+  h += '</thead>';
+  h += '<tbody>';
+
+  filtered.forEach(function(b){
+    var okBadge = '<span style="color:#2e7d32;font-weight:800;">良</span>';
+    var ngBadge = '<span style="color:#c62828;font-weight:800;">不良</span>';
+    var dash = '<span style="color:#9e9e9e;">-</span>';
+
+    h += '<tr>';
+    h += '  <td><b>' + (b.recvDate ? esc(b.recvDate) : dash) + '</b></td>';
+    h += '  <td><span style="font-weight:800;color:var(--coffee);">' + esc(b.lotId || '-') + '</span></td>';
+    h += '  <td><b>' + esc(b.beanOrigin || '-') + '</b></td>';
+    h += '  <td>' + (b.supplierLot && b.supplierLot !== '-' ? esc(b.supplierLot) : dash) + '</td>';
+    h += '  <td><b>' + (b.recvWeightKg ? b.recvWeightKg + ' kg' : dash) + '</b></td>';
+    h += '  <td>' + (b.recvPackage ? (b.recvPackage === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    h += '  <td>' + (b.recvForeign ? (b.recvForeign === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    h += '  <td>' + esc(b.workerName || '-') + '</td>';
+    h += '  <td><b>' + esc(b.verifierName || '-') + '</b></td>';
+    h += '  <td><button type="button" onclick="deleteBatchRecord(\'' + b.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px;font-weight:700;">✕ 削除</button></td>';
+    h += '</tr>';
+  });
+
+  h += '</tbody>';
+  h += '</table>';
+  h += '</div>';
+
+  c.innerHTML = h;
+}
+
+// ─── 焙煎製造記録 専用テーブル ─────────────────────────
 async function renderAdminRoastTable(c){
+  var key = 'haccp_roast_batches';
+  var list = await getHaccpJson(key, []);
+  var ym = _adminMonth || curYmStr();
+  var filtered = list.filter(function(b){
+    var d = b.roastDate || (b.stage === 'roasted' && b.updatedAt ? b.updatedAt.slice(0, 10) : '');
+    var isRoast = Boolean(b.roastDate || b.inputG || b.stage === 'roasted');
+    return isRoast && (!d || d.slice(0, 7) === ym);
+  });
+
+  if(filtered.length === 0){
+    c.innerHTML = '<div style="text-align:center;padding:50px;color:var(--sub);background:#fff;border-radius:18px;border:1.5px solid var(--bdr);">この月の焙煎製造記録はありません。</div>';
+    return;
+  }
+
+  var h = '';
+  h += '<div class="table-wrap">';
+  h += '<table class="admin-table" style="font-size:12px;">';
+  h += '<thead>';
+  h += '  <tr style="background:#5d4037;color:#fff;">';
+  h += '    <th>焙煎日</th>';
+  h += '    <th>製造ロットID</th>';
+  h += '    <th>産地・銘柄</th>';
+  h += '    <th>生豆投入量 (g)</th>';
+  h += '    <th>焙煎後重量 (g)</th>';
+  h += '    <th>歩留り (%)</th>';
+  h += '    <th>焙煎条件・冷却確認</th>';
+  h += '    <th>焙煎異常有無</th>';
+  h += '    <th>作業者</th>';
+  h += '    <th>職員確認</th>';
+  h += '    <th>操作</th>';
+  h += '  </tr>';
+  h += '</thead>';
+  h += '<tbody>';
+
+  filtered.forEach(function(b){
+    var okBadge = '<span style="color:#2e7d32;font-weight:800;">良</span>';
+    var ngBadge = '<span style="color:#c62828;font-weight:800;">不良</span>';
+    var dash = '<span style="color:#9e9e9e;">-</span>';
+
+    h += '<tr>';
+    h += '  <td><b>' + (b.roastDate ? esc(b.roastDate) : dash) + '</b></td>';
+    h += '  <td><span style="font-weight:800;color:var(--coffee);">' + esc(b.lotId || '-') + '</span></td>';
+    h += '  <td><b>' + esc(b.beanOrigin || '-') + '</b></td>';
+    h += '  <td>' + (b.inputG ? b.inputG + ' g' : dash) + '</td>';
+    h += '  <td>' + (b.outputG ? b.outputG + ' g' : dash) + '</td>';
+    h += '  <td><b style="color:#e65100;">' + (b.yieldPct ? esc(b.yieldPct) : dash) + '</b></td>';
+    h += '  <td>' + (b.roastCondition ? (b.roastCondition === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    h += '  <td>' + (b.roastAbnormal ? (b.roastAbnormal === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    h += '  <td>' + esc(b.workerName || '-') + '</td>';
+    h += '  <td><b>' + esc(b.verifierName || '-') + '</b></td>';
+    h += '  <td><button type="button" onclick="deleteBatchRecord(\'' + b.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px;font-weight:700;">✕ 削除</button></td>';
+    h += '</tr>';
+  });
+
+  h += '</tbody>';
+  h += '</table>';
+  h += '</div>';
+
+  c.innerHTML = h;
+}
+
+// ─── 包装出荷記録 専用テーブル ─────────────────────────
+async function renderAdminPackTable(c){
+  var key = 'haccp_roast_batches';
+  var list = await getHaccpJson(key, []);
+  var ym = _adminMonth || curYmStr();
+  var filtered = list.filter(function(b){
+    var d = b.packDate || (b.stage === 'packed' && b.updatedAt ? b.updatedAt.slice(0, 10) : '');
+    var isPack = Boolean(b.packDate || b.packCount || b.stage === 'packed');
+    return isPack && (!d || d.slice(0, 7) === ym);
+  });
+
+  if(filtered.length === 0){
+    c.innerHTML = '<div style="text-align:center;padding:50px;color:var(--sub);background:#fff;border-radius:18px;border:1.5px solid var(--bdr);">この月の包装出荷記録はありません。</div>';
+    return;
+  }
+
+  var h = '';
+  h += '<div class="table-wrap">';
+  h += '<table class="admin-table" style="font-size:12px;">';
+  h += '<thead>';
+  h += '  <tr style="background:#263238;color:#fff;">';
+  h += '    <th>包装日</th>';
+  h += '    <th>製造ロットID</th>';
+  h += '    <th>産地・銘柄</th>';
+  h += '    <th>形態</th>';
+  h += '    <th>個数</th>';
+  h += '    <th>賞味期限・密封確認</th>';
+  h += '    <th>ラベル表示確認</th>';
+  h += '    <th>保管・出荷先</th>';
+  h += '    <th>特記事項・備考</th>';
+  h += '    <th>作業者</th>';
+  h += '    <th>職員確認</th>';
+  h += '    <th>操作</th>';
+  h += '  </tr>';
+  h += '</thead>';
+  h += '<tbody>';
+
+  filtered.forEach(function(b){
+    var okBadge = '<span style="color:#2e7d32;font-weight:800;">良</span>';
+    var ngBadge = '<span style="color:#c62828;font-weight:800;">不良</span>';
+    var dash = '<span style="color:#9e9e9e;">-</span>';
+
+    h += '<tr>';
+    h += '  <td><b>' + (b.packDate ? esc(b.packDate) : dash) + '</b></td>';
+    h += '  <td><span style="font-weight:800;color:var(--coffee);">' + esc(b.lotId || '-') + '</span></td>';
+    h += '  <td><b>' + esc(b.beanOrigin || '-') + '</b></td>';
+    h += '  <td>' + (b.packForm ? esc(b.packForm) : dash) + '</td>';
+    h += '  <td><b>' + (b.packCount ? b.packCount + ' 個' : dash) + '</b></td>';
+    h += '  <td>' + (b.packSeal ? (b.packSeal === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    h += '  <td>' + (b.packLabel ? (b.packLabel === '良' ? okBadge : ngBadge) : dash) + '</td>';
+    h += '  <td>' + (b.packDest ? esc(b.packDest) : dash) + '</td>';
+    h += '  <td>' + (b.notes && b.notes !== '-' ? esc(b.notes) : dash) + '</td>';
+    h += '  <td>' + esc(b.workerName || '-') + '</td>';
+    h += '  <td><b>' + esc(b.verifierName || '-') + '</b></td>';
+    h += '  <td><button type="button" onclick="deleteBatchRecord(\'' + b.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px;font-weight:700;">✕ 削除</button></td>';
+    h += '</tr>';
+  });
+
+  h += '</tbody>';
+  h += '</table>';
+  h += '</div>';
+
+  c.innerHTML = h;
+}
+
+// ─── 統合台帳（全ロット一元管理 2段ヘッダー・20項目） ──────────────────
+async function renderAdminCombinedTable(c){
   var key = 'haccp_roast_batches';
   var list = await getHaccpJson(key, []);
 
@@ -3683,7 +3883,7 @@ async function renderAdminRoastTable(c){
   });
 
   if(filtered.length === 0){
-    c.innerHTML = '<div style="text-align:center;padding:50px;color:var(--sub);background:#fff;border-radius:18px;border:1.5px solid var(--bdr);">この月の焙煎・出荷台帳記録はありません。</div>';
+    c.innerHTML = '<div style="text-align:center;padding:50px;color:var(--sub);background:#fff;border-radius:18px;border:1.5px solid var(--bdr);">この月の統合台帳記録はありません。</div>';
     return;
   }
 
@@ -3695,27 +3895,23 @@ async function renderAdminRoastTable(c){
   h += '    <th colspan="2" style="background:#3e2723;">共通・ロット通番</th>';
   h += '    <th colspan="5" style="background:#4e342e;">① 生豆受入記録（仕入時・使用ロット確認）</th>';
   h += '    <th colspan="6" style="background:#5d4037;">② 焙煎製造記録（重要管理・歩留確認）</th>';
-  h += '    <th colspan="7" style="background:#263238;">③ 包装・出荷記録（計量・密封・表示・出荷）</th>';
+  h += '    <th colspan="7" style="background:#263238;">③ 包装出荷記録（計量・密封・表示・出荷）</th>';
   h += '    <th rowspan="2" style="background:#1b2428;">操作</th>';
   h += '  </tr>';
   h += '  <tr>';
-  // 共通
   h += '    <th>製造ロットID</th>';
   h += '    <th>産地・銘柄</th>';
-  // ① 受入
   h += '    <th>受入日</th>';
   h += '    <th>仕入先・生豆ロット</th>';
   h += '    <th>受入量<br>(kg)</th>';
   h += '    <th>包装・保管状態</th>';
   h += '    <th>カビ・虫・異物判定</th>';
-  // ② 焙煎
   h += '    <th>焙煎日</th>';
   h += '    <th>投入量<br>(g)</th>';
   h += '    <th>焙煎後<br>(g)</th>';
   h += '    <th>歩留り<br>(%)</th>';
   h += '    <th>焙煎条件・冷却確認</th>';
   h += '    <th>焙煎異常有無</th>';
-  // ③ 包装
   h += '    <th>包装日</th>';
   h += '    <th>形態<br>(豆/粉)</th>';
   h += '    <th>個数</th>';
@@ -3733,32 +3929,27 @@ async function renderAdminRoastTable(c){
     var dash = '<span style="color:#9e9e9e;">-</span>';
 
     h += '<tr>';
-    // 共通
     h += '  <td><span style="font-weight:800;color:var(--coffee);">' + esc(b.lotId || '-') + '</span></td>';
     h += '  <td><b>' + esc(b.beanOrigin || '-') + '</b></td>';
-    // ① 受入
-    h += '  <td>' + esc(b.recvDate || dash) + '</td>';
-    h += '  <td>' + esc(b.supplierLot || dash) + '</td>';
+    h += '  <td>' + (b.recvDate ? esc(b.recvDate) : dash) + '</td>';
+    h += '  <td>' + (b.supplierLot && b.supplierLot !== '-' ? esc(b.supplierLot) : dash) + '</td>';
     h += '  <td>' + (b.recvWeightKg ? b.recvWeightKg + ' kg' : dash) + '</td>';
     h += '  <td>' + (b.recvPackage ? (b.recvPackage === '良' ? okBadge : ngBadge) : dash) + '</td>';
     h += '  <td>' + (b.recvForeign ? (b.recvForeign === '良' ? okBadge : ngBadge) : dash) + '</td>';
-    // ② 焙煎
-    h += '  <td>' + esc(b.roastDate || dash) + '</td>';
+    h += '  <td>' + (b.roastDate ? esc(b.roastDate) : dash) + '</td>';
     h += '  <td>' + (b.inputG ? b.inputG + ' g' : dash) + '</td>';
     h += '  <td>' + (b.outputG ? b.outputG + ' g' : dash) + '</td>';
-    h += '  <td><b style="color:#e65100;">' + esc(b.yieldPct || dash) + '</b></td>';
+    h += '  <td>' + (b.yieldPct ? '<b style="color:#e65100;">' + esc(b.yieldPct) + '</b>' : dash) + '</td>';
     h += '  <td>' + (b.roastCondition ? (b.roastCondition === '良' ? okBadge : ngBadge) : dash) + '</td>';
     h += '  <td>' + (b.roastAbnormal ? (b.roastAbnormal === '良' ? okBadge : ngBadge) : dash) + '</td>';
-    // ③ 包装
-    h += '  <td>' + esc(b.packDate || dash) + '</td>';
-    h += '  <td>' + esc(b.packForm || dash) + '</td>';
+    h += '  <td>' + (b.packDate ? esc(b.packDate) : dash) + '</td>';
+    h += '  <td>' + (b.packForm ? esc(b.packForm) : dash) + '</td>';
     h += '  <td>' + (b.packCount ? b.packCount + ' 個' : dash) + '</td>';
     h += '  <td>' + (b.packSeal ? (b.packSeal === '良' ? okBadge : ngBadge) : dash) + '</td>';
     h += '  <td>' + (b.packLabel ? (b.packLabel === '良' ? okBadge : ngBadge) : dash) + '</td>';
-    h += '  <td>' + esc(b.packDest || dash) + '</td>';
+    h += '  <td>' + (b.packDest ? esc(b.packDest) : dash) + '</td>';
     h += '  <td><b>' + esc(b.verifierName || '-') + '</b>' + (b.notes && b.notes !== '-' ? '<br><span style="font-size:10px;color:var(--sub);">' + esc(b.notes) + '</span>' : '') + '</td>';
-    // 操作
-    h += '  <td><button type="button" onclick="deleteRoastRecord(\'' + b.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px;font-weight:700;">✕ 削除</button></td>';
+    h += '  <td><button type="button" onclick="deleteBatchRecord(\'' + b.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px;font-weight:700;">✕ 削除</button></td>';
     h += '</tr>';
   });
 
@@ -3769,14 +3960,15 @@ async function renderAdminRoastTable(c){
   c.innerHTML = h;
 }
 
-async function deleteRoastRecord(id){
-  if(!confirm('この台帳レコードを削除しますか？')) return;
+async function deleteBatchRecord(id){
+  if(!confirm('この記録を削除しますか？')) return;
   var key = 'haccp_roast_batches';
   var list = await getHaccpJson(key, []);
   list = list.filter(function(x){ return x.id !== id; });
   await saveHaccpJson(key, list);
   renderAdminView();
 }
+var deleteRoastRecord = deleteBatchRecord;
 
 // ─── 月次点検記録 全履歴テーブル（エクセル原本画像3「2. 月次点検記録」完全準拠） ────
 async function renderAdminMonthlyTable(c){
@@ -3930,7 +4122,7 @@ async function printCurrentAdminReport(){
   var ym = _adminMonth || curYmStr();
   if(_curAdminSubtab === 'hygiene'){
     await printDailyHaccpReport(ym);
-  } else if(_curAdminSubtab === 'roast'){
+  } else if(_curAdminSubtab === 'recv' || _curAdminSubtab === 'roast' || _curAdminSubtab === 'pack' || _curAdminSubtab === 'combined'){
     await printRoastHaccpReport(ym);
   } else if(_curAdminSubtab === 'monthly'){
     await printMonthlyHaccpReport(ym);
@@ -4281,16 +4473,42 @@ async function exportCurrentAdminCsv(){
     var csv = '\uFEFF作業日,作業者,健康確認,手洗い消毒,専用台器具清掃,害虫異物有無,他作業区分確認,設備火気安全確認,作業終了後清掃片付,総合判定,特記事項,職員確認\n';
     list.forEach(function(r){
       var ans = r.answers || {};
-      csv += [r.date, r.workerName, (ans.q_health||'良'), (ans.q_wash||'良'), (ans.q_table||'良'), (ans.q_foreign||'良'), (ans.q_other||'良'), (ans.q_fire||'良'), (ans.q_clean||'良'), r.judge, (r.notes||''), r.verifierName].join(',') + '\n';
+      csv += [r.date, r.workerName, (ans.q_health||'良'), (ans.q_wash||'良'), (ans.q_table||'良'), (ans.q_foreign||'良'), (ans.q_other||'良'), (ans.q_fire||'良'), (ans.q_clean||'良'), r.judge, '"' + (r.notes||'').replace(/"/g,'""') + '"', r.verifierName].join(',') + '\n';
     });
-    downloadCsv(csv, '日常衛生チェック_' + ym + '.csv');
-  } else if(_curAdminSubtab === 'roast'){
-    var list = await getHaccpJson('haccp_roast_batches', []);
-    var csv = '\uFEFF製造ロットID,産地銘柄,受入日,仕入先生豆ロット,受入量kg,包装保管状態,カビ虫異物判定,焙煎日,投入量g,焙煎後g,歩留り,焙煎条件冷却確認,焙煎異常有無,包装日,形態,個数,賞味期限密封確認,ラベル表示確認,保管出荷先,職員確認備考\n';
+    downloadCsv(csv, '日常衛生記録_' + ym + '.csv');
+  } else if(_curAdminSubtab === 'recv'){
+    var all = await getHaccpJson('haccp_roast_batches', []);
+    var list = all.filter(function(b){
+      var d = b.recvDate || (b.updatedAt ? b.updatedAt.slice(0, 10) : '');
+      return (b.recvDate || b.stage === 'received') && (!d || d.slice(0, 7) === ym);
+    });
+    var csv = '\uFEFF受入日,製造ロットID,産地銘柄,仕入先・生豆ロット,受入量kg,包装保管状態,カビ虫異物判定,作業者,職員確認\n';
     list.forEach(function(b){
-      csv += [b.lotId, b.beanOrigin, (b.recvDate||''), (b.supplierLot||''), (b.recvWeightKg||''), (b.recvPackage||''), (b.recvForeign||''), (b.roastDate||''), (b.inputG||''), (b.outputG||''), (b.yieldPct||''), (b.roastCondition||''), (b.roastAbnormal||''), (b.packDate||''), (b.packForm||''), (b.packCount||''), (b.packSeal||''), (b.packLabel||''), (b.packDest||''), ((b.verifierName||'') + ' ' + (b.notes||''))].join(',') + '\n';
+      csv += [b.recvDate||'', b.lotId||'', b.beanOrigin||'', '"' + (b.supplierLot||'').replace(/"/g,'""') + '"', b.recvWeightKg||'', b.recvPackage||'', b.recvForeign||'', b.workerName||'', b.verifierName||''].join(',') + '\n';
     });
-    downloadCsv(csv, 'HACCP焙煎出荷台帳_' + ym + '.csv');
+    downloadCsv(csv, '生豆受入記録_' + ym + '.csv');
+  } else if(_curAdminSubtab === 'roast'){
+    var all = await getHaccpJson('haccp_roast_batches', []);
+    var list = all.filter(function(b){
+      var d = b.roastDate || (b.updatedAt ? b.updatedAt.slice(0, 10) : '');
+      return (b.roastDate || b.inputG || b.stage === 'roasted') && (!d || d.slice(0, 7) === ym);
+    });
+    var csv = '\uFEFF焙煎日,製造ロットID,産地銘柄,生豆投入量g,焙煎後重量g,歩留り,焙煎条件冷却確認,焙煎異常有無,作業者,職員確認\n';
+    list.forEach(function(b){
+      csv += [b.roastDate||'', b.lotId||'', b.beanOrigin||'', b.inputG||'', b.outputG||'', b.yieldPct||'', b.roastCondition||'', b.roastAbnormal||'', b.workerName||'', b.verifierName||''].join(',') + '\n';
+    });
+    downloadCsv(csv, '焙煎製造記録_' + ym + '.csv');
+  } else if(_curAdminSubtab === 'pack'){
+    var all = await getHaccpJson('haccp_roast_batches', []);
+    var list = all.filter(function(b){
+      var d = b.packDate || (b.updatedAt ? b.updatedAt.slice(0, 10) : '');
+      return (b.packDate || b.packCount || b.stage === 'packed') && (!d || d.slice(0, 7) === ym);
+    });
+    var csv = '\uFEFF包装日,製造ロットID,産地銘柄,包装形態,個数,賞味期限密封確認,ラベル表示確認,保管出荷先,特記事項備考,作業者,職員確認\n';
+    list.forEach(function(b){
+      csv += [b.packDate||'', b.lotId||'', b.beanOrigin||'', b.packForm||'', b.packCount||'', b.packSeal||'', b.packLabel||'', '"' + (b.packDest||'').replace(/"/g,'""') + '"', '"' + (b.notes||'').replace(/"/g,'""') + '"', b.workerName||'', b.verifierName||''].join(',') + '\n';
+    });
+    downloadCsv(csv, '包装出荷記録_' + ym + '.csv');
   } else if(_curAdminSubtab === 'monthly'){
     var list = await getHaccpJson('haccp_monthly_records', []);
     var csv = '\uFEFF対象月,日常記録確認,製造出荷記録確認,異常記録確認,衛生教育健康管理,設備防虫防鼠定期点検,改善事項振り返り,確認日,責任者確認\n';
@@ -4299,12 +4517,27 @@ async function exportCurrentAdminCsv(){
     });
     downloadCsv(csv, '月次点検記録_' + ym + '.csv');
   } else if(_curAdminSubtab === 'abnormal'){
-    var list = await getHaccpJson('haccp_abnormal_records', []);
+    var all = await getHaccpJson('haccp_abnormal_records', []);
+    var list = all.filter(function(x){
+      var d = x.occurDate || '';
+      return !d || d.slice(0, 7) === ym;
+    });
     var csv = '\uFEFF発生日,工程,対象ロットID,異常内容,製品保留隔離措置,是正処置原因究明,再確認結果,再発防止策,責任者完了日\n';
     list.forEach(function(r){
       csv += [r.occurDate, r.processName, r.lotId, '"' + (r.abnormalContent||'').replace(/"/g,'""') + '"', r.holdMeasure, '"' + (r.causeAndAction||'').replace(/"/g,'""') + '"', r.recheckResult, '"' + (r.preventRecurrence||'').replace(/"/g,'""') + '"', ((r.managerName||'') + ' ' + (r.completedDate||''))].join(',') + '\n';
     });
     downloadCsv(csv, '異常是正記録_' + ym + '.csv');
+  } else if(_curAdminSubtab === 'combined'){
+    var all = await getHaccpJson('haccp_roast_batches', []);
+    var list = all.filter(function(b){
+      var d = b.roastDate || b.recvDate || b.packDate || (b.updatedAt ? b.updatedAt.slice(0, 10) : '');
+      return !d || d.slice(0, 7) === ym;
+    });
+    var csv = '\uFEFF製造ロットID,産地銘柄,受入日,仕入先生豆ロット,受入量kg,包装保管状態,カビ虫異物判定,焙煎日,投入量g,焙煎後g,歩留り,焙煎条件冷却確認,焙煎異常有無,包装日,形態,個数,賞味期限密封確認,ラベル表示確認,保管出荷先,職員確認備考\n';
+    list.forEach(function(b){
+      csv += [b.lotId, b.beanOrigin, (b.recvDate||''), (b.supplierLot||''), (b.recvWeightKg||''), (b.recvPackage||''), (b.recvForeign||''), (b.roastDate||''), (b.inputG||''), (b.outputG||''), (b.yieldPct||''), (b.roastCondition||''), (b.roastAbnormal||''), (b.packDate||''), (b.packForm||''), (b.packCount||''), (b.packSeal||''), (b.packLabel||''), (b.packDest||''), ((b.verifierName||'') + ' ' + (b.notes||''))].join(',') + '\n';
+    });
+    downloadCsv(csv, 'HACCP統合台帳_' + ym + '.csv');
   }
 }
 
