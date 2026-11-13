@@ -9762,7 +9762,8 @@ async function renderHaccpDailyTab(container){
     '  <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
     '    <span class="card-t">1. 日常衛生記録（' + ymLabel + ' / 全 ' + list.length + ' 件）</span>' +
     '    <div class="no-print" style="display:flex;gap:6px;flex-wrap:wrap">' +
-    '      <button class="bp" onclick="openHaccpDailyModal()" style="font-size:12px;padding:5px 12px;background:#2e7d32;border-color:#2e7d32">＋ 手動で記録を追加</button>' +
+    '      <a href="tablet.html?view=haccp&open=wizard" target="_blank" class="bp" style="font-size:12px;padding:5px 12px;background:#2e7d32;border-color:#2e7d32;text-decoration:none;display:inline-flex;align-items:center;gap:4px">📱 衛生チェックカード（モーダル）</a>' +
+    '      <button class="bp" onclick="openHaccpDailyModal()" style="font-size:12px;padding:5px 12px;background:#558b2f;border-color:#558b2f">＋ 一括手動入力</button>' +
     '      <button class="bp" onclick="printHaccpDailyReport(\'' + _haccpMonth + '\')" style="font-size:12px;padding:5px 12px;background:#6a1b9a;border-color:#6a1b9a">🖨️ エクセル様式で印刷 / PDF</button>' +
     '      <button class="bg" onclick="exportHaccpDailyCsv(\'' + _haccpMonth + '\')" style="font-size:12px;padding:5px 10px">📥 CSV出力</button>' +
     '    </div>' +
@@ -9839,7 +9840,8 @@ async function renderHaccpRoastTab(container){
     '  <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
     '    <span class="card-t">2. 焙煎・出荷台帳（全 ' + list.length + ' ロット）</span>' +
     '    <div class="no-print" style="display:flex;gap:6px;flex-wrap:wrap">' +
-    '      <button class="bp" onclick="openHaccpRoastModal()" style="font-size:12px;padding:5px 12px;background:#2e7d32;border-color:#2e7d32">＋ 新規ロット追加</button>' +
+    '      <a href="tablet.html?view=haccp&open=roast" target="_blank" class="bp" style="font-size:12px;padding:5px 12px;background:#6f4e37;border-color:#6f4e37;text-decoration:none;display:inline-flex;align-items:center;gap:4px">📱 ロット記録カード（モーダル）</a>' +
+    '      <button class="bp" onclick="openHaccpRoastModal()" style="font-size:12px;padding:5px 12px;background:#2e7d32;border-color:#2e7d32">＋ 一括手動入力</button>' +
     '      <button class="bp" onclick="printHaccpRoastReport()" style="font-size:12px;padding:5px 12px;background:#6a1b9a;border-color:#6a1b9a">🖨️ エクセル様式で印刷 / PDF (A4横)</button>' +
     '      <button class="bg" onclick="exportHaccpRoastCsv()" style="font-size:12px;padding:5px 10px">📥 CSV出力</button>' +
     '    </div>' +
@@ -10145,7 +10147,10 @@ async function openHaccpRoastModal(editId){
   var h = '<div id="haccp-roast-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;justify-content:center;align-items:center;padding:16px;overflow-y:auto">' +
     '<div style="background:#fff;border-radius:12px;width:720px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:22px;box-shadow:0 8px 24px rgba(0,0,0,0.25)">' +
     '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #eee;padding-bottom:8px">' +
-    '    <h3 style="font-size:16px;font-weight:700;color:var(--pri)">' + (b ? 'ロット台帳の編集 (' + esc(b.lotId) + ')' : '新規ロット台帳の追加') + '</h3>' +
+    '    <div style="display:flex;align-items:center;gap:12px">' +
+    '      <h3 style="font-size:16px;font-weight:700;color:var(--pri);margin:0">' + (b ? 'ロット台帳の編集 (' + esc(b.lotId) + ')' : '新規ロット台帳の追加') + '</h3>' +
+    '      <a href="tablet.html?view=haccp&open=roast' + (b ? '&id=' + b.id : '') + '" target="_blank" style="font-size:11.5px;color:#6f4e37;font-weight:700;text-decoration:underline">📱 タブレット用カード入力（モーダル）で開く ➔</a>' +
+    '    </div>' +
     '    <button onclick="closeModal(\'common-modal\')" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>' +
     '  </div>' +
     '  <form onsubmit="event.preventDefault();submitHaccpRoastModal(\'' + (b ? b.id : '') + '\')">' +

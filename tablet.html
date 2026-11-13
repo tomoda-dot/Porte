@@ -268,6 +268,80 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
 .roast-pill-btn:hover,.roast-pill-btn:active{background:#efebe9;border-color:#8d6e63;}
 .roast-pill-btn.selected{background:#6f4e37;border-color:#6f4e37;color:#fff;}
 .roast-yield-badge{background:linear-gradient(135deg, #efebe9, #d7ccc8);border:2px solid #8d6e63;border-radius:16px;padding:10px 18px;font-size:18px;font-weight:900;color:#3e2723;display:inline-flex;align-items:center;gap:8px;margin:8px 0;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
+
+/* ☕ HACCP モーダルカード オーバーレイ スタイル */
+.haccp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(20, 32, 24, 0.74);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.haccp-modal-overlay.active {
+  display: flex;
+  opacity: 1;
+}
+.haccp-modal-card {
+  background: #ffffff;
+  border-radius: 28px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.45), 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+  width: 640px;
+  max-width: 95vw;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 34px 22px 28px;
+  text-align: center;
+  transform: scale(0.92) translateY(14px);
+  transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.haccp-modal-overlay.active .haccp-modal-card {
+  transform: scale(1) translateY(0);
+}
+.haccp-modal-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f0eae4;
+  border: none;
+  font-size: 20px;
+  font-weight: 700;
+  color: #6d4c41;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s ease;
+  z-index: 30;
+  touch-action: manipulation;
+}
+.haccp-modal-close-btn:hover, .haccp-modal-close-btn:active {
+  background: #d7ccc8;
+  color: #3e2723;
+  transform: scale(1.1);
+}
+.haccp-dash-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12)!important;
+}
 </style>
 </head>
 <body>
@@ -404,30 +478,43 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
 <div id="layout-haccp">
   <!-- HACCP サブナビゲーション -->
   <div class="haccp-sub-nav">
-    <button class="haccp-sub-btn active" id="btn-sub-wizard" onclick="switchHaccpSubTab('wizard')">🧼 衛生チェック（カード）</button>
-    <button class="haccp-sub-btn" id="btn-sub-roast" onclick="switchHaccpSubTab('roast')">☕ 焙煎・出荷ロット（カード）</button>
-    <button class="haccp-sub-btn" id="btn-sub-list" onclick="switchHaccpSubTab('list')">📋 本日の衛生記録一覧</button>
+    <button type="button" class="haccp-sub-btn" id="btn-sub-wizard" onclick="openHaccpWizardModal()">🧼 衛生チェック（モーダルカード）</button>
+    <button type="button" class="haccp-sub-btn" id="btn-sub-roast" onclick="openHaccpRoastModalTablet()">☕ 焙煎・出荷ロット（モーダルカード）</button>
+    <button type="button" class="haccp-sub-btn active" id="btn-sub-list" onclick="closeHaccpModal()">📋 本日の記録一覧</button>
   </div>
 
-  <!-- 1. 衛生チェックカードウィザード -->
-  <div id="haccp-sec-wizard">
-    <div class="haccp-card-wrap">
-      <div class="haccp-card" id="haccp-card-box">
-        読み込み中...
+  <!-- トップダッシュボード：2大アクションカード -->
+  <div style="max-width:760px;margin:0 auto 20px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:20px;">
+      <!-- カード1: 日常衛生チェック -->
+      <div class="haccp-dash-card" onclick="openHaccpWizardModal()" style="background:#fff;border:2.5px solid #a5d6a7;border-radius:20px;padding:22px;cursor:pointer;box-shadow:0 6px 20px rgba(46,125,50,0.1);transition:all .2s ease;text-align:center;">
+        <div style="font-size:46px;margin-bottom:8px">🧼</div>
+        <div style="font-size:18px;font-weight:800;color:#2e7d32;margin-bottom:4px">日常衛生チェック</div>
+        <div style="font-size:12.5px;color:#555;line-height:1.5;margin-bottom:14px">体調・手洗い・作業台の清潔確認など<br>6項目の質問カード</div>
+        <button type="button" class="bp" style="width:100%;padding:12px;font-size:15px;font-weight:700;border-radius:12px;background:#2e7d32;border-color:#2e7d32">▶ 衛生チェックカードを開く</button>
+      </div>
+
+      <!-- カード2: 焙煎・出荷ロット -->
+      <div class="haccp-dash-card" onclick="openHaccpRoastModalTablet()" style="background:#fff;border:2.5px solid #d7ccc8;border-radius:20px;padding:22px;cursor:pointer;box-shadow:0 6px 20px rgba(111,78,55,0.1);transition:all .2s ease;text-align:center;">
+        <div style="font-size:46px;margin-bottom:8px">☕</div>
+        <div style="font-size:18px;font-weight:800;color:#4e342e;margin-bottom:4px">生豆受入・焙煎・包装出荷</div>
+        <div style="font-size:12.5px;color:#555;line-height:1.5;margin-bottom:14px">生豆受入・焙煎歩留り(%)・包装出荷<br>4工程のロットカード</div>
+        <button type="button" class="bp" style="width:100%;padding:12px;font-size:15px;font-weight:700;border-radius:12px;background:#6f4e37;border-color:#6f4e37">▶ ロット記録カードを開く</button>
       </div>
     </div>
   </div>
 
-  <!-- 2. 焙煎・出荷ロット記録フォーム -->
-  <div id="haccp-sec-roast" style="display:none;max-width:760px;margin:0 auto 40px;">
-    <!-- 焙煎・出荷フォーム（JSで動的生成） -->
-    <div id="haccp-roast-container"></div>
+  <!-- 本日の衛生記録＆ロット一覧 -->
+  <div id="haccp-sec-list" style="max-width:760px;margin:0 auto 40px;">
+    <div id="haccp-list-container"></div>
   </div>
 
-  <!-- 3. 本日の衛生記録一覧 -->
-  <div id="haccp-sec-list" style="display:none;max-width:760px;margin:0 auto 40px;">
-    <!-- 本日のリスト（JSで動的生成） -->
-    <div id="haccp-list-container"></div>
+  <!-- ☕ HACCP モーダルカード オーバーレイ -->
+  <div id="haccp-modal-overlay" class="haccp-modal-overlay" onclick="onHaccpBackdropClick(event)">
+    <div class="haccp-modal-card" id="haccp-modal-card" onclick="event.stopPropagation()">
+      <button type="button" class="haccp-modal-close-btn" onclick="closeHaccpModal()" title="閉じる">✕</button>
+      <div id="haccp-modal-body" style="width:100%"></div>
+    </div>
   </div>
 </div><!-- /layout-haccp -->
 </div><!-- /pg-main -->
@@ -1475,27 +1562,82 @@ function switchTabletView(view){
   }
 }
 
-var _curHaccpSubTab = 'wizard';
-function switchHaccpSubTab(tab){
-  _curHaccpSubTab = tab;
-  ['wizard','roast','list'].forEach(function(t){
-    var b = el('btn-sub-' + t);
-    var s = el('haccp-sec-' + t);
-    if(b) b.classList.toggle('active', t === tab);
-    if(s) s.style.display = (t === tab) ? 'block' : 'none';
-  });
+var _curHaccpSubTab = 'list';
+var _haccpModalMode = null; // 'wizard' | 'roast' | null
 
+function openHaccpWizardModal(){
+  _haccpModalMode = 'wizard';
+  var ov = el('haccp-modal-overlay');
+  if(ov) ov.classList.add('active');
+  var bW = el('btn-sub-wizard');
+  var bR = el('btn-sub-roast');
+  var bL = el('btn-sub-list');
+  if(bW) bW.classList.add('active');
+  if(bR) bR.classList.remove('active');
+  if(bL) bL.classList.remove('active');
+  renderHaccpCard();
+}
+
+async function openHaccpRoastModalTablet(batchId){
+  _haccpModalMode = 'roast';
+  var ov = el('haccp-modal-overlay');
+  if(ov) ov.classList.add('active');
+  var bW = el('btn-sub-wizard');
+  var bR = el('btn-sub-roast');
+  var bL = el('btn-sub-list');
+  if(bW) bW.classList.remove('active');
+  if(bR) bR.classList.add('active');
+  if(bL) bL.classList.remove('active');
+
+  if(batchId){
+    var list = await getHaccpJson('haccp_roast_batches', []);
+    var found = list.find(function(b){ return b.id === batchId; });
+    await initRoastWizard(found);
+  } else if(!_roastWizardState){
+    await initRoastWizard();
+  }
+  renderHaccpRoastForm();
+}
+
+function closeHaccpModal(){
+  _haccpModalMode = null;
+  var ov = el('haccp-modal-overlay');
+  if(ov) ov.classList.remove('active');
+  var bW = el('btn-sub-wizard');
+  var bR = el('btn-sub-roast');
+  var bL = el('btn-sub-list');
+  if(bW) bW.classList.remove('active');
+  if(bR) bR.classList.remove('active');
+  if(bL) bL.classList.add('active');
+  renderHaccpTodayList();
+}
+
+function onHaccpBackdropClick(e){
+  if(e.target === el('haccp-modal-overlay')){
+    closeHaccpModal();
+  }
+}
+
+function switchHaccpSubTab(tab){
   if(tab === 'wizard'){
-    renderHaccpCard();
+    openHaccpWizardModal();
   } else if(tab === 'roast'){
-    renderHaccpRoastForm();
-  } else if(tab === 'list'){
-    renderHaccpTodayList();
+    openHaccpRoastModalTablet();
+  } else {
+    closeHaccpModal();
   }
 }
 
 function initHaccpView(){
-  switchHaccpSubTab(_curHaccpSubTab || 'wizard');
+  renderHaccpTodayList();
+  var params = new URLSearchParams(window.location.search);
+  var openParam = params.get('open');
+  var idParam = params.get('id');
+  if(openParam === 'roast'){
+    openHaccpRoastModalTablet(idParam);
+  } else if(openParam === 'wizard'){
+    openHaccpWizardModal();
+  }
 }
 
 // ─── 1. 衛生チェック カードウィザード ────────────────────
@@ -1622,7 +1764,7 @@ var HACCP_QUESTIONS = [
 ];
 
 function renderHaccpCard(){
-  var box = el('haccp-card-box');
+  var box = el('haccp-modal-body') || el('haccp-card-box');
   if(!box) return;
 
   var step = _haccpState.step;
@@ -1812,14 +1954,14 @@ async function submitHaccpWizard(){
     await saveHaccpJson(key, list);
 
     // 成功演出
-    var box = el('haccp-card-box');
+    var box = el('haccp-modal-body') || el('haccp-card-box');
     if(box){
       box.innerHTML = '<div class="haccp-icon">✨</div>' +
         '<div class="haccp-q-title" style="color:var(--pri)">保存しました！</div>' +
         '<div class="haccp-q-desc">' + esc(record.workerName) + ' さんの本日の衛生記録をSupabaseに安全に保存しました。</div>' +
-        '<div style="margin-top:20px;display:flex;gap:12px;width:100%;max-width:400px">' +
+        '<div style="margin-top:20px;display:flex;gap:12px;width:100%;max-width:400px;justify-content:center">' +
         '  <button type="button" class="haccp-btn-yes" onclick="resetHaccpWizard()" style="padding:14px;font-size:16px">👤 別の人のチェックを行う</button>' +
-        '  <button type="button" class="haccp-btn-no" onclick="switchHaccpSubTab(\'list\')" style="padding:14px;font-size:15px">📋 一覧を見る</button>' +
+        '  <button type="button" class="haccp-btn-no" onclick="closeHaccpModal()" style="padding:14px;font-size:15px">✕ 閉じて一覧を見る</button>' +
         '</div>';
     }
   } catch(e){
@@ -1984,13 +2126,7 @@ async function loadExistingRoastLot(id){
 }
 
 async function editHaccpRoastTablet(id){
-  var list = await getHaccpJson('haccp_roast_batches', []);
-  var found = list.find(function(b){ return b.id === id; });
-  if(found){
-    switchHaccpSubTab('roast');
-    await initRoastWizard(found);
-    renderHaccpRoastForm();
-  }
+  openHaccpRoastModalTablet(id);
 }
 
 async function submitHaccpRoast(){
@@ -2025,7 +2161,7 @@ async function submitHaccpRoast(){
 }
 
 async function renderHaccpRoastForm(){
-  var c = el('haccp-roast-container');
+  var c = el('haccp-modal-body') || el('haccp-roast-container');
   if(!c) return;
 
   if(!_roastWizardState){
@@ -2052,8 +2188,7 @@ async function renderHaccpRoastForm(){
   });
   h += '</div>';
 
-  h += '<div class="haccp-card-wrap">';
-  h += '<div class="haccp-card" style="min-height:460px;padding:28px 22px;">';
+  h += '<div style="display:flex;flex-direction:column;align-items:center;width:100%;min-height:420px;justify-content:space-between">';
 
   // ─── Step 0: ロット・銘柄 ───
   if(step === 0){
@@ -2364,12 +2499,11 @@ async function renderHaccpRoastForm(){
 
     h += '<div style="display:flex;gap:12px;justify-content:center;margin-top:20px;flex-wrap:wrap">';
     h += '  <button type="button" class="bp" onclick="initRoastWizard();renderHaccpRoastForm()" style="padding:14px 24px;font-size:16px;background:#6f4e37;border-color:#6f4e37;border-radius:14px">＋ 続けて新しいロットを記録</button>';
-    h += '  <button type="button" class="bg" onclick="switchHaccpSubTab(\'list\')" style="padding:14px 24px;font-size:16px;border-radius:14px">📋 本日の記録一覧を見る</button>';
+    h += '  <button type="button" class="bg" onclick="closeHaccpModal()" style="padding:14px 24px;font-size:16px;border-radius:14px">✕ 閉じて本日の記録一覧を見る</button>';
     h += '</div>';
   }
 
-  h += '</div>'; // /haccp-card
-  h += '</div>'; // /haccp-card-wrap
+  h += '</div>';
 
   c.innerHTML = h;
 }
@@ -2394,7 +2528,7 @@ async function renderHaccpTodayList(){
   h += '<div class="card" style="padding:20px;margin-bottom:16px">';
   h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">';
   h += '    <h3 style="font-size:16px;font-weight:700;color:var(--pri)">🧼 本日の衛生チェック記録（' + todayStr + '）</h3>';
-  h += '    <button type="button" class="bp" onclick="resetHaccpWizard();switchHaccpSubTab(\'wizard\')" style="font-size:12px;padding:6px 14px">＋ 新しくチェックする</button>';
+  h += '    <button type="button" class="bp" onclick="resetHaccpWizard();openHaccpWizardModal()" style="font-size:12px;padding:6px 14px">＋ 新しくチェックする</button>';
   h += '  </div>';
 
   if(todays.length === 0){
@@ -2423,7 +2557,7 @@ async function renderHaccpTodayList(){
   h += '<div class="card" style="padding:20px;">';
   h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">';
   h += '    <h3 style="font-size:16px;font-weight:700;color:var(--pri)">☕ 本日の焙煎・出荷ロット（' + todayStr + '）</h3>';
-  h += '    <button type="button" class="bp" onclick="switchHaccpSubTab(\'roast\')" style="font-size:12px;padding:6px 14px">＋ ロット追加</button>';
+  h += '    <button type="button" class="bp" onclick="initRoastWizard();openHaccpRoastModalTablet()" style="font-size:12px;padding:6px 14px;background:#6f4e37;border-color:#6f4e37">＋ ロット追加</button>';
   h += '  </div>';
 
   if(todaysRoast.length === 0){
@@ -2441,7 +2575,10 @@ async function renderHaccpTodayList(){
       h += '      投入: ' + (b.inputG||0) + 'g → 焙煎後: ' + (b.outputG||0) + 'g（歩留: <b>' + (b.yieldPct||'-') + '</b>） / 包装: ' + (b.packType||'-') + ' ' + (b.packCount||0) + '個';
       h += '    </div>';
       h += '  </div>';
-      h += '  <button type="button" onclick="deleteHaccpRoastBatch(\''+b.id+'\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:13px;padding:6px">✕ 削除</button>';
+      h += '  <div style="display:flex;gap:6px;align-items:center">';
+      h += '    <button type="button" onclick="openHaccpRoastModalTablet(\''+b.id+'\')" style="background:#efebe9;border:1px solid #8d6e63;color:#4e342e;cursor:pointer;font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px">✏️ 編集/続き</button>';
+      h += '    <button type="button" onclick="deleteHaccpRoastBatch(\''+b.id+'\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:13px;padding:6px">✕ 削除</button>';
+      h += '  </div>';
       h += '</div>';
     });
     h += '</div>';
