@@ -407,6 +407,20 @@ main {
 .task-card.c-pack .task-title { color: #7b1fa2; }
 .task-card.c-pack .task-btn-action { background: #7b1fa2; }
 
+.task-card.c-monthly {
+  border-color: #5c6bc0;
+  background: linear-gradient(180deg, #ffffff 60%, #e8eaf6 100%);
+}
+.task-card.c-monthly .task-title { color: #283593; }
+.task-card.c-monthly .task-btn-action { background: #283593; }
+
+.task-card.c-abnormal {
+  border-color: #ef5350;
+  background: linear-gradient(180deg, #ffffff 60%, #ffebee 100%);
+}
+.task-card.c-abnormal .task-title { color: #c62828; }
+.task-card.c-abnormal .task-btn-action { background: #c62828; }
+
 /* ─── 3. ポップアップ モーダル（Googleマップ風） ───────── */
 .modal-overlay {
   position: fixed;
@@ -1158,6 +1172,26 @@ main {
           </div>
           <button type="button" class="task-btn-action">開く ▶</button>
         </div>
+
+        <!-- 5. 月次点検記録 -->
+        <div class="task-card c-monthly" onclick="openHaccpModal('monthly')">
+          <div>
+            <div class="task-icon">🔍</div>
+            <div class="task-title">月次点検記録</div>
+            <div class="task-desc">月末・月1回の総点検記録<br>製造・異常・衛生教育・設備</div>
+          </div>
+          <button type="button" class="task-btn-action">開く ▶</button>
+        </div>
+
+        <!-- 6. 異常・是正記録 -->
+        <div class="task-card c-abnormal" onclick="openHaccpModal('abnormal')">
+          <div>
+            <div class="task-icon">⚠️</div>
+            <div class="task-title">異常・是正記録</div>
+            <div class="task-desc">異常発生時の専用記録<br>保留措置・原因究明・再発防止策</div>
+          </div>
+          <button type="button" class="task-btn-action">開く ▶</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1173,6 +1207,12 @@ main {
         </button>
         <button type="button" class="admin-subtab-btn" id="subtab-btn-roast" onclick="switchAdminSubtab('roast')">
           ☕ 焙煎・出荷台帳
+        </button>
+        <button type="button" class="admin-subtab-btn" id="subtab-btn-monthly" onclick="switchAdminSubtab('monthly')">
+          🔍 月次点検記録
+        </button>
+        <button type="button" class="admin-subtab-btn" id="subtab-btn-abnormal" onclick="switchAdminSubtab('abnormal')">
+          ⚠️ 異常・是正記録
         </button>
       </div>
 
@@ -1494,6 +1534,10 @@ function openHaccpModal(modalType){
     startRoastWizard(body);
   } else if(modalType === 'pack'){
     startPackWizard(body);
+  } else if(modalType === 'monthly'){
+    startMonthlyWizard(body);
+  } else if(modalType === 'abnormal'){
+    startAbnormalWizard(body);
   }
 
   ov.classList.add('active');
@@ -2681,6 +2725,633 @@ async function savePackRecord(){
   }
 }
 
+// ═══════════════════════════════════════════════════════
+// 5. 月次点検記録 ウィザード（Googleマップ評価カード風 1問1答）
+// ═══════════════════════════════════════════════════════
+var _monthlyStepIdx = 0;
+var _monthlyData = null;
+
+async function startMonthlyWizard(body){
+  _monthlyStepIdx = 0;
+  _monthlyData = {
+    targetMonth: curYmStr(),
+    checkDaily: '良',
+    checkManufacture: '良',
+    checkAbnormal: '良',
+    checkEducation: '良',
+    checkPestEquipment: '良',
+    reviewNotes: '',
+    checkDate: todayStr(),
+    manager: STAFF.length > 0 ? STAFF[0].name : '友田 篤賜'
+  };
+  _isStepAnimating = false;
+  renderMonthlyStep('in-right', body);
+}
+
+async function renderMonthlyStep(animType, body){
+  if(!body) body = el('modal-card-body');
+  if(!body) return;
+
+  var total = 7;
+  var animClass = (animType === 'in-left') ? ' anim-in-left' : ' anim-in-right';
+
+  if(_monthlyStepIdx < total){
+    var progressPct = Math.round(((_monthlyStepIdx + 1) / total) * 100);
+    var h = '';
+
+    h += '<div class="q-progress-wrap">';
+    h += '  <div class="q-progress-header">';
+    h += '    <span>月次点検 (' + (_monthlyStepIdx + 1) + ' / ' + total + ')</span>';
+    h += '    <span>点検者: ' + esc(_worker.name) + ' さん</span>';
+    h += '  </div>';
+    h += '  <div class="q-progress-bar-bg">';
+    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#3949ab;"></div>';
+    h += '  </div>';
+    h += '</div>';
+
+    h += '<div class="gmap-card-wrapper">';
+    h += '  <div id="gmap-card-box" class="gmap-card-box' + animClass + '">';
+
+    // Step 0: 対象月の選択
+    if(_monthlyStepIdx === 0){
+      h += '    <div class="gmap-q-category">点検対象月</div>';
+      h += '    <div class="gmap-q-sentence">点検の対象月を選んでください</div>';
+      h += '    <div class="choice-chip-grid">';
+      var now = new Date();
+      for(var m = 0; m < 4; m++){
+        var d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+        var ym = d.getFullYear() + '-' + pad(d.getMonth() + 1);
+        var label = d.getFullYear() + '年 ' + (d.getMonth() + 1) + '月度';
+        var act = (_monthlyData.targetMonth === ym) ? ' active' : '';
+        h += '    <button type="button" class="choice-chip-btn' + act + '" onclick="selectMonthlyYmChip(\'' + ym + '\')">' + label + '</button>';
+      }
+      h += '    </div>';
+    }
+    // Step 1: 日常記録確認
+    else if(_monthlyStepIdx === 1){
+      h += '    <div class="gmap-q-category">日常記録確認</div>';
+      h += '    <div class="gmap-q-sentence">日常の衛生チェックに記録漏れや不備はないですか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerMonthlyQuestion(\'checkDaily\', \'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerMonthlyQuestion(\'checkDaily\', \'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 2: 製造・出荷記録確認
+    else if(_monthlyStepIdx === 2){
+      h += '    <div class="gmap-q-category">製造・出荷記録確認</div>';
+      h += '    <div class="gmap-q-sentence">製造・出荷台帳の記録やロット管理は確認しましたか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerMonthlyQuestion(\'checkManufacture\', \'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerMonthlyQuestion(\'checkManufacture\', \'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 3: 異常記録確認
+    else if(_monthlyStepIdx === 3){
+      h += '    <div class="gmap-q-category">異常記録確認</div>';
+      h += '    <div class="gmap-q-sentence">異常発生時の対応・是正記録や保留措置は確認しましたか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerMonthlyQuestion(\'checkAbnormal\', \'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerMonthlyQuestion(\'checkAbnormal\', \'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 4: 衛生教育・健康管理
+    else if(_monthlyStepIdx === 4){
+      h += '    <div class="gmap-q-category">衛生教育・健康管理</div>';
+      h += '    <div class="gmap-q-sentence">従事者の健康管理や衛生手順の教育・確認は行いましたか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerMonthlyQuestion(\'checkEducation\', \'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerMonthlyQuestion(\'checkEducation\', \'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 5: 設備・防虫防鼠定期点検
+    else if(_monthlyStepIdx === 5){
+      h += '    <div class="gmap-q-category">設備・防虫防鼠点検</div>';
+      h += '    <div class="gmap-q-sentence">器具・設備や防虫・防鼠の定期点検は問題ないですか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerMonthlyQuestion(\'checkPestEquipment\', \'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerMonthlyQuestion(\'checkPestEquipment\', \'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 6: 改善事項・振り返り
+    else if(_monthlyStepIdx === 6){
+      h += '    <div class="gmap-q-category">改善事項・振り返り</div>';
+      h += '    <div class="gmap-q-sentence">今月の改善事項や振り返りがあれば教えてください</div>';
+      h += '    <textarea id="f-monthly-notes" class="f-textarea" rows="3" placeholder="（任意）特記事項なし、手順周知、清掃強化など">' + esc(_monthlyData.reviewNotes) + '</textarea>';
+      h += '    <div class="quick-choice-row" style="margin-top:8px;">';
+      ['特記事項なし', '衛生手順の再周知', '器具清掃・消毒徹底', '順調・異常なし'].forEach(function(phrase){
+        h += '    <button type="button" class="quick-chip-btn" onclick="el(\'f-monthly-notes\').value=\'' + phrase + '\'">' + phrase + '</button>';
+      });
+      h += '    </div>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#3949ab;margin-top:14px;" onclick="submitMonthlyNotes()">確認画面へ進む ▶</button>';
+    }
+
+    // 戻るボタン
+    h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
+    if(_monthlyStepIdx > 0){
+      h += '      <button type="button" class="prev-step-btn" onclick="prevMonthlyStep()">◀ 前のカードに戻る</button>';
+    } else {
+      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+    }
+    h += '    </div>';
+
+    h += '  </div>';
+    h += '</div>';
+    body.innerHTML = h;
+  } else {
+    renderMonthlyConfirmStep(body);
+  }
+}
+
+function selectMonthlyYmChip(ym){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _monthlyData.targetMonth = ym;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _monthlyStepIdx = 1;
+    renderMonthlyStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function answerMonthlyQuestion(key, ans){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _monthlyData[key] = ans;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _monthlyStepIdx++;
+    renderMonthlyStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function submitMonthlyNotes(){
+  if(_isStepAnimating) return;
+  _monthlyData.reviewNotes = el('f-monthly-notes') ? el('f-monthly-notes').value.trim() : '';
+
+  _isStepAnimating = true;
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _monthlyStepIdx = 7;
+    renderMonthlyStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function prevMonthlyStep(){
+  if(_isStepAnimating || _monthlyStepIdx <= 0) return;
+  _isStepAnimating = true;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-right');
+  }
+  setTimeout(function(){
+    _monthlyStepIdx--;
+    renderMonthlyStep('in-left');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+async function renderMonthlyConfirmStep(body){
+  var parts = _monthlyData.targetMonth.split('-');
+  var ymLabel = parts[0] + '年 ' + parseInt(parts[1], 10) + '月度';
+
+  var h = '';
+  h += '<div class="step-header" style="margin-bottom:16px;">';
+  h += '  <span class="step-tag" style="background:#e8eaf6;color:#283593">月次点検 完了確認</span>';
+  h += '  <h2 class="step-title" style="font-size:20px;">月次点検記録の確認</h2>';
+  h += '  <p class="step-sub">点検実施者: <b>' + esc(_worker.name) + '</b> さん</p>';
+  h += '</div>';
+
+  h += '<div style="margin-bottom:16px;">';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">対象月</span><span style="font-weight:900;color:#283593;">' + ymLabel + '</span></div>';
+  h += '  <div class="summary-item-row ' + (_monthlyData.checkDaily === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">日常記録確認</span><span class="badge-result ' + (_monthlyData.checkDaily === '良' ? 'ok' : 'ng') + '">' + _monthlyData.checkDaily + '</span></div>';
+  h += '  <div class="summary-item-row ' + (_monthlyData.checkManufacture === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">製造・出荷記録確認</span><span class="badge-result ' + (_monthlyData.checkManufacture === '良' ? 'ok' : 'ng') + '">' + _monthlyData.checkManufacture + '</span></div>';
+  h += '  <div class="summary-item-row ' + (_monthlyData.checkAbnormal === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">異常記録確認</span><span class="badge-result ' + (_monthlyData.checkAbnormal === '良' ? 'ok' : 'ng') + '">' + _monthlyData.checkAbnormal + '</span></div>';
+  h += '  <div class="summary-item-row ' + (_monthlyData.checkEducation === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">衛生教育・健康管理</span><span class="badge-result ' + (_monthlyData.checkEducation === '良' ? 'ok' : 'ng') + '">' + _monthlyData.checkEducation + '</span></div>';
+  h += '  <div class="summary-item-row ' + (_monthlyData.checkPestEquipment === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">設備・防虫防鼠定期点検</span><span class="badge-result ' + (_monthlyData.checkPestEquipment === '良' ? 'ok' : 'ng') + '">' + _monthlyData.checkPestEquipment + '</span></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">改善事項・振り返り</span><b>' + esc(_monthlyData.reviewNotes || '特記事項なし') + '</b></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">確認日</span><b>' + todayStr() + '</b></div>';
+  h += '</div>';
+
+  h += '<div class="f-row">';
+  h += '  <label class="f-label">責任者確認（確認者を選択してください）</label>';
+  h += '  <div class="staff-chip-grid">';
+  STAFF.forEach(function(s, idx){
+    var act = (idx === 0) ? ' active' : '';
+    h += '  <button type="button" class="staff-chip' + act + '" onclick="selectStaffChip(this, \'' + esc(s.name) + '\')">' + esc(s.name) + '</button>';
+  });
+  h += '  </div>';
+  h += '</div>';
+
+  h += '<button type="button" class="save-action-btn" style="background:#283593;" onclick="saveMonthlyRecord()">';
+  h += '  <span>💾 月次点検を記録する</span>';
+  h += '</button>';
+
+  h += '<div style="text-align:center;margin-top:12px;">';
+  h += '  <button type="button" class="prev-step-btn" onclick="prevMonthlyStep()">◀ 最後のカードに戻る</button>';
+  h += '</div>';
+
+  body.innerHTML = h;
+}
+
+async function saveMonthlyRecord(){
+  var key = 'haccp_monthly_records';
+  var manager = _hygieneVerifier || (STAFF[0] ? STAFF[0].name : '友田 篤賜');
+
+  var rec = {
+    id: 'monthly_' + Date.now(),
+    targetMonth: _monthlyData.targetMonth,
+    checkDaily: _monthlyData.checkDaily,
+    checkManufacture: _monthlyData.checkManufacture,
+    checkAbnormal: _monthlyData.checkAbnormal,
+    checkEducation: _monthlyData.checkEducation,
+    checkPestEquipment: _monthlyData.checkPestEquipment,
+    reviewNotes: _monthlyData.reviewNotes || '特記事項なし',
+    checkDate: todayStr(),
+    managerName: manager,
+    workerName: _worker.name,
+    createdAt: new Date().toISOString()
+  };
+
+  try {
+    var list = await getHaccpJson(key, []);
+    var existingIdx = list.findIndex(function(x){ return x.targetMonth === rec.targetMonth; });
+    if(existingIdx >= 0){
+      list[existingIdx] = rec;
+    } else {
+      list.unshift(rec);
+    }
+    await saveHaccpJson(key, list);
+
+    showModalDone('月次点検を記録しました', _monthlyData.targetMonth + '度 月次点検記録（責任者: ' + manager + '）を保存しました。', '✓');
+  } catch(e){
+    alert('保存エラー: ' + (e.message || String(e)));
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 6. 異常・是正記録 ウィザード（Googleマップ評価カード風 1問1答）
+// ═══════════════════════════════════════════════════════
+var ABNORMAL_PROCESSES = ['衛生チェック', '生豆受入', '焙煎製造', '包装・出荷', '設備・保管・その他'];
+
+var _abnormalStepIdx = 0;
+var _abnormalData = null;
+
+async function startAbnormalWizard(body){
+  _abnormalStepIdx = 0;
+  _abnormalData = {
+    occurDate: todayStr(),
+    processName: '焙煎製造',
+    lotId: '',
+    abnormalContent: '',
+    holdMeasure: '良',
+    causeAndAction: '',
+    recheckResult: '良',
+    preventRecurrence: '',
+    manager: STAFF.length > 0 ? STAFF[0].name : '友田 篤賜',
+    completedDate: todayStr()
+  };
+  _isStepAnimating = false;
+  renderAbnormalStep('in-right', body);
+}
+
+async function renderAbnormalStep(animType, body){
+  if(!body) body = el('modal-card-body');
+  if(!body) return;
+
+  var total = 6;
+  var animClass = (animType === 'in-left') ? ' anim-in-left' : ' anim-in-right';
+
+  if(_abnormalStepIdx < total){
+    var progressPct = Math.round(((_abnormalStepIdx + 1) / total) * 100);
+    var h = '';
+
+    h += '<div class="q-progress-wrap">';
+    h += '  <div class="q-progress-header">';
+    h += '    <span>異常・是正 (' + (_abnormalStepIdx + 1) + ' / ' + total + ')</span>';
+    h += '    <span>記入者: ' + esc(_worker.name) + ' さん</span>';
+    h += '  </div>';
+    h += '  <div class="q-progress-bar-bg">';
+    h += '    <div class="q-progress-bar-fill" style="width:' + progressPct + '%;background:#c62828;"></div>';
+    h += '  </div>';
+    h += '</div>';
+
+    h += '<div class="gmap-card-wrapper">';
+    h += '  <div id="gmap-card-box" class="gmap-card-box' + animClass + '">';
+
+    // Step 0: 工程の選択
+    if(_abnormalStepIdx === 0){
+      h += '    <div class="gmap-q-category">異常発生工程</div>';
+      h += '    <div class="gmap-q-sentence">異常が発生した工程を選んでください</div>';
+      h += '    <div class="choice-chip-grid">';
+      ABNORMAL_PROCESSES.forEach(function(proc){
+        var act = (_abnormalData.processName === proc) ? ' active' : '';
+        h += '    <button type="button" class="choice-chip-btn' + act + '" onclick="selectAbnormalProcessChip(\'' + esc(proc) + '\')">' + esc(proc) + '</button>';
+      });
+      h += '    </div>';
+    }
+    // Step 1: 対象ロットIDと異常内容
+    else if(_abnormalStepIdx === 1){
+      h += '    <div class="gmap-q-category">対象ロット・異常内容</div>';
+      h += '    <div class="gmap-q-sentence">対象ロットIDと異常の内容を教えてください</div>';
+      h += '    <div style="margin-bottom:12px;">';
+      h += '      <label style="font-size:12px;font-weight:700;color:var(--coffee);display:block;margin-bottom:4px;">対象ロットID（任意）</label>';
+      h += '      <input type="text" id="f-abnormal-lot" class="f-input" value="' + esc(_abnormalData.lotId) + '" placeholder="例: ' + (curYmStr().replace('-','').slice(2)) + '13-01 または空欄">';
+      h += '    </div>';
+      h += '    <div style="margin-bottom:12px;">';
+      h += '      <label style="font-size:12px;font-weight:700;color:var(--coffee);display:block;margin-bottom:4px;">異常内容（具体的に記入）</label>';
+      h += '      <textarea id="f-abnormal-content" class="f-textarea" rows="3" placeholder="異物の混入疑い、焙煎機の温度異常、袋の圧着不良など">' + esc(_abnormalData.abnormalContent) + '</textarea>';
+      h += '    </div>';
+      h += '    <div class="quick-choice-row">';
+      ['袋の密封不良', 'ラベル印字ズレ', '焙煎温度異常・焦げ', '生豆の虫食い・異物', '体調不良の申出', '器具の破損・汚れ'].forEach(function(txt){
+        h += '    <button type="button" class="quick-chip-btn" onclick="el(\'f-abnormal-content\').value=\'' + txt + '\'">' + txt + '</button>';
+      });
+      h += '    </div>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#c62828;margin-top:14px;" onclick="submitAbnormalContent()">次へ進む ▶</button>';
+    }
+    // Step 2: 製品の保留・隔離措置（はい/いいえ）
+    else if(_abnormalStepIdx === 2){
+      h += '    <div class="gmap-q-category">製品の保留・隔離措置</div>';
+      h += '    <div class="gmap-q-sentence">対象製品・原材料を保留・隔離し、出荷停止の処置をしましたか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerAbnormalHold(\'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerAbnormalHold(\'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 3: 是正処置・原因究明
+    else if(_abnormalStepIdx === 3){
+      h += '    <div class="gmap-q-category">是正処置・原因究明</div>';
+      h += '    <div class="gmap-q-sentence">是正処置と原因究明の内容を教えてください</div>';
+      h += '    <textarea id="f-abnormal-cause" class="f-textarea" rows="3" placeholder="対象ロットを廃棄、ラインを再清掃・再消毒、温度設定の再確認など">' + esc(_abnormalData.causeAndAction) + '</textarea>';
+      h += '    <div class="quick-choice-row" style="margin-top:8px;">';
+      ['対象品を廃棄・再清掃', '温度・タイマー再設定', '包装袋を交換し再密封', '器具の再洗浄・消毒'].forEach(function(txt){
+        h += '    <button type="button" class="quick-chip-btn" onclick="el(\'f-abnormal-cause\').value=\'' + txt + '\'">' + txt + '</button>';
+      });
+      h += '    </div>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#c62828;margin-top:14px;" onclick="submitAbnormalCause()">次へ進む ▶</button>';
+    }
+    // Step 4: 再確認結果（はい/いいえ）
+    else if(_abnormalStepIdx === 4){
+      h += '    <div class="gmap-q-category">再確認結果</div>';
+      h += '    <div class="gmap-q-sentence">再点検の結果、安全基準を満たしていることを確認しましたか？</div>';
+      h += '    <div class="yes-no-grid">';
+      h += '      <button type="button" class="yes-no-btn btn-yes" onclick="answerAbnormalRecheck(\'良\')">はい</button>';
+      h += '      <button type="button" class="yes-no-btn btn-no" onclick="answerAbnormalRecheck(\'不良\')">いいえ</button>';
+      h += '    </div>';
+    }
+    // Step 5: 再発防止策
+    else if(_abnormalStepIdx === 5){
+      h += '    <div class="gmap-q-category">再発防止策</div>';
+      h += '    <div class="gmap-q-sentence">今後の再発防止策を教えてください</div>';
+      h += '    <textarea id="f-abnormal-prevent" class="f-textarea" rows="3" placeholder="作業前点検の徹底、ダブルチェックの実施、マニュアルの再周知など">' + esc(_abnormalData.preventRecurrence) + '</textarea>';
+      h += '    <div class="quick-choice-row" style="margin-top:8px;">';
+      ['作業前点検の徹底', 'ダブルチェックの実施', '手順書の再周知', '定期清掃の強化'].forEach(function(txt){
+        h += '    <button type="button" class="quick-chip-btn" onclick="el(\'f-abnormal-prevent\').value=\'' + txt + '\'">' + txt + '</button>';
+      });
+      h += '    </div>';
+      h += '    <button type="button" class="card-next-action-btn" style="background:#c62828;margin-top:14px;" onclick="submitAbnormalPrevent()">確認画面へ進む ▶</button>';
+    }
+
+    // 戻るボタン
+    h += '    <div style="display:flex;justify-content:center;margin-top:12px;">';
+    if(_abnormalStepIdx > 0){
+      h += '      <button type="button" class="prev-step-btn" onclick="prevAbnormalStep()">◀ 前のカードに戻る</button>';
+    } else {
+      h += '      <span style="font-size:12px;color:var(--sub)">カードをタップしてください</span>';
+    }
+    h += '    </div>';
+
+    h += '  </div>';
+    h += '</div>';
+    body.innerHTML = h;
+  } else {
+    renderAbnormalConfirmStep(body);
+  }
+}
+
+function selectAbnormalProcessChip(proc){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _abnormalData.processName = proc;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _abnormalStepIdx = 1;
+    renderAbnormalStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function submitAbnormalContent(){
+  if(_isStepAnimating) return;
+  var content = el('f-abnormal-content') ? el('f-abnormal-content').value.trim() : '';
+  if(!content){
+    alert('異常内容を入力してください');
+    return;
+  }
+  _abnormalData.lotId = el('f-abnormal-lot') ? el('f-abnormal-lot').value.trim() : '';
+  _abnormalData.abnormalContent = content;
+
+  _isStepAnimating = true;
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _abnormalStepIdx = 2;
+    renderAbnormalStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function answerAbnormalHold(ans){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _abnormalData.holdMeasure = ans;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _abnormalStepIdx = 3;
+    renderAbnormalStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function submitAbnormalCause(){
+  if(_isStepAnimating) return;
+  var cause = el('f-abnormal-cause') ? el('f-abnormal-cause').value.trim() : '';
+  if(!cause){
+    alert('是正処置・原因究明を入力してください');
+    return;
+  }
+  _abnormalData.causeAndAction = cause;
+
+  _isStepAnimating = true;
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _abnormalStepIdx = 4;
+    renderAbnormalStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function answerAbnormalRecheck(ans){
+  if(_isStepAnimating) return;
+  _isStepAnimating = true;
+  _abnormalData.recheckResult = ans;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _abnormalStepIdx = 5;
+    renderAbnormalStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function submitAbnormalPrevent(){
+  if(_isStepAnimating) return;
+  var prev = el('f-abnormal-prevent') ? el('f-abnormal-prevent').value.trim() : '';
+  if(!prev){
+    alert('再発防止策を入力してください');
+    return;
+  }
+  _abnormalData.preventRecurrence = prev;
+
+  _isStepAnimating = true;
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-left');
+  }
+  setTimeout(function(){
+    _abnormalStepIdx = 6;
+    renderAbnormalStep('in-right');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+function prevAbnormalStep(){
+  if(_isStepAnimating || _abnormalStepIdx <= 0) return;
+  _isStepAnimating = true;
+
+  var cardBox = el('gmap-card-box');
+  if(cardBox){
+    cardBox.classList.remove('anim-in-right', 'anim-in-left');
+    cardBox.classList.add('anim-out-right');
+  }
+  setTimeout(function(){
+    _abnormalStepIdx--;
+    renderAbnormalStep('in-left');
+    _isStepAnimating = false;
+  }, 170);
+}
+
+async function renderAbnormalConfirmStep(body){
+  var h = '';
+  h += '<div class="step-header" style="margin-bottom:16px;">';
+  h += '  <span class="step-tag" style="background:#ffebee;color:#c62828">異常・是正記録 完了確認</span>';
+  h += '  <h2 class="step-title" style="font-size:20px;">異常・是正記録の確認</h2>';
+  h += '  <p class="step-sub">記録者: <b>' + esc(_worker.name) + '</b> さん</p>';
+  h += '</div>';
+
+  h += '<div style="margin-bottom:16px;">';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">発生日</span><b>' + esc(_abnormalData.occurDate) + '</b></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">工程</span><b>' + esc(_abnormalData.processName) + '</b></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">対象ロットID</span><span style="font-weight:900;color:var(--coffee);">' + esc(_abnormalData.lotId || '-') + '</span></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">異常内容</span><b style="color:#c62828;">' + esc(_abnormalData.abnormalContent) + '</b></div>';
+  h += '  <div class="summary-item-row ' + (_abnormalData.holdMeasure === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">保留・隔離措置</span><span class="badge-result ' + (_abnormalData.holdMeasure === '良' ? 'ok' : 'ng') + '">' + _abnormalData.holdMeasure + '</span></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">是正処置・原因究明</span><b>' + esc(_abnormalData.causeAndAction) + '</b></div>';
+  h += '  <div class="summary-item-row ' + (_abnormalData.recheckResult === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">再確認結果</span><span class="badge-result ' + (_abnormalData.recheckResult === '良' ? 'ok' : 'ng') + '">' + _abnormalData.recheckResult + '</span></div>';
+  h += '  <div class="summary-item-row"><span style="font-weight:700;">再発防止策</span><b>' + esc(_abnormalData.preventRecurrence) + '</b></div>';
+  h += '</div>';
+
+  h += '<div class="f-row">';
+  h += '  <label class="f-label">責任者／完了日（責任者を選択してください）</label>';
+  h += '  <div class="staff-chip-grid">';
+  STAFF.forEach(function(s, idx){
+    var act = (idx === 0) ? ' active' : '';
+    h += '  <button type="button" class="staff-chip' + act + '" onclick="selectStaffChip(this, \'' + esc(s.name) + '\')">' + esc(s.name) + '</button>';
+  });
+  h += '  </div>';
+  h += '</div>';
+
+  h += '<button type="button" class="save-action-btn" style="background:#c62828;" onclick="saveAbnormalRecord()">';
+  h += '  <span>💾 異常・是正記録を保存する</span>';
+  h += '</button>';
+
+  h += '<div style="text-align:center;margin-top:12px;">';
+  h += '  <button type="button" class="prev-step-btn" onclick="prevAbnormalStep()">◀ 最後のカードに戻る</button>';
+  h += '</div>';
+
+  body.innerHTML = h;
+}
+
+async function saveAbnormalRecord(){
+  var key = 'haccp_abnormal_records';
+  var manager = _hygieneVerifier || (STAFF[0] ? STAFF[0].name : '友田 篤賜');
+
+  var rec = {
+    id: 'abnormal_' + Date.now(),
+    occurDate: _abnormalData.occurDate || todayStr(),
+    processName: _abnormalData.processName,
+    lotId: _abnormalData.lotId || '-',
+    abnormalContent: _abnormalData.abnormalContent,
+    holdMeasure: _abnormalData.holdMeasure,
+    causeAndAction: _abnormalData.causeAndAction,
+    recheckResult: _abnormalData.recheckResult,
+    preventRecurrence: _abnormalData.preventRecurrence,
+    managerName: manager,
+    completedDate: todayStr(),
+    workerName: _worker.name,
+    createdAt: new Date().toISOString()
+  };
+
+  try {
+    var list = await getHaccpJson(key, []);
+    list.unshift(rec);
+    await saveHaccpJson(key, list);
+
+    showModalDone('異常・是正を記録しました', '発生工程: ' + _abnormalData.processName + '（責任者: ' + manager + '）の是正処置を記録しました。', '⚠️');
+  } catch(e){
+    alert('保存エラー: ' + (e.message || String(e)));
+  }
+}
+
 // ─── 完了モーダル表示 ─────────────────────────────────
 function showModalDone(title, detail, icon){
   var body = el('modal-card-body');
@@ -2732,13 +3403,15 @@ function switchAdminSubtab(subtab){
   _curAdminSubtab = subtab;
   var bH = el('subtab-btn-hygiene');
   var bR = el('subtab-btn-roast');
-  if(subtab === 'hygiene'){
-    if(bH) bH.classList.add('active');
-    if(bR) bR.classList.remove('active');
-  } else {
-    if(bH) bH.classList.remove('active');
-    if(bR) bR.classList.add('active');
-  }
+  var bM = el('subtab-btn-monthly');
+  var bA = el('subtab-btn-abnormal');
+  [bH, bR, bM, bA].forEach(function(btn){ if(btn) btn.classList.remove('active'); });
+
+  if(subtab === 'hygiene' && bH) bH.classList.add('active');
+  else if(subtab === 'roast' && bR) bR.classList.add('active');
+  else if(subtab === 'monthly' && bM) bM.classList.add('active');
+  else if(subtab === 'abnormal' && bA) bA.classList.add('active');
+
   renderAdminView();
 }
 
@@ -2749,8 +3422,12 @@ async function renderAdminView(){
 
   if(_curAdminSubtab === 'hygiene'){
     await renderAdminHygieneTable(c);
-  } else {
+  } else if(_curAdminSubtab === 'roast'){
     await renderAdminRoastTable(c);
+  } else if(_curAdminSubtab === 'monthly'){
+    await renderAdminMonthlyTable(c);
+  } else if(_curAdminSubtab === 'abnormal'){
+    await renderAdminAbnormalTable(c);
   }
 }
 
@@ -2933,25 +3610,182 @@ async function deleteRoastRecord(id){
   renderAdminView();
 }
 
+// ─── 月次点検記録 全履歴テーブル（エクセル原本画像3「2. 月次点検記録」完全準拠） ────
+async function renderAdminMonthlyTable(c){
+  var key = 'haccp_monthly_records';
+  var list = await getHaccpJson(key, []);
+  var ym = _adminMonth || curYmStr();
+
+  var filtered = list.filter(function(r){
+    return !r.targetMonth || r.targetMonth === ym;
+  });
+
+  if(filtered.length === 0){
+    c.innerHTML = '<div style="text-align:center;padding:50px;color:var(--sub);background:#fff;border-radius:18px;border:1.5px solid var(--bdr);">' + ym + '度の月次点検記録はまだありません。「現場作業メニュー」の「月次点検記録」カードから入力してください。</div>';
+    return;
+  }
+
+  var h = '';
+  h += '<div class="table-wrap">';
+  h += '<table class="admin-table">';
+  h += '<thead>';
+  h += '  <tr style="background:#283593;color:#fff;">';
+  h += '    <th colspan="10" style="text-align:left;padding:8px 12px;font-size:13px;letter-spacing:0.5px;">2. 月次点検記録（月末または月1回責任者が点検・記録）</th>';
+  h += '  </tr>';
+  h += '  <tr>';
+  h += '    <th>対象月</th>';
+  h += '    <th>日常記録確認</th>';
+  h += '    <th>製造・出荷記録確認</th>';
+  h += '    <th>異常記録確認</th>';
+  h += '    <th>衛生教育・健康管理</th>';
+  h += '    <th>設備・防虫防鼠定期点検</th>';
+  h += '    <th>改善事項・振り返り</th>';
+  h += '    <th>確認日</th>';
+  h += '    <th>責任者確認</th>';
+  h += '    <th>操作</th>';
+  h += '  </tr>';
+  h += '</thead>';
+  h += '<tbody>';
+
+  filtered.forEach(function(r){
+    var okBadge = '<span style="color:#2e7d32;font-weight:800;">良</span>';
+    var ngBadge = '<span style="color:#c62828;font-weight:800;">不良</span>';
+    var parts = (r.targetMonth || '').split('-');
+    var ymLabel = parts.length === 2 ? parts[0] + '年' + parseInt(parts[1],10) + '月' : r.targetMonth;
+
+    h += '<tr>';
+    h += '  <td><b style="color:#283593;">' + esc(ymLabel) + '</b></td>';
+    h += '  <td>' + (r.checkDaily === '良' ? okBadge : ngBadge) + '</td>';
+    h += '  <td>' + (r.checkManufacture === '良' ? okBadge : ngBadge) + '</td>';
+    h += '  <td>' + (r.checkAbnormal === '良' ? okBadge : ngBadge) + '</td>';
+    h += '  <td>' + (r.checkEducation === '良' ? okBadge : ngBadge) + '</td>';
+    h += '  <td>' + (r.checkPestEquipment === '良' ? okBadge : ngBadge) + '</td>';
+    h += '  <td style="text-align:left;padding-left:8px;">' + esc(r.reviewNotes || '特記事項なし') + '</td>';
+    h += '  <td>' + esc(r.checkDate || '-') + '</td>';
+    h += '  <td><b>' + esc(r.managerName || '-') + '</b></td>';
+    h += '  <td><button type="button" onclick="deleteMonthlyRecord(\'' + r.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px;font-weight:700;">✕ 削除</button></td>';
+    h += '</tr>';
+  });
+
+  h += '</tbody>';
+  h += '</table>';
+  h += '</div>';
+
+  c.innerHTML = h;
+}
+
+async function deleteMonthlyRecord(id){
+  if(!confirm('この月次点検記録を削除しますか？')) return;
+  var key = 'haccp_monthly_records';
+  var list = await getHaccpJson(key, []);
+  list = list.filter(function(x){ return x.id !== id; });
+  await saveHaccpJson(key, list);
+  renderAdminView();
+}
+
+// ─── 異常・是正記録 全履歴テーブル（エクセル原本画像3「3. 異常・是正記録」完全準拠） ────
+async function renderAdminAbnormalTable(c){
+  var key = 'haccp_abnormal_records';
+  var list = await getHaccpJson(key, []);
+  var ym = _adminMonth || curYmStr();
+
+  var filtered = list.filter(function(r){
+    var d = r.occurDate || '';
+    return !d || d.slice(0,7) === ym;
+  });
+
+  if(filtered.length === 0){
+    c.innerHTML = '<div style="text-align:center;padding:50px;color:var(--sub);background:#fff;border-radius:18px;border:1.5px solid var(--bdr);">' + ym + '度の異常・是正記録はありません（異常発生時のみ記入、通常時は空欄で可）。</div>';
+    return;
+  }
+
+  var h = '';
+  h += '<div class="table-wrap">';
+  h += '<table class="admin-table">';
+  h += '<thead>';
+  h += '  <tr style="background:#c62828;color:#fff;">';
+  h += '    <th colspan="10" style="text-align:left;padding:8px 12px;font-size:13px;letter-spacing:0.5px;">3. 異常・是正記録（異常発生時のみ記入 ※通常時は空欄で可）</th>';
+  h += '  </tr>';
+  h += '  <tr>';
+  h += '    <th>発生日</th>';
+  h += '    <th>工程</th>';
+  h += '    <th>対象ロットID</th>';
+  h += '    <th>異常内容</th>';
+  h += '    <th>製品の保留・隔離措置</th>';
+  h += '    <th>是正処置・原因究明</th>';
+  h += '    <th>再確認結果</th>';
+  h += '    <th>再発防止策</th>';
+  h += '    <th>責任者／完了日</th>';
+  h += '    <th>操作</th>';
+  h += '  </tr>';
+  h += '</thead>';
+  h += '<tbody>';
+
+  filtered.forEach(function(r){
+    var okBadge = '<span style="color:#2e7d32;font-weight:800;">良</span>';
+    var ngBadge = '<span style="color:#c62828;font-weight:800;">不良</span>';
+
+    h += '<tr>';
+    h += '  <td><b>' + esc(r.occurDate || '-') + '</b></td>';
+    h += '  <td><span style="background:#ffebee;color:#c62828;padding:2px 8px;border-radius:8px;font-weight:800;font-size:11px;">' + esc(r.processName || '-') + '</span></td>';
+    h += '  <td><b style="color:var(--coffee);">' + esc(r.lotId || '-') + '</b></td>';
+    h += '  <td style="text-align:left;padding-left:6px;color:#c62828;font-weight:700;">' + esc(r.abnormalContent || '-') + '</td>';
+    h += '  <td>' + (r.holdMeasure === '良' ? okBadge : ngBadge) + '</td>';
+    h += '  <td style="text-align:left;padding-left:6px;">' + esc(r.causeAndAction || '-') + '</td>';
+    h += '  <td>' + (r.recheckResult === '良' ? okBadge : ngBadge) + '</td>';
+    h += '  <td style="text-align:left;padding-left:6px;">' + esc(r.preventRecurrence || '-') + '</td>';
+    h += '  <td><b>' + esc(r.managerName || '-') + '</b><br><span style="font-size:10px;color:var(--sub);">' + esc(r.completedDate || '-') + '</span></td>';
+    h += '  <td><button type="button" onclick="deleteAbnormalRecord(\'' + r.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px;font-weight:700;">✕ 削除</button></td>';
+    h += '</tr>';
+  });
+
+  h += '</tbody>';
+  h += '</table>';
+  h += '</div>';
+
+  c.innerHTML = h;
+}
+
+async function deleteAbnormalRecord(id){
+  if(!confirm('この異常・是正記録を削除しますか？')) return;
+  var key = 'haccp_abnormal_records';
+  var list = await getHaccpJson(key, []);
+  list = list.filter(function(x){ return x.id !== id; });
+  await saveHaccpJson(key, list);
+  renderAdminView();
+}
+
 // ═══════════════════════════════════════════════════════
-// 3. 印刷機能（エクセル原本画像1＆画像2と完全合致 A4横）
+// 3. 印刷機能（エクセル原本画像1＆画像2＆画像3と完全合致 A4横）
 // ═══════════════════════════════════════════════════════
 async function printCurrentAdminReport(){
   var ym = _adminMonth || curYmStr();
   if(_curAdminSubtab === 'hygiene'){
     await printDailyHaccpReport(ym);
-  } else {
+  } else if(_curAdminSubtab === 'roast'){
     await printRoastHaccpReport(ym);
+  } else if(_curAdminSubtab === 'monthly'){
+    await printMonthlyHaccpReport(ym);
+  } else if(_curAdminSubtab === 'abnormal'){
+    await printAbnormalHaccpReport(ym);
   }
 }
 
-// ① 日常衛生管理点検表 A4横原本印刷（エクセル原本画像1完全準拠）
+// ① 日常衛生管理点検表 A4横原本印刷（エクセル原本画像1＆画像3完全準拠：日常・月次・異常是正の3段構成）
 async function printDailyHaccpReport(ym){
   var key = 'haccp_hygiene_' + ym;
   var list = await getHaccpJson(key, []);
   var parts = ym.split('-');
   var year = parts[0];
   var month = parseInt(parts[1], 10);
+
+  // 月次点検記録データ取得
+  var mList = await getHaccpJson('haccp_monthly_records', []);
+  var mRec = mList.find(function(x){ return x.targetMonth === ym; }) || null;
+
+  // 異常・是正記録データ取得
+  var aList = await getHaccpJson('haccp_abnormal_records', []);
+  var aFiltered = aList.filter(function(x){ return (x.occurDate || '').slice(0,7) === ym; });
 
   var win = window.open('', '_blank');
   if(!win){
@@ -2962,22 +3796,23 @@ async function printDailyHaccpReport(ym){
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
   html += '<title>HACCP衛生・点検チェック表_' + ym + '</title>';
   html += '<style>';
-  html += '@page { size: A4 landscape; margin: 8mm; }';
-  html += 'body { font-family: "Noto Sans JP", sans-serif; font-size: 10px; color: #000; margin: 0; padding: 0; }';
-  html += 'h1 { font-size: 16px; margin: 0 0 6px; }';
-  html += '.meta-tbl { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px; }';
-  html += '.meta-tbl td { border: 1px solid #000; padding: 4px 6px; }';
-  html += '.meta-lbl { background: #f0f0f0; font-weight: bold; width: 100px; text-align: center; }';
+  html += '@page { size: A4 landscape; margin: 6mm; }';
+  html += 'body { font-family: "Noto Sans JP", sans-serif; font-size: 8.5px; color: #000; margin: 0; padding: 0; }';
+  html += 'h1 { font-size: 14px; margin: 0 0 4px; }';
+  html += '.meta-tbl { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 8.5px; }';
+  html += '.meta-tbl td { border: 1px solid #000; padding: 3px 5px; }';
+  html += '.meta-lbl { background: #f0f0f0; font-weight: bold; width: 90px; text-align: center; }';
   html += '.stamp-box { border: 1px solid #000; border-collapse: collapse; margin-left: auto; }';
-  html += '.stamp-box td { border: 1px solid #000; width: 48px; height: 48px; text-align: center; vertical-align: top; font-size: 8.5px; padding: 2px; }';
-  html += 'table.report { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-top: 6px; }';
-  html += 'table.report th, table.report td { border: 1px solid #000; padding: 4px 2px; text-align: center; }';
-  html += 'table.report th { background: #332a24; color: #fff; font-weight: bold; font-size: 9px; }';
+  html += '.stamp-box td { border: 1px solid #000; width: 44px; height: 40px; text-align: center; vertical-align: top; font-size: 8px; padding: 2px; }';
+  html += 'table.report { width: 100%; border-collapse: collapse; font-size: 8px; margin-top: 3px; }';
+  html += 'table.report th, table.report td { border: 1px solid #000; padding: 3px 2px; text-align: center; }';
+  html += 'table.report th { background: #332a24; color: #fff; font-weight: bold; font-size: 8px; }';
+  html += '.sec-title { background: #efebe9; border: 1px solid #000; padding: 2px 6px; font-weight: bold; font-size: 8.5px; margin-top: 5px; margin-bottom: 2px; }';
   html += '</style></head><body>';
 
   html += '<h1>【ひとつぎ珈琲】HACCP 衛生・点検チェック表（日常衛生・月次点検・異常是正）</h1>';
 
-  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px;">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;">';
   html += '  <table class="meta-tbl" style="flex:1;">';
   html += '    <tr><td class="meta-lbl">事業所名</td><td>就労継続支援B型 ひとつぎ豊中小曽根</td><td class="meta-lbl">作業場所</td><td>訓練・作業室内 コーヒー専用テーブル</td><td class="meta-lbl">衛生管理責任者</td><td>友田 篤賜</td></tr>';
   html += '    <tr><td class="meta-lbl">対象年月</td><td>' + year + '年 ' + month + '月分</td><td class="meta-lbl">運用ルール</td><td colspan="3">作業日ごとに1行記録（良／不良／該当なし）。異常時は対象品を保留し、下段「異常・是正記録」へ記入。</td></tr>';
@@ -2985,14 +3820,14 @@ async function printDailyHaccpReport(ym){
   html += '  <table class="stamp-box"><tr><td>施設長</td><td>管理者</td><td>担当者</td></tr><tr><td></td><td></td><td></td></tr></table>';
   html += '</div>';
 
-  html += '<div style="background:#efebe9;border:1px solid #000;padding:3px 8px;font-weight:bold;font-size:10px;margin-bottom:4px;">1. 日常衛生記録（作業実施日ごとに記入）</div>';
-
+  // 1. 日常衛生記録
+  html += '<div class="sec-title">1. 日常衛生記録（作業実施日ごとに記入）</div>';
   html += '<table class="report">';
   html += '<thead><tr><th>作業日</th><th>作業者</th><th>健康確認<br>(体調・手指傷)</th><th>手洗い<br>・消毒</th><th>専用台・<br>器具清掃</th><th>害虫・異物<br>有無</th><th>他作業との<br>区分確認</th><th>設備・火気<br>安全確認</th><th>作業終了後<br>清掃・片付</th><th>総合判定</th><th>特記事項（異常内容・対応メモ）</th><th>職員確認</th></tr></thead>';
   html += '<tbody>';
 
   if(list.length === 0){
-    html += '<tr><td colspan="12" style="padding:20px;">当月の日常衛生記録はありません</td></tr>';
+    html += '<tr><td colspan="12" style="padding:12px;">当月の日常衛生記録はありません</td></tr>';
   } else {
     list.forEach(function(r){
       var ans = r.answers || {};
@@ -3012,8 +3847,54 @@ async function printDailyHaccpReport(ym){
       html += '</tr>';
     });
   }
-
   html += '</tbody></table>';
+
+  // 2. 月次点検記録（原本画像3完全準拠）
+  html += '<div class="sec-title" style="margin-top:6px;">2. 月次点検記録（月末または月1回責任者が点検・記録）</div>';
+  html += '<table class="report">';
+  html += '<thead><tr><th style="background:#2b1d14;">対象月</th><th style="background:#2b1d14;">日常記録確認</th><th style="background:#2b1d14;">製造・出荷記録確認</th><th style="background:#2b1d14;">異常記録確認</th><th style="background:#2b1d14;">衛生教育・健康管理</th><th style="background:#2b1d14;">設備・防虫防鼠定期点検</th><th style="background:#2b1d14;">改善事項・振り返り</th><th style="background:#2b1d14;">確認日</th><th style="background:#2b1d14;">責任者確認</th></tr></thead>';
+  html += '<tbody>';
+  if(mRec){
+    html += '<tr>';
+    html += '  <td>' + year + '年' + month + '月</td>';
+    html += '  <td>' + esc(mRec.checkDaily || '良') + '</td>';
+    html += '  <td>' + esc(mRec.checkManufacture || '良') + '</td>';
+    html += '  <td>' + esc(mRec.checkAbnormal || '良') + '</td>';
+    html += '  <td>' + esc(mRec.checkEducation || '良') + '</td>';
+    html += '  <td>' + esc(mRec.checkPestEquipment || '良') + '</td>';
+    html += '  <td style="text-align:left;padding-left:4px;">' + esc(mRec.reviewNotes || '特記事項なし') + '</td>';
+    html += '  <td>' + esc(mRec.checkDate || '-') + '</td>';
+    html += '  <td>' + esc(mRec.managerName || '友田 篤賜') + '</td>';
+    html += '</tr>';
+  } else {
+    html += '<tr><td>' + year + '年' + month + '月</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
+  }
+  html += '</tbody></table>';
+
+  // 3. 異常・是正記録（原本画像3完全準拠）
+  html += '<div class="sec-title" style="margin-top:6px;">3. 異常・是正記録（異常発生時のみ記入 ※通常時は空欄で可）</div>';
+  html += '<table class="report">';
+  html += '<thead><tr><th style="background:#2b1d14;">発生日</th><th style="background:#2b1d14;">工程</th><th style="background:#2b1d14;">対象ロットID</th><th style="background:#2b1d14;">異常内容</th><th style="background:#2b1d14;">製品の保留・隔離措置</th><th style="background:#2b1d14;">是正処置・原因究明</th><th style="background:#2b1d14;">再確認結果</th><th style="background:#2b1d14;">再発防止策</th><th style="background:#2b1d14;">責任者／完了日</th></tr></thead>';
+  html += '<tbody>';
+  if(aFiltered.length > 0){
+    aFiltered.forEach(function(a){
+      html += '<tr>';
+      html += '  <td>' + esc(a.occurDate || '-') + '</td>';
+      html += '  <td>' + esc(a.processName || '-') + '</td>';
+      html += '  <td>' + esc(a.lotId || '-') + '</td>';
+      html += '  <td style="text-align:left;padding-left:4px;">' + esc(a.abnormalContent || '-') + '</td>';
+      html += '  <td>' + esc(a.holdMeasure || '良') + '</td>';
+      html += '  <td style="text-align:left;padding-left:4px;">' + esc(a.causeAndAction || '-') + '</td>';
+      html += '  <td>' + esc(a.recheckResult || '良') + '</td>';
+      html += '  <td style="text-align:left;padding-left:4px;">' + esc(a.preventRecurrence || '-') + '</td>';
+      html += '  <td>' + esc(a.managerName || '') + (a.completedDate ? ' / ' + a.completedDate : '') + '</td>';
+      html += '</tr>';
+    });
+  } else {
+    html += '<tr><td colspan="9" style="padding:8px;color:#666;">（異常発生なし・空欄）</td></tr>';
+  }
+  html += '</tbody></table>';
+
   html += '</body></html>';
 
   win.document.open();
@@ -3118,6 +3999,112 @@ async function printRoastHaccpReport(ym){
   setTimeout(function(){ win.print(); }, 400);
 }
 
+// ③ 月次点検記録 単独印刷
+async function printMonthlyHaccpReport(ym){
+  var key = 'haccp_monthly_records';
+  var list = await getHaccpJson(key, []);
+  var filtered = list.filter(function(r){ return !r.targetMonth || r.targetMonth === ym; });
+
+  var win = window.open('', '_blank');
+  if(!win){
+    alert('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。');
+    return;
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
+  html += '<title>HACCP月次点検記録_' + ym + '</title>';
+  html += '<style>';
+  html += '@page { size: A4 landscape; margin: 8mm; }';
+  html += 'body { font-family: "Noto Sans JP", sans-serif; font-size: 10px; color: #000; margin: 0; padding: 0; }';
+  html += 'h1 { font-size: 16px; margin: 0 0 6px; }';
+  html += 'table.report { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }';
+  html += 'table.report th, table.report td { border: 1px solid #000; padding: 6px 4px; text-align: center; }';
+  html += 'table.report th { background: #283593; color: #fff; font-size: 10px; }';
+  html += '</style></head><body>';
+  html += '<h1>【ひとつぎ珈琲】2. 月次点検記録（月末または月1回責任者が点検・記録）</h1>';
+  html += '<div style="margin-bottom:8px;font-size:11px;">事業所名: 就労継続支援B型 ひとつぎ豊中小曽根 ／ 対象年月: ' + ym + '</div>';
+
+  html += '<table class="report">';
+  html += '<thead><tr><th>対象月</th><th>日常記録確認</th><th>製造・出荷記録確認</th><th>異常記録確認</th><th>衛生教育・健康管理</th><th>設備・防虫防鼠定期点検</th><th>改善事項・振り返り</th><th>確認日</th><th>責任者確認</th></tr></thead>';
+  html += '<tbody>';
+  if(filtered.length === 0){
+    html += '<tr><td colspan="9" style="padding:20px;">当月の記録はありません</td></tr>';
+  } else {
+    filtered.forEach(function(r){
+      html += '<tr>';
+      html += '  <td><b>' + esc(r.targetMonth) + '</b></td>';
+      html += '  <td>' + esc(r.checkDaily || '良') + '</td>';
+      html += '  <td>' + esc(r.checkManufacture || '良') + '</td>';
+      html += '  <td>' + esc(r.checkAbnormal || '良') + '</td>';
+      html += '  <td>' + esc(r.checkEducation || '良') + '</td>';
+      html += '  <td>' + esc(r.checkPestEquipment || '良') + '</td>';
+      html += '  <td style="text-align:left;padding-left:6px;">' + esc(r.reviewNotes || '特記事項なし') + '</td>';
+      html += '  <td>' + esc(r.checkDate || '-') + '</td>';
+      html += '  <td><b>' + esc(r.managerName || '-') + '</b></td>';
+      html += '</tr>';
+    });
+  }
+  html += '</tbody></table></body></html>';
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function(){ win.print(); }, 400);
+}
+
+// ④ 異常・是正記録 単独印刷
+async function printAbnormalHaccpReport(ym){
+  var key = 'haccp_abnormal_records';
+  var list = await getHaccpJson(key, []);
+  var filtered = list.filter(function(r){ return !r.occurDate || r.occurDate.slice(0,7) === ym; });
+
+  var win = window.open('', '_blank');
+  if(!win){
+    alert('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。');
+    return;
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
+  html += '<title>HACCP異常・是正記録_' + ym + '</title>';
+  html += '<style>';
+  html += '@page { size: A4 landscape; margin: 8mm; }';
+  html += 'body { font-family: "Noto Sans JP", sans-serif; font-size: 10px; color: #000; margin: 0; padding: 0; }';
+  html += 'h1 { font-size: 16px; margin: 0 0 6px; }';
+  html += 'table.report { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }';
+  html += 'table.report th, table.report td { border: 1px solid #000; padding: 6px 4px; text-align: center; }';
+  html += 'table.report th { background: #c62828; color: #fff; font-size: 10px; }';
+  html += '</style></head><body>';
+  html += '<h1>【ひとつぎ珈琲】3. 異常・是正記録（異常発生時のみ記入 ※通常時は空欄で可）</h1>';
+  html += '<div style="margin-bottom:8px;font-size:11px;">事業所名: 就労継続支援B型 ひとつぎ豊中小曽根 ／ 対象年月: ' + ym + '</div>';
+
+  html += '<table class="report">';
+  html += '<thead><tr><th>発生日</th><th>工程</th><th>対象ロットID</th><th>異常内容</th><th>製品の保留・隔離措置</th><th>是正処置・原因究明</th><th>再確認結果</th><th>再発防止策</th><th>責任者／完了日</th></tr></thead>';
+  html += '<tbody>';
+  if(filtered.length === 0){
+    html += '<tr><td colspan="9" style="padding:20px;">当月の異常・是正記録はありません（異常発生なし）</td></tr>';
+  } else {
+    filtered.forEach(function(a){
+      html += '<tr>';
+      html += '  <td>' + esc(a.occurDate || '-') + '</td>';
+      html += '  <td>' + esc(a.processName || '-') + '</td>';
+      html += '  <td>' + esc(a.lotId || '-') + '</td>';
+      html += '  <td style="text-align:left;padding-left:4px;">' + esc(a.abnormalContent || '-') + '</td>';
+      html += '  <td>' + esc(a.holdMeasure || '良') + '</td>';
+      html += '  <td style="text-align:left;padding-left:4px;">' + esc(a.causeAndAction || '-') + '</td>';
+      html += '  <td>' + esc(a.recheckResult || '良') + '</td>';
+      html += '  <td style="text-align:left;padding-left:4px;">' + esc(a.preventRecurrence || '-') + '</td>';
+      html += '  <td>' + esc(a.managerName || '') + (a.completedDate ? ' / ' + a.completedDate : '') + '</td>';
+      html += '</tr>';
+    });
+  }
+  html += '</tbody></table></body></html>';
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function(){ win.print(); }, 400);
+}
+
 // ─── CSVエクスポート ─────────────────────────────────────
 async function exportCurrentAdminCsv(){
   var ym = _adminMonth || curYmStr();
@@ -3129,13 +4116,27 @@ async function exportCurrentAdminCsv(){
       csv += [r.date, r.workerName, (ans.q_health||'良'), (ans.q_wash||'良'), (ans.q_table||'良'), (ans.q_foreign||'良'), (ans.q_other||'良'), (ans.q_fire||'良'), (ans.q_clean||'良'), r.judge, (r.notes||''), r.verifierName].join(',') + '\n';
     });
     downloadCsv(csv, '日常衛生チェック_' + ym + '.csv');
-  } else {
+  } else if(_curAdminSubtab === 'roast'){
     var list = await getHaccpJson('haccp_roast_batches', []);
     var csv = '\uFEFF製造ロットID,産地銘柄,受入日,仕入先生豆ロット,受入量kg,包装保管状態,カビ虫異物判定,焙煎日,投入量g,焙煎後g,歩留り,焙煎条件冷却確認,焙煎異常有無,包装日,形態,個数,賞味期限密封確認,ラベル表示確認,保管出荷先,職員確認備考\n';
     list.forEach(function(b){
       csv += [b.lotId, b.beanOrigin, (b.recvDate||''), (b.supplierLot||''), (b.recvWeightKg||''), (b.recvPackage||''), (b.recvForeign||''), (b.roastDate||''), (b.inputG||''), (b.outputG||''), (b.yieldPct||''), (b.roastCondition||''), (b.roastAbnormal||''), (b.packDate||''), (b.packForm||''), (b.packCount||''), (b.packSeal||''), (b.packLabel||''), (b.packDest||''), ((b.verifierName||'') + ' ' + (b.notes||''))].join(',') + '\n';
     });
     downloadCsv(csv, 'HACCP焙煎出荷台帳_' + ym + '.csv');
+  } else if(_curAdminSubtab === 'monthly'){
+    var list = await getHaccpJson('haccp_monthly_records', []);
+    var csv = '\uFEFF対象月,日常記録確認,製造出荷記録確認,異常記録確認,衛生教育健康管理,設備防虫防鼠定期点検,改善事項振り返り,確認日,責任者確認\n';
+    list.forEach(function(r){
+      csv += [r.targetMonth, r.checkDaily, r.checkManufacture, r.checkAbnormal, r.checkEducation, r.checkPestEquipment, '"' + (r.reviewNotes||'').replace(/"/g,'""') + '"', r.checkDate, r.managerName].join(',') + '\n';
+    });
+    downloadCsv(csv, '月次点検記録_' + ym + '.csv');
+  } else if(_curAdminSubtab === 'abnormal'){
+    var list = await getHaccpJson('haccp_abnormal_records', []);
+    var csv = '\uFEFF発生日,工程,対象ロットID,異常内容,製品保留隔離措置,是正処置原因究明,再確認結果,再発防止策,責任者完了日\n';
+    list.forEach(function(r){
+      csv += [r.occurDate, r.processName, r.lotId, '"' + (r.abnormalContent||'').replace(/"/g,'""') + '"', r.holdMeasure, '"' + (r.causeAndAction||'').replace(/"/g,'""') + '"', r.recheckResult, '"' + (r.preventRecurrence||'').replace(/"/g,'""') + '"', ((r.managerName||'') + ' ' + (r.completedDate||''))].join(',') + '\n';
+    });
+    downloadCsv(csv, '異常是正記録_' + ym + '.csv');
   }
 }
 
