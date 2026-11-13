@@ -1242,7 +1242,7 @@ main {
 <!-- ══════════════════════════════════════════════
      3. Googleマップ風 モーダルカード（ポップアップ）
      ══════════════════════════════════════════════ -->
-<div class="modal-overlay" id="haccp-modal-overlay" onclick="onModalBackdropClick(event)">
+<div class="modal-overlay" id="haccp-modal-overlay">
   <div class="modal-card" id="haccp-modal-card" onclick="event.stopPropagation()">
     <button type="button" class="modal-close-btn" onclick="closeHaccpModal()" title="閉じる">✕</button>
     <div id="modal-card-body"></div>
@@ -1550,9 +1550,8 @@ function closeHaccpModal(){
 }
 
 function onModalBackdropClick(e){
-  if(e.target === el('haccp-modal-overlay')){
-    closeHaccpModal();
-  }
+  // 誤タップ防止：モーダル外（背景）をタップしても閉じない仕様
+  // 閉じる場合は右上の✕ボタンまたは完了時の決定ボタンを使用
 }
 
 // ═══════════════════════════════════════════════════════

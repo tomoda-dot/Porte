@@ -510,7 +510,7 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
   </div>
 
   <!-- ☕ HACCP モーダルカード オーバーレイ -->
-  <div id="haccp-modal-overlay" class="haccp-modal-overlay" onclick="onHaccpBackdropClick(event)">
+  <div id="haccp-modal-overlay" class="haccp-modal-overlay">
     <div class="haccp-modal-card" id="haccp-modal-card" onclick="event.stopPropagation()">
       <button type="button" class="haccp-modal-close-btn" onclick="closeHaccpModal()" title="閉じる">✕</button>
       <div id="haccp-modal-body" style="width:100%"></div>
@@ -1611,9 +1611,7 @@ function closeHaccpModal(){
 }
 
 function onHaccpBackdropClick(e){
-  if(e.target === el('haccp-modal-overlay')){
-    closeHaccpModal();
-  }
+  // 誤タップ防止：モーダル外をタップしても閉じない仕様
 }
 
 function switchHaccpSubTab(tab){
