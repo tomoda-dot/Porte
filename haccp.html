@@ -1130,7 +1130,6 @@ main {
       <div class="step-header">
         <span class="step-tag">Step 2</span>
         <h2 class="step-title">どの作業を しますか？</h2>
-        <p class="step-sub">カードをタップすると入力モーダルが開きます</p>
       </div>
 
       <div class="task-menu-grid">
@@ -1552,22 +1551,26 @@ function selectWorker(type, id, name){
   renderWorkerSelectionGrid();
 
   el('badge-cur-worker').innerHTML = '👤 作業するひと: <b>' + esc(name) + '</b> さん';
+  el('sec-worker-selection').style.display = 'none';
   el('sec-task-menu').style.display = 'block';
-  el('sec-task-menu').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function resetWorkerSelection(){
   _worker = null;
   renderWorkerSelectionGrid();
   el('sec-task-menu').style.display = 'none';
-  el('sec-worker-selection').scrollIntoView({ behavior: 'smooth' });
+  el('sec-worker-selection').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ─── モーダル開閉制御 ─────────────────────────────────
 function openHaccpModal(modalType){
   if(!_worker){
     alert('まず作業する方のお名前カードをタップしてください。');
-    el('sec-worker-selection').scrollIntoView({ behavior: 'smooth' });
+    el('sec-task-menu').style.display = 'none';
+    el('sec-worker-selection').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
 
