@@ -1226,6 +1226,9 @@ main {
         <button type="button" class="admin-subtab-btn" id="subtab-btn-beans" onclick="switchAdminSubtab('beans')">
           🌱 豆の種類設定
         </button>
+        <button type="button" class="admin-subtab-btn" id="subtab-btn-suppliers" onclick="switchAdminSubtab('suppliers')">
+          🏢 受入先設定
+        </button>
       </div>
 
       <div id="admin-month-wrap" style="display:flex;align-items:center;gap:10px;">
@@ -1342,6 +1345,29 @@ async function saveBeanOrigins(list){
   await saveHaccpJson('haccp_bean_origins', list);
 }
 
+// 生豆受入先・仕入先（初期標準：一般社団法人ショーマネ）
+var DEFAULT_SUPPLIERS = ['一般社団法人ショーマネ'];
+var SUPPLIERS = DEFAULT_SUPPLIERS.slice();
+
+async function loadSuppliers(){
+  try {
+    var saved = await getHaccpJson('haccp_suppliers', null);
+    if(Array.isArray(saved) && saved.length > 0){
+      SUPPLIERS = saved;
+    } else {
+      SUPPLIERS = DEFAULT_SUPPLIERS.slice();
+      await saveHaccpJson('haccp_suppliers', SUPPLIERS);
+    }
+  } catch(e){
+    SUPPLIERS = DEFAULT_SUPPLIERS.slice();
+  }
+}
+
+async function saveSuppliers(list){
+  SUPPLIERS = list;
+  await saveHaccpJson('haccp_suppliers', list);
+}
+
 // ─── ユーティリティ ─────────────────────────────────────
 function pad(n){ return String(n).padStart(2, '0'); }
 function todayStr(){
@@ -1429,6 +1455,7 @@ window.addEventListener('DOMContentLoaded', async function(){
   buildAdminMonthSelect();
 
   await loadBeanOrigins();
+  await loadSuppliers();
   await loadUsersAndStaff();
 
   var p = new URLSearchParams(window.location.search);
@@ -1840,7 +1867,7 @@ var _recvStepIdx = 0;
 var _recvData = {
   bean: BEAN_ORIGINS[0],
   weightKg: 1,
-  supplierLot: '',
+  supplierLot: (SUPPLIERS && SUPPLIERS.length > 0) ? SUPPLIERS[0] : '一般社団法人ショーマネ',
   packageStatus: '良',
   foreignStatus: '良',
   verifier: ''
@@ -1848,10 +1875,11 @@ var _recvData = {
 
 function startRecvWizard(body){
   _recvStepIdx = 0;
+  var defSupplier = (SUPPLIERS && SUPPLIERS.length > 0) ? SUPPLIERS[0] : '一般社団法人ショーマネ';
   _recvData = {
     bean: BEAN_ORIGINS[0],
     weightKg: 1,
-    supplierLot: '',
+    supplierLot: defSupplier,
     packageStatus: '良',
     foreignStatus: '良',
     verifier: STAFF.length > 0 ? STAFF[0].name : ''
@@ -1910,8 +1938,15 @@ function renderRecvStep(animType, body){
       h += '      </div>';
       h += '    </div>';
       h += '    <div style="margin-top:16px;text-align:left;">';
-      h += '      <label style="font-size:12px;font-weight:800;color:var(--coffee);">仕入先・生豆ロット（任意）</label>';
-      h += '      <input type="text" id="f-recv-supplier" class="f-input" placeholder="例: 業者名、袋のロット番号" value="' + esc(_recvData.supplierLot) + '">';
+      h += '      <label style="font-size:12px;font-weight:800;color:var(--coffee);">受入先（仕入先）・生豆ロット</label>';
+      h += '      <input type="text" id="f-recv-supplier" class="f-input" placeholder="例: 一般社団法人ショーマネ、袋のロット番号" value="' + esc(_recvData.supplierLot) + '">';
+      if(SUPPLIERS && SUPPLIERS.length > 0){
+        h += '    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">';
+        SUPPLIERS.forEach(function(s){
+          h += '    <button type="button" class="quick-num-btn" style="width:auto;padding:5px 12px;font-size:12px;font-weight:800;border-radius:14px;border:1px solid #d7ccc8;background:#fff;" onclick="el(\'f-recv-supplier\').value=\'' + esc(s) + '\'">' + esc(s) + '</button>';
+        });
+        h += '    </div>';
+      }
       h += '    </div>';
       h += '    <button type="button" class="card-next-action-btn" onclick="submitRecvWeight()">次へ進む ▶</button>';
     }
@@ -1970,7 +2005,7 @@ function selectRecvBean(beanName){
 
 function submitRecvWeight(){
   if(_isStepAnimating) return;
-  var val = parseFloat(el('f-recv-kg') ? el('f-recv-kg').value : 5) || 0;
+  var val = parseFloat(el('f-recv-kg') ? el('f-recv-kg').value : 1) || 0;
   if(val <= 0){
     alert('数量を入力してください');
     return;
@@ -3454,7 +3489,7 @@ function onAdminMonthChange(){
 
 function switchAdminSubtab(subtab){
   _curAdminSubtab = subtab;
-  var subtabs = ['hygiene', 'recv', 'roast', 'pack', 'abnormal', 'monthly', 'combined', 'beans'];
+  var subtabs = ['hygiene', 'pack', 'roast', 'recv', 'abnormal', 'monthly', 'combined', 'beans', 'suppliers'];
   subtabs.forEach(function(s){
     var btn = el('subtab-btn-' + s);
     if(btn){
@@ -3465,8 +3500,9 @@ function switchAdminSubtab(subtab){
 
   var fWrap = el('admin-month-wrap');
   var aWrap = el('admin-actions-wrap');
-  if(fWrap) fWrap.style.display = (subtab === 'beans') ? 'none' : 'flex';
-  if(aWrap) aWrap.style.display = (subtab === 'beans') ? 'none' : 'flex';
+  var isSettings = (subtab === 'beans' || subtab === 'suppliers');
+  if(fWrap) fWrap.style.display = isSettings ? 'none' : 'flex';
+  if(aWrap) aWrap.style.display = isSettings ? 'none' : 'flex';
 
   renderAdminView();
 }
@@ -3492,6 +3528,8 @@ async function renderAdminView(){
     await renderAdminCombinedTable(c);
   } else if(_curAdminSubtab === 'beans'){
     await renderAdminBeansSettings(c);
+  } else if(_curAdminSubtab === 'suppliers'){
+    await renderAdminSuppliersSettings(c);
   }
 }
 
@@ -3611,6 +3649,128 @@ async function resetBeanOriginsToDefault(){
   }
   await saveBeanOrigins(DEFAULT_BEAN_ORIGINS.slice());
   renderAdminBeansSettings(el('admin-table-container'));
+}
+
+// ─── 生豆の受入先（仕入先）設定（管理画面） ───────────────
+async function renderAdminSuppliersSettings(container){
+  var h = '';
+  h += '<div class="admin-table-card" style="padding: 24px 28px; max-width: 680px; margin: 0 auto; background: #fff; border-radius: 18px; border: 1.5px solid var(--bdr);">';
+  
+  // 見出し
+  h += '  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:20px;border-bottom:1px solid var(--bdr);padding-bottom:16px;">';
+  h += '    <div>';
+  h += '      <h3 style="margin:0 0 6px;font-size:18px;font-weight:900;color:var(--coffee-dark);">🏢 生豆の受入先（仕入先）設定</h3>';
+  h += '      <div style="font-size:12px;color:var(--sub);line-height:1.6;">';
+  h += '        生豆受入記録でワンタップ選択できる受入先（仕入先業者・団体名）の一覧です。<br>';
+  h += '        一番上の受入先が、生豆受入カードの標準（デフォルト）として自動入力されます。';
+  h += '      </div>';
+  h += '    </div>';
+  h += '    <button type="button" class="btn-csv" style="padding:8px 12px;font-size:12px;white-space:nowrap;" onclick="resetSuppliersToDefault()">初期標準に戻す</button>';
+  h += '  </div>';
+
+  // 追加フォーム
+  h += '  <div style="background:var(--pri-light);border:1px solid var(--bdr);border-radius:16px;padding:16px 20px;margin-bottom:24px;">';
+  h += '    <label style="display:block;font-size:12px;font-weight:800;color:var(--coffee);margin-bottom:8px;">＋ 新しい受入先・仕入先を追加</label>';
+  h += '    <div style="display:flex;gap:10px;">';
+  h += '      <input type="text" id="new-supplier-name-input" class="f-input" placeholder="例: 一般社団法人ショーマネ、〇〇珈琲商事" style="flex:1;background:#fff;font-weight:700;" onkeydown="if(event.key===\'Enter\')addNewSupplier()">';
+  h += '      <button type="button" class="btn-print" style="padding:10px 22px;font-size:14px;white-space:nowrap;border-radius:12px;" onclick="addNewSupplier()">追加する</button>';
+  h += '    </div>';
+  h += '  </div>';
+
+  // 現在の一覧リスト
+  h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  h += '    <div style="font-size:14px;font-weight:800;color:var(--coffee-dark);">';
+  h += '      登録中の受入先一覧（全 ' + SUPPLIERS.length + ' 件）';
+  h += '    </div>';
+  h += '    <span style="font-size:11px;color:var(--sub);">▲▼で表示順を変更できます（一番上が標準）</span>';
+  h += '  </div>';
+
+  h += '  <div style="display:flex;flex-direction:column;gap:8px;">';
+  if(SUPPLIERS.length === 0){
+    h += '    <div style="text-align:center;padding:24px;color:var(--sub);border:1px dashed var(--bdr);border-radius:12px;">受入先が登録されていません。上の入力欄から追加してください。</div>';
+  } else {
+    SUPPLIERS.forEach(function(sup, idx){
+      var isDefault = (idx === 0);
+      h += '    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg);border:1px solid var(--bdr);border-radius:14px;">';
+      h += '      <div style="display:flex;align-items:center;gap:12px;">';
+      h += '        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:var(--pri-light);color:var(--coffee-dark);border-radius:50%;font-size:12px;font-weight:900;">' + (idx + 1) + '</span>';
+      h += '        <span style="font-size:15px;font-weight:800;color:var(--coffee-dark);">' + esc(sup) + '</span>';
+      if(isDefault){
+        h += '        <span style="background:var(--coffee);color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;">★ 標準</span>';
+      }
+      h += '      </div>';
+      h += '      <div style="display:flex;align-items:center;gap:6px;">';
+      if(idx > 0){
+        h += '        <button type="button" class="btn-csv" style="padding:4px 8px;font-size:11px;" onclick="moveSupplier(' + idx + ', -1)" title="上へ移動">▲</button>';
+      } else {
+        h += '        <button type="button" class="btn-csv" style="padding:4px 8px;font-size:11px;opacity:0.3;cursor:default;" disabled>▲</button>';
+      }
+      if(idx < SUPPLIERS.length - 1){
+        h += '        <button type="button" class="btn-csv" style="padding:4px 8px;font-size:11px;" onclick="moveSupplier(' + idx + ', 1)" title="下へ移動">▼</button>';
+      } else {
+        h += '        <button type="button" class="btn-csv" style="padding:4px 8px;font-size:11px;opacity:0.3;cursor:default;" disabled>▼</button>';
+      }
+      h += '        <button type="button" style="background:#fbe9e7;border:1px solid #ffccbc;color:#c62828;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;margin-left:4px;" onclick="deleteSupplier(' + idx + ')">✕ 削除</button>';
+      h += '      </div>';
+      h += '    </div>';
+    });
+  }
+  h += '  </div>';
+
+  h += '</div>';
+  container.innerHTML = h;
+}
+
+async function addNewSupplier(){
+  var inp = el('new-supplier-name-input');
+  if(!inp) return;
+  var name = String(inp.value || '').trim();
+  if(!name){
+    alert('受入先（仕入先名）を入力してください。');
+    inp.focus();
+    return;
+  }
+  if(SUPPLIERS.indexOf(name) >= 0){
+    alert('「' + name + '」は既に登録されています。');
+    inp.focus();
+    return;
+  }
+  var list = SUPPLIERS.slice();
+  list.push(name);
+  await saveSuppliers(list);
+  inp.value = '';
+  renderAdminSuppliersSettings(el('admin-table-container'));
+}
+
+async function deleteSupplier(idx){
+  if(idx < 0 || idx >= SUPPLIERS.length) return;
+  var name = SUPPLIERS[idx];
+  if(!confirm('受入先「' + name + '」を削除しますか？\n（※過去の記録データはそのまま残ります）')){
+    return;
+  }
+  var list = SUPPLIERS.slice();
+  list.splice(idx, 1);
+  await saveSuppliers(list);
+  renderAdminSuppliersSettings(el('admin-table-container'));
+}
+
+async function moveSupplier(idx, dir){
+  var target = idx + dir;
+  if(target < 0 || target >= SUPPLIERS.length) return;
+  var list = SUPPLIERS.slice();
+  var tmp = list[idx];
+  list[idx] = list[target];
+  list[target] = tmp;
+  await saveSuppliers(list);
+  renderAdminSuppliersSettings(el('admin-table-container'));
+}
+
+async function resetSuppliersToDefault(){
+  if(!confirm('受入先を初期標準（一般社団法人ショーマネ）にリセットしますか？')){
+    return;
+  }
+  await saveSuppliers(DEFAULT_SUPPLIERS.slice());
+  renderAdminSuppliersSettings(el('admin-table-container'));
 }
 
 // ─── 衛生チェック 全履歴テーブル（エクセル原本画像1完全準拠） ────
