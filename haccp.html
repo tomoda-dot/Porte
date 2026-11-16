@@ -2098,16 +2098,6 @@ async function renderRecvConfirmStep(body){
   h += '  <div class="summary-item-row ' + (_recvData.foreignStatus === '良' ? 'is-ok' : 'is-ng') + '"><span style="font-weight:700;">カビ・虫・異物判定</span><span class="badge-result ' + (_recvData.foreignStatus === '良' ? 'ok' : 'ng') + '">' + _recvData.foreignStatus + '</span></div>';
   h += '</div>';
 
-  h += '<div class="f-row">';
-  h += '  <label class="f-label">職員確認（確認者を選択してください）</label>';
-  h += '  <div class="staff-chip-grid">';
-  STAFF.forEach(function(s, idx){
-    var act = (idx === 0) ? ' active' : '';
-    h += '  <button type="button" class="staff-chip' + act + '" onclick="selectStaffChip(this, \'' + esc(s.name) + '\')">' + esc(s.name) + '</button>';
-  });
-  h += '  </div>';
-  h += '</div>';
-
   h += '<button type="button" class="save-action-btn" style="background:#6e5f3c;" onclick="saveRecvRecord()">';
   h += '  <span>💾 生豆受入記録を保存する</span>';
   h += '</button>';
@@ -2122,7 +2112,7 @@ async function renderRecvConfirmStep(body){
 async function saveRecvRecord(){
   var key = 'haccp_roast_batches';
   var lot = _recvData.lotId || await generateNextLotId();
-  var verifier = _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ');
+  var verifier = _worker ? _worker.name : '作業者確認';
 
   var rec = {
     id: 'batch_' + Date.now(),
@@ -3873,8 +3863,7 @@ async function renderAdminRecvTable(c){
   h += '    <th>受入量 (kg)</th>';
   h += '    <th>包装・保管状態</th>';
   h += '    <th>カビ・虫・異物判定</th>';
-  h += '    <th>作業者</th>';
-  h += '    <th>職員確認</th>';
+  h += '    <th>作業・確認者</th>';
   h += '    <th>操作</th>';
   h += '  </tr>';
   h += '</thead>';
@@ -3893,8 +3882,7 @@ async function renderAdminRecvTable(c){
     h += '  <td><b>' + (b.recvWeightKg ? b.recvWeightKg + ' kg' : dash) + '</b></td>';
     h += '  <td>' + (b.recvPackage ? (b.recvPackage === '良' ? okBadge : ngBadge) : dash) + '</td>';
     h += '  <td>' + (b.recvForeign ? (b.recvForeign === '良' ? okBadge : ngBadge) : dash) + '</td>';
-    h += '  <td>' + esc(b.workerName || '-') + '</td>';
-    h += '  <td><b>' + esc(b.verifierName || '-') + '</b></td>';
+    h += '  <td><b>' + esc(b.workerName || b.verifierName || '-') + '</b></td>';
     h += '  <td><button type="button" onclick="deleteBatchRecord(\'' + b.id + '\')" style="background:none;border:none;color:#c62828;cursor:pointer;font-size:12px;font-weight:700;">✕ 削除</button></td>';
     h += '</tr>';
   });
@@ -4645,9 +4633,9 @@ async function exportCurrentAdminCsv(){
       var d = b.recvDate || (b.updatedAt ? b.updatedAt.slice(0, 10) : '');
       return (b.recvDate || b.stage === 'received') && (!d || d.slice(0, 7) === ym);
     });
-    var csv = '\uFEFF受入日,製造ロットID,産地銘柄,仕入先・生豆ロット,受入量kg,包装保管状態,カビ虫異物判定,作業者,職員確認\n';
+    var csv = '\uFEFF受入日,製造ロットID,産地銘柄,仕入先・生豆ロット,受入量kg,包装保管状態,カビ虫異物判定,作業・確認者\n';
     list.forEach(function(b){
-      csv += [b.recvDate||'', b.lotId||'', b.beanOrigin||'', '"' + (b.supplierLot||'').replace(/"/g,'""') + '"', b.recvWeightKg||'', b.recvPackage||'', b.recvForeign||'', b.workerName||'', b.verifierName||''].join(',') + '\n';
+      csv += [b.recvDate||'', b.lotId||'', b.beanOrigin||'', '"' + (b.supplierLot||'').replace(/"/g,'""') + '"', b.recvWeightKg||'', b.recvPackage||'', b.recvForeign||'', (b.workerName||b.verifierName||'')].join(',') + '\n';
     });
     downloadCsv(csv, '生豆受入記録_' + ym + '.csv');
   } else if(_curAdminSubtab === 'roast'){
