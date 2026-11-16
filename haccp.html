@@ -1132,9 +1132,18 @@ main {
         <h2 class="step-title">どの作業を しますか？</h2>
       </div>
 
+      <div id="notice-hygiene-required" style="display:none;background:#fff8e1;border:2px dashed #ffe082;border-radius:18px;padding:14px 18px;margin-bottom:18px;text-align:center;">
+        <div style="font-size:15px;font-weight:900;color:#795548;">
+          🔒 焙煎製造・包装出荷は、日常衛生記録を行うと表示されます
+        </div>
+        <div style="font-size:13px;color:#8d6e63;margin-top:4px;">
+          食品衛生管理のため、先に下の「🧼 日常衛生記録」をタップして本日の点検を行ってください。
+        </div>
+      </div>
+
       <div class="task-menu-grid">
         <!-- 1. 日常衛生記録 -->
-        <div class="task-card c-hygiene" onclick="openHaccpModal('hygiene')">
+        <div class="task-card c-hygiene" id="card-task-hygiene" onclick="openHaccpModal('hygiene')">
           <div>
             <div class="task-icon">🧼</div>
             <div class="task-title">日常衛生記録</div>
@@ -1144,7 +1153,7 @@ main {
         </div>
 
         <!-- 2. 焙煎製造記録 -->
-        <div class="task-card c-roast" onclick="openHaccpModal('roast')">
+        <div class="task-card c-roast" id="card-task-roast" onclick="openHaccpModal('roast')">
           <div>
             <div class="task-icon">🔥</div>
             <div class="task-title">焙煎製造記録</div>
@@ -1154,7 +1163,7 @@ main {
         </div>
 
         <!-- 3. 包装出荷記録 -->
-        <div class="task-card c-pack" onclick="openHaccpModal('pack')">
+        <div class="task-card c-pack" id="card-task-pack" onclick="openHaccpModal('pack')">
           <div>
             <div class="task-icon">🎁</div>
             <div class="task-title">包装出荷記録</div>
@@ -1449,6 +1458,43 @@ function switchMainTab(tab){
   }
 }
 
+// ─── 本日の衛生管理 完了状態の管理 ─────────────────────
+var _todayHygieneWorkers = new Set();
+
+async function loadTodayHygieneStatus(){
+  try {
+    var ym = curYmStr();
+    var list = await getHaccpJson('haccp_hygiene_' + ym, []);
+    var today = todayStr();
+    _todayHygieneWorkers = new Set();
+    list.forEach(function(r){
+      if(r.date === today && r.judge !== '不良'){
+        if(r.workerName) _todayHygieneWorkers.add(String(r.workerName).trim());
+        if(r.workerId) _todayHygieneWorkers.add(String(r.workerId).trim());
+      }
+    });
+  } catch(e){
+    console.error('loadTodayHygieneStatus error:', e);
+  }
+}
+
+function hasWorkerDoneTodayHygiene(worker){
+  if(!worker) return false;
+  var name = String(worker.name || '').trim();
+  var id = String(worker.id || '').trim();
+  return _todayHygieneWorkers.has(name) || _todayHygieneWorkers.has(id);
+}
+
+function updateTaskMenuCardsVisibility(hasHygiene){
+  var cardRoast = el('card-task-roast');
+  var cardPack = el('card-task-pack');
+  var notice = el('notice-hygiene-required');
+
+  if(cardRoast) cardRoast.style.display = hasHygiene ? 'flex' : 'none';
+  if(cardPack) cardPack.style.display = hasHygiene ? 'flex' : 'none';
+  if(notice) notice.style.display = hasHygiene ? 'none' : 'block';
+}
+
 // ─── 初期化 ─────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async function(){
   _adminMonth = curYmStr();
@@ -1456,6 +1502,7 @@ window.addEventListener('DOMContentLoaded', async function(){
 
   await loadBeanOrigins();
   await loadSuppliers();
+  await loadTodayHygieneStatus();
   await loadUsersAndStaff();
 
   var p = new URLSearchParams(window.location.search);
@@ -1554,10 +1601,13 @@ function renderWorkerSelectionGrid(){
   uGrid.innerHTML = USERS.map(function(u){
     var init = u.name ? u.name.charAt(0) : '☕';
     var isSel = (_worker && _worker.id === u.id) ? ' selected-active' : '';
+    var hasHyg = hasWorkerDoneTodayHygiene(u);
+    var badgeHyg = hasHyg ? '<div style="margin-top:4px;"><span style="background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:900;padding:2px 8px;border-radius:10px;">✓ 衛生済</span></div>' : '';
     return '<div class="name-card' + isSel + '" onclick="selectWorker(\'user\', \'' + esc(u.id) + '\', \'' + esc(u.name) + '\')">' +
       '<div class="name-avatar">' + esc(init) + '</div>' +
       '<div class="name-text">' + esc(u.name) + '</div>' +
       (u.furigana ? '<div class="name-ruby">' + esc(u.furigana) + '</div>' : '') +
+      badgeHyg +
     '</div>';
   }).join('');
 
@@ -1565,10 +1615,13 @@ function renderWorkerSelectionGrid(){
   sGrid.innerHTML = STAFF.map(function(s){
     var init = s.name ? s.name.charAt(0) : '👔';
     var isSel = (_worker && _worker.id === s.id) ? ' selected-active' : '';
+    var hasHyg = hasWorkerDoneTodayHygiene(s);
+    var badgeHyg = hasHyg ? '<div style="margin-top:4px;"><span style="background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:900;padding:2px 8px;border-radius:10px;">✓ 衛生済</span></div>' : '';
     return '<div class="name-card staff-card' + isSel + '" onclick="selectWorker(\'staff\', \'' + esc(s.id) + '\', \'' + esc(s.name) + '\')">' +
       '<div class="name-avatar">' + esc(init) + '</div>' +
       '<div class="name-text">' + esc(s.name) + '</div>' +
       '<div class="name-ruby">' + esc(s.role || 'スタッフ') + '</div>' +
+      badgeHyg +
     '</div>';
   }).join('');
 }
@@ -1577,7 +1630,17 @@ function selectWorker(type, id, name){
   _worker = { type: type, id: id, name: name };
   renderWorkerSelectionGrid();
 
-  el('badge-cur-worker').innerHTML = '👤 作業するひと: <b>' + esc(name) + '</b> さん';
+  var hasHygiene = hasWorkerDoneTodayHygiene(_worker);
+  var badgeHtml = '👤 作業するひと: <b>' + esc(name) + '</b> さん';
+  if(hasHygiene){
+    badgeHtml += ' <span style="background:#e8f5e9;color:#2e7d32;font-size:12px;font-weight:900;padding:3px 10px;border-radius:12px;margin-left:6px;">✓ 本日衛生チェック済</span>';
+  } else {
+    badgeHtml += ' <span style="background:#fff3e0;color:#e65100;font-size:12px;font-weight:800;padding:3px 10px;border-radius:12px;margin-left:6px;">⚠ 本日衛生チェック未実施</span>';
+  }
+  el('badge-cur-worker').innerHTML = badgeHtml;
+
+  updateTaskMenuCardsVisibility(hasHygiene);
+
   el('sec-worker-selection').style.display = 'none';
   el('sec-task-menu').style.display = 'block';
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1599,6 +1662,12 @@ function openHaccpModal(modalType){
     el('sec-worker-selection').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
+  }
+
+  // 包装と焙煎は本日の日常衛生記録を行った人のみ可能
+  if((modalType === 'roast' || modalType === 'pack') && !hasWorkerDoneTodayHygiene(_worker)){
+    alert('「' + _worker.name + '」さんは本日まだ日常衛生記録を完了していません。\n食品衛生管理のため、先に「🧼 日常衛生記録」を行ってください。');
+    modalType = 'hygiene';
   }
 
   var ov = el('haccp-modal-overlay');
@@ -1829,7 +1898,20 @@ async function saveHygieneRecord(){
     list.unshift(rec);
     await saveHaccpJson(key, list);
 
-    showModalDone('日常衛生記録を保存しました', _worker.name + ' さんの日常衛生点検を保存しました。今日も安全に作業を行いましょう。', '✓');
+    // 本日の衛生完了状態を再読み込み＆作業メニューの表示を更新
+    await loadTodayHygieneStatus();
+    renderWorkerSelectionGrid();
+    if(_worker){
+      var hasHygiene = hasWorkerDoneTodayHygiene(_worker);
+      updateTaskMenuCardsVisibility(hasHygiene);
+      var badgeHtml = '👤 作業するひと: <b>' + esc(_worker.name) + '</b> さん';
+      if(hasHygiene){
+        badgeHtml += ' <span style="background:#e8f5e9;color:#2e7d32;font-size:12px;font-weight:900;padding:3px 10px;border-radius:12px;margin-left:6px;">✓ 本日衛生チェック済</span>';
+      }
+      el('badge-cur-worker').innerHTML = badgeHtml;
+    }
+
+    showModalDone('日常衛生記録を保存しました', _worker.name + ' さんの日常衛生点検を保存しました。\n焙煎製造・包装出荷のカードが表示されました！', '✓');
   } catch(e){
     alert('保存エラー: ' + (e.message || String(e)));
   }
