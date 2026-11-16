@@ -1656,6 +1656,8 @@ function resetWorkerSelection(){
 
 // ─── モーダル開閉制御 ─────────────────────────────────
 function openHaccpModal(modalType){
+  _hygieneVerifier = '';
+
   if(!_worker){
     alert('まず作業する方のお名前カードをタップしてください。');
     el('sec-task-menu').style.display = 'none';
@@ -1714,7 +1716,7 @@ var _isStepAnimating = false;
 function startHygieneWizard(body){
   _hygieneStepIdx = 0;
   _hygieneAnswers = {};
-  _hygieneVerifier = STAFF.length > 0 ? STAFF[0].name : '';
+  _hygieneVerifier = '';
   _isStepAnimating = false;
   renderHygieneStep('in-right', body);
 }
@@ -1848,7 +1850,7 @@ function renderHygieneConfirmStep(body){
   h += '  <label class="f-label">職員確認（確認者を選択してください）</label>';
   h += '  <div class="staff-chip-grid">';
   STAFF.forEach(function(s, idx){
-    var act = (idx === 0) ? ' active' : '';
+    var act = (_hygieneVerifier === s.name) ? ' active' : '';
     h += '  <button type="button" class="staff-chip' + act + '" onclick="selectStaffChip(this, \'' + esc(s.name) + '\')">' + esc(s.name) + '</button>';
   });
   h += '  </div>';
@@ -1874,6 +1876,10 @@ function selectStaffChip(btn, name){
 }
 
 async function saveHygieneRecord(){
+  if(!_hygieneVerifier){
+    alert('職員確認（確認者）をタップして選択してください。');
+    return;
+  }
   var ym = curYmStr();
   var key = 'haccp_hygiene_' + ym;
   var notes = el('f-hygiene-notes') ? el('f-hygiene-notes').value.trim() : '';
@@ -2239,6 +2245,7 @@ var _roastData = {
 
 async function startRoastWizard(body){
   _roastStepIdx = 0;
+  _hygieneVerifier = '';
   _roastData = {
     lotId: '',
     bean: BEAN_ORIGINS[0],
@@ -2247,7 +2254,7 @@ async function startRoastWizard(body){
     yieldPct: '83.3%',
     conditionStatus: '良',
     abnormalStatus: '良',
-    verifier: STAFF.length > 0 ? STAFF[0].name : ''
+    verifier: ''
   };
   _isStepAnimating = false;
   renderRoastStep('in-right', body);
@@ -2509,7 +2516,7 @@ async function renderRoastConfirmStep(body){
   h += '  <label class="f-label">職員確認（確認者を選択してください）</label>';
   h += '  <div class="staff-chip-grid">';
   STAFF.forEach(function(s, idx){
-    var act = (idx === 0) ? ' active' : '';
+    var act = (_hygieneVerifier === s.name) ? ' active' : '';
     h += '  <button type="button" class="staff-chip' + act + '" onclick="selectStaffChip(this, \'' + esc(s.name) + '\')">' + esc(s.name) + '</button>';
   });
   h += '  </div>';
@@ -2527,9 +2534,13 @@ async function renderRoastConfirmStep(body){
 }
 
 async function saveRoastRecord(){
+  if(!_hygieneVerifier){
+    alert('職員確認（確認者）をタップして選択してください。');
+    return;
+  }
   var key = 'haccp_roast_batches';
   var lot = _roastData.lotId || await generateNextLotId();
-  var verifier = _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ');
+  var verifier = _hygieneVerifier;
 
   var rec = {
     id: 'batch_' + Date.now(),
@@ -2579,6 +2590,7 @@ var PACK_DESTS = ['だがし屋 店頭販売', '事業所 窓口販売', 'イベ
 
 async function startPackWizard(body){
   _packStepIdx = 0;
+  _hygieneVerifier = '';
   _packData = {
     lotId: '',
     bean: BEAN_ORIGINS[0],
@@ -2588,7 +2600,7 @@ async function startPackWizard(body){
     labelStatus: '良',
     packDest: 'だがし屋 店頭販売',
     notes: '',
-    verifier: STAFF.length > 0 ? STAFF[0].name : ''
+    verifier: ''
   };
   _isStepAnimating = false;
   renderPackStep('in-right', body);
@@ -2838,7 +2850,7 @@ async function renderPackConfirmStep(body){
   h += '  <label class="f-label">職員確認（確認者を選択してください）</label>';
   h += '  <div class="staff-chip-grid">';
   STAFF.forEach(function(s, idx){
-    var act = (idx === 0) ? ' active' : '';
+    var act = (_hygieneVerifier === s.name) ? ' active' : '';
     h += '  <button type="button" class="staff-chip' + act + '" onclick="selectStaffChip(this, \'' + esc(s.name) + '\')">' + esc(s.name) + '</button>';
   });
   h += '  </div>';
@@ -2856,10 +2868,14 @@ async function renderPackConfirmStep(body){
 }
 
 async function savePackRecord(){
+  if(!_hygieneVerifier){
+    alert('職員確認（確認者）をタップして選択してください。');
+    return;
+  }
   var key = 'haccp_roast_batches';
   var lot = _packData.lotId || await generateNextLotId();
   var notes = el('f-pack-notes') ? el('f-pack-notes').value.trim() : '';
-  var verifier = _hygieneVerifier || (STAFF[0] ? STAFF[0].name : 'スタッフ');
+  var verifier = _hygieneVerifier;
 
   var rec = {
     id: 'batch_' + Date.now(),
@@ -2897,6 +2913,7 @@ var _monthlyData = null;
 
 async function startMonthlyWizard(body){
   _monthlyStepIdx = 0;
+  _hygieneVerifier = '';
   _monthlyData = {
     targetMonth: curYmStr(),
     checkDaily: '良',
@@ -2906,7 +2923,7 @@ async function startMonthlyWizard(body){
     checkPestEquipment: '良',
     reviewNotes: '',
     checkDate: todayStr(),
-    manager: STAFF.length > 0 ? STAFF[0].name : '友田 篤賜'
+    manager: ''
   };
   _isStepAnimating = false;
   renderMonthlyStep('in-right', body);
@@ -3117,7 +3134,7 @@ async function renderMonthlyConfirmStep(body){
   h += '  <label class="f-label">責任者確認（確認者を選択してください）</label>';
   h += '  <div class="staff-chip-grid">';
   STAFF.forEach(function(s, idx){
-    var act = (idx === 0) ? ' active' : '';
+    var act = (_hygieneVerifier === s.name) ? ' active' : '';
     h += '  <button type="button" class="staff-chip' + act + '" onclick="selectStaffChip(this, \'' + esc(s.name) + '\')">' + esc(s.name) + '</button>';
   });
   h += '  </div>';
@@ -3135,8 +3152,12 @@ async function renderMonthlyConfirmStep(body){
 }
 
 async function saveMonthlyRecord(){
+  if(!_hygieneVerifier){
+    alert('責任者確認（確認者）をタップして選択してください。');
+    return;
+  }
   var key = 'haccp_monthly_records';
-  var manager = _hygieneVerifier || (STAFF[0] ? STAFF[0].name : '友田 篤賜');
+  var manager = _hygieneVerifier;
 
   var rec = {
     id: 'monthly_' + Date.now(),
@@ -3179,6 +3200,7 @@ var _abnormalData = null;
 
 async function startAbnormalWizard(body){
   _abnormalStepIdx = 0;
+  _hygieneVerifier = '';
   _abnormalData = {
     occurDate: todayStr(),
     processName: '焙煎製造',
@@ -3188,7 +3210,7 @@ async function startAbnormalWizard(body){
     causeAndAction: '',
     recheckResult: '良',
     preventRecurrence: '',
-    manager: STAFF.length > 0 ? STAFF[0].name : '友田 篤賜',
+    manager: '',
     completedDate: todayStr()
   };
   _isStepAnimating = false;
@@ -3464,7 +3486,7 @@ async function renderAbnormalConfirmStep(body){
   h += '  <label class="f-label">責任者／完了日（責任者を選択してください）</label>';
   h += '  <div class="staff-chip-grid">';
   STAFF.forEach(function(s, idx){
-    var act = (idx === 0) ? ' active' : '';
+    var act = (_hygieneVerifier === s.name) ? ' active' : '';
     h += '  <button type="button" class="staff-chip' + act + '" onclick="selectStaffChip(this, \'' + esc(s.name) + '\')">' + esc(s.name) + '</button>';
   });
   h += '  </div>';
@@ -3482,8 +3504,12 @@ async function renderAbnormalConfirmStep(body){
 }
 
 async function saveAbnormalRecord(){
+  if(!_hygieneVerifier){
+    alert('責任者（完了確認者）をタップして選択してください。');
+    return;
+  }
   var key = 'haccp_abnormal_records';
-  var manager = _hygieneVerifier || (STAFF[0] ? STAFF[0].name : '友田 篤賜');
+  var manager = _hygieneVerifier;
 
   var rec = {
     id: 'abnormal_' + Date.now(),
