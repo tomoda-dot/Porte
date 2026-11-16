@@ -759,8 +759,10 @@ var TRAINING_COURSES = [
     isCurrent: true,
     dueText: '2026年11月30日（月）まで',
     desc: '「ちょっと待って」「座ってて」「触らないで」など、言葉によって行動を制限するスピーチロックの弊害を理解し、現場で相手に寄り添う代替支援と言い換えの工夫を習得します。',
-    // 厚労省／福祉専門機関準拠の公式研修動画（YouTube埋め込み）
-    videoEmbedUrl: 'https://www.youtube-nocookie.com/embed/SjV6oO_qX04', // 身体拘束・スピーチロック解説動画
+    // 福祉専門機関（介護スキル研究所）の身体拘束・スピーチロック公的研修動画
+    videoEmbedUrl: 'https://www.youtube.com/embed/U5DBEouTQu8',
+    youtubeWatchUrl: 'https://www.youtube.com/watch?v=U5DBEouTQu8',
+    videoTitle: '【身体拘束廃止シリーズ 第３弾】スピーチロック',
     keypoints: [
       '<b>スピーチロックとは：</b>言葉によって利用者の自発的行動や自由を制限すること（拘束の一形態）。',
       '<b>3大NGフレーズ：</b>「ちょっと待って」「座ってて（立たないで）」「触らないで（ダメ）」。',
@@ -1074,6 +1076,14 @@ function renderModalStep(){
   h += '<div class="video-wrapper">';
   h += '  <iframe src="' + _curTraining.videoEmbedUrl + '" title="' + esc(_curTraining.title) + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
   h += '</div>';
+
+  if(_curTraining.youtubeWatchUrl){
+    h += '<div style="text-align:center;margin:-6px 0 16px;">';
+    h += '  <a href="' + _curTraining.youtubeWatchUrl + '" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--accent);padding:7px 16px;border-radius:20px;box-shadow:0 2px 6px rgba(0,0,0,0.06);">';
+    h += '    ▶ YouTubeアプリ / 新しいタブで全画面視聴する ↗';
+    h += '  </a>';
+    h += '</div>';
+  }
 
   // 2. 要点まとめスライド
   if(_curTraining.keypoints && _curTraining.keypoints.length > 0){
