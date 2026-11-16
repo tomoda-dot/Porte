@@ -1143,22 +1143,22 @@ main {
           <button type="button" class="task-btn-action">開く ▶</button>
         </div>
 
-        <!-- 2. 包装出荷記録 -->
-        <div class="task-card c-pack" onclick="openHaccpModal('pack')">
-          <div>
-            <div class="task-icon">🎁</div>
-            <div class="task-title">包装出荷記録</div>
-            <div class="task-desc">ドリップバッグ・豆・粉の袋詰め<br>密封・賞味期限・個数記録</div>
-          </div>
-          <button type="button" class="task-btn-action">開く ▶</button>
-        </div>
-
-        <!-- 3. 焙煎製造記録 -->
+        <!-- 2. 焙煎製造記録 -->
         <div class="task-card c-roast" onclick="openHaccpModal('roast')">
           <div>
             <div class="task-icon">🔥</div>
             <div class="task-title">焙煎製造記録</div>
             <div class="task-desc">コーヒー豆を焙煎する記録<br>歩留り(%)を自動でパッと計算！</div>
+          </div>
+          <button type="button" class="task-btn-action">開く ▶</button>
+        </div>
+
+        <!-- 3. 包装出荷記録 -->
+        <div class="task-card c-pack" onclick="openHaccpModal('pack')">
+          <div>
+            <div class="task-icon">🎁</div>
+            <div class="task-title">包装出荷記録</div>
+            <div class="task-desc">ドリップバッグ・豆・粉の袋詰め<br>密封・賞味期限・個数記録</div>
           </div>
           <button type="button" class="task-btn-action">開く ▶</button>
         </div>
@@ -1205,11 +1205,11 @@ main {
         <button type="button" class="admin-subtab-btn active" id="subtab-btn-hygiene" onclick="switchAdminSubtab('hygiene')">
           🧼 日常衛生記録
         </button>
-        <button type="button" class="admin-subtab-btn" id="subtab-btn-pack" onclick="switchAdminSubtab('pack')">
-          🎁 包装出荷記録
-        </button>
         <button type="button" class="admin-subtab-btn" id="subtab-btn-roast" onclick="switchAdminSubtab('roast')">
           🔥 焙煎製造記録
+        </button>
+        <button type="button" class="admin-subtab-btn" id="subtab-btn-pack" onclick="switchAdminSubtab('pack')">
+          🎁 包装出荷記録
         </button>
         <button type="button" class="admin-subtab-btn" id="subtab-btn-recv" onclick="switchAdminSubtab('recv')">
           📦 生豆受入記録
@@ -3479,7 +3479,7 @@ function onAdminMonthChange(){
 
 function switchAdminSubtab(subtab){
   _curAdminSubtab = subtab;
-  var subtabs = ['hygiene', 'pack', 'roast', 'recv', 'abnormal', 'monthly', 'combined', 'beans', 'suppliers'];
+  var subtabs = ['hygiene', 'roast', 'pack', 'recv', 'abnormal', 'monthly', 'combined', 'beans', 'suppliers'];
   subtabs.forEach(function(s){
     var btn = el('subtab-btn-' + s);
     if(btn){
