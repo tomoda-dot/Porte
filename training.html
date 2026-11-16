@@ -1062,7 +1062,12 @@ function openTrainingModal(courseId){
 }
 
 function closeTrainingModal(){
-  el('training-modal-overlay').classList.remove('active');
+  var ov = el('training-modal-overlay');
+  if(ov) ov.classList.remove('active');
+  var body = el('modal-training-body');
+  if(body){
+    body.innerHTML = ''; // iframeを破棄して動画の再生・音声を即座に完全停止
+  }
 }
 
 // ─── モーダル内ステップ描画 ─────────────────────────────
