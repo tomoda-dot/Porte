@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="google" content="notranslate">
+<title>Porte 研修アカデミー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-config.js?v=20261113"></script>
+<script src="supabase-adapter.js?v=20261113"></script>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body {
+  min-height: 100%;
+  background: #f7f4f0;
+  color: #332a24;
+  font-family: 'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif;
+  touch-action: manipulation;
+}
+input, select, textarea, button {
+  font-family: inherit;
+  font-size: 15px;
+  touch-action: manipulation;
+}
+
+:root {
+  --pri: #4a2c1d;              /* ディープ・エスプレッソ */
+  --pri-light: #f5ece5;        /* カフェラテベージュ */
+  --coffee: #684a37;           /* リッチコーヒー */
+  --accent: #c06c28;           /* キャラメルアンバー */
+  --accent-light: #fdf3eb;
+  --bg: #f8f4ef;
+  --card: #ffffff;
+  --bdr: #e5dacd;
+  --sub: #7a6657;
+  --grn: #2e7d32;
+  --grn-bg: #e8f5e9;
+  --warn: #e65100;
+  --warn-bg: #fff3e0;
+  --blue: #1565c0;
+  --blue-bg: #e3f2fd;
+  --shadow-sm: 0 4px 14px rgba(56,31,19,0.06);
+  --shadow-md: 0 8px 24px rgba(56,31,19,0.10);
+  --shadow-lg: 0 16px 40px rgba(56,31,19,0.15);
+  --radius: 20px;
+}
+
+/* ─── ヘッダー ───────────────────────────── */
+header {
+  background: linear-gradient(135deg, var(--pri) 0%, #2e170c 100%);
+  color: #fff;
+  padding: 14px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+}
+.header-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand-title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-badge {
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mode-switch-btn {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mode-switch-btn:hover {
+  background: rgba(255,255,255,0.28);
+}
+.mode-switch-btn.active {
+  background: #fff;
+  color: var(--pri);
+  border-color: #fff;
+}
+
+/* ─── コンテナ ───────────────────────────── */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* ─── カード ─────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1.5px solid var(--bdr);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── スタッフ選択グリッド（スマホ最適化） ── */
+.section-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--pri);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.staff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.staff-card {
+  background: #fff;
+  border: 2px solid var(--bdr);
+  border-radius: 16px;
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .18s ease;
+  position: relative;
+}
+.staff-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--coffee);
+  box-shadow: var(--shadow-md);
+}
+.staff-card.active {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  box-shadow: 0 4px 16px rgba(192,108,40,0.25);
+}
+.staff-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--pri-light);
+  color: var(--pri);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 900;
+  margin: 0 auto 6px;
+}
+.staff-name {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--pri);
+}
+.staff-role {
+  font-size: 11px;
+  color: var(--sub);
+  margin-top: 2px;
+}
+.staff-status-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-top: 6px;
+}
+.staff-status-badge.done {
+  background: var(--grn-bg);
+  color: var(--grn);
+}
+.staff-status-badge.todo {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+/* ─── 受講者バナー ───────────────────────── */
+.cur-staff-bar {
+  background: linear-gradient(135deg, var(--pri-light) 0%, #fff 100%);
+  border: 1.5px solid #d7ccc8;
+  border-radius: 16px;
+  padding: 12px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cur-staff-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--pri);
+}
+.cur-staff-progress {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+/* ─── 研修カード ─────────────────────────── */
+.training-card {
+  border: 2px solid var(--bdr);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: all .2s ease;
+}
+.training-card.urgent {
+  border-color: #ffcc80;
+  background: linear-gradient(180deg, #fffbf5 0%, #fff 100%);
+}
+.training-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.training-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--pri-light);
+  color: var(--pri);
+  margin-bottom: 4px;
+}
+.training-title {
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--pri);
+  line-height: 1.4;
+}
+.training-meta {
+  font-size: 12px;
+  color: var(--sub);
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.training-desc {
+  font-size: 13.5px;
+  color: #555;
+  line-height: 1.6;
+  margin: 12px 0 16px;
+}
+.training-start-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent) 0%, #a25218 100%);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(192,108,40,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all .15s;
+}
+.training-start-btn:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+.training-start-btn.completed {
+  background: #e0d6cf;
+  color: #665;
+  box-shadow: none;
+}
+
+/* ─── モーダル / 受講プレイヤー ──────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(30,15,8,0.72);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+  padding: 16px;
+  overflow-y: auto;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.active {
+  display: flex;
+}
+.modal-box {
+  background: #fff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 680px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+.modal-header {
+  background: var(--pri);
+  color: #fff;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title {
+  font-size: 16px;
+  font-weight: 900;
+}
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ─── 動画プレイヤー枠 ───────────────────── */
+.video-wrapper {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 */
+  height: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #000;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.video-wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* ─── 要点スライド・レジュメ ─────────────── */
+.keypoints-box {
+  background: #faf6f2;
+  border: 1.5px solid var(--bdr);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.keypoints-title {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--pri);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.keypoints-list {
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #444;
+}
+
+/* ─── クイズ（1問1答 Googleマップ風） ─────── */
+.quiz-step-card {
+  background: #fff;
+  border: 2px solid var(--bdr);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.quiz-q-num {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.quiz-q-text {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--pri);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.quiz-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.choice-btn {
+  background: #faf6f2;
+  border: 2px solid var(--bdr);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #332a24;
+  text-align: left;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.choice-btn:hover {
+  background: #f0e6dd;
+  border-color: var(--coffee);
+}
+.choice-btn.selected-correct {
+  background: #e8f5e9;
+  border-color: #2e7d32;
+  color: #1b5e20;
+}
+.choice-btn.selected-wrong {
+  background: #ffebee;
+  border-color: #c62828;
+  color: #b71c1c;
+}
+.quiz-explanation {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #5d4037;
+  display: none;
+}
+
+/* ─── 所感・振り返り入力 ─────────────────── */
+.reflection-box {
+  margin-top: 18px;
+}
+.reflection-box label {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--pri);
+  display: block;
+  margin-bottom: 6px;
+}
+.reflection-textarea {
+  width: 100%;
+  border: 1.5px solid var(--bdr);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+}
+.reflection-textarea:focus {
+  border-color: var(--pri);
+}
+.quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.quick-chip {
+  background: #efebe9;
+  border: 1px solid #d7ccc8;
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #4e342e;
+  cursor: pointer;
+}
+.quick-chip:hover {
+  background: #e0d6cf;
+}
+
+/* ─── 管理者モード（星取表・印刷） ───────── */
+.admin-view {
+  display: none;
+}
+.admin-view.active {
+  display: block;
+}
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 12px;
+}
+.matrix-table th, .matrix-table td {
+  border: 1px solid var(--bdr);
+  padding: 10px 12px;
+  text-align: center;
+}
+.matrix-table th {
+  background: #faf6f2;
+  color: var(--pri);
+  font-weight: 800;
+}
+.matrix-table td.staff-col {
+  text-align: left;
+  font-weight: 800;
+}
+.badge-ok {
+  background: var(--grn-bg);
+  color: var(--grn);
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+.badge-no {
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+.print-action-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.btn-print {
+  background: var(--pri);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ─── A4印刷専用スタイル（実地指導用） ───── */
+@media print {
+  header, .header-actions, .print-action-bar, .mode-switch-btn, .modal-close-btn, .no-print {
+    display: none !important;
+  }
+  body, html {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt !important;
+  }
+  .container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── ヘッダー ─────────────────────────── -->
+<header>
+  <div class="header-inner">
+    <div class="brand-title">
+      <span>📚 Porte 研修アカデミー</span>
+      <span class="brand-badge">法定研修eラーニング</span>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="mode-switch-btn active" id="btn-mode-staff" onclick="switchMode('staff')">
+        📱 スタッフ受講
+      </button>
+      <button type="button" class="mode-switch-btn" id="btn-mode-admin" onclick="switchMode('admin')">
+        👔 管理者（星取表・印刷）
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════════
+       1. スタッフ受講モード（モバイル最適化）
+       ══════════════════════════════════════════════ -->
+  <div id="view-staff" class="staff-view">
+
+    <!-- Step 1: 受講するスタッフを選択 -->
+    <div class="card">
+      <div class="section-title">
+        <span>👤 1. 受講するスタッフをタップしてください</span>
+      </div>
+      <div class="staff-grid" id="staff-selection-grid">
+        <!-- 動的描画 -->
+      </div>
+    </div>
+
+    <!-- Step 2: 選択中スタッフの受講状況 ＆ 研修一覧 -->
+    <div id="staff-training-area" style="display: none;">
+      <div class="cur-staff-bar">
+        <div>
+          <span style="font-size:12px;color:var(--sub);">受講スタッフ：</span>
+          <span class="cur-staff-name" id="badge-cur-staff">〇〇 〇〇</span>
+        </div>
+        <div class="cur-staff-progress" id="badge-cur-progress">
+          年間進捗：0/4 完了 (0%)
+        </div>
+      </div>
+
+      <div class="section-title">
+        <span>📖 2. 受講する研修カードを選んでください</span>
+      </div>
+
+      <!-- 研修カードリスト -->
+      <div id="training-card-list">
+        <!-- 動的描画 -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       2. 管理者モード（受講星取表・実地指導A4印刷・議事録）
+       ══════════════════════════════════════════════ -->
+  <div id="view-admin" class="admin-view">
+
+    <div class="card">
+      <div class="print-action-bar no-print">
+        <button type="button" class="btn-print" onclick="printTrainingOfficialReport('202611_restraint_speechlock')">
+          🖨️ 11月 身体拘束研修 実地指導記録簿を印刷
+        </button>
+        <button type="button" class="btn-print" style="background:#2e7d32;" onclick="openCommitteeModal('restraint')">
+          🏛️ 身体拘束適正化 委員会議事録を作成
+        </button>
+      </div>
+
+      <div class="section-title">
+        <span>📊 令和8年度 法定研修 スタッフ受講星取表（進捗マトリクス）</span>
+      </div>
+      <p style="font-size:12.5px;color:var(--sub);margin-bottom:12px;">
+        ※全職員の受講率100%達成を目指します。実地指導（運営指導）ではこの受講実績および研修記録簿を提出します。
+      </p>
+
+      <div style="overflow-x:auto;">
+        <table class="matrix-table" id="matrix-table-body">
+          <!-- 動的描画 -->
+        </table>
+      </div>
+    </div>
+
+    <!-- 委員会議事録アーカイブ一覧 -->
+    <div class="card">
+      <div class="section-title">
+        <span>🏛️ 委員会議事録アーカイブ（実地指導対応）</span>
+      </div>
+      <div id="committee-minutes-list">
+        <!-- 動的描画 -->
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     受講モーダル（動画視聴 ➔ クイズ ➔ 所感保存）
+     ══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="training-modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-training-title">研修受講</div>
+      <button type="button" class="modal-close-btn" onclick="closeTrainingModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-training-body">
+      <!-- 動的描画 -->
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     委員会議事録 入力モーダル
+     ══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="committee-modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header" style="background:#2e7d32;">
+      <div class="modal-title" id="committee-modal-title">身体拘束適正化 委員会議事録作成</div>
+      <button type="button" class="modal-close-btn" onclick="closeCommitteeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="committee-modal-body">
+      <!-- 動的描画 -->
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── スタッフ定義（Porte共通マスター） ────────────────
+var DEFAULT_STAFF = [
+  { id: 's1', name: '友田篤賜', role: '管理者・サビ管' },
+  { id: 's2', name: '木中静香', role: '職業指導員' },
+  { id: 's3', name: '奥永優斗', role: '生活支援員' },
+  { id: 's4', name: '大倉基輝', role: '職業指導員' },
+  { id: 's5', name: '釘村真弓', role: '職業指導員' }
+];
+var STAFF = DEFAULT_STAFF.slice();
+
+// ─── 年間研修カリキュラム定義（回次別・動画＆テスト付き） ─
+var TRAINING_COURSES = [
+  {
+    id: '202611_restraint_speechlock',
+    month: '11月',
+    category: '身体拘束適正化',
+    title: '第2回 身体拘束適正化研修「言葉の拘束（スピーチロック）防止と現場での代替支援事例」',
+    isCurrent: true,
+    dueText: '2026年11月30日（月）まで',
+    desc: '「ちょっと待って」「座ってて」「触らないで」など、言葉によって行動を制限するスピーチロックの弊害を理解し、現場で相手に寄り添う代替支援と言い換えの工夫を習得します。',
+    // 厚労省／福祉専門機関準拠の公式研修動画（YouTube埋め込み）
+    videoEmbedUrl: 'https://www.youtube-nocookie.com/embed/SjV6oO_qX04', // 身体拘束・スピーチロック解説動画
+    keypoints: [
+      '<b>スピーチロックとは：</b>言葉によって利用者の自発的行動や自由を制限すること（拘束の一形態）。',
+      '<b>3大NGフレーズ：</b>「ちょっと待って」「座ってて（立たないで）」「触らないで（ダメ）」。',
+      '<b>スピーチロックの悪影響：</b>見通しが立たず不安やパニックを増幅させ、信頼関係を損ねる。',
+      '<b>代替支援の原則：</b>行動の背景にある理由（トイレ？不安？退屈？）に共感し、具体的な見通し（「◯分後にお茶にしましょう」等）を伝える。',
+      '<b>組織での取り組み：</b>スタッフ同士で「今の言い方、工夫できたかも」と責めずに気づき合える職場づくりが大切。'
+    ],
+    quizzes: [
+      {
+        q: '【第1問】「スピーチロック（言葉の拘束）」に関する説明として、最も適切なものはどれですか？',
+        choices: [
+          '身体をヒモで縛るわけではないので、法律上の身体拘束には該当せず特に問題ない。',
+          '「動かないで」「座ってて」など言葉で相手の行動を制限・抑制することも拘束の一形態であり、適正化の対象となる。',
+          '業務が忙しい時間帯であれば、スピーチロックを使ってもやむを得ないとされている。'
+        ],
+        ans: 1,
+        exp: '正解！身体的な拘束だけでなく、「言葉」によって相手の自由な行動を制限・抑制することも拘束（スピーチロック）であり、尊厳を傷つけ不穏を助長するため適正化が義務付けられています。'
+      },
+      {
+        q: '【第2問】作業中に利用者が立ち上がってスタッフのもとへ来ました。スピーチロックにならない最も適切な対応はどれですか？',
+        choices: [
+          '「危ないから席に戻って座ってて！」と強く制止する。',
+          '「どうされましたか？何かお手伝いできることはありますか？」と優しく背景の理由を尋ねる。',
+          '作業の手を止めずに「ちょっと待ってて！」と言ってそのまま放置する。'
+        ],
+        ans: 1,
+        exp: '正解！立ち上がった背景には「トイレに行きたい」「道具が見当たらない」「不安がある」などの理由があります。まずは理由を受け止めることが代替支援の基本です。'
+      },
+      {
+        q: '【第3問】手が離せない状況で利用者に少し待ってもらう際、不安を与えない伝え方はどれですか？',
+        choices: [
+          '「あと3分でこの計量作業が終わるので、終わったらすぐ伺いますね」と具体的に理由と見通しを伝える。',
+          '何も言わずに無視して作業を続ける。',
+          '「いま忙しいの見えませんか！」と伝える。'
+        ],
+        ans: 0,
+        exp: '正解！いつ終わるかわからない「ちょっと待って」は大きな不安を煽ります。「あと3分で◯◯が終わったら伺います」と具体的な見通しを伝えることで安心していただけます。'
+      },
+      {
+        q: '【第4問】事業所全体でスピーチロックを減らすためのチームの姿勢として、最も適切なものはどれですか？',
+        choices: [
+          'スピーチロックを使ってしまった職員を全員の前で厳しく叱責しペナルティを与える。',
+          '「忙しいから仕方ない」と職員個人の問題として見て見ぬふりをする。',
+          '「今の言い方、こう伝えると安心だったかもね」とお互いに責めずに気づき合え、工夫を共有できる温かい職場風土をつくる。'
+        ],
+        ans: 2,
+        exp: '正解！個人の責任にして責めるのではなく、チーム全体で業務環境を整え、お互いに声かけの工夫を前向きに振り返り合える組織づくりが再発防止に最も効果的です。'
+      }
+    ]
+  },
+  {
+    id: '202612_infection_control',
+    month: '12月',
+    category: '感染対策',
+    title: '第1回 感染対策研修「冬期の感染予防・標準予防策と個人防護具（PPE）着脱手順」',
+    isCurrent: false,
+    dueText: '2026年12月31日（木）予定',
+    desc: 'インフルエンザ・ノロウイルス・新型コロナ等の感染経路を断つ標準予防策、正しい手洗い・手指消毒、およびガウン・手袋の汚染防止着脱手順を学びます。',
+    videoEmbedUrl: 'https://www.youtube-nocookie.com/embed/SjV6oO_qX04',
+    keypoints: [
+      '<b>標準予防策（スタンダード・プレコーション）：</b>すべての人の血液・体液・分泌物は感染源になり得るとして扱う。',
+      '<b>手指衛生のタイミング：</b>ケアの前、体液に触れた後、環境整備後など。アルコール消毒は20秒以上すり込む。',
+      '<b>PPEの脱衣手順：</b>汚染されている表面に触れないよう、手袋➔ガウン➔マスクの順に慎重に外す。'
+    ],
+    quizzes: []
+  },
+  {
+    id: '202702_restraint_case',
+    month: '2月',
+    category: '身体拘束適正化',
+    title: '第3回 身体拘束適正化研修「身体拘束廃止の組織的取り組みとヒヤリハット分析」',
+    isCurrent: false,
+    dueText: '2027年2月28日（日）予定',
+    desc: 'ヒヤリハット報告から身体拘束リスクを予見し、指針の見直しと環境調整によって未然に防ぐ組織マネジメントを学びます。',
+    videoEmbedUrl: 'https://www.youtube-nocookie.com/embed/SjV6oO_qX04',
+    keypoints: [],
+    quizzes: []
+  },
+  {
+    id: '202703_bcp_simulation',
+    month: '3月',
+    category: 'BCP研修・訓練',
+    title: '第1回 業務継続計画（BCP）研修「自然災害・非常時の初動対応と安否確認シミュレーション」',
+    isCurrent: false,
+    dueText: '2027年3月31日（水）予定',
+    desc: '震災・風水害発生時における利用者・職員の安全確保、連絡網による迅速な安否確認、および事業継続のための初動フローを机上訓練します。',
+    videoEmbedUrl: 'https://www.youtube-nocookie.com/embed/SjV6oO_qX04',
+    keypoints: [],
+    quizzes: []
+  }
+];
+
+// ─── 状態管理 ─────────────────────────────────────────
+var _curStaff = null;
+var _trainingRecords = []; // { id, trainingId, staffId, staffName, completedDate, score, total, reflection, ... }
+var _committeeMinutes = []; // { id, type, date, title, attendees, agenda, decisions, nextDate, ... }
+var _quizAnswers = {};
+var _quizStep = 0;
+var _curTraining = null;
+
+// ─── ユーティリティ ─────────────────────────────────────
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function todayStr(){
+  var d = new Date();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var day = String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + m + '-' + day;
+}
+
+// ─── Supabase / localStorage データ同期 ───────────────
+async function loadAllTrainingData(){
+  try {
+    var rawRecs = await getStorageData('porte_training_records', []);
+    _trainingRecords = Array.isArray(rawRecs) ? rawRecs : [];
+
+    var rawMinutes = await getStorageData('porte_committee_minutes', []);
+    _committeeMinutes = Array.isArray(rawMinutes) ? rawMinutes : [];
+  } catch(e){
+    console.warn('loadAllTrainingData error:', e);
+  }
+}
+
+async function getStorageData(key, defVal){
+  try {
+    var sb = (typeof _getSupabase === 'function') ? _getSupabase() : (typeof supabase !== 'undefined' ? supabase : null);
+    if(!sb){
+      var loc = localStorage.getItem(key);
+      return loc ? JSON.parse(loc) : defVal;
+    }
+    var res = await sb.from('設定').select('value').eq('key', key).limit(1);
+    if(res.error || !res.data || res.data.length === 0){
+      var loc = localStorage.getItem(key);
+      return loc ? JSON.parse(loc) : defVal;
+    }
+    var val = res.data[0].value;
+    return typeof val === 'string' ? JSON.parse(val) : val;
+  } catch(e){
+    var loc = localStorage.getItem(key);
+    return loc ? JSON.parse(loc) : defVal;
+  }
+}
+
+async function saveStorageData(key, val){
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+    var sb = (typeof _getSupabase === 'function') ? _getSupabase() : (typeof supabase !== 'undefined' ? supabase : null);
+    if(sb){
+      await sb.from('設定').upsert({ key: key, value: JSON.stringify(val) }, { onConflict: 'key' });
+    }
+  } catch(e){
+    console.warn('saveStorageData error:', e);
+  }
+}
+
+// ─── 画面初期化 ─────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async function(){
+  await loadAllTrainingData();
+  renderStaffGrid();
+  renderAdminMatrix();
+  renderCommitteeList();
+});
+
+// ─── モード切替 ─────────────────────────────────────────
+function switchMode(mode){
+  el('btn-mode-staff').classList.toggle('active', mode === 'staff');
+  el('btn-mode-admin').classList.toggle('active', mode === 'admin');
+  el('view-staff').style.display = (mode === 'staff') ? 'block' : 'none';
+  el('view-admin').style.display = (mode === 'admin') ? 'block' : 'none';
+
+  if(mode === 'admin'){
+    renderAdminMatrix();
+    renderCommitteeList();
+  }
+}
+
+// ─── スタッフ選択グリッドの描画 ─────────────────────────
+function renderStaffGrid(){
+  var c = el('staff-selection-grid');
+  if(!c) return;
+
+  var curCourseId = '202611_restraint_speechlock';
+
+  c.innerHTML = STAFF.map(function(s){
+    var isSel = (_curStaff && _curStaff.id === s.id) ? ' active' : '';
+    var hasDone = _trainingRecords.some(function(r){ return r.staffId === s.id && r.trainingId === curCourseId; });
+    var badge = hasDone
+      ? '<span class="staff-status-badge done">✓ 11月受講済</span>'
+      : '<span class="staff-status-badge todo">⏳ 11月未受講</span>';
+
+    return '<div class="staff-card' + isSel + '" onclick="selectStaff(\'' + s.id + '\')">' +
+      '<div class="staff-avatar">' + esc(s.name.charAt(0)) + '</div>' +
+      '<div class="staff-name">' + esc(s.name) + '</div>' +
+      '<div class="staff-role">' + esc(s.role) + '</div>' +
+      badge +
+    '</div>';
+  }).join('');
+}
+
+function selectStaff(id){
+  _curStaff = STAFF.find(function(s){ return s.id === id; });
+  renderStaffGrid();
+
+  if(_curStaff){
+    el('staff-training-area').style.display = 'block';
+    el('badge-cur-staff').textContent = _curStaff.name + ' (' + _curStaff.role + ')';
+    renderStaffTrainingList();
+  }
+}
+
+// ─── スタッフ別研修一覧の描画 ───────────────────────────
+function renderStaffTrainingList(){
+  var c = el('training-card-list');
+  if(!c || !_curStaff) return;
+
+  var myRecords = _trainingRecords.filter(function(r){ return r.staffId === _curStaff.id; });
+  var completedCount = myRecords.length;
+  var totalCount = TRAINING_COURSES.length;
+  var pct = Math.round((completedCount / totalCount) * 100);
+
+  el('badge-cur-progress').textContent = '年間進捗：' + completedCount + '/' + totalCount + ' 完了 (' + pct + '%)';
+
+  c.innerHTML = TRAINING_COURSES.map(function(tc){
+    var rec = myRecords.find(function(r){ return r.trainingId === tc.id; });
+    var isDone = !!rec;
+
+    var btnHtml = '';
+    if(isDone){
+      btnHtml = '<button type="button" class="training-start-btn completed" onclick="openTrainingModal(\'' + tc.id + '\')">' +
+        '✓ 受講完了 (' + rec.completedDate + ' 合格 ' + rec.score + '点) / 復習する ↻</button>';
+    } else if(tc.isCurrent){
+      btnHtml = '<button type="button" class="training-start-btn" onclick="openTrainingModal(\'' + tc.id + '\')">' +
+        '▶ 今すぐ受講する（動画視聴 ＋ 4問クイズ / 約15分）</button>';
+    } else {
+      btnHtml = '<button type="button" class="training-start-btn completed" style="background:#efebe9;color:#8d6e63;" disabled>' +
+        '📅 ' + tc.month + '度 開講予定</button>';
+    }
+
+    var cardClass = tc.isCurrent && !isDone ? 'training-card urgent' : 'training-card';
+
+    return '<div class="' + cardClass + '">' +
+      '<div class="training-card-header">' +
+        '<div>' +
+          '<span class="training-tag">' + tc.month + '度 必須研修</span>' +
+          '<h3 class="training-title">' + esc(tc.title) + '</h3>' +
+          '<div class="training-meta">' +
+            '<span>⏳ 受講期限: <b>' + tc.dueText + '</b></span>' +
+            '<span>🎯 対象: 全従事者（常勤・非常勤）</span>' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          (isDone ? '<span class="badge-ok">合格済 ✓</span>' : (tc.isCurrent ? '<span class="badge-no">要受講 🔥</span>' : '<span style="font-size:11px;color:#999;">予定</span>')) +
+        '</div>' +
+      '</div>' +
+      '<div class="training-desc">' + esc(tc.desc) + '</div>' +
+      btnHtml +
+    '</div>';
+  }).join('');
+}
+
+// ─── 受講モーダルを開く ─────────────────────────────────
+function openTrainingModal(courseId){
+  _curTraining = TRAINING_COURSES.find(function(c){ return c.id === courseId; });
+  if(!_curTraining) return;
+
+  _quizStep = 0;
+  _quizAnswers = {};
+
+  el('modal-training-title').textContent = _curTraining.title;
+  renderModalStep();
+
+  el('training-modal-overlay').classList.add('active');
+}
+
+function closeTrainingModal(){
+  el('training-modal-overlay').classList.remove('active');
+}
+
+// ─── モーダル内ステップ描画 ─────────────────────────────
+function renderModalStep(){
+  var body = el('modal-training-body');
+  if(!body || !_curTraining) return;
+
+  var h = '';
+
+  // 1. 動画プレイヤー
+  h += '<div class="video-wrapper">';
+  h += '  <iframe src="' + _curTraining.videoEmbedUrl + '" title="' + esc(_curTraining.title) + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+  h += '</div>';
+
+  // 2. 要点まとめスライド
+  if(_curTraining.keypoints && _curTraining.keypoints.length > 0){
+    h += '<div class="keypoints-box">';
+    h += '  <div class="keypoints-title">💡 本日の研修重要ポイント（要約）</div>';
+    h += '  <ul class="keypoints-list">';
+    _curTraining.keypoints.forEach(function(kp){
+      h += '    <li>' + kp + '</li>';
+    });
+    h += '  </ul>';
+    h += '</div>';
+  }
+
+  // 3. 理解度チェッククイズ
+  if(_curTraining.quizzes && _curTraining.quizzes.length > 0){
+    h += '<div class="section-title"><span>📝 理解度確認ミニクイズ（全' + _curTraining.quizzes.length + '問）</span></div>';
+    h += '<p style="font-size:12.5px;color:var(--sub);margin-bottom:14px;">動画の要点を振り返り、正しいと思う選択肢をタップしてください。合格基準：80点以上</p>';
+
+    _curTraining.quizzes.forEach(function(q, idx){
+      var myAns = _quizAnswers[idx];
+      var isAnswered = (myAns !== undefined);
+
+      h += '<div class="quiz-step-card">';
+      h += '  <div class="quiz-q-num">第 ' + (idx + 1) + ' 問</div>';
+      h += '  <div class="quiz-q-text">' + esc(q.q) + '</div>';
+      h += '  <div class="quiz-choices">';
+      q.choices.forEach(function(choice, cIdx){
+        var btnClass = 'choice-btn';
+        if(isAnswered){
+          if(cIdx === q.ans) btnClass += ' selected-correct';
+          else if(cIdx === myAns) btnClass += ' selected-wrong';
+        }
+        var icon = isAnswered && cIdx === q.ans ? ' ✓ 正解' : '';
+        h += '    <button type="button" class="' + btnClass + '" onclick="answerQuiz(' + idx + ', ' + cIdx + ')">' +
+          '<span>' + esc(choice) + '</span>' +
+          '<span>' + icon + '</span>' +
+        '</button>';
+      });
+      h += '  </div>';
+
+      // 解説
+      var expDisplay = isAnswered ? 'block' : 'none';
+      h += '  <div class="quiz-explanation" style="display:' + expDisplay + ';">' + esc(q.exp) + '</div>';
+      h += '</div>';
+    });
+  }
+
+  // 4. 所感入力
+  h += '<div class="quiz-step-card reflection-box">';
+  h += '  <label>✍️ 本日の所感・現場で意識したいこと（ひと言）</label>';
+  h += '  <textarea id="f-training-reflection" class="reflection-textarea" rows="3" placeholder="例：作業を焦らせず、具体的な時間を伝えて安心していただけるよう心がけます。"></textarea>';
+  h += '  <div class="quick-chips">';
+  ['具体的な時間と見通しを伝える', '行動の背景にある理由に気づく', '「ちょっと待って」を減らす', 'チームで声かけを振り返る'].forEach(function(txt){
+    h += '    <span class="quick-chip" onclick="addReflectionSnippet(\'' + txt + '\')">' + txt + '</span>';
+  });
+  h += '  </div>';
+  h += '</div>';
+
+  // 5. 保存完了ボタン
+  h += '<button type="button" class="training-start-btn" style="background:#2e7d32;margin-top:16px;" onclick="submitTrainingCompletion()">';
+  h += '  <span>💾 理解度テストと所感を提出し、受講完了にする</span>';
+  h += '</button>';
+
+  body.innerHTML = h;
+}
+
+function addReflectionSnippet(txt){
+  var tf = el('f-training-reflection');
+  if(!tf) return;
+  if(tf.value) tf.value += '、' + txt;
+  else tf.value = txt;
+}
+
+function answerQuiz(qIdx, choiceIdx){
+  _quizAnswers[qIdx] = choiceIdx;
+  renderModalStep();
+}
+
+// ─── 受講完了の保存 ─────────────────────────────────────
+async function submitTrainingCompletion(){
+  if(!_curStaff){
+    alert('受講スタッフが選択されていません。');
+    return;
+  }
+  if(!_curTraining){
+    return;
+  }
+
+  // 全問回答チェック
+  var total = _curTraining.quizzes.length;
+  var answeredCount = Object.keys(_quizAnswers).length;
+  if(answeredCount < total){
+    alert('まだ回答していない問題があります。全問回答してください。');
+    return;
+  }
+
+  // 採点
+  var correctCount = 0;
+  _curTraining.quizzes.forEach(function(q, idx){
+    if(_quizAnswers[idx] === q.ans) correctCount++;
+  });
+  var score = Math.round((correctCount / total) * 100);
+
+  if(score < 75){
+    alert('得点が ' + score + '点 でした。合格基準は75点以上です。解説を確認して再度挑戦してください！');
+    return;
+  }
+
+  var reflection = el('f-training-reflection') ? el('f-training-reflection').value.trim() : '';
+
+  var record = {
+    id: 'tr_rec_' + Date.now(),
+    trainingId: _curTraining.id,
+    trainingTitle: _curTraining.title,
+    staffId: _curStaff.id,
+    staffName: _curStaff.name,
+    staffRole: _curStaff.role,
+    completedDate: todayStr(),
+    score: score,
+    total: total,
+    correctCount: correctCount,
+    reflection: reflection || 'スピーチロックを避け、見通しをもった丁寧な支援を実践します。',
+    submittedAt: new Date().toISOString()
+  };
+
+  // 既存の同一研修レコードがあれば上書き、なければ先頭追加
+  var existIdx = _trainingRecords.findIndex(function(r){
+    return r.staffId === _curStaff.id && r.trainingId === _curTraining.id;
+  });
+  if(existIdx >= 0){
+    _trainingRecords[existIdx] = record;
+  } else {
+    _trainingRecords.unshift(record);
+  }
+
+  await saveStorageData('porte_training_records', _trainingRecords);
+
+  alert('🎉 合格おめでとうございます！\n得点: ' + score + '点（' + correctCount + '/' + total + '）\n受講完了として記録簿に保存されました。');
+
+  closeTrainingModal();
+  renderStaffGrid();
+  renderStaffTrainingList();
+  renderAdminMatrix();
+}
+
+// ─── 管理者モード：受講星取表の描画 ─────────────────────
+function renderAdminMatrix(){
+  var c = el('matrix-table-body');
+  if(!c) return;
+
+  var h = '<thead><tr>';
+  h += '<th style="width:120px;">職員名</th>';
+  h += '<th style="width:100px;">役職</th>';
+  TRAINING_COURSES.forEach(function(tc){
+    h += '<th>' + tc.month + '<br><span style="font-size:11px;font-weight:normal;">' + esc(tc.category) + '</span></th>';
+  });
+  h += '<th style="width:90px;">年間進捗</th>';
+  h += '</tr></thead><tbody>';
+
+  STAFF.forEach(function(s){
+    var myRecs = _trainingRecords.filter(function(r){ return r.staffId === s.id; });
+    var doneCnt = myRecs.length;
+    var totalCnt = TRAINING_COURSES.length;
+    var pct = Math.round((doneCnt / totalCnt) * 100);
+
+    h += '<tr>';
+    h += '<td class="staff-col"><b>' + esc(s.name) + '</b></td>';
+    h += '<td><span style="font-size:11px;color:var(--sub);">' + esc(s.role) + '</span></td>';
+
+    TRAINING_COURSES.forEach(function(tc){
+      var rec = myRecs.find(function(r){ return r.trainingId === tc.id; });
+      if(rec){
+        h += '<td><span class="badge-ok">✓ 済 (' + rec.score + '点)</span><div style="font-size:10px;color:#666;margin-top:2px;">' + rec.completedDate + '</div></td>';
+      } else if(tc.isCurrent){
+        h += '<td><span class="badge-no">⏳ 未受講</span></td>';
+      } else {
+        h += '<td><span style="color:#bbb;font-size:11px;">予定</span></td>';
+      }
+    });
+
+    h += '<td><b style="color:' + (pct === 100 ? 'var(--grn)' : 'var(--accent)') + ';">' + pct + '%</b> (' + doneCnt + '/' + totalCnt + ')</td>';
+    h += '</tr>';
+  });
+
+  h += '</tbody>';
+  c.innerHTML = h;
+}
+
+// ─── 実地指導（運営指導）対応 A4印刷 ───────────────────
+function printTrainingOfficialReport(courseId){
+  var tc = TRAINING_COURSES.find(function(c){ return c.id === courseId; });
+  if(!tc) return;
+
+  var recs = _trainingRecords.filter(function(r){ return r.trainingId === courseId; });
+
+  var w = window.open('', '_blank');
+  var html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>研修実施記録簿 - ' + esc(tc.title) + '</title>';
+  html += '<style>';
+  html += 'body { font-family: "Noto Sans JP", sans-serif; padding: 25mm 20mm; font-size: 10.5pt; color: #111; line-height: 1.6; }';
+  html += 'h1 { font-size: 16pt; text-align: center; margin-bottom: 4px; letter-spacing: 1px; }';
+  html += '.sub-header { text-align: center; font-size: 10pt; color: #555; margin-bottom: 24px; }';
+  html += '.meta-box { width: 100%; border: 1.5px solid #222; border-collapse: collapse; margin-bottom: 20px; }';
+  html += '.meta-box th, .meta-box td { border: 1px solid #333; padding: 8px 10px; font-size: 10pt; }';
+  html += '.meta-box th { background: #f2f2f2; width: 130px; text-align: left; }';
+  html += '.attendee-table { width: 100%; border: 1.5px solid #222; border-collapse: collapse; margin-bottom: 24px; }';
+  html += '.attendee-table th, .attendee-table td { border: 1px solid #333; padding: 8px 10px; font-size: 9.5pt; }';
+  html += '.attendee-table th { background: #f2f2f2; text-align: center; }';
+  html += '.stamp-box { display: flex; justify-content: flex-end; margin-bottom: 16px; }';
+  html += '.stamp-table { border-collapse: collapse; text-align: center; }';
+  html += '.stamp-table th, .stamp-table td { border: 1px solid #333; font-size: 9pt; width: 65px; }';
+  html += '.stamp-table td { height: 60px; }';
+  html += '@media print { button { display: none !important; } }';
+  html += '</style></head><body>';
+
+  html += '<div class="stamp-box"><table class="stamp-table"><tr><th>管理者</th><th>サビ管</th><th>担当</th></tr><tr><td></td><td></td><td></td></tr></table></div>';
+  html += '<h1>法定研修 実施記録簿</h1>';
+  html += '<div class="sub-header">（障害福祉サービス事業所 実地指導・運営基準準拠様式）</div>';
+
+  html += '<table class="meta-box">';
+  html += '<tr><th>事業所名</th><td>就労継続支援B型事業所 Porte</td></tr>';
+  html += '<tr><th>研修区分・種別</th><td>法定必須研修（年次計画） / ' + esc(tc.category) + '</td></tr>';
+  html += '<tr><th>研修タイトル</th><td><b>' + esc(tc.title) + '</b></td></tr>';
+  html += '<tr><th>実施期間</th><td>2026年11月1日 〜 2026年11月30日（eラーニング＋理解度確認）</td></tr>';
+  html += '<tr><th>研修教材・方法</th><td>公的動画教材視聴、要点レジュメ確認、理解度確認テスト（4問）、受講後所感入力</td></tr>';
+  html += '<tr><th>研修の目的・概要</th><td>' + esc(tc.desc) + '</td></tr>';
+  html += '</table>';
+
+  html += '<h3 style="font-size:11.5pt;margin-bottom:8px;">【受講者一覧および理解度判定結果】</h3>';
+  html += '<table class="attendee-table">';
+  html += '<tr><th style="width:30px;">No</th><th style="width:90px;">受講者氏名</th><th style="width:80px;">役職</th><th style="width:85px;">受講完了日</th><th style="width:65px;">点数</th><th style="width:55px;">合否</th><th>受講者の所感・今後の実践目標</th></tr>';
+
+  STAFF.forEach(function(s, idx){
+    var r = recs.find(function(x){ return x.staffId === s.id; });
+    html += '<tr>';
+    html += '<td style="text-align:center;">' + (idx + 1) + '</td>';
+    html += '<td style="font-weight:bold;">' + esc(s.name) + '</td>';
+    html += '<td>' + esc(s.role) + '</td>';
+    if(r){
+      html += '<td style="text-align:center;">' + r.completedDate + '</td>';
+      html += '<td style="text-align:center;">' + r.score + '点</td>';
+      html += '<td style="text-align:center;font-weight:bold;color:green;">合格</td>';
+      html += '<td>' + esc(r.reflection) + '</td>';
+    } else {
+      html += '<td style="text-align:center;color:#999;">-</td>';
+      html += '<td style="text-align:center;color:#999;">-</td>';
+      html += '<td style="text-align:center;color:#e65100;">未受講</td>';
+      html += '<td style="color:#999;">11月30日までに受講予定</td>';
+    }
+    html += '</tr>';
+  });
+
+  html += '</table>';
+
+  html += '<div style="margin-top:20px;border:1px solid #333;padding:12px;border-radius:4px;font-size:9.5pt;">';
+  html += '<b>【管理者・総括評価】</b><br>';
+  html += '身体拘束適正化指針に基づき、第1回の基本原則に続き、第2回として「スピーチロック（言葉による行動制限）」の防止研修を実施した。日常業務において生じやすい言葉の拘束について、理由の受容や具体的見通しの伝達といった代替支援の具体策を全員が学び、理解度基準（80点以上）に到達していることを確認した。今後もチーム内で声かけの工夫を共有し、権利擁護と尊厳ある支援を徹底する。';
+  html += '</div>';
+
+  html += '<div style="text-align:center;margin-top:30px;"><button onclick="window.print()" style="padding:10px 24px;font-size:14px;cursor:pointer;background:#4a2c1d;color:#fff;border:none;border-radius:8px;">🖨️ この様式をA4印刷する</button></div>';
+
+  html += '</body></html>';
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
+// ─── 委員会議事録アーカイブ描画 ─────────────────────────
+function renderCommitteeList(){
+  var c = el('committee-minutes-list');
+  if(!c) return;
+
+  if(_committeeMinutes.length === 0){
+    c.innerHTML = '<div style="text-align:center;padding:24px;color:var(--sub);font-size:13px;">まだ登録された委員会議事録はありません。「身体拘束適正化 委員会議事録を作成」から作成できます。</div>';
+    return;
+  }
+
+  c.innerHTML = _committeeMinutes.map(function(cm){
+    return '<div style="background:#faf6f2;border:1px solid var(--bdr);border-radius:12px;padding:12px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div>' +
+        '<span style="font-size:11px;font-weight:bold;background:#2e7d32;color:#fff;padding:2px 8px;border-radius:8px;">' + esc(cm.category) + '</span>' +
+        '<span style="font-weight:bold;margin-left:8px;">' + esc(cm.title) + '</span>' +
+        '<div style="font-size:12px;color:var(--sub);margin-top:4px;">開催日: ' + cm.date + ' | 出席者: ' + esc(cm.attendees) + '</div>' +
+      '</div>' +
+      '<button type="button" class="btn-print" style="font-size:12px;padding:6px 12px;" onclick="printCommitteeMinutes(\'' + cm.id + '\')">🖨️ 議事録を印刷</button>' +
+    '</div>';
+  }).join('');
+}
+
+// ─── 委員会議事録 入力モーダル ───────────────────────────
+function openCommitteeModal(type){
+  var body = el('committee-modal-body');
+  if(!body) return;
+
+  var h = '';
+  h += '<div style="display:flex;flex-direction:column;gap:12px;">';
+  h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">開催日</label><input type="date" id="cm-date" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + todayStr() + '"></div>';
+  h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">会議名</label><input type="text" id="cm-title" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="令和8年度 第2回 身体拘束適正化委員会"></div>';
+  h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">出席者</label><input type="text" id="cm-attendees" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="友田篤賜、木中静香、奥永優斗、大倉基輝、釘村真弓"></div>';
+  h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">協議事項・議題</label><textarea id="cm-agenda" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">1. 事業所における身体拘束ゼロの継続確認\n2. 現場におけるスピーチロック（言葉の拘束）のヒヤリハット事例共有\n3. 11月スタッフ研修「スピーチロック防止と代替支援」の実施計画</textarea></div>';
+  h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">決定事項・改善策</label><textarea id="cm-decisions" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">・「ちょっと待って」ではなく具体的な見通し（◯分後など）を伝える声かけを全職員で徹底する。\n・言葉遣いに違和感があった場合、責めずに前向きに共有できる職場環境づくりを継続する。\n・全スタッフに11月中のスピーチロック研修受講を義務付ける。</textarea></div>';
+  h += '  <button type="button" class="training-start-btn" style="background:#2e7d32;margin-top:10px;" onclick="saveCommitteeMinutes()">💾 委員会議事録を保存する</button>';
+  h += '</div>';
+
+  body.innerHTML = h;
+  el('committee-modal-overlay').classList.add('active');
+}
+
+function closeCommitteeModal(){
+  el('committee-modal-overlay').classList.remove('active');
+}
+
+async function saveCommitteeMinutes(){
+  var date = el('cm-date').value || todayStr();
+  var title = el('cm-title').value || '身体拘束適正化 委員会議事録';
+  var attendees = el('cm-attendees').value || '';
+  var agenda = el('cm-agenda').value || '';
+  var decisions = el('cm-decisions').value || '';
+
+  var cm = {
+    id: 'cm_' + Date.now(),
+    category: '身体拘束適正化委員会',
+    date: date,
+    title: title,
+    attendees: attendees,
+    agenda: agenda,
+    decisions: decisions,
+    createdAt: new Date().toISOString()
+  };
+
+  _committeeMinutes.unshift(cm);
+  await saveStorageData('porte_committee_minutes', _committeeMinutes);
+
+  closeCommitteeModal();
+  renderCommitteeList();
+  alert('委員会議事録を保存しました。実地指導用A4印刷が可能です。');
+}
+
+function printCommitteeMinutes(id){
+  var cm = _committeeMinutes.find(function(x){ return x.id === id; });
+  if(!cm) return;
+
+  var w = window.open('', '_blank');
+  var html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>' + esc(cm.title) + '</title>';
+  html += '<style>';
+  html += 'body { font-family: "Noto Sans JP", sans-serif; padding: 25mm 20mm; font-size: 10.5pt; color: #111; line-height: 1.6; }';
+  html += 'h1 { font-size: 16pt; text-align: center; margin-bottom: 24px; letter-spacing: 1px; }';
+  html += 'table { width: 100%; border: 1.5px solid #222; border-collapse: collapse; margin-bottom: 24px; }';
+  html += 'th, td { border: 1px solid #333; padding: 10px 12px; font-size: 10pt; }';
+  html += 'th { background: #f2f2f2; width: 140px; text-align: left; }';
+  html += '.stamp-box { display: flex; justify-content: flex-end; margin-bottom: 16px; }';
+  html += '.stamp-table { border-collapse: collapse; text-align: center; }';
+  html += '.stamp-table th, .stamp-table td { border: 1px solid #333; font-size: 9pt; width: 65px; }';
+  html += '.stamp-table td { height: 60px; }';
+  html += '@media print { button { display: none !important; } }';
+  html += '</style></head><body>';
+
+  html += '<div class="stamp-box"><table class="stamp-table"><tr><th>管理者</th><th>サビ管</th><th>記録者</th></tr><tr><td></td><td></td><td></td></tr></table></div>';
+  html += '<h1>' + esc(cm.title) + ' 議事録</h1>';
+
+  html += '<table>';
+  html += '<tr><th>事業所名</th><td>就労継続支援B型事業所 Porte</td></tr>';
+  html += '<tr><th>開催日時</th><td>' + cm.date + '</td></tr>';
+  html += '<tr><th>出席者</th><td>' + esc(cm.attendees) + '</td></tr>';
+  html += '<tr><th>議題・協議事項</th><td style="white-space:pre-wrap;">' + esc(cm.agenda) + '</td></tr>';
+  html += '<tr><th>決定事項・対応策</th><td style="white-space:pre-wrap;">' + esc(cm.decisions) + '</td></tr>';
+  html += '<tr><th>次回開催予定</th><td>令和9年2月度（第3回 身体拘束適正化委員会）</td></tr>';
+  html += '</table>';
+
+  html += '<div style="text-align:center;margin-top:30px;"><button onclick="window.print()" style="padding:10px 24px;font-size:14px;cursor:pointer;background:#2e7d32;color:#fff;border:none;border-radius:8px;">🖨️ 議事録をA4印刷する</button></div>';
+
+  html += '</body></html>';
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+</script>
+
+</body>
+</html>
