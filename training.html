@@ -741,10 +741,10 @@ header {
 <script>
 // ─── スタッフ定義（Porte共通マスター） ────────────────
 var DEFAULT_STAFF = [
-  { id: 's1', name: '友田篤賜', role: '管理者・サビ管' },
-  { id: 's2', name: '木中静香', role: '職業指導員' },
+  { id: 's1', name: '友田篤賜', role: 'サービス管理責任者' },
+  { id: 's2', name: '太中静香', role: '生活支援員' },
   { id: 's3', name: '奥永優斗', role: '生活支援員' },
-  { id: 's4', name: '大倉基輝', role: '職業指導員' },
+  { id: 's4', name: '大倉基揮', role: '職業指導員' },
   { id: 's5', name: '釘村真弓', role: '職業指導員' }
 ];
 var STAFF = DEFAULT_STAFF.slice();
@@ -874,11 +874,35 @@ function todayStr(){
 // ─── Supabase / localStorage データ同期 ───────────────
 async function loadAllTrainingData(){
   try {
+    // 職員マスターの動的取得（Supabase / GAS連携）
+    if(typeof gas === 'function'){
+      var staffList = await gas('getStaff').catch(function(){ return []; });
+      if(staffList && staffList.length > 0){
+        var activeStaff = staffList.filter(function(s){
+          return !s.resignedDate && !s.resigned;
+        });
+        if(activeStaff.length > 0){
+          var roleOrder = {'サービス管理責任者': 1, '管理者': 2, '生活支援員': 3, '職業指導員': 4};
+          activeStaff.sort(function(a, b){
+            return (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99);
+          });
+          STAFF = activeStaff;
+        }
+      }
+    }
+
     var rawRecs = await getStorageData('porte_training_records', []);
     _trainingRecords = Array.isArray(rawRecs) ? rawRecs : [];
+    // 既存レコードの名前表記揺れ修正
+    _trainingRecords.forEach(function(r){
+      if(r.staffName === '木中静香') r.staffName = '太中静香';
+    });
 
     var rawMinutes = await getStorageData('porte_committee_minutes', []);
     _committeeMinutes = Array.isArray(rawMinutes) ? rawMinutes : [];
+    _committeeMinutes.forEach(function(m){
+      if(m.attendees) m.attendees = m.attendees.replace(/木中静香/g, '太中静香');
+    });
   } catch(e){
     console.warn('loadAllTrainingData error:', e);
   }
@@ -1348,7 +1372,7 @@ function openCommitteeModal(type){
   h += '<div style="display:flex;flex-direction:column;gap:12px;">';
   h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">開催日</label><input type="date" id="cm-date" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + todayStr() + '"></div>';
   h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">会議名</label><input type="text" id="cm-title" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="令和8年度 第2回 身体拘束適正化委員会"></div>';
-  h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">出席者</label><input type="text" id="cm-attendees" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="友田篤賜、木中静香、奥永優斗、大倉基輝、釘村真弓"></div>';
+  h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">出席者</label><input type="text" id="cm-attendees" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="友田篤賜、太中静香、奥永優斗、大倉基揮、釘村真弓"></div>';
   h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">協議事項・議題</label><textarea id="cm-agenda" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">1. 事業所における身体拘束ゼロの継続確認\n2. 現場におけるスピーチロック（言葉の拘束）のヒヤリハット事例共有\n3. 11月スタッフ研修「スピーチロック防止と代替支援」の実施計画</textarea></div>';
   h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri);">決定事項・改善策</label><textarea id="cm-decisions" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">・「ちょっと待って」ではなく具体的な見通し（◯分後など）を伝える声かけを全職員で徹底する。\n・言葉遣いに違和感があった場合、責めずに前向きに共有できる職場環境づくりを継続する。\n・全スタッフに11月中のスピーチロック研修受講を義務付ける。</textarea></div>';
   h += '  <button type="button" class="training-start-btn" style="background:#2e7d32;margin-top:10px;" onclick="saveCommitteeMinutes()">💾 委員会議事録を保存する</button>';
