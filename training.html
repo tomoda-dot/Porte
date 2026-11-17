@@ -1934,6 +1934,7 @@
     var _isAdminAuthenticated = false;
     var _adminPin = '0000';
     var _editingCourseId = null;
+    var _wizShowCreator = false;
     var _aiGeneratedDraft = null;
     var _autoMonthSync = true;
     var _viewerShowAllYears = false;
@@ -3386,7 +3387,7 @@
         h += '        <span class="fy-month-num">' + mLabel + '</span>';
         if (hint) h += '<div style="font-size:10px;color:var(--sub);font-weight:700;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(hint) + '</div>';
         h += '      </div>';
-        h += '      <button type="button" class="fy-month-add-btn" onclick="event.stopPropagation();openMonthAssignModal(\'' + mLabel + '\', \'kenshu\')">＋ 作成・追加</button>';
+        h += '      <button type="button" class="fy-month-add-btn" onclick="event.stopPropagation();openMonthAssignModal(\'' + mLabel + '\', \'kenshu\', true)">＋ 作成・追加</button>';
         h += '    </div>';
 
         if (mCourses.length === 0 && mCommittees.length === 0) {
@@ -3439,26 +3440,31 @@
 
     function openCourseForEditFromCalendar(mLabel, courseId) {
       _wizExpandedCourseId = courseId;
-      openMonthAssignModal(mLabel, 'kenshu');
-      loadCourseIntoWizardEditor(courseId, false);
+      openMonthAssignModal(mLabel, 'kenshu', false);
     }
 
     function openMonthCellWithAutoEdit(mLabel) {
       var mCourses = getFyCourses(_calFY).filter(function (c) { return c.month === mLabel; });
+      var mCommittees = getFyCommittees(_calFY).filter(function (cm) { return getCommitteeMonthLabel(cm) === mLabel; });
       if (mCourses.length > 0) {
         openCourseForEditFromCalendar(mLabel, mCourses[0].id);
+      } else if (mCommittees.length > 0) {
+        openMonthAssignModal(mLabel, 'iinkai', false);
       } else {
-        openMonthAssignModal(mLabel, 'kenshu');
+        openMonthAssignModal(mLabel, 'kenshu', true);
       }
     }
 
-    function openMonthAssignModal(mLabel, mode) {
+    function openMonthAssignModal(mLabel, mode, showCreator) {
       _activeAssignMonth = mLabel || currentMonthLabel();
       if (mode) _wizMode = mode;
       _editingCourseId = null;
       _editingCommitteeId = null;
       _aiGeneratedDraft = null;
       _wizInlinePreviewId = '';
+      var hasItems = getFyCourses(_calFY).some(function (c) { return c.month === _activeAssignMonth; }) ||
+        getFyCommittees(_calFY).some(function (cm) { return getCommitteeMonthLabel(cm) === _activeAssignMonth; });
+      _wizShowCreator = (showCreator !== undefined) ? !!showCreator : !hasItems;
 
       syncWizardCategoryForMonth(_activeAssignMonth);
 
@@ -3482,6 +3488,9 @@
       _editingCommitteeId = null;
       _aiGeneratedDraft = null;
       _wizInlinePreviewId = '';
+      var hasItems = getFyCourses(_calFY).some(function (c) { return c.month === fm; }) ||
+        getFyCommittees(_calFY).some(function (cm) { return getCommitteeMonthLabel(cm) === fm; });
+      _wizShowCreator = !hasItems;
       syncWizardCategoryForMonth(fm);
       var titleEl = el('month-assign-modal-title');
       if (titleEl) titleEl.textContent = '📅 令和' + (_calFY - 2018) + '年度 ' + fm + ' 研修・委員会の作成＆管理スタジオ';
@@ -3632,8 +3641,13 @@
       }
 
       // ═══════════════════════════════════════════════════
-      // 2. 新規作成モード切替タブ（📖 研修を作成 vs 🏛️ 委員会を作成）
+      // 2. 新規作成・編集フォーム（作成・追加ボタン／編集ボタン押下時または未登録時のみ表示）
       // ═══════════════════════════════════════════════════
+      if (!_wizShowCreator && (mCourses.length > 0 || mCommittees.length > 0)) {
+        h += '<div style="text-align:center;padding:8px 0 4px;">';
+        h += '  <button type="button" onclick="_wizShowCreator=true;_editingCourseId=null;_editingCommitteeId=null;_aiGeneratedDraft=null;renderMonthAssignModalBody();" style="background:#fff;color:var(--pri);border:1.5px dashed var(--pri);border-radius:12px;padding:10px 20px;font-size:13px;font-weight:900;cursor:pointer;">＋ この月に新しい研修・委員会を追加する</button>';
+        h += '</div>';
+      } else {
       h += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
       h += '  <button type="button" onclick="_wizMode=\'kenshu\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;border:2px solid ' + (_wizMode === 'kenshu' ? '#1565c0' : 'var(--bdr)') + ';background:' + (_wizMode === 'kenshu' ? '#e3f2fd' : '#fff') + ';color:' + (_wizMode === 'kenshu' ? '#0d47a1' : 'var(--sub)') + ';">📖 研修テーマ作成</button>';
       h += '  <button type="button" onclick="_wizMode=\'iinkai\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;border:2px solid ' + (_wizMode === 'iinkai' ? '#2e7d32' : 'var(--bdr)') + ';background:' + (_wizMode === 'iinkai' ? '#e8f5e9' : '#fff') + ';color:' + (_wizMode === 'iinkai' ? '#1b5e20' : 'var(--sub)') + ';">🏛️ 委員会議事録作成</button>';
@@ -3808,7 +3822,7 @@
         h += '    </label>';
         h += '    <div style="display:flex;gap:8px;">';
         if (_editingCourseId) {
-          h += '      <button type="button" class="btn-print" style="background:#607d8b;" onclick="_editingCourseId=null;_aiGeneratedDraft=null;renderMonthAssignModalBody();">編集キャンセル</button>';
+          h += '      <button type="button" class="btn-print" style="background:#607d8b;" onclick="_editingCourseId=null;_aiGeneratedDraft=null;_wizShowCreator=false;renderMonthAssignModalBody();">編集キャンセル</button>';
         }
         h += '      <button type="button" class="training-start-btn" style="background:var(--accent);width:auto;padding:12px 26px;" onclick="saveCourseFromCreator()">';
         h += '        <span>' + (_editingCourseId ? ('💾 「' + mLabel + '」の研修を更新・保存する') : ('💾 「' + mLabel + '」の研修としてカレンダーに登録・配信する')) + '</span>';
@@ -3860,6 +3874,7 @@
         h += '    </button>';
         h += '  </div>';
         h += '</div>';
+      }
       }
 
       body.innerHTML = h;
@@ -4124,6 +4139,7 @@
     function loadCourseIntoWizardEditor(courseId, shouldScroll) {
       var tc = TRAINING_COURSES.find(function (c) { return c.id === courseId; });
       if (!tc) return;
+      _wizShowCreator = true;
       _editingCourseId = tc.id;
       _activeAssignMonth = tc.month;
       _wizMode = 'kenshu';
@@ -4180,6 +4196,7 @@
     function loadCommitteeIntoWizardEditor(cmId) {
       var cm = _committeeMinutes.find(function (x) { return x.id === cmId; });
       if (!cm) return;
+      _wizShowCreator = true;
       _editingCommitteeId = cm.id;
       _activeAssignMonth = getCommitteeMonthLabel(cm);
       _wizMode = 'iinkai';
@@ -5713,6 +5730,7 @@
 
       _editingCourseId = null;
       _aiGeneratedDraft = null;
+      _wizShowCreator = false;
       _wizExpandedCourseId = courseId;
       sortCoursesByFiscalMonth();
       renderAnnualPlanner();
