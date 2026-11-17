@@ -3571,7 +3571,6 @@
         h += '<div style="margin-bottom:20px;">';
         mCourses.forEach(function (tc) {
           var doneCnt = STAFF.filter(function (s) { return !!findStaffRecord(s, tc.id); }).length;
-          var isExpanded = (_wizExpandedCourseId === tc.id);
           var moveOpts = FISCAL_MONTHS.map(function (fm) {
             return '<option value="' + fm + '"' + (fm === tc.month ? ' selected' : '') + '>' + fm + 'へ移動</option>';
           }).join('');
@@ -3586,7 +3585,6 @@
           h += '  </div>';
           h += '  <div style="font-size:14.5px;font-weight:900;color:#0d47a1;margin:4px 0 8px;">' + esc(tc.title) + '</div>';
           h += '  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
-          h += '    <button type="button" onclick="toggleCourseStaffInspector(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1.5px solid #1565c0;background:' + (isExpanded ? '#1565c0' : '#fff') + ';color:' + (isExpanded ? '#fff' : '#1565c0') + ';font-weight:800;cursor:pointer;">👥 受講者・所感を確認 (' + doneCnt + '/' + STAFF.length + ')</button>';
           h += '    <button type="button" onclick="printTrainingOfficialReport(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#1565c0;color:#fff;font-weight:800;cursor:pointer;">🖨️ A4実施記録簿を印刷</button>';
           h += '    <button type="button" onclick="loadCourseIntoWizardEditor(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid #1565c0;background:#fff;color:#1565c0;font-weight:800;cursor:pointer;">✏️ テーマ・動画・クイズを編集</button>';
           h += '    <button type="button" onclick="duplicateCourseToCurrentMonth(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1.5px solid #2e7d32;background:#f1f8e9;color:#1b5e20;font-weight:800;cursor:pointer;">再受講</button>';
@@ -3594,9 +3592,8 @@
           h += '    <button type="button" onclick="deleteCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ffebee;color:#c62828;font-weight:800;cursor:pointer;">🗑️ 削除</button>';
           h += '  </div>';
 
-          // 展開時：スタッフ5名の受講状況・点数・所感一覧テーブル
-          if (isExpanded) {
-            h += '  <div style="margin-top:10px;background:#fff;border-radius:10px;padding:10px;border:1px solid #90caf9;">';
+          // スタッフ5名の受講状況・点数・所感一覧テーブル（常時表示）
+          h += '  <div style="margin-top:10px;background:#fff;border-radius:10px;padding:10px;border:1px solid #90caf9;">';
             h += '    <div style="font-size:12px;font-weight:900;color:#0d47a1;margin-bottom:6px;">📋 スタッフ別 受講ステータス＆提出された所感（視聴側とリアルタイム連動）</div>';
             h += '    <table style="width:100%;border-collapse:collapse;font-size:12px;">';
             h += '      <thead><tr style="background:#f0f7ff;"><th style="border:1px solid #cfe2f3;padding:5px 8px;text-align:left;width:95px;">氏名</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:85px;">状態・得点</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:85px;">完了日</th><th style="border:1px solid #cfe2f3;padding:5px 8px;text-align:left;">提出された所感</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:75px;">操作</th></tr></thead><tbody>';
@@ -3619,7 +3616,6 @@
             });
             h += '      </tbody></table>';
             h += '  </div>';
-          }
           h += '</div>';
         });
 
