@@ -2146,32 +2146,92 @@
       }
     }
 
+    function mergeRecordsArrays(baseArr, extraArr) {
+      var map = {};
+      var out = [];
+      (Array.isArray(baseArr) ? baseArr : []).concat(Array.isArray(extraArr) ? extraArr : []).forEach(function (r) {
+        if (!r || !r.trainingId) return;
+        var k = r.id || (r.trainingId + '__' + (r.staffId || r.staffName || ''));
+        if (!map[k]) {
+          map[k] = r;
+          out.push(r);
+        } else if (r.submittedAt && (!map[k].submittedAt || r.submittedAt > map[k].submittedAt)) {
+          var idx = out.indexOf(map[k]);
+          map[k] = r;
+          if (idx >= 0) out[idx] = r;
+        }
+      });
+      return out;
+    }
+
+    async function upsertSettingSafe(sb, key, val) {
+      var jsonStr = JSON.stringify(val);
+      var chk = await sb.from('設定').select('key').eq('key', key).limit(1);
+      if (chk.error) { console.warn('upsertSettingSafe select error:', chk.error); return; }
+      if (chk.data && chk.data.length > 0) {
+        var ur = await sb.from('設定').update({ value: jsonStr }).eq('key', key);
+        if (ur.error) console.warn('upsertSettingSafe update error:', ur.error);
+      } else {
+        var ir = await sb.from('設定').insert([{ key: key, value: jsonStr }]);
+        if (ir.error) console.warn('upsertSettingSafe insert error:', ir.error);
+      }
+    }
+
     async function getStorageData(key, defVal) {
+      var locVal = null;
+      try {
+        var loc = localStorage.getItem(key);
+        if (loc) locVal = JSON.parse(loc);
+      } catch (e) { }
+
       try {
         var sb = (typeof _getSupabase === 'function') ? _getSupabase() : (typeof supabase !== 'undefined' ? supabase : null);
-        if (!sb) {
-          var loc = localStorage.getItem(key);
-          return loc ? JSON.parse(loc) : defVal;
-        }
+        if (!sb) return locVal !== null ? locVal : defVal;
+
         var res = await sb.from('設定').select('value').eq('key', key).limit(1);
         if (res.error || !res.data || res.data.length === 0) {
-          var loc = localStorage.getItem(key);
-          return loc ? JSON.parse(loc) : defVal;
+          if (locVal !== null) {
+            await upsertSettingSafe(sb, key, locVal);
+            return locVal;
+          }
+          return defVal;
         }
-        var val = res.data[0].value;
-        return typeof val === 'string' ? JSON.parse(val) : val;
+        var rawVal = res.data[0].value;
+        var sbVal = typeof rawVal === 'string' ? JSON.parse(rawVal) : rawVal;
+
+        if (key === 'porte_training_records' && Array.isArray(locVal) && locVal.length > 0) {
+          var merged = mergeRecordsArrays(sbVal, locVal);
+          if (merged.length > (Array.isArray(sbVal) ? sbVal.length : 0)) {
+            await upsertSettingSafe(sb, key, merged);
+          }
+          localStorage.setItem(key, JSON.stringify(merged));
+          return merged;
+        }
+        localStorage.setItem(key, JSON.stringify(sbVal));
+        return sbVal;
       } catch (e) {
-        var loc = localStorage.getItem(key);
-        return loc ? JSON.parse(loc) : defVal;
+        return locVal !== null ? locVal : defVal;
       }
     }
 
     async function saveStorageData(key, val) {
       try {
-        localStorage.setItem(key, JSON.stringify(val));
+        var toSave = val;
         var sb = (typeof _getSupabase === 'function') ? _getSupabase() : (typeof supabase !== 'undefined' ? supabase : null);
+        if (sb && key === 'porte_training_records' && Array.isArray(val)) {
+          var res = await sb.from('設定').select('value').eq('key', key).limit(1);
+          if (!res.error && res.data && res.data.length > 0) {
+            var rawVal = res.data[0].value;
+            var sbArr = typeof rawVal === 'string' ? JSON.parse(rawVal) : rawVal;
+            if (Array.isArray(sbArr)) {
+              toSave = mergeRecordsArrays(sbArr, val);
+              _trainingRecords = toSave;
+            }
+          }
+        }
+        localStorage.setItem(key, JSON.stringify(toSave));
         if (sb) {
-          await sb.from('設定').upsert({ key: key, value: JSON.stringify(val) }, { onConflict: 'key' });
+          await upsertSettingSafe(sb, key, toSave);
         }
       } catch (e) {
         console.warn('saveStorageData error:', e);
