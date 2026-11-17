@@ -2966,9 +2966,7 @@
         { label: '🗣️ 身体拘束適正化', cat: '身体拘束適正化', req: '年2回以上必須', cur: counts.restraint, min: 2 },
         { label: '🛡️ 障害者虐待防止', cat: '障害者虐待防止', req: '年1回以上必須', cur: counts.abuse, min: 1 },
         { label: '❄️ 感染症対策', cat: '感染対策', req: '年2回以上必須', cur: counts.infection, min: 2 },
-        { label: '🌸 BCP研修・訓練', cat: 'BCP研修・訓練', req: '年1回以上必須', cur: counts.bcp, min: 1 },
-        { label: '🚒 防災・救命訓練', cat: '防災訓練', req: '年1回以上推奨', cur: counts.disaster, min: 1 },
-        { label: '☕ 衛生・人権・情報', cat: '衛生管理・HACCP', req: '質の向上研修', cur: counts.other, min: 1 }
+        { label: '🌸 BCP研修・訓練', cat: 'BCP研修・訓練', req: '年1回以上必須', cur: counts.bcp, min: 1 }
       ];
 
       var h = '';
@@ -3003,18 +3001,23 @@
       h += '  <div class="fy-stat-card stat-upcoming"><div class="fy-stat-label">📅 今後・進行中</div><div class="fy-stat-val" style="color:#ff9800;">' + upcomingCount + '</div></div>';
       h += '</div>';
 
-      // 2.5 法定必須回数チェッカー（コンパクトバー：クリックでその区分の作成へ）
-      h += '<div class="req-check-grid">';
+      // 2.5 法定必須研修・訓練の実施回数チェッカー（実地指導基準：必須4項目のみ）
+      h += '<div class="card" style="padding:16px 20px;margin-bottom:18px;">';
+      h += '  <div class="section-title" style="margin-bottom:10px;">';
+      h += '    <span>✅ 法定必須研修・訓練の実施回数チェッカー（実地指導基準）</span>';
+      h += '  </div>';
+      h += '  <div class="req-check-grid" style="margin-bottom:0;">';
       reqItems.forEach(function (it) {
         var isOk = it.cur >= it.min;
         h += '<div class="req-check-item ' + (isOk ? 'ok' : 'warn') + '" style="cursor:pointer;transition:transform .15s;" onclick="_wizFilterCat=\'' + it.cat + '\';openMonthAssignModal(currentMonthLabel(), \'kenshu\');" title="クリックして「' + it.cat + '」の研修を作成・追加">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-          '<span style="font-weight:900;color:var(--pri-dark);">' + it.label + '</span>' +
-          '<span style="font-weight:900;font-size:11.5px;color:' + (isOk ? 'var(--grn)' : 'var(--warn)') + ';">' + (isOk ? '✓ ' + it.cur + '回' : '⚠️ ' + it.cur + '/' + it.min + '回') + '</span>' +
+          '<div style="font-weight:900;color:var(--pri-dark);">' + it.label + '</div>' +
+          '<div style="font-size:11px;color:var(--sub);margin:2px 0;">基準: ' + it.req + '</div>' +
+          '<div style="font-weight:900;font-size:13px;color:' + (isOk ? 'var(--grn)' : 'var(--warn)') + ';">' +
+          (isOk ? '✓ 計画済 (' + it.cur + '回)' : '⚠️ 現在 ' + it.cur + '回 (要追加)') +
           '</div>' +
-          '<div style="font-size:10.5px;color:var(--sub);margin-top:2px;">基準: ' + it.req + '（タップで追加）</div>' +
           '</div>';
       });
+      h += '  </div>';
       h += '</div>';
 
       // 3. 4列×3段の年度カレンダー（4月〜3月）
