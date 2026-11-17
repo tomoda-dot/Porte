@@ -3571,12 +3571,7 @@
           h += '    <button type="button" onclick="toggleCourseStaffInspector(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1.5px solid #1565c0;background:' + (isExpanded ? '#1565c0' : '#fff') + ';color:' + (isExpanded ? '#fff' : '#1565c0') + ';font-weight:800;cursor:pointer;">👥 受講者・所感を確認 (' + doneCnt + '/' + STAFF.length + ')</button>';
           h += '    <button type="button" onclick="printTrainingOfficialReport(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#1565c0;color:#fff;font-weight:800;cursor:pointer;">🖨️ A4実施記録簿を印刷</button>';
           h += '    <button type="button" onclick="loadCourseIntoWizardEditor(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid #1565c0;background:#fff;color:#1565c0;font-weight:800;cursor:pointer;">✏️ テーマ・動画・クイズを編集</button>';
-          if (!tc.isCurrent) {
-            h += '    <button type="button" onclick="toggleCurrentCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ef6c00;color:#fff;font-weight:800;cursor:pointer;">🔥 今月の要受講にする</button>';
-          } else {
-            h += '    <button type="button" onclick="toggleCurrentCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1.5px solid #ef6c00;background:#fff3e0;color:#e65100;font-weight:800;cursor:pointer;">🔥 要受講から外す</button>';
-          }
-          h += '    <button type="button" onclick="duplicateCourseToCurrentMonth(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1.5px solid #2e7d32;background:#f1f8e9;color:#1b5e20;font-weight:800;cursor:pointer;">📋 今月（' + currentMonthLabel() + '）へコピー再受講</button>';
+          h += '    <button type="button" onclick="duplicateCourseToCurrentMonth(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1.5px solid #2e7d32;background:#f1f8e9;color:#1b5e20;font-weight:800;cursor:pointer;">再受講</button>';
           h += '    <select onchange="moveCourseToMonth(\'' + tc.id + '\', this.value);renderMonthAssignModalBody();" style="font-size:11.5px;padding:4px 8px;border-radius:8px;border:1px solid #90caf9;background:#fff;font-weight:700;cursor:pointer;">' + moveOpts + '</select>';
           h += '    <button type="button" onclick="deleteCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ffebee;color:#c62828;font-weight:800;cursor:pointer;">🗑️ 削除</button>';
           h += '  </div>';
@@ -5758,10 +5753,7 @@
             '</div>' +
             '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
             '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#fff;color:#1565c0;border:1.5px solid #1565c0;" onclick="_wizExpandedCourseId=\'' + tc.id + '\';openMonthAssignModal(\'' + tc.month + '\', \'kenshu\')">👥 受講所感・詳細 (' + doneCnt + '/' + STAFF.length + ')</button>' +
-            (!tc.isCurrent
-              ? '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#e65100;" onclick="toggleCurrentCourse(\'' + tc.id + '\')">🔥 今月に設定</button>'
-              : '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#fff3e0;color:#e65100;border:1.5px solid #ef6c00;" onclick="toggleCurrentCourse(\'' + tc.id + '\')">🔥 今月から外す</button>') +
-            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#2e7d32;" onclick="duplicateCourseToCurrentMonth(\'' + tc.id + '\')">📋 今月（' + currentMonthLabel() + '）へコピー再受講</button>' +
+            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#2e7d32;" onclick="duplicateCourseToCurrentMonth(\'' + tc.id + '\')">再受講</button>' +
             '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#1565c0;" onclick="printTrainingOfficialReport(\'' + tc.id + '\')">🖨️ A4記録簿印刷</button>' +
             '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#455a64;" onclick="editCourse(\'' + tc.id + '\')">✏️ 編集</button>' +
             '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#c62828;" onclick="deleteCourse(\'' + tc.id + '\')">🗑️ 削除</button>' +
