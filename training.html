@@ -3195,13 +3195,10 @@
       var h = '';
 
       // ═══════════════════════════════════════════════════
-      // 1. 現在この月に設定されている研修・委員会（受講状況確認・印刷・編集）
+      // 1. 現在この月に設定されている研修・委員会（登録がある時のみ表示）
       // ═══════════════════════════════════════════════════
-      h += '<div style="font-size:14px;font-weight:900;color:var(--pri-dark);margin-bottom:8px;">📌 現在「' + mLabel + '」に登録されている研修・委員会（' + (mCourses.length + mCommittees.length) + '件）</div>';
-
-      if (mCourses.length === 0 && mCommittees.length === 0) {
-        h += '<div style="background:#f8fbf9;border:1.5px dashed var(--bdr);border-radius:12px;padding:14px;text-align:center;color:var(--sub);font-size:13px;margin-bottom:18px;">まだ「' + mLabel + '」には予定がありません。下の「STEP 1：テーマの提案」から簡単に作成・追加できます。</div>';
-      } else {
+      if (mCourses.length > 0 || mCommittees.length > 0) {
+        h += '<div style="font-size:14px;font-weight:900;color:var(--pri-dark);margin-bottom:8px;">📌 現在「' + mLabel + '」に登録されている研修・委員会（' + (mCourses.length + mCommittees.length) + '件）</div>';
         h += '<div style="margin-bottom:20px;">';
         mCourses.forEach(function (tc) {
           var doneCnt = STAFF.filter(function (s) { return !!findStaffRecord(s, tc.id); }).length;
