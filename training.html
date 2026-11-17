@@ -3736,12 +3736,8 @@
         h += '  </div>';
 
         if (_wizMaterialMode === 'slide_only') {
-          h += '  <div style="background:#fbf9ff;border:1.5px dashed #b39ddb;border-radius:12px;padding:14px;color:#4527a0;font-size:12.5px;line-height:1.6;">';
-          h += '    <b>📄 動画なし（AIスライド・現場事例読本モード）が選択されています</b><br>';
-          h += '    都合よくYouTube動画がないテーマでも心配いりません！下の【STEP 3】でAIが<b>「① 基本原則スライド」「② 現場での❌NG対応 ⇔ ⭕OK対応ケース比較」「③ 明日から実践する行動ルール」</b>の3枚スライド読本と4択クイズを自動作成します（実地指導でも正式な研修として100%認められます）。';
-          h += '    <input type="hidden" id="cr-video" value="">';
-          h += '    <input type="hidden" id="cr-video-title" value="AIスライド・現場事例読本">';
-          h += '  </div>';
+          h += '  <input type="hidden" id="cr-video" value="">';
+          h += '  <input type="hidden" id="cr-video-title" value="AIスライド・現場事例読本">';
         } else {
           h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
           h += '    <input type="text" id="yt-search-query" value="' + esc(initYtQuery) + '" placeholder="検索キーワード（YouTube・厚労省定番動画を一括検索）" style="flex:1;min-width:220px;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 12px;font-size:13.5px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();searchYouTubeVideosLive();}">';
