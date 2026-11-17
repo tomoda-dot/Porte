@@ -1386,7 +1386,7 @@
     function hide(id) { var e = el(id); if (e) e.style.display = 'none'; }
     function cleanNotesText(str) {
       if (!str) return '';
-      return String(str).replace(/\s*< !--(AD J |AUTH):.*?- ->\s*/g, '').trim();
+      return String(str).replace(/\s*<\s*[!I]\s*--\s*(?:ADJ|AD\s*J|AUTH)\s*:.*?--\s*>\s*/g, '').trim();
     }
 
     // スタッフ名から短縮名（苗字）を取得
