@@ -4661,6 +4661,68 @@
             exp: '正解！いざという時に即時避難・初期消火ができるよう、避難動線と消火設備の周囲は常にクリアに保ちます。'
           }
         ]
+      },
+      heatstroke_safety: {
+        id: '202707_heatstroke_safety',
+        month: '7月',
+        category: '事故防止・ヒヤリハット',
+        title: '夏期 労働安全衛生研修「熱中症予防・水分補給の声かけと作業室温度管理」',
+        dueText: '2027-07-31',
+        videoUrl: '',
+        desc: '夏場の作業室内および送迎時における熱中症リスクの早期察知、WBGT（暑さ指数）確認、こまめな水分・塩分補給の声かけ手順を習得します。',
+        isCurrent: false,
+        keypoints: [
+          '<b>熱中症の早期サイン：</b>めまい、だるさ、大量の発汗、作業ペースの急な低下を見逃さない。',
+          '<b>予防の声かけ：</b>のどが渇く前の定時水分補給（1時間おき等）と塩分補給をスタッフから促す。',
+          '<b>作業室・送迎車の温度管理：</b>エアコン・サーキュレーターの活用と、高温になる焙煎室でのこまめな休憩・交代を徹底する。',
+          '<b>発症時の応急処置：</b>涼しい場所へ移動し、衣服を緩めて首・脇・太ももの付け根を冷却し、自力で飲めない場合は直ちに医療機関へ搬送する。'
+        ],
+        quizzes: [
+          {
+            q: '【第1問】夏場の作業支援における「水分補給」の促し方として最も適切なものはどれですか？',
+            choices: [
+              '利用者が「のどが渇いた」と自分から申し出た時だけ飲んでもらう。',
+              'のどの渇きを感じる前に、作業の区切りや定時（1時間ごと等）にスタッフから声をかけてこまめに水分補給を促す。',
+              '作業効率が落ちるため休憩時間まで一切水を飲ませない。',
+              '冷たいコーヒーや緑茶など利尿作用のある飲み物だけを大量に飲んでもらう。'
+            ],
+            ans: 1,
+            exp: '正解！のどの渇きを感じた時点ですでに脱水が始まっているため、定時でこまめに水や麦茶・経口補水液等を摂るよう声かけします。'
+          },
+          {
+            q: '【第2問】作業中に利用者様が「頭が痛い」「めまいがする」「顔がほてっている」と訴えた際の初動対応として適切なものはどれですか？',
+            choices: [
+              '「気合が足りない」と作業を続けさせる。',
+              '直ちに作業を中止し、涼しい日陰や冷房の効いた部屋へ移動させて衣服を緩め、首・脇の下・足の付け根を冷やす。',
+              '1人でトイレに行って休むよう指示し目を離す。',
+              '終礼の時間まで様子を見る。'
+            ],
+            ans: 1,
+            exp: '正解！熱中症の初期症状が疑われる場合は即座に作業を止め、涼しい環境での休息・太い血管の冷却・水分補給を行います。'
+          },
+          {
+            q: '【第3問】熱中症が疑われる人に水分を飲ませようとした際、「意識がぼんやりしている・吐き気がある」場合の対応として正しいものはどれですか？',
+            choices: [
+              '無理やり口から水を流し込む。',
+              '誤嚥の危険があるため口から水分を飲ませず、直ちに救急要請（119番）および医療機関受診の手配を行う。',
+              '冷水を頭からかけて様子を見る。',
+              'そのまま送迎車で自宅へ送る。'
+            ],
+            ans: 1,
+            exp: '正解！呼びかけへの反応がおかしい・自力で飲めない・吐き気がある場合は重度化のサインであり、無理に飲ませず直ちに医療機関へつなぎます。'
+          },
+          {
+            q: '【第4問】焙煎作業や送迎車の運行など、夏場に温度が上がりやすい場面での予防策として適切なものはどれですか？',
+            choices: [
+              '室温やWBGT（暑さ指数）を確認し、空調・換気・サーキュレーターの活用と無理のない交代・休憩スケジュールを組む。',
+              '電気代節約のためエアコンは使わず窓も閉め切る。',
+              '送迎車の車内点検や点呼を行わずに降車する。',
+              '暑さに慣れるため長袖厚着で作業する。'
+            ],
+            ans: 0,
+            exp: '正解！環境管理（温度・換気）と無理のない作業ローテーション、送迎時の車内安全確認を組み合わせることが事故防止の基本です。'
+          }
+        ]
       }
     };
 
@@ -4852,11 +4914,27 @@
     async function autoFill12MonthPlan() {
       var added = 0;
       var fyCourses = getFyCourses(_calFY);
-      Object.keys(COURSE_PRESETS).forEach(function (k) {
+      var orderedKeys = [
+        'abuse',            // 4月：障害者虐待防止
+        'privacy_sns',      // 5月：個人情報保護
+        'infection_summer', // 6月：感染症・食中毒対策（夏期）
+        'heatstroke_safety',// 7月：熱中症予防・夏期安全衛生
+        'restraint_basic',  // 8月：身体拘束適正化（原則・3要件）
+        'haccp',            // 9月：食品衛生・HACCP
+        'abuse_grayzone',   // 10月：障害者虐待防止（グレーゾーン）
+        'speechlock',       // 11月：身体拘束適正化（スピーチロック）
+        'infection',        // 12月：感染症対策（冬期PPE）
+        'disaster_fire',    // 1月：防災・初期消火訓練
+        'restraint_case',   // 2月：身体拘束適正化（ヒヤリハット）
+        'bcp'               // 3月：BCP研修・訓練
+      ];
+      orderedKeys.forEach(function (k) {
         var p = COURSE_PRESETS[k];
+        if (!p) return;
         var hasInMonth = fyCourses.some(function (c) { return c.month === p.month; });
         if (!hasInMonth) {
-          TRAINING_COURSES.push({
+          var vUrl = p.videoUrl || '';
+          var newItem = {
             id: p.id + '_fy' + _calFY,
             fy: _calFY,
             month: p.month,
@@ -4865,11 +4943,14 @@
             isCurrent: false,
             dueText: getDueTextForMonth(p.month, _calFY),
             desc: p.desc,
-            videoEmbedUrl: p.videoUrl.replace('watch?v=', 'embed/'),
-            youtubeWatchUrl: p.videoUrl,
+            noVideo: !vUrl,
+            videoEmbedUrl: vUrl ? vUrl.replace('watch?v=', 'embed/') : '',
+            youtubeWatchUrl: vUrl,
             keypoints: p.keypoints.slice(),
             quizzes: JSON.parse(JSON.stringify(p.quizzes))
-          });
+          };
+          TRAINING_COURSES.push(newItem);
+          fyCourses.push(newItem);
           added++;
         }
       });
