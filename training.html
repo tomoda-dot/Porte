@@ -3277,8 +3277,8 @@
       // 2. 新規作成モード切替タブ（📖 研修を作成 vs 🏛️ 委員会を作成）
       // ═══════════════════════════════════════════════════
       h += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
-      h += '  <button type="button" onclick="_wizMode=\'kenshu\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:13.5px;font-weight:900;cursor:pointer;border:2px solid ' + (_wizMode === 'kenshu' ? '#1565c0' : 'var(--bdr)') + ';background:' + (_wizMode === 'kenshu' ? '#e3f2fd' : '#fff') + ';color:' + (_wizMode === 'kenshu' ? '#0d47a1' : 'var(--sub)') + ';">📖 「' + mLabel + '」の研修を作成・追加する（テーマ提案 ➔ 最新動画検索 ➔ AIクイズ作成）</button>';
-      h += '  <button type="button" onclick="_wizMode=\'iinkai\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:13.5px;font-weight:900;cursor:pointer;border:2px solid ' + (_wizMode === 'iinkai' ? '#2e7d32' : 'var(--bdr)') + ';background:' + (_wizMode === 'iinkai' ? '#e8f5e9' : '#fff') + ';color:' + (_wizMode === 'iinkai' ? '#1b5e20' : 'var(--sub)') + ';">🏛️ 「' + mLabel + '」の委員会・議事録を作成・追加する（AI自動起案）</button>';
+      h += '  <button type="button" onclick="_wizMode=\'kenshu\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;border:2px solid ' + (_wizMode === 'kenshu' ? '#1565c0' : 'var(--bdr)') + ';background:' + (_wizMode === 'kenshu' ? '#e3f2fd' : '#fff') + ';color:' + (_wizMode === 'kenshu' ? '#0d47a1' : 'var(--sub)') + ';">📖 研修テーマ作成</button>';
+      h += '  <button type="button" onclick="_wizMode=\'iinkai\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;border:2px solid ' + (_wizMode === 'iinkai' ? '#2e7d32' : 'var(--bdr)') + ';background:' + (_wizMode === 'iinkai' ? '#e8f5e9' : '#fff') + ';color:' + (_wizMode === 'iinkai' ? '#1b5e20' : 'var(--sub)') + ';">🏛️ 委員会議事録作成</button>';
       h += '</div>';
 
       if (_wizMode === 'kenshu') {
