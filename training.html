@@ -767,6 +767,95 @@ header {
   margin-bottom: 12px;
 }
 
+/* ─── 年間研修計画ボード（4月〜3月パズル） ─── */
+.req-check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.req-check-item {
+  background: #fff;
+  border: 1.5px solid var(--bdr);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+.req-check-item.ok {
+  border-color: #81c784;
+  background: #f1f8e9;
+}
+.req-check-item.warn {
+  border-color: #ffb74d;
+  background: #fff8e1;
+}
+.annual-board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+}
+.month-slot-card {
+  background: #fff;
+  border: 2px solid var(--bdr);
+  border-radius: 18px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  transition: all .15s;
+}
+.month-slot-card.has-current {
+  border-color: #ef6c00;
+  background: linear-gradient(180deg, #fffdf9 0%, #fff 100%);
+  box-shadow: 0 6px 18px rgba(230,81,0,0.12);
+}
+.month-slot-card.empty-slot {
+  background: #f8fbf9;
+  border-style: dashed;
+}
+.month-slot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1.5px solid var(--pri-light);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+.month-slot-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--pri-dark);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.assigned-course-box {
+  background: var(--pri-light);
+  border: 1.5px solid var(--bdr);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.slot-add-area {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--bdr);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.slot-select {
+  width: 100%;
+  border: 1.5px solid var(--bdr);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--pri-dark);
+  background: #fff;
+}
+
 /* ─── A4印刷専用スタイル（実地指導用） ───── */
 @media print {
   header, .header-actions, .print-action-bar, .mode-switch-btn, .modal-close-btn, .no-print {
@@ -867,6 +956,9 @@ header {
       <button type="button" class="admin-subtab-btn active" id="btn-subtab-matrix" onclick="switchAdminSubtab('matrix')">
         📊 スタッフ受講星取表・実地指導印刷
       </button>
+      <button type="button" class="admin-subtab-btn" id="btn-subtab-planner" onclick="switchAdminSubtab('planner')">
+        📅 年間研修計画（4月〜3月 当てはめパズル）
+      </button>
       <button type="button" class="admin-subtab-btn" id="btn-subtab-creator" onclick="switchAdminSubtab('creator')">
         ✨ 研修作成・AI自動生成スタジオ
       </button>
@@ -882,6 +974,9 @@ header {
     <div id="subtab-content-matrix">
       <div class="card">
         <div class="print-action-bar no-print">
+          <button type="button" class="btn-print" style="background:var(--forest);" onclick="switchAdminSubtab('planner')">
+            📅 年間計画パズル（何月に何を当てはめるか編集）
+          </button>
           <button type="button" class="btn-print" onclick="printTrainingOfficialReport()">
             🖨️ 今月の研修 実施記録簿をA4印刷
           </button>
@@ -910,6 +1005,38 @@ header {
           <table class="matrix-table" id="matrix-table-body">
             <!-- 動的描画 -->
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── サブタブ1.5: 年間研修計画（4月〜3月 当てはめパズル） ── -->
+    <div id="subtab-content-planner" style="display:none;">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+          <div class="section-title" style="margin:0;">
+            <span>📅 年間研修計画ボード（4月〜翌3月：何月にどの研修を実施するか当てはめ）</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn-print" style="background:var(--accent);" onclick="autoFill12MonthPlan()">
+              ✨ 12ヶ月すべてに推奨法定研修を自動配置
+            </button>
+            <button type="button" class="btn-print" style="background:#1565c0;" onclick="printAnnualMatrixReport()">
+              🖨️ 年間研修計画・総括表をA4印刷
+            </button>
+          </div>
+        </div>
+        <p style="font-size:12.5px;color:var(--sub);margin-bottom:14px;">
+          各月の枠にある「<b>＋ この月に研修を当てはめる</b>」から研修パックを選ぶだけで、その月に動画・要点・4択クイズ付きの研修がセットされます。既に配置された研修の「実施月移動」や「AIでの新規作成」もワンクリックで行えます。
+        </p>
+
+        <!-- 法定必須回数チェッカー -->
+        <div id="planner-req-checker">
+          <!-- 動的描画 -->
+        </div>
+
+        <!-- 4月〜3月 12ヶ月ボード -->
+        <div class="annual-board-grid" id="annual-board-container">
+          <!-- 動的描画 -->
         </div>
       </div>
     </div>
@@ -1800,6 +1927,7 @@ function switchMode(mode){
 
   if(mode === 'admin'){
     renderAdminMatrix();
+    renderAnnualPlanner();
     renderPublishedCoursesList();
     renderCommitteeList();
   }
@@ -1807,7 +1935,7 @@ function switchMode(mode){
 
 // ─── 管理者サブタブ切替 ─────────────────────────────────
 function switchAdminSubtab(tabName){
-  ['matrix', 'creator', 'minutes', 'settings'].forEach(function(t){
+  ['matrix', 'planner', 'creator', 'minutes', 'settings'].forEach(function(t){
     var btn = el('btn-subtab-' + t);
     var content = el('subtab-content-' + t);
     if(btn) btn.classList.toggle('active', t === tabName);
@@ -1815,6 +1943,7 @@ function switchAdminSubtab(tabName){
   });
 
   if(tabName === 'matrix') renderAdminMatrix();
+  if(tabName === 'planner') renderAnnualPlanner();
   if(tabName === 'creator') renderPublishedCoursesList();
   if(tabName === 'minutes') renderCommitteeList();
 }
@@ -1867,7 +1996,15 @@ function renderStaffTrainingList(){
 
   el('badge-cur-progress').textContent = '年間進捗：' + completedCount + '/' + totalCount + ' 完了 (' + pct + '%)';
 
-  c.innerHTML = TRAINING_COURSES.map(function(tc){
+  var displayCourses = TRAINING_COURSES.slice().sort(function(a, b){
+    if(a.isCurrent && !b.isCurrent) return -1;
+    if(!a.isCurrent && b.isCurrent) return 1;
+    var ia = FISCAL_MONTHS.indexOf(a.month);
+    var ib = FISCAL_MONTHS.indexOf(b.month);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+
+  c.innerHTML = displayCourses.map(function(tc){
     var rec = myRecords.find(function(r){ return r.trainingId === tc.id; });
     var isDone = !!rec;
     var qCount = (tc.quizzes && tc.quizzes.length) || 4;
@@ -2438,8 +2575,508 @@ var COURSE_PRESETS = {
         exp: '正解！HACCPでは「実施したことを毎日正確に記録・保管すること」が安全の証明として義務付けられています。'
       }
     ]
+  },
+  privacy_sns: {
+    id: '202705_privacy_sns',
+    month: '5月',
+    category: '個人情報保護',
+    title: '第1回 個人情報保護・情報セキュリティ研修「利用者情報の適正管理とSNS・写真取扱ルール」',
+    dueText: '2027-05-31',
+    videoUrl: 'https://www.youtube.com/watch?v=0KL_R8ZMQ9U',
+    desc: '個人情報保護法および事業所の守秘義務規定に基づき、支援記録・書類の持ち出し禁止、SNSでの情報漏洩防止、写真掲載同意の徹底を学びます。',
+    isCurrent: false,
+    keypoints: [
+      '<b>守秘義務の徹底：</b>業務上知り得た利用者・家族の個人情報は、在職中だけでなく退職後も漏らしてはならない。',
+      '<b>書類・端末の管理：</b>個別支援計画や日報などの書類放置・外部持ち出しを厳禁とし、施錠保管を徹底する。',
+      '<b>SNS・写真取扱いの注意：</b>個人のSNSに事業所の出来事や背景が特定される写真を絶対に投稿しない。広報掲載時は必ず事前同意を確認する。'
+    ],
+    quizzes: [
+      {
+        q: '【第1問】福祉事業所の職員における「守秘義務（秘密保持義務）」の範囲として正しいものはどれですか？',
+        choices: [
+          '在職中だけでなく、退職した後も業務上知り得た利用者様やご家族の秘密を第三者に漏らしてはならない。',
+          '退職した後は自由に話しても問題ない。',
+          '名前さえ伏せれば家族や友人に利用者の詳しい事情を話してよい。'
+        ],
+        ans: 0,
+        exp: '正解！社会福祉法および運営基準により、職員は在職中・退職後を問わず正当な理由なく業務上知り得た秘密を漏らしてはなりません。'
+      },
+      {
+        q: '【第2問】事業所のイベントや作業風景の写真をWebやSNSに掲載する際のルールとして適切なものはどれですか？',
+        choices: [
+          '事前にご本人・ご家族の同意（肖像権・広報掲載同意書）を確認し、個人が特定される名札や書類が写り込んでいないか点検する。',
+          '楽しそうな写真であれば無断で個人のSNSにアップしてよい。',
+          '後ろ姿なら誰の許可も取らずに個人名を添えて投稿してよい。'
+        ],
+        ans: 0,
+        exp: '正解！写真掲載には事前の同意確認が不可欠であり、背景の掲示物や名札などから個人情報が漏洩しないよう細心の注意を払います。'
+      },
+      {
+        q: '【第3問】支援記録や利用者ファイルなどの紙媒体・タブレット端末の取り扱いとして正しいものはどれですか？',
+        choices: [
+          '使用後は速やかに所定の保管場所（施錠できる書庫等）に戻し、机の上に広げたまま離席しない。',
+          '仕事が終わらないので自宅に持ち帰ってカフェで記入する。',
+          '不要になった個人情報書類をそのまま一般ゴミ箱に捨てる。'
+        ],
+        ans: 0,
+        exp: '正解！個人情報の紛失・盗難・覗き見を防ぐため、クリアデスクと施錠保管、シュレッダー廃棄を徹底します。'
+      },
+      {
+        q: '【第4問】万が一、書類の紛失や誤送信など個人情報漏洩の恐れがある事案が発生した場合の初動対応はどれですか？',
+        choices: [
+          '隠さずに直ちに管理者へ報告し、被害拡大防止と迅速な事実確認・対応を行う。',
+          '自分で探して見つからなければ誰にも言わずに黙っておく。',
+          '気づかなかったことにする。'
+        ],
+        ans: 0,
+        exp: '正解！情報セキュリティ事故が疑われる場合は一刻も早い管理者への報告が被害最小化の鍵となります。'
+      }
+    ]
+  },
+  infection_summer: {
+    id: '202706_infection_summer',
+    month: '6月',
+    category: '感染対策',
+    title: '第1回 感染症・食中毒対策研修「梅雨・夏期の食中毒予防と標準予防策・手指衛生」',
+    dueText: '2027-06-30',
+    videoUrl: 'https://www.youtube.com/watch?v=Pj4Sj6t8XhM',
+    desc: '高温多湿となる梅雨・夏期における細菌性食中毒の予防3原則（つけない・増やさない・やっつける）と、日常の手洗い・共用部消毒を徹底します。',
+    isCurrent: false,
+    keypoints: [
+      '<b>食中毒予防の3原則：</b>菌を「つけない（手洗い・洗浄）」「増やさない（低温保存・迅速提供）」「やっつける（加熱・殺菌）」。',
+      '<b>正しい手洗いの徹底：</b>石けんで指先・親指・手首まで30秒以上もみ洗いし、ペーパータオルで水気を拭き取ってからアルコール消毒する。',
+      '<b>共用部と調理・作業器具の衛生：</b>ドアノブ、トイレ、作業テーブル等の定期的な拭き取り消毒を実施する。'
+    ],
+    quizzes: [
+      {
+        q: '【第1問】食中毒予防の「3原則」として、正しい組み合わせはどれですか？',
+        choices: [
+          '原因菌を「つけない」「増やさない」「やっつける」',
+          '食材を「洗わない」「冷やさない」「残さない」',
+          '消毒液を「薄める」「乾かさない」「混ぜる」'
+        ],
+        ans: 0,
+        exp: '正解！食中毒予防の基本は、清潔（つけない）、温度管理・迅速対応（増やさない）、加熱・殺菌（やっつける）の3原則です。'
+      },
+      {
+        q: '【第2問】手洗い後のアルコール手指消毒の効果を最大限に高めるポイントはどれですか？',
+        choices: [
+          '手洗い後、ペーパータオル等でしっかり水分を拭き取ってからアルコールをすり込む。',
+          '手がびしょ濡れのままアルコールを吹きかける。',
+          '共用タオルで手を拭いてアルコールは省略する。'
+        ],
+        ans: 0,
+        exp: '正解！手に水分が残っているとアルコール濃度が薄まり殺菌効果が低下するため、しっかり乾かしてからすり込むことが重要です。'
+      },
+      {
+        q: '【第3問】夏場の弁当や飲料・食品の取り扱いとして適切なものはどれですか？',
+        choices: [
+          '直射日光や高温多湿を避け、適切な温度管理（保冷・冷蔵）を行い、開封後は速やかに消費する。',
+          '常温の室内に半日以上放置してから提供する。',
+          '賞味期限・消費期限が切れても匂いがしなければ提供する。'
+        ],
+        ans: 0,
+        exp: '正解！梅雨〜夏場は細菌が急速に増殖するため、適切な温度管理と期限確認を徹底します。'
+      },
+      {
+        q: '【第4問】手指に切り傷や手荒れがある状態で食品や作業に関わる際の注意点は何ですか？',
+        choices: [
+          '傷口には黄色ブドウ球菌などが繁殖しやすいため、絆創膏の上から必ず清潔な使い捨て手袋を着用する。',
+          '素手のまま作業を続ける。',
+          '水でさっと流すだけでよい。'
+        ],
+        ans: 0,
+        exp: '正解！手指の傷口は食中毒菌の温床になりやすいため、直接触れないよう手袋着用を徹底します。'
+      }
+    ]
+  },
+  restraint_basic: {
+    id: '202708_restraint_basic',
+    month: '8月',
+    category: '身体拘束適正化',
+    title: '第1回 身体拘束適正化研修「身体拘束廃止の基本原則・緊急やむを得ない3要件と尊厳の保持」',
+    dueText: '2027-08-31',
+    videoUrl: 'https://www.youtube.com/watch?v=Fys7qku3s50',
+    desc: '障害者総合支援法に基づく身体拘束の原則禁止、3つのロック（フィジカル・ドラッグ・スピーチ）の弊害、および例外3要件の厳格な解釈を学びます。',
+    isCurrent: false,
+    keypoints: [
+      '<b>身体拘束は原則禁止：</b>利用者の自由と尊厳を奪い、心身の機能低下や不穏を引き起こすため、いかなる場面でも原則禁止。',
+      '<b>3つのロック：</b>フィジカルロック（物理的拘束）、ドラッグロック（薬物による過度な鎮静）、スピーチロック（言葉の拘束）。',
+      '<b>緊急やむを得ない3要件：</b>①切迫性、②非代替性、③一時性の3つすべてを満たし、かつ組織的な委員会手続きと記録がなければ認められない。'
+    ],
+    quizzes: [
+      {
+        q: '【第1問】福祉現場で防ぐべき「3つのロック（拘束）」の組み合わせとして正しいものはどれですか？',
+        choices: [
+          'フィジカルロック（物理的拘束）・ドラッグロック（薬物拘束）・スピーチロック（言葉の拘束）',
+          'ドアロック・タイムロック・カードロック',
+          '作業ロック・休憩ロック・送迎ロック'
+        ],
+        ans: 0,
+        exp: '正解！物理的な制限だけでなく、過度な薬物鎮静や言葉による行動制限（スピーチロック）も含めて廃止・適正化が求められます。'
+      },
+      {
+        q: '【第2問】例外的に身体拘束が認められる「緊急やむを得ない3要件」とはどれですか？',
+        choices: [
+          '①切迫性（生命・身体の危険が著しい）、②非代替性（他に方法がない）、③一時性（あくまで一時的である）の3つすべてを満たす場合。',
+          '職員が忙しく目が届かない場合。',
+          '本人が何度も立ち上がって作業が進まない場合。'
+        ],
+        ans: 0,
+        exp: '正解！「切迫性・非代替性・一時性」の3要件すべてを満たし、かつ委員会での慎重な検討・本人家族への説明同意・記録がある場合に限られます。'
+      },
+      {
+        q: '【第3問】身体拘束適正化のために事業所に義務付けられている取り組みとして正しいものはどれですか？',
+        choices: [
+          '指針の整備、委員会の定期開催、および全従事者に対する定期的な研修の実施。',
+          '管理者だけがマニュアルを読んでおくこと。',
+          '問題が起きた時だけ話し合うこと。'
+        ],
+        ans: 0,
+        exp: '正解！運営基準により「指針の整備」「委員会の定期開催」「定期的な研修の実施」が義務付けられており、未実施は減算対象となります。'
+      },
+      {
+        q: '【第4問】利用者が不穏になったり立ち歩いたりする際、身体拘束に頼らない支援の基本は何ですか？',
+        choices: [
+          'その行動の背景にある原因（体調不良、疲労、環境への違和感など）をアセスメントし、環境調整や安心できる声かけを行う。',
+          '無理やり席に座らせて動かないように言い聞かせる。',
+          '別室に閉じ込める。'
+        ],
+        ans: 0,
+        exp: '正解！行動には必ず理由があります。原因を探り環境や関わり方を工夫することが専門職としての本来の支援です。'
+      }
+    ]
+  },
+  abuse_grayzone: {
+    id: '202710_abuse_grayzone',
+    month: '10月',
+    category: '障害者虐待防止',
+    title: '第2回 障害者虐待防止研修「不適切ケア（グレーゾーン）の気づきとアンガーマネジメント」',
+    dueText: '2027-10-31',
+    videoUrl: 'https://www.youtube.com/watch?v=0KL_R8ZMQ9U',
+    desc: '日常の支援に潜む「不適切ケア（タメ口、子ども扱い、焦らせる声かけ等）」を振り返り、感情をコントロールするアンガーマネジメントを学びます。',
+    isCurrent: false,
+    keypoints: [
+      '<b>グレーゾーン（不適切ケア）の放置厳禁：</b>「親しみを込めたつもり」の呼び捨て・タメ口・子ども扱いが尊厳の侵害につながる。',
+      '<b>アンガーマネジメント：</b>イライラや焦りを感じたらまず「6秒ルール」で深呼吸し、感情的な言動を防ぐ。',
+      '<b>相互フィードバック：</b>日々のセルフチェックとチームでの優しい声かけ合いで、不適切ケアの芽を早期に摘み取る。'
+    ],
+    quizzes: [
+      {
+        q: '【第1問】日常の支援における「不適切ケア（グレーゾーン）」に関する説明として最も適切なものはどれですか？',
+        choices: [
+          '呼び捨てやタメ口、威圧的な態度、子ども扱いなどは、放置すると感覚が麻痺し深刻な虐待へエスカレートする危険がある。',
+          '長年の付き合いであれば、どんな言葉遣いや態度でも問題ない。',
+          '本人が怒らなければ何を言っても許される。'
+        ],
+        ans: 0,
+        exp: '正解！小さな不適切ケア（グレーゾーン）を見過ごさないことが、重大な虐待を未然に防ぐ最も確実な方法です。'
+      },
+      {
+        q: '【第2問】支援中に突発的なトラブルで焦りやイライラ（怒り）を感じた際、アンガーマネジメントの基本対処法はどれですか？',
+        choices: [
+          '衝動的な怒りのピークである「最初の6秒間」を深呼吸してやり過ごし、必要なら他のスタッフと一時交代して冷静さを保つ。',
+          '感じた怒りをその場ですぐ大声でぶつける。',
+          '物に当たってストレスを発散する。'
+        ],
+        ans: 0,
+        exp: '正解！6秒ルールで一呼吸置き、1人で抱え込まずにスタッフ間でクールダウンやヘルプを出し合うことが大切です。'
+      },
+      {
+        q: '【第3問】利用者様への日常の基本的な接遇・言葉遣いとして最も適切なものはどれですか？',
+        choices: [
+          '一人の大人として敬意を払い、「〇〇さん」と丁寧な言葉遣いで本人の意思やペースを尊重して接する。',
+          '上から目線の命令口調で指示を出す。',
+          '本人の目の前で他のスタッフと本人の失敗談を笑って話す。'
+        ],
+        ans: 0,
+        exp: '正解！常に対等な一人の大人として尊厳を重んじた丁寧な接遇を心がけます。'
+      },
+      {
+        q: '【第4問】「不適切ケア防止セルフチェック」を定期的に行う目的は何ですか？',
+        choices: [
+          '自分自身の関わり方や言葉遣いに無意識のクセや慣れがないか客観的に振り返り、支援の質を高めるため。',
+          '反省文を書かせるため。',
+          '形だけの書類を増やすため。'
+        ],
+        ans: 0,
+        exp: '正解！定期的なセルフチェックによって自らの支援を謙虚に振り返ることが、権利擁護の意識を高く保つ鍵となります。'
+      }
+    ]
+  },
+  disaster_fire: {
+    id: '202701_disaster_fire',
+    month: '1月',
+    category: '防災訓練',
+    title: '第1回 防災・救命研修「火災・地震発生時の初期消火と避難誘導・救命救急フロー」',
+    dueText: '2027-01-31',
+    videoUrl: 'https://www.youtube.com/watch?v=ovqm7CoosRs',
+    desc: '焙煎室や厨房からの出火想定を含む初期消火手順（119番通報・消火器操作）、障害特性に配慮した避難誘導、および救命処置（AED）を確認します。',
+    isCurrent: false,
+    keypoints: [
+      '<b>火災発生時の3原則：</b>「早く知らせる（大声・非常ベル・119番）」「早く消す（初期消火）」「早く逃げる（避難誘導）」。',
+      '<b>障害特性に応じた避難誘導：</b>パニックや聴覚・視覚・移動の特性に配慮し、具体的な声かけと複数スタッフでの誘導・点呼を行う。',
+      '<b>消火器（ピノキオ）と避難経路：</b>ピンを抜く・ノズルを構える・距離をとる・押す。日頃から避難通路に荷物を置かない。'
+    ],
+    quizzes: [
+      {
+        q: '【第1問】事業所内で火災を発見した際、最も優先すべき行動の流れはどれですか？',
+        choices: [
+          '周囲に大声で「火事だ！」と知らせて応援を呼び、119番通報・初期消火・利用者の避難誘導を役割分担して行う。',
+          '誰にも言わずに1人だけでこっそり火を消そうとする。',
+          '利用者を残して自分だけ先に外へ逃げる。'
+        ],
+        ans: 0,
+        exp: '正解！まずは周囲へ大声で周知して体制を作り、通報・初期消火・避難誘導を連携して行います。'
+      },
+      {
+        q: '【第2問】消火器の基本的な操作手順「ピ・ノ・キ・オ」の意味として正しいものはどれですか？',
+        choices: [
+          'ピンを抜く・ノズル（ホース）を火元に向ける・距離をとる・レバーを押す。',
+          'ピッと鳴らす・覗き込む・気合を入れる・置く。',
+          'ピンを差す・ノズルを折りたたむ・切る・押す。'
+        ],
+        ans: 0,
+        exp: '正解！安全ピンを抜き、ホース先端を持って火元に向け、適切な距離からレバーを強く握って噴射します。'
+      },
+      {
+        q: '【第3問】障害のある利用者様を避難誘導する際の配慮として適切なものはどれですか？',
+        choices: [
+          '非常ベルの音等で不安やパニックになりやすいため、落ち着いた明確な声かけで誘導し、避難完了後に必ず全員の点呼確認を行う。',
+          '「各自で勝手に逃げてください」とだけ伝えて放置する。',
+          'エレベーターを使って避難させる。'
+        ],
+        ans: 0,
+        exp: '正解！火災・地震時にエレベーターは絶対に使用せず、不安を和らげる声かけと共に避難場所まで誘導して人数点呼を行います。'
+      },
+      {
+        q: '【第4問】日頃の防火・防災管理として、作業室や通路で徹底すべきことはどれですか？',
+        choices: [
+          '非常口や避難経路、消火器の前に段ボールや荷物を絶対に置かず、常にスムーズに避難できる状態を保つ。',
+          '非常口の前に在庫を積み上げておく。',
+          '消火器を見えない奥の棚にしまい込む。'
+        ],
+        ans: 0,
+        exp: '正解！いざという時に即時避難・初期消火ができるよう、避難動線と消火設備の周囲は常にクリアに保ちます。'
+      }
+    ]
   }
 };
+
+// ─── 年度カレンダー順（4月〜翌3月）定義と並び替え ────────
+var FISCAL_MONTHS = ['4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月', '1月', '2月', '3月'];
+
+function sortCoursesByFiscalMonth(){
+  TRAINING_COURSES.sort(function(a, b){
+    var ia = FISCAL_MONTHS.indexOf(a.month);
+    var ib = FISCAL_MONTHS.indexOf(b.month);
+    if(ia < 0) ia = 99;
+    if(ib < 0) ib = 99;
+    return ia - ib;
+  });
+}
+
+// ─── 年間研修計画ボード（4月〜3月 当てはめパズル）描画 ───
+function renderAnnualPlanner(){
+  var reqBox = el('planner-req-checker');
+  var boardBox = el('annual-board-container');
+  if(!boardBox) return;
+
+  sortCoursesByFiscalMonth();
+
+  // 1. 法定必須要件の集計
+  var counts = {
+    restraint: TRAINING_COURSES.filter(function(c){ return c.category === '身体拘束適正化'; }).length,
+    abuse: TRAINING_COURSES.filter(function(c){ return c.category === '障害者虐待防止'; }).length,
+    infection: TRAINING_COURSES.filter(function(c){ return c.category === '感染対策'; }).length,
+    bcp: TRAINING_COURSES.filter(function(c){ return c.category === 'BCP研修・訓練'; }).length,
+    disaster: TRAINING_COURSES.filter(function(c){ return c.category === '防災訓練'; }).length,
+    other: TRAINING_COURSES.filter(function(c){ return ['衛生管理・HACCP', 'ハラスメント防止', '個人情報保護', 'その他'].indexOf(c.category) >= 0; }).length
+  };
+
+  if(reqBox){
+    var reqItems = [
+      { label: '🗣️ 身体拘束適正化', req: '年2回以上必須', cur: counts.restraint, min: 2 },
+      { label: '🛡️ 障害者虐待防止', req: '年1回以上必須', cur: counts.abuse, min: 1 },
+      { label: '❄️ 感染症対策', req: '年2回以上必須', cur: counts.infection, min: 2 },
+      { label: '🌸 BCP研修・訓練', req: '年1回以上必須', cur: counts.bcp, min: 1 },
+      { label: '🚒 防災・救命訓練', req: '年1回以上推奨', cur: counts.disaster, min: 1 },
+      { label: '☕ HACCP・人権・情報', req: '質の向上研修', cur: counts.other, min: 1 }
+    ];
+    reqBox.innerHTML = '<div class="req-check-grid">' + reqItems.map(function(it){
+      var isOk = it.cur >= it.min;
+      return '<div class="req-check-item ' + (isOk ? 'ok' : 'warn') + '">' +
+        '<div style="font-weight:900;color:var(--pri-dark);">' + it.label + '</div>' +
+        '<div style="font-size:11px;color:var(--sub);margin:2px 0;">基準: ' + it.req + '</div>' +
+        '<div style="font-weight:900;font-size:13px;color:' + (isOk ? 'var(--grn)' : 'var(--warn)') + ';">' +
+          (isOk ? '✓ 計画済 (' + it.cur + '回)' : '⚠️ 現在 ' + it.cur + '回 (要追加)') +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  // カタログ選択肢（COURSE_PRESETS一覧）
+  var presetKeys = Object.keys(COURSE_PRESETS);
+
+  // 2. 4月〜3月の12枠カード描画
+  boardBox.innerHTML = FISCAL_MONTHS.map(function(mLabel){
+    var mCourses = TRAINING_COURSES.filter(function(c){ return c.month === mLabel; });
+    var hasCur = mCourses.some(function(c){ return c.isCurrent; });
+    var cardClass = 'month-slot-card' + (hasCur ? ' has-current' : (mCourses.length === 0 ? ' empty-slot' : ''));
+
+    var h = '<div class="' + cardClass + '">';
+    h += '<div>';
+    h += '  <div class="month-slot-header">';
+    h += '    <div class="month-slot-title">';
+    h += '      <span>📅 ' + mLabel + '度</span>';
+    if(hasCur) h += '<span style="font-size:10.5px;background:var(--warn-bg);color:var(--warn);padding:2px 7px;border-radius:8px;">🔥 今月の研修</span>';
+    h += '    </div>';
+    h += '    <span style="font-size:11.5px;font-weight:800;color:' + (mCourses.length > 0 ? 'var(--grn)' : '#999') + ';">' +
+      (mCourses.length > 0 ? mCourses.length + '件 設定済' : '未設定（空き）') + '</span>';
+    h += '  </div>';
+
+    if(mCourses.length === 0){
+      h += '  <div style="padding:14px 8px;text-align:center;color:var(--sub);font-size:12px;">まだこの月の研修が当てはめられていません。<br>下のリストから選んで追加できます。</div>';
+    } else {
+      mCourses.forEach(function(tc){
+        var doneCnt = STAFF.filter(function(s){
+          return _trainingRecords.some(function(r){ return r.staffId === s.id && r.trainingId === tc.id; });
+        }).length;
+
+        var moveOpts = FISCAL_MONTHS.map(function(fm){
+          return '<option value="' + fm + '"' + (fm === tc.month ? ' selected' : '') + '>' + fm + 'へ移動</option>';
+        }).join('');
+
+        h += '  <div class="assigned-course-box">';
+        h += '    <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:4px;">';
+        h += '      <span style="font-size:11px;font-weight:900;background:#fff;color:var(--pri);padding:2px 7px;border-radius:6px;border:1px solid var(--bdr);">' + esc(tc.category) + '</span>';
+        h += '      <span style="font-size:11px;color:var(--sub);font-weight:700;">受講: ' + doneCnt + '/' + STAFF.length + '名</span>';
+        h += '    </div>';
+        h += '    <div style="font-size:13px;font-weight:900;color:var(--pri-dark);line-height:1.4;margin-bottom:8px;">' + esc(tc.title) + '</div>';
+        h += '    <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">';
+        h += '      <select onchange="moveCourseToMonth(\'' + tc.id + '\', this.value)" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--bdr);background:#fff;font-weight:700;color:var(--pri-dark);cursor:pointer;">' + moveOpts + '</select>';
+        if(!tc.isCurrent){
+          h += '      <button type="button" onclick="setCurrentCourse(\'' + tc.id + '\')" style="font-size:10.5px;padding:3px 7px;border-radius:6px;border:none;background:#ef6c00;color:#fff;font-weight:800;cursor:pointer;">🔥今月に設定</button>';
+        }
+        h += '      <button type="button" onclick="editCourse(\'' + tc.id + '\');switchAdminSubtab(\'creator\');" style="font-size:10.5px;padding:3px 7px;border-radius:6px;border:1px solid var(--bdr);background:#fff;color:var(--pri-dark);font-weight:800;cursor:pointer;">✏️編集</button>';
+        h += '      <button type="button" onclick="printTrainingOfficialReport(\'' + tc.id + '\')" style="font-size:10.5px;padding:3px 7px;border-radius:6px;border:1px solid var(--bdr);background:#fff;color:var(--pri);font-weight:800;cursor:pointer;">🖨️記録簿</button>';
+        h += '      <button type="button" onclick="deleteCourse(\'' + tc.id + '\')" style="font-size:10.5px;padding:3px 7px;border-radius:6px;border:none;background:#ffebee;color:#c62828;font-weight:800;cursor:pointer;">✕外す</button>';
+        h += '    </div>';
+        h += '  </div>';
+      });
+    }
+    h += '</div>';
+
+    // 下部：この月に研修を当てはめるセレクター
+    var selId = 'slot-preset-sel-' + mLabel;
+    var presetOptionsHtml = '<option value="">＋ 研修パックから選んで' + mLabel + 'に当てはめる...</option>';
+    presetKeys.forEach(function(pk){
+      var p = COURSE_PRESETS[pk];
+      var alreadyInMonth = mCourses.some(function(c){ return c.title === p.title; });
+      if(!alreadyInMonth){
+        var recMark = (p.month === mLabel) ? '【★' + mLabel + '推奨】' : '【' + p.category + '】';
+        presetOptionsHtml += '<option value="' + pk + '">' + recMark + p.title.replace(/^第\d+回\s*/, '') + '</option>';
+      }
+    });
+
+    h += '<div class="slot-add-area">';
+    h += '  <select id="' + selId + '" class="slot-select" onchange="if(this.value){assignPresetToMonth(\'' + mLabel + '\', this.value);this.value=\'\';}">' + presetOptionsHtml + '</select>';
+    h += '  <button type="button" onclick="openCreatorForMonth(\'' + mLabel + '\')" style="width:100%;background:#f3e5f5;color:var(--ai-purple);border:1px solid #ce93d8;border-radius:8px;padding:5px 8px;font-size:11.5px;font-weight:800;cursor:pointer;">🤖 ' + mLabel + 'の新しい研修をAIで自由作成する ➔</button>';
+    h += '</div>';
+
+    h += '</div>';
+    return h;
+  }).join('');
+}
+
+function getDueTextForMonth(mLabel){
+  var mNum = parseInt(String(mLabel).replace('月', ''), 10) || 12;
+  var yr = (mNum >= 4) ? 2026 : 2027;
+  var lastDay = new Date(yr, mNum, 0).getDate();
+  return yr + '-' + String(mNum).padStart(2, '0') + '-' + String(lastDay).padStart(2, '0');
+}
+
+async function assignPresetToMonth(monthLabel, presetKey){
+  var tpl = COURSE_PRESETS[presetKey];
+  if(!tpl) return;
+
+  var newCourse = {
+    id: tpl.id + '_' + Date.now(),
+    month: monthLabel,
+    category: tpl.category,
+    title: tpl.title,
+    isCurrent: false,
+    dueText: getDueTextForMonth(monthLabel),
+    desc: tpl.desc,
+    videoEmbedUrl: tpl.videoUrl.replace('watch?v=', 'embed/'),
+    youtubeWatchUrl: tpl.videoUrl,
+    keypoints: tpl.keypoints.slice(),
+    quizzes: JSON.parse(JSON.stringify(tpl.quizzes))
+  };
+
+  TRAINING_COURSES.push(newCourse);
+  sortCoursesByFiscalMonth();
+  await saveStorageData('porte_training_courses', TRAINING_COURSES);
+
+  renderAnnualPlanner();
+  renderPublishedCoursesList();
+  renderStaffTrainingList();
+  renderAdminMatrix();
+}
+
+async function moveCourseToMonth(courseId, newMonth){
+  var tc = TRAINING_COURSES.find(function(c){ return c.id === courseId; });
+  if(!tc) return;
+  tc.month = newMonth;
+  tc.dueText = getDueTextForMonth(newMonth);
+  sortCoursesByFiscalMonth();
+  await saveStorageData('porte_training_courses', TRAINING_COURSES);
+
+  renderAnnualPlanner();
+  renderPublishedCoursesList();
+  renderStaffTrainingList();
+  renderAdminMatrix();
+}
+
+function openCreatorForMonth(monthLabel){
+  switchAdminSubtab('creator');
+  resetCreatorForm();
+  if(el('cr-month')) el('cr-month').value = monthLabel;
+  if(el('cr-due')) el('cr-due').value = getDueTextForMonth(monthLabel);
+  el('creator-form-title').textContent = '✨ ' + monthLabel + '度の新規研修を作成・AI自動生成';
+  window.scrollTo({ top: el('subtab-content-creator').offsetTop - 20, behavior: 'smooth' });
+}
+
+async function autoFill12MonthPlan(){
+  var added = 0;
+  Object.keys(COURSE_PRESETS).forEach(function(k){
+    var p = COURSE_PRESETS[k];
+    var hasInMonth = TRAINING_COURSES.some(function(c){ return c.month === p.month; });
+    if(!hasInMonth){
+      TRAINING_COURSES.push({
+        id: p.id,
+        month: p.month,
+        category: p.category,
+        title: p.title,
+        isCurrent: false,
+        dueText: getDueTextForMonth(p.month),
+        desc: p.desc,
+        videoEmbedUrl: p.videoUrl.replace('watch?v=', 'embed/'),
+        youtubeWatchUrl: p.videoUrl,
+        keypoints: p.keypoints.slice(),
+        quizzes: JSON.parse(JSON.stringify(p.quizzes))
+      });
+      added++;
+    }
+  });
+  sortCoursesByFiscalMonth();
+  await saveStorageData('porte_training_courses', TRAINING_COURSES);
+  renderAnnualPlanner();
+  renderPublishedCoursesList();
+  renderStaffTrainingList();
+  renderAdminMatrix();
+  alert('✨ 4月〜翌3月の12ヶ月すべてに推奨法定研修カリキュラムを自動配置しました！（新規追加：' + added + '件）');
+}
 
 function onCreatorCategoryChange(){
   var cat = el('cr-category').value;
@@ -2854,6 +3491,8 @@ async function saveCourseFromCreator(){
   alert('🎉 研修カリキュラム「' + title + '」を保存・配信しました！\nスタッフのスマホ受講画面および星取表に即座に反映されます。');
 
   resetCreatorForm();
+  sortCoursesByFiscalMonth();
+  renderAnnualPlanner();
   renderPublishedCoursesList();
   renderStaffTrainingList();
   renderStaffGrid();
@@ -2924,6 +3563,7 @@ async function setCurrentCourse(id){
     c.isCurrent = (c.id === id);
   });
   await saveStorageData('porte_training_courses', TRAINING_COURSES);
+  renderAnnualPlanner();
   renderPublishedCoursesList();
   renderStaffGrid();
   renderStaffTrainingList();
@@ -2935,6 +3575,7 @@ async function deleteCourse(id){
   if(!confirm('この研修カリキュラムを削除しますか？受講記録は保持されます。')) return;
   TRAINING_COURSES = TRAINING_COURSES.filter(function(c){ return c.id !== id; });
   await saveStorageData('porte_training_courses', TRAINING_COURSES);
+  renderAnnualPlanner();
   renderPublishedCoursesList();
   renderStaffTrainingList();
   renderAdminMatrix();
