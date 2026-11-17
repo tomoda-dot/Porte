@@ -2260,23 +2260,14 @@
       var grid = el('tr-login-staff-grid');
       if (!grid) return;
 
-      var curCourse = TRAINING_COURSES.find(function (tc) { return tc.isCurrent; }) || TRAINING_COURSES[0];
-
       grid.innerHTML = STAFF.map(function (s) {
         var initial = esc(s.name ? s.name.charAt(0) : '?');
         var role = esc(s.role || 'スタッフ');
-        var doneCur = curCourse ? !!findStaffRecord(s, curCourse.id) : false;
-        var statusDot = curCourse
-          ? (doneCur
-            ? '<div style="margin-top:6px;font-size:10px;font-weight:600;color:var(--grn);background:var(--grn-bg);padding:2px 6px;border-radius:8px;display:inline-block;">✓ 今月受講済</div>'
-            : '<div style="margin-top:6px;font-size:10px;font-weight:600;color:var(--warn);background:var(--warn-bg);padding:2px 6px;border-radius:8px;display:inline-block;">⏳ 今月未受講</div>')
-          : '';
 
         return '<div onclick="selectTrLoginStaff(\'' + s.id + '\')" style="background:#f8fbf9;border:1.5px solid var(--bdr);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;transition:all .18s;" onmouseover="this.style.borderColor=\'var(--pri)\';this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--bdr)\';this.style.transform=\'none\'">' +
           '<div style="width:46px;height:46px;border-radius:50%;background:var(--pri);color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;">' + initial + '</div>' +
           '<div style="font-size:14px;font-weight:700;color:var(--pri-dark);margin-bottom:2px;">' + esc(s.name) + '</div>' +
           '<div style="font-size:10.5px;color:var(--sub);">' + role + '</div>' +
-          statusDot +
           '</div>';
       }).join('');
     }
