@@ -2823,18 +2823,10 @@
         });
       }
 
-      // 4. 所感入力（AIアシスト付き）
+      // 4. 所感入力
       h += '<div class="quiz-step-card reflection-box">';
-      h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px;">';
-      h += '    <label style="margin:0;">✍️ 本日の所感・現場で意識したいこと（ひと言）</label>';
-      h += '    <button type="button" onclick="generateReflectionWithAI()" id="btn-ai-reflection" style="background:var(--ai-purple-light);color:var(--ai-purple);border:1px solid #b39ddb;border-radius:14px;padding:4px 10px;font-size:11.5px;font-weight:800;cursor:pointer;">🤖 AIで所感文を自動作成</button>';
-      h += '  </div>';
-      h += '  <textarea id="f-training-reflection" class="reflection-textarea" rows="3" placeholder="例：作業を焦らせず、具体的な時間を伝えて安心していただけるよう心がけます。">' + esc(savedReflection) + '</textarea>';
-      h += '  <div class="quick-chips">';
-      ['具体的な時間と見通しを伝える', '行動の背景にある理由に気づく', 'チームで声かけを振り返る', '衛生・感染対策の手順を徹底する'].forEach(function (txt) {
-        h += '    <span class="quick-chip" onclick="addReflectionSnippet(\'' + txt + '\')">＋ ' + txt + '</span>';
-      });
-      h += '  </div>';
+      h += '  <label style="margin-bottom:8px;">✍️ 本日の所感・現場で意識したいこと（ひと言）</label>';
+      h += '  <textarea id="f-training-reflection" class="reflection-textarea" rows="3" placeholder="研修で学んだことや、明日から現場で意識したいことを入力してください">' + esc(savedReflection) + '</textarea>';
       h += '</div>';
 
       // 5. 保存完了ボタン
