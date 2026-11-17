@@ -1936,6 +1936,12 @@
     var _editingCourseId = null;
     var _aiGeneratedDraft = null;
     var _autoMonthSync = false;
+    var _facilityType = '就労継続支援B型';
+    var _facilityName = 'ひとつぎ豊中小曽根';
+
+    function getFacilityFullName() {
+      return (_facilityType ? _facilityType + '事業所 ' : '') + (_facilityName || 'ひとつぎ豊中小曽根');
+    }
 
     // ─── ユーティリティ ─────────────────────────────────────
     function el(id) { return document.getElementById(id); }
@@ -2075,8 +2081,12 @@
           } catch (e) { }
         }
 
-        // 職員マスターの動的取得（Supabase / GAS連携）
+        // 事業所設定・職員マスターの動的取得（Supabase / GAS連携）
         if (typeof gas === 'function') {
+          var appSettings = await gas('getSettings').catch(function () { return {}; });
+          if (appSettings && appSettings.facilityName) _facilityName = appSettings.facilityName;
+          if (appSettings && appSettings.facilityType) _facilityType = appSettings.facilityType;
+
           var staffList = await gas('getStaff').catch(function () { return []; });
           if (staffList && staffList.length > 0) {
             var activeStaff = staffList.filter(function (s) { return isStaffActive(s); });
@@ -2850,7 +2860,7 @@
       if (btn) { btn.disabled = true; btn.textContent = '🤖 作成中...'; }
 
       var kpText = (_curTraining.keypoints || []).map(function (k) { return k.replace(/<[^>]+>/g, ''); }).join(' / ');
-      var prompt = 'あなたは就労継続支援B型事業所「Porte」のスタッフ（' + (_curStaff ? _curStaff.role : '支援員') + '）です。\n' +
+      var prompt = 'あなたは' + getFacilityFullName() + 'のスタッフ（' + (_curStaff ? _curStaff.role : '支援員') + '）です。\n' +
         '以下の法定研修を受講した後の「受講所感・現場で実践したいこと」を、実地指導の記録簿に適した誠実かつ具体的な1〜2文（80〜120文字程度）で作成してください。出力は本文のみにしてください。\n' +
         '研修名：' + _curTraining.title + '\n' +
         '重要ポイント：' + kpText;
@@ -3054,7 +3064,7 @@
       { month: '6月', category: 'ハラスメント防止', angle: '【① パワハラ3要素・基本編】', presetKey: 'harassment', title: 'ハラスメント防止研修「パワハラ・セクハラの定義と『業務指導』と『ハラスメント』の境界線」', desc: 'パワハラの3要素を理解し、人格否定ではなく「具体的な行動・手順」に焦点を当てた適切な指導方法を学びます。', ytQuery: '障害福祉 ハラスメント防止 職員研修 厚生労働省' },
       { month: '6月', category: 'ハラスメント防止', angle: '【② 心理的安全性・言葉遣い編】', title: '職場環境改善研修「スタッフ同士の敬意あるコミュニケーションと相談しやすい心理的安全性」', desc: '忙しい時こそお互いに「ありがとう」「お疲れ様」と声をかけ合い、新人や他職種が質問しやすい温かい職場風土を作ります。', ytQuery: '心理的安全性 ハラスメント防止 コミュニケーション 研修' },
       { month: '6月', category: 'ハラスメント防止', angle: '【③ カスハラ・外部対応編】', title: 'ハラスメント防止研修「カスタマーハラスメント・過度な要求への組織的対応と職員保護」', desc: '外部や取引先・関係者からの不当な言動や過度な要求に対し、職員1人で抱え込まず管理者が組織として守る手順を確認します。', ytQuery: '厚生労働省 カスタマーハラスメント 介護 福祉 研修' },
-      { month: '6月', category: 'ハラスメント防止', angle: '【④ 無意識の偏見（アンコンシャスバイアス）編】', title: 'ハラスメント防止研修「『男だから・女だから・経験が浅いから』の思い込み（アンコンシャスバイアス）への気づき」', desc: '無意識の決めつけや不機嫌ハラスメント（フキハラ）を振り返り、誰もが働きやすいPorteのチームづくりを学びます。', ytQuery: 'アンコンシャスバイアス ハラスメント防止 研修' },
+      { month: '6月', category: 'ハラスメント防止', angle: '【④ 無意識の偏見（アンコンシャスバイアス）編】', title: 'ハラスメント防止研修「『男だから・女だから・経験が浅いから』の思い込み（アンコンシャスバイアス）への気づき」', desc: '無意識の決めつけや不機嫌ハラスメント（フキハラ）を振り返り、誰もが働きやすいチームづくりを学びます。', ytQuery: 'アンコンシャスバイアス ハラスメント防止 研修' },
       { month: '6月', category: 'ハラスメント防止', angle: '【⑤ 相談窓口・不利益取扱い禁止編】', title: 'コンプライアンス研修「ハラスメント相談時のプライバシー保護と不利益取扱いの絶対禁止」', desc: '職場で困りごとやハラスメントを見聞きした際の相談ルートと、相談者の秘密厳守・迅速な環境改善フローを確認します。', ytQuery: '職場 ハラスメント 相談対応 厚生労働省 研修' },
 
       // 8. 衛生管理・HACCP（5切り口）
@@ -3721,7 +3731,7 @@
 
       var existingTitles = THEME_SUGGESTIONS_MASTER.filter(function (t) { return t.category === cat; }).map(function (t) { return t.title; }).join(' / ');
 
-      var prompt = 'あなたは就労継続支援B型事業所「Porte（ポルテ）」（珈琲焙煎・製造・袋詰め・軽作業等を提供）の研修企画アドバイザーです。\n' +
+      var prompt = 'あなたは' + getFacilityFullName() + '（珈琲焙煎・製造・袋詰め・軽作業等を提供）の研修企画アドバイザーです。\n' +
         '研修区分「' + cat + '」について、既存のテーマ（' + existingTitles + '）とは**全く異なる新しい切り口・視点**の研修テーマ案を5つ、JSON形式のみで出力してください。\n' +
         '{\n' +
         '  "themes": [\n' +
@@ -4923,7 +4933,7 @@
       if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳ AIがスライド読本・要点・4択クイズを生成中...</span>'; }
       if (st) { st.innerHTML = '🤖 AIエンジン（ai-config.js連携）が「現場ケーススタディ読本（3枚）＋要点＋4択クイズ4問」を生成しています...'; }
 
-      var prompt = 'あなたは障害福祉サービス（就労継続支援B型事業所「Porte（ポルテ）」：珈琲焙煎・製造・袋詰め・軽作業等を提供）の法定研修カリキュラム作成の専門家です。\n' +
+      var prompt = 'あなたは障害福祉サービス（' + getFacilityFullName() + '：珈琲焙煎・製造・袋詰め・軽作業等を提供）の法定研修カリキュラム作成の専門家です。\n' +
         '以下の条件に基づき、動画がなくてもこれを読むだけで5分間で深く学べる「現場ケーススタディ・スライド読本（3枚）」、「重要ポイント要約（4項目）」、「理解度確認4択クイズ（全4問・各問4つの選択肢）」をJSON形式のみで出力してください。\n\n' +
         '【条件】\n' +
         '・実施月：' + month + '\n' +
@@ -4946,7 +4956,7 @@
         '      "body": "【場面】作業中や日常支援での具体的な場面\\n❌NG対応：やってしまいがちな不適切な言動・対応\\n⭕OK対応：利用者の尊厳と安心を守る具体的な言い換え・環境調整"\n' +
         '    },\n' +
         '    {\n' +
-        '      "heading": "明日からPorteで実践する3つのアクション",\n' +
+        '      "heading": "明日から' + _facilityName + 'で実践する3つのアクション",\n' +
         '      "body": "① ...\\n② ...\\n③ ..."\n' +
         '    }\n' +
         '  ],\n' +
@@ -4998,14 +5008,14 @@
         var defaultSlides = [
           {
             heading: 'なぜ「' + finalTitle + '」が重要なのか',
-            body: '就労継続支援B型事業所「Porte」では、利用者様が安心して珈琲製造や軽作業に取り組める環境づくりが最優先です。忙しい場面や慣れた業務の中こそ、基本原則に立ち返り、尊厳と安全を守る支援を徹底します。'
+            body: getFacilityFullName() + 'では、利用者様が安心して珈琲製造や軽作業に取り組める環境づくりが最優先です。忙しい場面や慣れた業務の中こそ、基本原則に立ち返り、尊厳と安全を守る支援を徹底します。'
           },
           {
             heading: '現場ケーススタディ（❌NG対応 ⇔ ⭕OK対応の比較）',
             body: '【場面】作業中に利用者様が不安そうに手を止め、スタッフに声をかけた場面\n❌NG対応：「いま忙しいからちょっと待ってて！」「勝手に触らないで！」と強い口調で制止する。\n⭕OK対応：「声をかけてくださりありがとうございます。あと2分でこの計量が終わるので、終わったらすぐ一緒に確認しましょうね」と具体的な見通しを穏やかに伝える。'
           },
           {
-            heading: '明日からPorteで実践する3つのアクション',
+            heading: '明日から' + _facilityName + 'で実践する3つのアクション',
             body: '① 否定語や命令形ではなく、「〜しましょう」と肯定形・具体的な時間で伝える。\n② 利用者様の行動の背景（体調・疲労・環境の刺激）に目を向け、環境調整を行う。\n③ 些細なヒヤリハットや支援の迷いを1人で抱え込まず、終礼でチーム全員に共有する。'
           }
         ];
@@ -5478,7 +5488,7 @@
       html += '<div class="sub-header">（障害福祉サービス事業所 実地指導・運営基準準拠様式）</div>';
 
       html += '<table class="meta-box">';
-      html += '<tr><th>事業所名</th><td>就労継続支援B型事業所 Porte</td></tr>';
+      html += '<tr><th>事業所名</th><td>' + esc(getFacilityFullName()) + '</td></tr>';
       html += '<tr><th>研修区分・種別</th><td>法定必須研修（年次計画） / ' + esc(tc.category) + '</td></tr>';
       html += '<tr><th>研修タイトル</th><td><b>' + esc(tc.title) + '</b></td></tr>';
       html += '<tr><th>実施期間</th><td>' + esc(tc.month) + '度（eラーニング＋理解度確認） 期限: ' + esc(tc.dueText || '') + '</td></tr>';
@@ -5532,7 +5542,7 @@
     // ─── 実地指導対応：年間研修計画・受講実績総括表 A4印刷 ────
     function printAnnualMatrixReport() {
       var w = window.open('', '_blank');
-      var html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>年間法定研修実施計画・受講実績総括表 - Porte</title>';
+      var html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>年間法定研修実施計画・受講実績総括表 - ' + esc(_facilityName) + '</title>';
       html += '<style>';
       html += '@page { size: A4 landscape; margin: 15mm; }';
       html += 'body { font-family: "Noto Sans JP", sans-serif; padding: 10mm; font-size: 9.5pt; color: #111; line-height: 1.5; }';
@@ -5545,7 +5555,7 @@
       html += '</style></head><body>';
 
       html += '<h1>令和8年度 法定研修 年間実施計画・職員受講実績総括表</h1>';
-      html += '<div class="sub">事業所名：就労継続支援B型事業所 Porte ｜ 出力日：' + todayStr() + '</div>';
+      html += '<div class="sub">事業所名：' + esc(getFacilityFullName()) + ' ｜ 出力日：' + todayStr() + '</div>';
 
       html += '<table><thead><tr>';
       html += '<th style="width:110px;">職員氏名</th><th style="width:100px;">役職</th>';
@@ -5674,7 +5684,7 @@
       var btn = el('btn-ai-committee');
       if (btn) { btn.disabled = true; btn.textContent = '⏳ AI起案中...'; }
 
-      var prompt = 'あなたは就労継続支援B型事業所「Porte（ポルテ）」の管理者です。\n' +
+      var prompt = 'あなたは' + getFacilityFullName() + 'の管理者です。\n' +
         '実地指導（運営指導）の監査基準を満たす「' + cat + '」の議事録として、「協議事項・議題（3項目）」と「決定事項・改善策（3項目）」をJSON形式のみで出力してください。\n' +
         '{\n' +
         '  "title": "令和8年度 第○回 ' + cat + '",\n' +
@@ -5788,7 +5798,7 @@
       html += '<h1>' + esc(cm.title) + ' 議事録</h1>';
 
       html += '<table>';
-      html += '<tr><th>事業所名</th><td>就労継続支援B型事業所 Porte</td></tr>';
+      html += '<tr><th>事業所名</th><td>' + esc(getFacilityFullName()) + '</td></tr>';
       html += '<tr><th>委員会区分</th><td>' + esc(cm.category || '法定委員会') + '</td></tr>';
       html += '<tr><th>開催日時</th><td>' + cm.date + '</td></tr>';
       html += '<tr><th>出席者</th><td>' + esc(cm.attendees) + '</td></tr>';
