@@ -14559,9 +14559,29 @@ function printComplaint(id){
 // ═══ 研修・委員会管理 ═══
 var _trainData=[],_trainReports=[],_trainFY=null;
 function _getFY(){var d=new Date();var y=d.getFullYear();return d.getMonth()<3?y-1:y;}
+
+var _TRN_MONTHLY_PRESETS=[
+  {month:4,cat:'研修',type:'虐待防止',title:'第1回 障害者虐待防止研修「障害者権利擁護と5つの虐待定義・通報義務」',video:'https://www.youtube.com/watch?v=4_mGm7Vllv0',content:'障害者虐待防止法における身体的・心理的・性的・ネグレクト・経済的虐待の5類型と早期発見・通報義務の徹底。\n【参考動画（障害福祉法定研修）】https://www.youtube.com/watch?v=4_mGm7Vllv0'},
+  {month:5,cat:'研修',type:'個人情報保護',title:'第1回 個人情報保護研修「利用者情報の適正管理とSNS・写真取扱ルール」',video:'https://www.youtube.com/watch?v=Eh8QXPPphSU',content:'守秘義務の徹底、支援記録・書類の施錠管理、およびSNS情報漏洩防止ルールの確認。\n【参考動画】https://www.youtube.com/watch?v=Eh8QXPPphSU'},
+  {month:6,cat:'研修',type:'感染症対策',title:'第1回 感染症・食中毒対策研修「梅雨・夏期の食中毒予防と標準予防策」',video:'https://www.youtube.com/watch?v=t52Y1C9azOU',content:'厚生労働省オンライン研修教材に基づく標準予防策・手指衛生と食中毒予防3原則の徹底。\n【参考動画（厚生労働省公式）】https://www.youtube.com/watch?v=t52Y1C9azOU'},
+  {month:6,cat:'委員会',type:'感染症対策委員会',title:'第1回 感染症対策委員会（夏期感染症・食中毒予防点検）',video:'',content:'1. 夏期食中毒・感染症予防対策の点検\n2. 手洗い・アルコール消毒および共用部衛生管理の徹底'},
+  {month:7,cat:'研修',type:'人権研修',title:'第1回 ハラスメント防止研修「健全で風通しの良い職場環境づくり」',video:'https://www.youtube.com/watch?v=Vf0TjgzTzyA',content:'障害福祉の現場におけるハラスメント防止と心理的安全性の高い職場づくり。\n【参考動画（厚生労働省公式）】https://www.youtube.com/watch?v=Vf0TjgzTzyA'},
+  {month:8,cat:'研修',type:'身体拘束適正化',title:'第1回 身体拘束適正化研修「身体拘束廃止の基本原則・3要件と尊厳の保持」',video:'https://www.youtube.com/watch?v=Fys7qku3s50',content:'身体拘束の原則禁止、3つのロック（物理・薬物・言葉）の排除と代替支援の検討。\n【参考動画】https://www.youtube.com/watch?v=Fys7qku3s50'},
+  {month:8,cat:'委員会',type:'虐待防止委員会',title:'第1回 虐待防止・身体拘束適正化合同委員会',video:'',content:'1. 虐待防止セルフチェック結果の確認\n2. 身体拘束ゼロ継続確認と環境調整の検討'},
+  {month:9,cat:'研修',type:'衛生管理',title:'第1回 食品衛生・HACCP研修「珈琲製造工程における危害要因分析と異物混入防止」',video:'https://www.youtube.com/watch?v=gZgnoHRPEVc',content:'HACCPに沿った衛生管理計画、ハンドピック・焙煎・包装工程の重要管理点と記録保管。\n【参考動画（保健所公式）】https://www.youtube.com/watch?v=gZgnoHRPEVc'},
+  {month:10,cat:'研修',type:'虐待防止',title:'第2回 障害者虐待防止研修「不適切ケア（グレーゾーン）の気づきとアンガーマネジメント」',video:'https://www.youtube.com/watch?v=wDXHLg-0Kv8',content:'日常の声かけ・接遇の振り返りとアンガーマネジメント実践。\n【参考動画】https://www.youtube.com/watch?v=wDXHLg-0Kv8'},
+  {month:11,cat:'研修',type:'身体拘束適正化',title:'第2回 身体拘束適正化研修「言葉の拘束（スピーチロック）防止と代替支援事例」',video:'https://www.youtube.com/watch?v=U5DBEouTQu8',content:'「ちょっと待って」「座ってて」等のスピーチロック防止と具体的な見通しを伝える代替支援。\n【参考動画】https://www.youtube.com/watch?v=U5DBEouTQu8'},
+  {month:11,cat:'委員会',type:'身体拘束適正化委員会',title:'第2回 身体拘束適正化委員会',video:'',content:'1. 事業所における身体拘束ゼロの継続確認\n2. スピーチロック防止研修の実施およびヒヤリハット共有'},
+  {month:12,cat:'研修',type:'感染症対策',title:'第2回 感染対策研修「冬期の感染予防（インフル・ノロ）とPPE着脱手順」',video:'https://www.youtube.com/watch?v=FGNY1YCj-jk',content:'冬期感染症の拡大防止とガウン・手袋・マスクの正しい着脱および嘔吐物処理手順。\n【参考動画（厚生労働省公式）】https://www.youtube.com/watch?v=FGNY1YCj-jk'},
+  {month:1,cat:'研修',type:'防災訓練',title:'第1回 防災・救命研修「火災・地震発生時の初期消火と避難誘導フロー」',video:'https://www.youtube.com/watch?v=rCubdoOMY9M',content:'消火器操作手順、通報・初期消火・障害特性に配慮した避難誘導訓練。\n【参考動画（総務省消防庁公式）】https://www.youtube.com/watch?v=rCubdoOMY9M'},
+  {month:2,cat:'研修',type:'身体拘束適正化',title:'第3回 身体拘束適正化研修「身体拘束廃止の組織的取り組みとヒヤリハット分析」',video:'https://www.youtube.com/watch?v=AEyCWpHIdhY',content:'ヒヤリハット報告の分析と環境調整・指針見直しによる未然防止。\n【参考動画】https://www.youtube.com/watch?v=AEyCWpHIdhY'},
+  {month:3,cat:'研修',type:'防災訓練',title:'第1回 業務継続計画（BCP）研修「自然災害・非常時の初動対応と安否確認訓練」',video:'https://www.youtube.com/watch?v=KNNmN8Y998A',content:'震災・風水害・感染症発生時におけるBCP初動対応と安否確認シミュレーション。\n【参考動画（厚生労働省公式）】https://www.youtube.com/watch?v=KNNmN8Y998A'},
+  {month:3,cat:'委員会',type:'防災委員会',title:'第1回 BCP・防災対策委員会（年次総括・計画見直し）',video:'',content:'1. 年間BCP訓練および避難訓練の総括\n2. 備蓄品点検と次年度計画の策定'}
+];
+
 async function renderTraining(c){
   if(!_trainFY)_trainFY=_getFY();
-  c.innerHTML='<div class="hd-row"><h2>📚 研修・委員会管理</h2><div style="display:flex;gap:8px;align-items:center;"><a href="training.html" target="_blank" style="text-decoration:none;background:linear-gradient(135deg,#c06c28,#a25218);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(0,0,0,0.15)">📱 スタッフ研修アカデミー（受講・星取表） ↗</a><button class="bg" onclick="eT=\'menu\';renderExport(document.getElementById(\'content\'))" style="font-size:12px">← 帳票一覧</button></div></div><div id="trn-area"><div class="loading-center"><div class="spin"></div></div></div>';
+  c.innerHTML='<div class="hd-row"><h2>📚 研修・委員会管理</h2><div style="display:flex;gap:8px;align-items:center;"><a href="training.html" target="_blank" style="text-decoration:none;background:linear-gradient(135deg,#2d5a3a,#1b3d25);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(0,0,0,0.15)">📱 スタッフ研修アカデミー（eラーニング・AI作成・星取表） ↗</a><button class="bg" onclick="eT=\'menu\';renderExport(document.getElementById(\'content\'))" style="font-size:12px">← 帳票一覧</button></div></div><div id="trn-area"><div class="loading-center"><div class="spin"></div></div></div>';
   try{
     _trainData=await gas('getTrainings');
     _trainReports=await gas('getTrainingReports');
@@ -14579,10 +14599,15 @@ function loadTrainingList(){
   var iinkai=fyData.filter(function(x){return x.category==='委員会';}).length;
   var upcoming=fyData.filter(function(x){return(x.date||'')>=today();}).length;
 
-  var h='<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">';
+  var h='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">';
+  h+='<div style="display:flex;align-items:center;gap:12px">';
   h+='<button class="bg" onclick="_trainFY--;loadTrainingList()" style="padding:4px 10px">◀</button>';
   h+='<span style="font-size:16px;font-weight:700">令和'+(fy-2018)+'年度（'+fy+'年4月〜'+(fy+1)+'年3月）</span>';
   h+='<button class="bg" onclick="_trainFY++;loadTrainingList()" style="padding:4px 10px">▶</button></div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  h+='<button class="bg" onclick="autoFillMainTrainings()" style="font-size:12px;border-color:#2e7d32;color:#2e7d32;font-weight:700">✨ 12ヶ月推奨カリキュラムを一括配置</button>';
+  h+='<button class="bp" onclick="openTrainingForm()">＋ 新規登録</button>';
+  h+='</div></div>';
 
   h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">';
   h+='<div class="stat"><div class="stat-l">年度合計</div><div class="stat-v">'+fyData.length+'</div></div>';
@@ -14591,39 +14616,41 @@ function loadTrainingList(){
   h+='<div class="stat" style="border-color:#ff9800"><div class="stat-l">📅 今後</div><div class="stat-v" style="color:#ff9800">'+upcoming+'</div></div>';
   h+='</div>';
 
-  // 年度カレンダー（4月〜3月：月単位）
-  h+='<div class="card" style="padding:12px;margin-bottom:16px">';
-  h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">';
+  // 年度カレンダー（4月〜3月：月単位・クリックでその月に研修を当てはめ可能）
+  h+='<div class="card" style="padding:14px;margin-bottom:16px">';
+  h+='<div style="font-size:12px;color:var(--sub);margin-bottom:10px;font-weight:600">💡 各月の「＋当てはめ」を押すと、その月に実施する研修・委員会（厚労省参考動画付）を簡単に当てはめることができます。</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">';
   for(var mi=0;mi<12;mi++){
     var mYear=mi<9?fy:fy+1;var mMonth=mi<9?mi+4:mi-8;
     var ym=mYear+'-'+String(mMonth).padStart(2,'0');
     var mEvents=fyData.filter(function(t){return(t.date||'').indexOf(ym)===0;});
     var isCurrentMonth=(ym===today().substring(0,7));
 
-    h+='<div style="border:1px solid '+(isCurrentMonth?'var(--pri)':'#e0d6cf')+';border-radius:8px;padding:8px;background:'+(isCurrentMonth?'#faf6f2':'#fff')+';min-height:80px">';
-    h+='<div style="font-weight:700;font-size:14px;margin-bottom:6px;color:'+(isCurrentMonth?'var(--pri)':'#333')+'">'+mMonth+'月</div>';
+    h+='<div style="border:1.5px solid '+(isCurrentMonth?'var(--pri)':'#e0d6cf')+';border-radius:10px;padding:10px;background:'+(isCurrentMonth?'#faf6f2':'#fff')+';min-height:94px;display:flex;flex-direction:column;justify-content:space-between">';
+    h+='<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+    h+='<span style="font-weight:700;font-size:14px;color:'+(isCurrentMonth?'var(--pri)':'#333')+'">'+mMonth+'月</span>';
+    h+='<button type="button" onclick="openTrainingForm(\'\',\''+ym+'-20\','+mMonth+')" style="font-size:10px;padding:2px 7px;border-radius:6px;border:1px solid #cbe0d1;background:#f4f8f5;color:#2d5a3a;font-weight:700;cursor:pointer">＋当てはめ</button>';
+    h+='</div>';
     if(mEvents.length===0){
-      h+='<div style="font-size:10px;color:#ccc">予定なし</div>';
+      h+='<div onclick="openTrainingForm(\'\',\''+ym+'-20\','+mMonth+')" style="font-size:10.5px;color:#bbb;cursor:pointer;padding:6px 0">予定なし（クリックで追加）</div>';
     }else{
       mEvents.sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
       mEvents.forEach(function(ev){
         var catColor=ev.category==='研修'?'#1565c0':'#2e7d32';
         var catBg=ev.category==='研修'?'#e3f2fd':'#e8f5e9';
         var day=parseInt((ev.date||'').split('-')[2])||'';
-        h+='<div onclick="openTrainingDetail(\''+ev.id+'\')" style="font-size:10px;padding:3px 5px;margin-bottom:3px;background:'+catBg+';color:'+catColor+';border-radius:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">';
+        h+='<div onclick="openTrainingDetail(\''+ev.id+'\')" style="font-size:10.5px;padding:4px 6px;margin-bottom:4px;background:'+catBg+';color:'+catColor+';border-radius:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600" title="'+esc(ev.title||'')+'">';
         h+=day+'日 '+esc(ev.title||ev.type||'');
         h+='</div>';
       });
     }
-    h+='</div>';
+    h+='</div></div>';
   }
   h+='</div>';
   h+='<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:#666;justify-content:center">';
   h+='<span><span style="display:inline-block;width:12px;height:12px;background:#e3f2fd;border-radius:2px;vertical-align:middle;margin-right:3px"></span>研修</span>';
   h+='<span><span style="display:inline-block;width:12px;height:12px;background:#e8f5e9;border-radius:2px;vertical-align:middle;margin-right:3px"></span>委員会</span>';
   h+='</div></div>';
-
-  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="bp" onclick="openTrainingForm()">＋ 新規登録</button></div>';
 
   // 一覧テーブル
   h+='<div class="card" style="overflow-x:auto"><table><thead><tr><th style="width:90px">日程</th><th>区分</th><th>種別</th><th>タイトル</th><th>報告状況</th><th>操作</th></tr></thead><tbody>';
@@ -14654,14 +14681,67 @@ function loadTrainingList(){
   el.innerHTML=h;
 }
 
-function openTrainingForm(id){
+async function autoFillMainTrainings(){
+  var fy=_trainFY||_getFY();
+  if(!await cConfirm('令和'+(fy-2018)+'年度の4月〜3月に、推奨法定研修および法定委員会を一括でカレンダーに当てはめますか？（既に同じ月・種別に登録があるものは重複登録されません）'))return;
+  if(!lockUI())return;
+  try{
+    var added=0;
+    for(var i=0;i<_TRN_MONTHLY_PRESETS.length;i++){
+      var p=_TRN_MONTHLY_PRESETS[i];
+      var mYear=p.month>=4?fy:fy+1;
+      var ym=mYear+'-'+String(p.month).padStart(2,'0');
+      var dateStr=ym+'-'+(p.cat==='委員会'?'24':'20');
+      var exists=_trainData.some(function(t){return (t.date||'').indexOf(ym)===0 && t.category===p.cat;});
+      if(!exists){
+        await gas('addTraining',{
+          date:dateStr,
+          category:p.cat,
+          type:p.type,
+          title:p.title,
+          location:p.cat==='研修'?'事業所内・eラーニング':'事業所内',
+          content:p.content,
+          required:'必須'
+        });
+        added++;
+      }
+    }
+    _trainData=await gas('getTrainings');
+    toast('✨ '+added+'件の年間研修・委員会をカレンダーに配置しました');
+    loadTrainingList();
+  }catch(e){await cAlert('一括配置エラー: '+e);}finally{unlockUI();}
+}
+
+function applyMainTrnPreset(idx){
+  var p=_TRN_MONTHLY_PRESETS[idx];
+  if(!p)return;
+  document.getElementById('trn-cat').value=p.cat;
+  document.getElementById('trn-type').value=p.type;
+  document.getElementById('trn-title').value=p.title;
+  document.getElementById('trn-loc').value=p.cat==='研修'?'事業所内・eラーニング':'事業所内';
+  document.getElementById('trn-content').value=p.content;
+}
+
+function openTrainingForm(id, defaultDate, targetMonth){
   var tr=id?_trainData.find(function(x){return x.id===id;}):null;
   var isEdit=!!tr;
-  if(!tr)tr={date:'',category:'研修',type:'',title:'',content:'',location:'',required:'必須',status:'予定'};
+  if(!tr)tr={date:defaultDate||today(),category:'研修',type:'',title:'',content:'',location:'事業所内・eラーニング',required:'必須',status:'予定'};
   var el=document.getElementById('trn-area');
   var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
-  h+='<h3 style="margin:0">'+(isEdit?'📝 研修・委員会を編集':'📚 新規 研修・委員会登録')+'</h3>';
-  h+='<button class="bg" onclick="loadTrainingList()" style="font-size:12px">← 一覧に戻る</button></div>';
+  h+='<h3 style="margin:0">'+(isEdit?'📝 研修・委員会を編集':'📚 '+(targetMonth?targetMonth+'月度 ':'')+'研修・委員会の当てはめ登録')+'</h3>';
+  h+='<button class="bg" onclick="loadTrainingList()" style="font-size:12px">← カレンダーに戻る</button></div>';
+
+  if(!isEdit){
+    h+='<div style="background:#f4f8f5;border:1.5px solid #cbe0d1;border-radius:10px;padding:12px;margin-bottom:16px">';
+    h+='<div style="font-size:12.5px;font-weight:700;color:#2d5a3a;margin-bottom:6px">⚡ 1クリックで法定研修・委員会パック（厚労省・公的参考動画付）を当てはめる：</div>';
+    h+='<select onchange="if(this.value!==\'\')applyMainTrnPreset(parseInt(this.value,10))" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #cbe0d1;font-size:13px;font-weight:600;background:#fff">';
+    h+='<option value="">-- ここから実施したい研修・委員会を選ぶと下に自動入力されます --</option>';
+    _TRN_MONTHLY_PRESETS.forEach(function(p,idx){
+      var rec=(targetMonth&&p.month===targetMonth)?'【★'+targetMonth+'月推奨】':'['+p.month+'月推奨 / '+p.cat+'] ';
+      h+='<option value="'+idx+'">'+rec+esc(p.title)+'</option>';
+    });
+    h+='</select></div>';
+  }
 
   h+='<div class="grid2">';
   h+='<div class="field"><label>日程 *</label><input type="date" id="trn-date" value="'+(tr.date||'')+'" style="width:100%"></div>';
@@ -14677,15 +14757,21 @@ function openTrainingForm(id){
   ['必須','任意'].forEach(function(s){h+='<option'+(tr.required===s?' selected':'')+'>'+s+'</option>';});
   h+='</select></div></div>';
 
-  h+='<div class="field"><label>タイトル *</label><input id="trn-title" value="'+esc(tr.title||'')+'" placeholder="例：令和7年度 第1回虐待防止研修" style="width:100%"></div>';
-  h+='<div class="field"><label>場所</label><input id="trn-loc" value="'+esc(tr.location||'')+'" placeholder="例：事業所内、オンライン" style="width:100%"></div>';
-  h+='<div class="field"><label>内容・議題</label><textarea id="trn-content" rows="4" placeholder="研修内容や委員会の議題" style="width:100%">'+esc(tr.content||'')+'</textarea></div>';
+  h+='<div class="field"><label>タイトル *</label><input id="trn-title" value="'+esc(tr.title||'')+'" placeholder="例：令和8年度 第1回虐待防止研修" style="width:100%"></div>';
+  h+='<div class="field"><label>場所</label><input id="trn-loc" value="'+esc(tr.location||'')+'" placeholder="例：事業所内・eラーニング" style="width:100%"></div>';
+  h+='<div class="field"><label>内容・議題・参考動画URL</label><textarea id="trn-content" rows="4" placeholder="研修内容や委員会の議題" style="width:100%">'+esc(tr.content||'')+'</textarea></div>';
 
   h+='<div class="btns" style="margin-top:16px;border-top:1px solid #eee;padding-top:12px">';
   if(isEdit)h+='<button style="background:#c62828;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:12px" onclick="deleteTraining(\''+tr.id+'\')">🗑️ 削除</button>';
   h+='<button class="bg" onclick="loadTrainingList()">キャンセル</button>';
-  h+='<button class="bp" onclick="saveTraining('+(isEdit?"'"+tr.id+"'":"''")+')">'+(isEdit?'更新':'登録')+'</button></div></div>';
+  h+='<button class="bp" onclick="saveTraining('+(isEdit?"'"+tr.id+"'":"''")+')">'+(isEdit?'更新':'この月に登録')+'</button></div></div>';
   el.innerHTML=h;
+
+  // もし月指定で新規作成を開いた場合、その月の推奨プリセットがあれば初期セット
+  if(!isEdit && targetMonth){
+    var defIdx=_TRN_MONTHLY_PRESETS.findIndex(function(p){return p.month===targetMonth && p.cat==='研修';});
+    if(defIdx>=0) applyMainTrnPreset(defIdx);
+  }
 }
 
 async function saveTraining(id){
