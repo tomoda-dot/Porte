@@ -3467,6 +3467,56 @@
       h += '  </div>';
       h += '</div>';
 
+      // 2.6 法定必須委員会の開催回数チェッカー（実地指導基準）
+      var cmReqItems = [
+        {
+          cat: '虐待防止委員会',
+          label: '🛡️ 虐待防止委員会',
+          req: '年1回以上必須',
+          min: 1,
+          cur: fyCommittees.filter(function (cm) { return String(cm.category || '').indexOf('虐待防止') >= 0; }).length
+        },
+        {
+          cat: '身体拘束適正化委員会',
+          label: '🫂 身体拘束適正化委員会',
+          req: '年1回以上必須',
+          min: 1,
+          cur: fyCommittees.filter(function (cm) { return String(cm.category || '').indexOf('身体拘束') >= 0; }).length
+        },
+        {
+          cat: '感染症対策委員会',
+          label: '❄️ 感染症対策委員会',
+          req: 'おおむね3か月に1回（年4回）',
+          min: 4,
+          cur: fyCommittees.filter(function (cm) { return String(cm.category || '').indexOf('感染症') >= 0; }).length
+        },
+        {
+          cat: 'BCP（業務継続計画）委員会',
+          label: '🌸 BCP（業務継続計画）委員会',
+          req: '年1回以上推奨',
+          min: 1,
+          cur: fyCommittees.filter(function (cm) { return String(cm.category || '').indexOf('BCP') >= 0; }).length
+        }
+      ];
+      h += '<div class="card" style="padding:16px 20px;margin-bottom:18px;">';
+      h += '  <div class="section-title" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">';
+      h += '    <span>🏛️ 法定必須委員会の開催回数チェッカー（実地指導基準）</span>';
+      h += '    <button type="button" class="btn-print" style="background:#2e7d32;font-size:11.5px;padding:5px 12px;" onclick="autoFillAnnualCommittees()">✨ 委員会の年間予定を一括配置</button>';
+      h += '  </div>';
+      h += '  <div class="req-check-grid" style="margin-bottom:0;">';
+      cmReqItems.forEach(function (it) {
+        var isOk = it.cur >= it.min;
+        h += '<div class="req-check-item ' + (isOk ? 'ok' : 'warn') + '" style="cursor:pointer;transition:transform .15s;" onclick="openCommitteeStudio(currentMonthLabel())" title="クリックして「' + it.cat + '」の議事録を作成">' +
+          '<div style="font-weight:700;color:var(--pri-dark);">' + it.label + '</div>' +
+          '<div style="font-size:11px;color:var(--sub);margin:2px 0;">基準: ' + it.req + '</div>' +
+          '<div style="font-weight:700;font-size:13px;color:' + (isOk ? 'var(--grn)' : 'var(--warn)') + ';">' +
+          (isOk ? '✓ 計画・記録済 (' + it.cur + '回)' : '⚠️ 現在 ' + it.cur + '回 (要追加)') +
+          '</div>' +
+          '</div>';
+      });
+      h += '  </div>';
+      h += '</div>';
+
       // 3. 4列×3段の年度カレンダー（4月〜3月）
       var curM = currentMonthLabel();
       h += '<div class="fy-cal-card">';
@@ -6345,6 +6395,101 @@
       renderCommitteeList();
       renderPublishedCoursesList();
       renderFyCalendar();
+    }
+
+    async function autoFillAnnualCommittees() {
+      var staffNames = STAFF.map(function (s) { return s.name; }).join('、');
+      var fyCommittees = getFyCommittees(_calFY);
+      var plan = [
+        {
+          month: '4月',
+          category: '虐待防止委員会',
+          title: '令和' + (_calFY - 2018) + '年度 第1回 虐待防止委員会',
+          agenda: '1. 虐待防止マニュアル・指針の年度点検\n2. 障害者虐待防止研修の年間計画確認\n3. 日常支援における声かけ・権利擁護の振り返り',
+          decisions: '・全職員で「利用者の尊厳を守る声かけ」を徹底し、迷う事例は速やかに管理者へ相談する。'
+        },
+        {
+          month: '6月',
+          category: '感染症対策委員会',
+          title: '令和' + (_calFY - 2018) + '年度 第1回 感染症・食中毒対策委員会（夏期）',
+          agenda: '1. 梅雨〜夏期の食中毒・感染症予防策の確認\n2. 手洗い・消毒設備と衛生用品の在庫点検\n3. 施設内換気と清掃ルールの確認',
+          decisions: '・作業前後の手洗い・アルコール消毒および作業台の衛生チェックを毎日実施する。'
+        },
+        {
+          month: '8月',
+          category: '身体拘束適正化委員会',
+          title: '令和' + (_calFY - 2018) + '年度 第1回 身体拘束適正化委員会',
+          agenda: '1. 身体拘束ゼロの継続確認と指針の点検\n2. 現場でのスピーチロック（言葉の拘束）防止の振り返り\n3. 緊急やむを得ない3要件の記録ルールの確認',
+          decisions: '・「ちょっと待って」ではなく具体的な見通しを伝える声かけを全職員で実践する。'
+        },
+        {
+          month: '9月',
+          category: '感染症対策委員会',
+          title: '令和' + (_calFY - 2018) + '年度 第2回 感染症・食中毒対策委員会（秋期）',
+          agenda: '1. 秋期以降の感染症流行に向けた予防体制の確認\n2. 嘔吐物処理セット（次亜塩素酸・PPE）の点検\n3. 利用者・職員の体調管理ルールの確認',
+          decisions: '・感染対策物品の補充を完了し、体調不良時の早め報告・連絡体制を再確認した。'
+        },
+        {
+          month: '12月',
+          category: '感染症対策委員会',
+          title: '令和' + (_calFY - 2018) + '年度 第3回 感染症対策委員会（冬期）',
+          agenda: '1. インフルエンザ・コロナ・ノロウイルス対策の強化\n2. 防護具（PPE）の正しい着脱手順の確認\n3. 事業所内の消毒・換気頻度の見直し',
+          decisions: '・冬期感染対策研修の内容を現場で実践し、朝の健康観察を徹底する。'
+        },
+        {
+          month: '2月',
+          category: '身体拘束適正化委員会',
+          title: '令和' + (_calFY - 2018) + '年度 第2回 身体拘束適正化委員会',
+          agenda: '1. 年間のヒヤリハット・不適切ケア防止の振り返り\n2. 個別支援計画と環境調整の改善事例共有\n3. 次年度に向けた支援方針の確認',
+          decisions: '・利用者が安心して作業に集中できる環境調整を継続し、チームでの情報共有を強化する。'
+        },
+        {
+          month: '3月',
+          category: '感染症対策委員会',
+          title: '令和' + (_calFY - 2018) + '年度 第4回 感染症対策委員会（年度総括）',
+          agenda: '1. 今年度の感染症発生状況と対策の総括\n2. 衛生チェック体制・マニュアルの改定検討\n3. 次年度の感染対策年間計画の確認',
+          decisions: '・今年度の取り組みを総括し、次年度も年4回以上の委員会と定期研修を継続する。'
+        },
+        {
+          month: '3月',
+          category: 'BCP（業務継続計画）委員会',
+          title: '令和' + (_calFY - 2018) + '年度 BCP（業務継続計画）見直し・総括委員会',
+          agenda: '1. 自然災害・感染症BCPの内容点検と連絡網更新\n2. 避難訓練・安否確認訓練の結果検証\n3. 備蓄品・非常用電源等の点検',
+          decisions: '・訓練で出た課題をBCPに反映し、最新版の連絡網と役割分担を全職員へ周知する。'
+        }
+      ];
+
+      var added = 0;
+      plan.forEach(function (p, idx) {
+        var exists = fyCommittees.some(function (cm) {
+          return getCommitteeMonthLabel(cm) === p.month && cm.category === p.category;
+        });
+        if (!exists) {
+          var mNum = parseInt(p.month.replace('月', ''), 10);
+          var yr = (mNum >= 4) ? _calFY : (_calFY + 1);
+          var dateStr = yr + '-' + String(mNum).padStart(2, '0') + '-20';
+          var item = {
+            id: 'cm_auto_' + _calFY + '_' + idx + '_' + Date.now(),
+            fy: _calFY,
+            category: p.category,
+            date: dateStr,
+            title: p.title,
+            attendees: staffNames,
+            agenda: p.agenda,
+            decisions: p.decisions,
+            createdAt: new Date().toISOString()
+          };
+          _committeeMinutes.push(item);
+          fyCommittees.push(item);
+          added++;
+        }
+      });
+
+      await saveStorageData('porte_committee_minutes', _committeeMinutes);
+      renderFyCalendar();
+      renderCommitteeList();
+      renderPublishedCoursesList();
+      alert('🏛️ 令和' + (_calFY - 2018) + '年度の法定委員会（虐待防止・身体拘束・感染症年4回・BCP）をカレンダーに一括配置しました！（新規追加：' + added + '件）');
     }
 
     // ─── 委員会議事録 入力モーダル（AI自動起案対応） ──────────
