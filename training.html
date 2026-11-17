@@ -3325,7 +3325,7 @@
         var isCurMonth = (_calFY === getCurrentFiscalYear() && mLabel === curM) || mCourses.some(function (c) { return c.isCurrent; });
         var hint = MONTH_SEASONAL_HINTS[mLabel] || '';
 
-        h += '<div class="fy-month-cell' + (isCurMonth ? ' current-m' : '') + '" onclick="openMonthAssignModal(\'' + mLabel + '\', \'kenshu\')" style="cursor:pointer;">';
+        h += '<div class="fy-month-cell' + (isCurMonth ? ' current-m' : '') + '" onclick="openMonthCellWithAutoEdit(\'' + mLabel + '\')" style="cursor:pointer;">';
         h += '  <div style="min-width:0;width:100%;overflow:hidden;">';
         h += '    <div class="fy-month-hd">';
         h += '      <div style="min-width:0;overflow:hidden;">';
@@ -3343,7 +3343,7 @@
             var doneCnt = STAFF.filter(function (s) {
               return !!findStaffRecord(s, tc.id);
             }).length;
-            h += '    <div class="fy-ev-pill kenshu" onclick="event.stopPropagation();_wizExpandedCourseId=\'' + tc.id + '\';openMonthAssignModal(\'' + mLabel + '\', \'kenshu\')" title="クリックして受講状況・記録簿印刷・編集を開く：' + esc(tc.title) + '">';
+            h += '    <div class="fy-ev-pill kenshu" onclick="event.stopPropagation();openCourseForEditFromCalendar(\'' + mLabel + '\', \'' + tc.id + '\')" title="クリックして受講状況・記録簿印刷・編集を開く：' + esc(tc.title) + '">';
             h += '      <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (tc.isCurrent ? '🔥 ' : '📖 ') + esc(shortTitle) + '</span>';
             h += '      <span style="font-size:10px;background:rgba(255,255,255,0.75);padding:1px 5px;border-radius:4px;flex-shrink:0;font-weight:900;">' + doneCnt + '/' + STAFF.length + '</span>';
             h += '    </div>';
@@ -3381,6 +3381,21 @@
         return v.category === _wizFilterCat;
       });
       if (_wizVideoCandidates.length === 0) _wizVideoCandidates = OFFICIAL_VIDEO_LIBRARY.slice(0, 6);
+    }
+
+    function openCourseForEditFromCalendar(mLabel, courseId) {
+      _wizExpandedCourseId = courseId;
+      openMonthAssignModal(mLabel, 'kenshu');
+      loadCourseIntoWizardEditor(courseId, false);
+    }
+
+    function openMonthCellWithAutoEdit(mLabel) {
+      var mCourses = getFyCourses(_calFY).filter(function (c) { return c.month === mLabel; });
+      if (mCourses.length > 0) {
+        openCourseForEditFromCalendar(mLabel, mCourses[0].id);
+      } else {
+        openMonthAssignModal(mLabel, 'kenshu');
+      }
     }
 
     function openMonthAssignModal(mLabel, mode) {
@@ -3749,7 +3764,7 @@
           h += '      <button type="button" class="btn-print" style="background:#607d8b;" onclick="_editingCourseId=null;_aiGeneratedDraft=null;renderMonthAssignModalBody();">編集キャンセル</button>';
         }
         h += '      <button type="button" class="training-start-btn" style="background:var(--accent);width:auto;padding:12px 26px;" onclick="saveCourseFromCreator()">';
-        h += '        <span>💾 「' + mLabel + '」の研修としてカレンダーに登録・配信する</span>';
+        h += '        <span>' + (_editingCourseId ? ('💾 「' + mLabel + '」の研修を更新・保存する') : ('💾 「' + mLabel + '」の研修としてカレンダーに登録・配信する')) + '</span>';
         h += '      </button>';
         h += '    </div>';
         h += '  </div>';
@@ -4055,7 +4070,7 @@
       }
     }
 
-    function loadCourseIntoWizardEditor(courseId) {
+    function loadCourseIntoWizardEditor(courseId, shouldScroll) {
       var tc = TRAINING_COURSES.find(function (c) { return c.id === courseId; });
       if (!tc) return;
       _editingCourseId = tc.id;
@@ -4076,8 +4091,10 @@
       if (el('cr-desc')) el('cr-desc').value = tc.desc || '';
       if (el('cr-is-current')) el('cr-is-current').checked = !!tc.isCurrent;
       renderAiPreview();
-      var step3 = el('wiz-step3-box');
-      if (step3) step3.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (shouldScroll !== false) {
+        var step3 = el('wiz-step3-box');
+        if (step3) step3.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }
 
     function loadCommitteeIntoWizardEditor(cmId) {
