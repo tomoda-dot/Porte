@@ -68,22 +68,18 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
 /* 実働時間 */
 .work-time-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--pri);}
 
-/* 保存ボタン（画面右下に常時固定、スマホ時は全幅固定） */
+/* 保存ボタン（フォーム最下部に配置：iPad等のキーボード表示時に入力欄を隠さない） */
 .save-bar{
-  position:fixed;
-  bottom:0;
-  right:0;
-  left:240px;
-  background:rgba(247,244,240,.98);
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
-  padding:12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+  position:static;
+  margin-top:16px;
+  background:#fff;
+  border:1px solid var(--bdr);
+  border-radius:12px;
+  padding:14px 18px;
   display:flex;
   gap:12px;
   justify-content:flex-end;
-  border-top:1px solid var(--bdr);
-  box-shadow:0 -4px 16px rgba(0,0,0,.08);
-  z-index:90;
+  box-shadow:0 1px 4px rgba(0,0,0,.05);
 }
 #btn-save{padding:12px 36px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(61,90,62,.3);touch-action:manipulation;}
 #btn-save:disabled{opacity:.6;cursor:not-allowed;}
@@ -121,7 +117,7 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
 .user-item .u-badge{font-size:11px;margin-top:0;white-space:nowrap;flex-shrink:0;}
 .u-badge.saved{color:var(--grn);font-weight:700;white-space:nowrap;}
 .user-item.active .u-badge.saved{color:#a5d6a7;}
-#content-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:20px 20px 90px;height:100%;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;}
+#content-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:20px 20px 28px;height:100%;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;}
 
 .mobile-back-btn{display:none;}
 
@@ -155,7 +151,7 @@ header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-ite
   .status-opts{display:grid;grid-template-columns:repeat(3, 1fr);gap:6px;}
   .status-opt{min-width:0;padding:10px 2px;font-size:13px;}
 
-  .save-bar{left:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px));gap:8px;}
+  .save-bar{padding:12px;gap:8px;}
   #btn-save{flex:1;padding:12px 10px;font-size:15px;}
   #btn-cancel{padding:12px 12px;font-size:13px;}
 }
