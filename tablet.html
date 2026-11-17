@@ -592,19 +592,24 @@
 
       html,
       body {
-        height: auto;
-        overflow: auto;
+        height: auto !important;
+        min-height: 100%;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
       }
 
       #pg-main {
-        height: auto;
-        overflow: visible;
+        height: auto !important;
+        min-height: 100vh;
+        overflow: visible !important;
       }
 
       #layout {
         flex-direction: column;
-        height: auto;
+        height: auto !important;
         min-height: calc(100vh - 54px);
+        overflow: visible !important;
       }
 
       body.mobile-view-list #sidebar {
@@ -625,8 +630,10 @@
 
       body.mobile-view-form #content-area {
         width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
         display: block !important;
-        padding: 12px 10px 80px;
+        padding: 12px 10px 40px;
       }
 
       .mobile-back-btn {
