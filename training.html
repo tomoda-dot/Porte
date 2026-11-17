@@ -3088,9 +3088,48 @@
       { month: '1月', category: '障害特性・就労支援', angle: '【⑤ 工賃向上と作業マッチング編】', title: '就労継続支援B型実践研修「珈琲製造・袋詰め・軽作業における適性マッチングと補助具（治具）開発」', desc: '一人ひとりの得意な動きに合わせて作業工程と治具（計量ガイド・シール貼り枠等）を工夫し、楽しく品質と工賃を高める実践を学びます。', ytQuery: '就労継続支援B型 工賃向上 治具 作業工夫' }
     ];
 
+    function getCurrentFiscalYear() {
+      var d = new Date();
+      var y = d.getFullYear();
+      return (d.getMonth() + 1) >= 4 ? y : (y - 1);
+    }
+
+    function getCourseFiscalYear(tc) {
+      if (tc && tc.fy) return Number(tc.fy);
+      if (tc && tc.dueText && /^\d{4}-\d{2}/.test(tc.dueText)) {
+        var parts = tc.dueText.split('-');
+        var y = parseInt(parts[0], 10);
+        var m = parseInt(parts[1], 10);
+        return m >= 4 ? y : (y - 1);
+      }
+      return 2026;
+    }
+
+    function getCommitteeFiscalYear(cm) {
+      if (cm && cm.fy) return Number(cm.fy);
+      if (cm && cm.date && /^\d{4}-\d{2}/.test(cm.date)) {
+        var parts = cm.date.split('-');
+        var y = parseInt(parts[0], 10);
+        var m = parseInt(parts[1], 10);
+        return m >= 4 ? y : (y - 1);
+      }
+      return 2026;
+    }
+
+    function getFyCourses(fy) {
+      var target = (fy !== undefined) ? fy : _calFY;
+      return TRAINING_COURSES.filter(function (c) { return getCourseFiscalYear(c) === target; });
+    }
+
+    function getFyCommittees(fy) {
+      var target = (fy !== undefined) ? fy : _calFY;
+      return _committeeMinutes.filter(function (cm) { return getCommitteeFiscalYear(cm) === target; });
+    }
+
     function changeCalFY(delta) {
       _calFY += delta;
-      renderFyCalendar();
+      renderAdminMatrix();
+      renderPublishedCoursesList();
     }
 
     function getCommitteeMonthLabel(cm) {
@@ -3108,20 +3147,23 @@
 
       sortCoursesByFiscalMonth();
 
-      var kenshuCount = TRAINING_COURSES.length;
-      var iinkaiCount = _committeeMinutes.length;
+      var fyCourses = getFyCourses(_calFY);
+      var fyCommittees = getFyCommittees(_calFY);
+
+      var kenshuCount = fyCourses.length;
+      var iinkaiCount = fyCommittees.length;
       var totalEvents = kenshuCount + iinkaiCount;
       var todayDate = todayStr();
-      var upcomingCount = TRAINING_COURSES.filter(function (tc) { return (tc.dueText || '9999') >= todayDate; }).length +
-        _committeeMinutes.filter(function (cm) { return (cm.date || '') >= todayDate; }).length;
+      var upcomingCount = fyCourses.filter(function (tc) { return (tc.dueText || '9999') >= todayDate; }).length +
+        fyCommittees.filter(function (cm) { return (cm.date || '') >= todayDate; }).length;
 
       var counts = {
-        restraint: TRAINING_COURSES.filter(function (c) { return c.category === '身体拘束適正化'; }).length,
-        abuse: TRAINING_COURSES.filter(function (c) { return c.category === '障害者虐待防止'; }).length,
-        infection: TRAINING_COURSES.filter(function (c) { return c.category === '感染対策'; }).length,
-        bcp: TRAINING_COURSES.filter(function (c) { return c.category === 'BCP研修・訓練'; }).length,
-        disaster: TRAINING_COURSES.filter(function (c) { return c.category === '防災訓練'; }).length,
-        other: TRAINING_COURSES.filter(function (c) { return ['衛生管理・HACCP', 'ハラスメント防止', '個人情報保護', 'その他'].indexOf(c.category) >= 0; }).length
+        restraint: fyCourses.filter(function (c) { return c.category === '身体拘束適正化'; }).length,
+        abuse: fyCourses.filter(function (c) { return c.category === '障害者虐待防止'; }).length,
+        infection: fyCourses.filter(function (c) { return c.category === '感染対策'; }).length,
+        bcp: fyCourses.filter(function (c) { return c.category === 'BCP研修・訓練'; }).length,
+        disaster: fyCourses.filter(function (c) { return c.category === '防災訓練'; }).length,
+        other: fyCourses.filter(function (c) { return ['衛生管理・HACCP', 'ハラスメント防止', '個人情報保護', 'その他'].indexOf(c.category) >= 0; }).length
       };
 
       var reqItems = [
@@ -3191,9 +3233,9 @@
       h += '  <div class="fy-cal-grid">';
 
       FISCAL_MONTHS.forEach(function (mLabel) {
-        var mCourses = TRAINING_COURSES.filter(function (c) { return c.month === mLabel; });
-        var mCommittees = _committeeMinutes.filter(function (cm) { return getCommitteeMonthLabel(cm) === mLabel; });
-        var isCurMonth = (mLabel === curM) || mCourses.some(function (c) { return c.isCurrent; });
+        var mCourses = fyCourses.filter(function (c) { return c.month === mLabel; });
+        var mCommittees = fyCommittees.filter(function (cm) { return getCommitteeMonthLabel(cm) === mLabel; });
+        var isCurMonth = (_calFY === getCurrentFiscalYear() && mLabel === curM) || mCourses.some(function (c) { return c.isCurrent; });
         var hint = MONTH_SEASONAL_HINTS[mLabel] || '';
 
         h += '<div class="fy-month-cell' + (isCurMonth ? ' current-m' : '') + '" onclick="openMonthAssignModal(\'' + mLabel + '\', \'kenshu\')" style="cursor:pointer;">';
@@ -3257,7 +3299,7 @@
       if (_wizVideoCandidates.length === 0) _wizVideoCandidates = OFFICIAL_VIDEO_LIBRARY.slice(0, 6);
 
       var titleEl = el('month-assign-modal-title');
-      if (titleEl) titleEl.textContent = '📅 ' + _activeAssignMonth + '度 研修・委員会の作成＆管理スタジオ';
+      if (titleEl) titleEl.textContent = '📅 令和' + (_calFY - 2018) + '年度 ' + _activeAssignMonth + ' 研修・委員会の作成＆管理スタジオ';
       renderMonthAssignModalBody();
       el('month-assign-modal-overlay').classList.add('active');
     }
@@ -3342,8 +3384,8 @@
       var curYtQueryVal = el('yt-search-query') ? el('yt-search-query').value : '';
 
       var mLabel = _activeAssignMonth;
-      var mCourses = TRAINING_COURSES.filter(function (c) { return c.month === mLabel; });
-      var mCommittees = _committeeMinutes.filter(function (cm) { return getCommitteeMonthLabel(cm) === mLabel; });
+      var mCourses = getFyCourses(_calFY).filter(function (c) { return c.month === mLabel; });
+      var mCommittees = getFyCommittees(_calFY).filter(function (cm) { return getCommitteeMonthLabel(cm) === mLabel; });
 
       var h = '';
 
@@ -3957,6 +3999,7 @@
       var cmId = _editingCommitteeId || ('cm_' + Date.now());
       var cm = {
         id: cmId,
+        fy: _calFY,
         category: cat,
         month: mLabel,
         date: date,
@@ -4011,6 +4054,7 @@
 
       var cm = {
         id: 'cm_' + Date.now(),
+        fy: _calFY,
         category: catName,
         month: mLabel,
         date: dateStr,
@@ -4033,38 +4077,48 @@
       var c = el('matrix-table-body');
       if (!c) return;
 
-      var curCourse = TRAINING_COURSES.find(function (tc) { return tc.isCurrent; }) || TRAINING_COURSES[0];
+      var fyCourses = getFyCourses(_calFY);
+      var curCourse = fyCourses.find(function (tc) { return tc.isCurrent; }) || fyCourses[0];
       var summaryEl = el('admin-matrix-summary');
 
-      if (summaryEl && curCourse) {
-        var doneStaff = [];
-        var todoStaff = [];
-        STAFF.forEach(function (s) {
-          var has = !!findStaffRecord(s, curCourse.id);
-          if (has) doneStaff.push(s.name);
-          else todoStaff.push(s.name);
-        });
-        var curPct = STAFF.length > 0 ? Math.round((doneStaff.length / STAFF.length) * 100) : 0;
-
-        var sumHtml = '<div class="summary-kpi-grid">';
-        sumHtml += '<div class="summary-kpi-card"><div class="summary-kpi-label">🔥 今月の対象研修（' + esc(curCourse.month) + '度）</div><div style="font-size:14px;font-weight:900;color:var(--pri-dark);margin-top:4px;">' + esc(curCourse.category) + '</div><div style="font-size:11.5px;color:var(--sub);margin-top:2px;">期限: ' + esc(curCourse.dueText || '月末') + '</div></div>';
-        sumHtml += '<div class="summary-kpi-card"><div class="summary-kpi-label">📈 今月の受講完了率</div><div class="summary-kpi-val" style="color:' + (curPct === 100 ? 'var(--grn)' : 'var(--warn)') + ';">' + curPct + '% <span style="font-size:13px;font-weight:700;">(' + doneStaff.length + '/' + STAFF.length + '名)</span></div></div>';
-        sumHtml += '<div class="summary-kpi-card" style="grid-column: span 2;"><div class="summary-kpi-label">⏳ 今月の未受講スタッフ通知</div>';
-        if (todoStaff.length === 0) {
-          sumHtml += '<div style="margin-top:6px;font-size:13.5px;font-weight:900;color:var(--grn);">🎉 全スタッフ受講完了しています！実地指導記録簿を印刷・保管できます。</div>';
+      if (summaryEl) {
+        if (!curCourse) {
+          summaryEl.innerHTML = '<div style="background:#f8fbf9;border:1.5px dashed var(--bdr);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--sub);margin-bottom:12px;">令和' + (_calFY - 2018) + '年度の研修はまだ登録されていません。上のカレンダーの月をクリックして研修を追加してください。</div>';
         } else {
-          sumHtml += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;">' +
-            todoStaff.map(function (n) { return '<span class="badge-no">未受講: ' + esc(n) + '</span>'; }).join('') +
-            '</div>';
+          var doneStaff = [];
+          var todoStaff = [];
+          STAFF.forEach(function (s) {
+            var has = !!findStaffRecord(s, curCourse.id);
+            if (has) doneStaff.push(s.name);
+            else todoStaff.push(s.name);
+          });
+          var curPct = STAFF.length > 0 ? Math.round((doneStaff.length / STAFF.length) * 100) : 0;
+
+          var sumHtml = '<div class="summary-kpi-grid">';
+          sumHtml += '<div class="summary-kpi-card"><div class="summary-kpi-label">🔥 対象研修（令和' + (_calFY - 2018) + '年度 ' + esc(curCourse.month) + '）</div><div style="font-size:14px;font-weight:900;color:var(--pri-dark);margin-top:4px;">' + esc(curCourse.category) + '</div><div style="font-size:11.5px;color:var(--sub);margin-top:2px;">期限: ' + esc(curCourse.dueText || '月末') + '</div></div>';
+          sumHtml += '<div class="summary-kpi-card"><div class="summary-kpi-label">📈 受講完了率</div><div class="summary-kpi-val" style="color:' + (curPct === 100 ? 'var(--grn)' : 'var(--warn)') + ';">' + curPct + '% <span style="font-size:13px;font-weight:700;">(' + doneStaff.length + '/' + STAFF.length + '名)</span></div></div>';
+          sumHtml += '<div class="summary-kpi-card" style="grid-column: span 2;"><div class="summary-kpi-label">⏳ 未受講スタッフ状況</div>';
+          if (todoStaff.length === 0) {
+            sumHtml += '<div style="margin-top:6px;font-size:13.5px;font-weight:900;color:var(--grn);">🎉 全スタッフ受講完了しています！実地指導記録簿を印刷・保管できます。</div>';
+          } else {
+            sumHtml += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;">' +
+              todoStaff.map(function (n) { return '<span class="badge-no">未受講: ' + esc(n) + '</span>'; }).join('') +
+              '</div>';
+          }
+          sumHtml += '</div></div>';
+          summaryEl.innerHTML = sumHtml;
         }
-        sumHtml += '</div></div>';
-        summaryEl.innerHTML = sumHtml;
+      }
+
+      if (fyCourses.length === 0) {
+        c.innerHTML = '<tbody><tr><td colspan="3" style="padding:20px;color:var(--sub);">令和' + (_calFY - 2018) + '年度に登録された研修がありません。</td></tr></tbody>';
+        return;
       }
 
       var h = '<thead><tr>';
       h += '<th style="width:120px;">職員名</th>';
       h += '<th style="width:105px;">役職</th>';
-      TRAINING_COURSES.forEach(function (tc) {
+      fyCourses.forEach(function (tc) {
         h += '<th>' + tc.month + '<br><span style="font-size:11px;font-weight:normal;">' + esc(tc.category) + '</span>' +
           '<div class="no-print" style="margin-top:4px;"><button type="button" onclick="printTrainingOfficialReport(\'' + tc.id + '\')" style="font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid var(--bdr);background:#fff;color:var(--pri);cursor:pointer;font-weight:800;">🖨️記録簿</button></div>' +
           '</th>';
@@ -4073,15 +4127,15 @@
       h += '</tr></thead><tbody>';
 
       STAFF.forEach(function (s) {
-        var doneCnt = TRAINING_COURSES.filter(function (tc) { return !!findStaffRecord(s, tc.id); }).length;
-        var totalCnt = TRAINING_COURSES.length;
+        var doneCnt = fyCourses.filter(function (tc) { return !!findStaffRecord(s, tc.id); }).length;
+        var totalCnt = fyCourses.length;
         var pct = totalCnt > 0 ? Math.round((doneCnt / totalCnt) * 100) : 0;
 
         h += '<tr>';
         h += '<td class="staff-col"><b>' + esc(s.name) + '</b></td>';
         h += '<td><span style="font-size:11px;color:var(--sub);">' + esc(s.role) + '</span></td>';
 
-        TRAINING_COURSES.forEach(function (tc) {
+        fyCourses.forEach(function (tc) {
           var rec = findStaffRecord(s, tc.id);
           if (rec) {
             h += '<td><span class="badge-ok">✓ 済 (' + rec.score + '点)</span><div style="font-size:10px;color:#666;margin-top:2px;">' + rec.completedDate + '</div></td>';
@@ -4735,9 +4789,10 @@
       window.scrollTo({ top: el('subtab-content-creator').offsetTop - 20, behavior: 'smooth' });
     }
 
-    function getDueTextForMonth(mLabel) {
+    function getDueTextForMonth(mLabel, fy) {
       var mNum = parseInt(String(mLabel).replace('月', ''), 10) || 12;
-      var yr = (mNum >= 4) ? 2026 : 2027;
+      var baseFY = (fy !== undefined) ? fy : _calFY;
+      var yr = (mNum >= 4) ? baseFY : (baseFY + 1);
       var lastDay = new Date(yr, mNum, 0).getDate();
       return yr + '-' + String(mNum).padStart(2, '0') + '-' + String(lastDay).padStart(2, '0');
     }
@@ -4747,12 +4802,13 @@
       if (!tpl) return;
 
       var newCourse = {
-        id: tpl.id + '_' + Date.now(),
+        id: tpl.id + '_' + _calFY + '_' + Date.now(),
+        fy: _calFY,
         month: monthLabel,
         category: tpl.category,
         title: tpl.title,
         isCurrent: false,
-        dueText: getDueTextForMonth(monthLabel),
+        dueText: getDueTextForMonth(monthLabel, _calFY),
         desc: tpl.desc,
         videoEmbedUrl: tpl.videoUrl.replace('watch?v=', 'embed/'),
         youtubeWatchUrl: tpl.videoUrl,
@@ -4774,7 +4830,7 @@
       var tc = TRAINING_COURSES.find(function (c) { return c.id === courseId; });
       if (!tc) return;
       tc.month = newMonth;
-      tc.dueText = getDueTextForMonth(newMonth);
+      tc.dueText = getDueTextForMonth(newMonth, getCourseFiscalYear(tc));
       sortCoursesByFiscalMonth();
       await saveStorageData('porte_training_courses', TRAINING_COURSES);
 
@@ -4788,24 +4844,26 @@
       switchAdminSubtab('creator');
       resetCreatorForm();
       if (el('cr-month')) el('cr-month').value = monthLabel;
-      if (el('cr-due')) el('cr-due').value = getDueTextForMonth(monthLabel);
+      if (el('cr-due')) el('cr-due').value = getDueTextForMonth(monthLabel, _calFY);
       el('creator-form-title').textContent = '✨ ' + monthLabel + '度の新規研修を作成・AI自動生成';
       window.scrollTo({ top: el('subtab-content-creator').offsetTop - 20, behavior: 'smooth' });
     }
 
     async function autoFill12MonthPlan() {
       var added = 0;
+      var fyCourses = getFyCourses(_calFY);
       Object.keys(COURSE_PRESETS).forEach(function (k) {
         var p = COURSE_PRESETS[k];
-        var hasInMonth = TRAINING_COURSES.some(function (c) { return c.month === p.month; });
+        var hasInMonth = fyCourses.some(function (c) { return c.month === p.month; });
         if (!hasInMonth) {
           TRAINING_COURSES.push({
-            id: p.id,
+            id: p.id + '_fy' + _calFY,
+            fy: _calFY,
             month: p.month,
             category: p.category,
             title: p.title,
             isCurrent: false,
-            dueText: getDueTextForMonth(p.month),
+            dueText: getDueTextForMonth(p.month, _calFY),
             desc: p.desc,
             videoEmbedUrl: p.videoUrl.replace('watch?v=', 'embed/'),
             youtubeWatchUrl: p.videoUrl,
@@ -4821,7 +4879,7 @@
       renderPublishedCoursesList();
       renderStaffTrainingList();
       renderAdminMatrix();
-      alert('✨ 4月〜翌3月の12ヶ月すべてに推奨法定研修カリキュラムを自動配置しました！（新規追加：' + added + '件）');
+      alert('✨ 令和' + (_calFY - 2018) + '年度の空き月に推奨法定研修カリキュラムを自動配置しました！（新規追加：' + added + '件）');
     }
 
     function onCreatorCategoryChange() {
@@ -5266,6 +5324,7 @@
 
       var newCourse = {
         id: courseId,
+        fy: _calFY,
         month: month,
         category: category,
         title: title,
@@ -5348,14 +5407,17 @@
 
       sortCoursesByFiscalMonth();
 
+      var fyCourses = getFyCourses(_calFY);
+      var fyCommittees = getFyCommittees(_calFY);
+
       var items = [];
       if (_archiveFilter === 'all' || _archiveFilter === 'kenshu') {
-        TRAINING_COURSES.forEach(function (tc) {
+        fyCourses.forEach(function (tc) {
           items.push({ kind: 'kenshu', month: tc.month, data: tc });
         });
       }
       if (_archiveFilter === 'all' || _archiveFilter === 'iinkai') {
-        _committeeMinutes.forEach(function (cm) {
+        fyCommittees.forEach(function (cm) {
           items.push({ kind: 'iinkai', month: getCommitteeMonthLabel(cm), data: cm });
         });
       }
@@ -5367,7 +5429,7 @@
       });
 
       if (items.length === 0) {
-        c.innerHTML = '<div style="text-align:center;padding:24px;color:var(--sub);">登録された研修・委員会はありません。上の4×3カレンダーの月をクリックして追加してください。</div>';
+        c.innerHTML = '<div style="text-align:center;padding:24px;color:var(--sub);">令和' + (_calFY - 2018) + '年度に登録された研修・委員会はありません。上の4×3カレンダーの月をクリックして追加してください。</div>';
         return;
       }
 
@@ -5532,6 +5594,7 @@
 
     // ─── 実地指導対応：年間研修計画・受講実績総括表 A4印刷 ────
     function printAnnualMatrixReport() {
+      var fyCourses = getFyCourses(_calFY);
       var w = window.open('', '_blank');
       var html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>年間法定研修実施計画・受講実績総括表 - ' + esc(_facilityName) + '</title>';
       html += '<style>';
@@ -5545,25 +5608,25 @@
       html += '@media print { button { display: none !important; } }';
       html += '</style></head><body>';
 
-      html += '<h1>令和8年度 法定研修 年間実施計画・職員受講実績総括表</h1>';
+      html += '<h1>令和' + (_calFY - 2018) + '年度 法定研修 年間実施計画・職員受講実績総括表</h1>';
       html += '<div class="sub">事業所名：' + esc(getFacilityFullName()) + ' ｜ 出力日：' + todayStr() + '</div>';
 
       html += '<table><thead><tr>';
       html += '<th style="width:110px;">職員氏名</th><th style="width:100px;">役職</th>';
-      TRAINING_COURSES.forEach(function (tc) {
+      fyCourses.forEach(function (tc) {
         html += '<th>' + esc(tc.month) + '度<br><span style="font-size:8pt;font-weight:normal;">' + esc(tc.category) + '</span></th>';
       });
       html += '<th style="width:80px;">年間達成率</th></tr></thead><tbody>';
 
       STAFF.forEach(function (s) {
-        var doneCnt = TRAINING_COURSES.filter(function (tc) { return !!findStaffRecord(s, tc.id); }).length;
-        var totalCnt = TRAINING_COURSES.length;
+        var doneCnt = fyCourses.filter(function (tc) { return !!findStaffRecord(s, tc.id); }).length;
+        var totalCnt = fyCourses.length;
         var pct = totalCnt > 0 ? Math.round((doneCnt / totalCnt) * 100) : 0;
 
         html += '<tr>';
         html += '<td style="font-weight:bold;text-align:left;">' + esc(s.name) + '</td>';
         html += '<td>' + esc(s.role) + '</td>';
-        TRAINING_COURSES.forEach(function (tc) {
+        fyCourses.forEach(function (tc) {
           var rec = findStaffRecord(s, tc.id);
           if (rec) {
             html += '<td style="color:#1b5e20;font-weight:bold;">受講済 (' + rec.score + '点)<br><span style="font-size:8pt;font-weight:normal;color:#444;">' + rec.completedDate + '</span></td>';
@@ -5578,7 +5641,7 @@
 
       html += '<h3 style="font-size:10.5pt;margin-bottom:6px;">【年間研修カリキュラム一覧】</h3>';
       html += '<table><thead><tr><th style="width:65px;">実施月</th><th style="width:120px;">研修区分</th><th>研修タイトル・学習内容</th><th style="width:90px;">受講期限</th></tr></thead><tbody>';
-      TRAINING_COURSES.forEach(function (tc) {
+      fyCourses.forEach(function (tc) {
         html += '<tr><td>' + esc(tc.month) + '</td><td>' + esc(tc.category) + '</td><td style="text-align:left;"><b>' + esc(tc.title) + '</b><br><span style="font-size:8pt;color:#444;">' + esc(tc.desc) + '</span></td><td>' + esc(tc.dueText || '-') + '</td></tr>';
       });
       html += '</tbody></table>';
