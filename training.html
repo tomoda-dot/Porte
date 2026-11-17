@@ -3498,9 +3498,8 @@
           h += '        <div style="font-size:13px;font-weight:900;color:var(--pri-dark);">' + esc(t.title) + '</div>';
           h += '        <div style="font-size:11px;color:var(--sub);margin-top:2px;">' + esc(t.desc) + '</div>';
           h += '      </div>';
-          h += '      <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">';
-          h += '        <button type="button" onclick="selectSuggestedTheme(' + idx + ', \'video\')" style="background:var(--pri);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;" title="このテーマでYouTube最新動画を検索して作成します">🎬 動画検索して作成</button>';
-          h += '        <button type="button" onclick="selectSuggestedTheme(' + idx + ', \'slide_only\')" style="background:#5e35b1;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;" title="動画が見つからない切り口でも、AIが現場ケーススタディ読本＆4択クイズを自動生成します">📄 動画なし（AI読本）で作成</button>';
+          h += '      <div style="flex-shrink:0;">';
+          h += '        <button type="button" onclick="selectSuggestedTheme(' + idx + ')" style="background:var(--pri);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap;">選択</button>';
           h += '      </div>';
           h += '    </div>';
         });
