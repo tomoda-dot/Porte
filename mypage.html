@@ -112,6 +112,10 @@ header{background:var(--pri);color:#fff;padding:12px 16px;border-radius:12px;mar
       <div style="margin-top:16px;text-align:center">
         <a href="javascript:void(0)" onclick="showMpTradLogin()" style="font-size:12px;color:var(--pri);text-decoration:underline;font-weight:600">🔑 従来のID・パスワードで入力</a>
       </div>
+      <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;">
+        <input type="checkbox" id="chk-keep-login" onchange="try{localStorage.setItem('porte_keep_login',this.checked?'1':'0')}catch(e){}" style="width:16px;height:16px;accent-color:var(--pri);cursor:pointer;">
+        <span>📱 ログイン状態を保持する（個人スマホ用）</span>
+      </label>
     </div>
 
     <!-- 4桁PINテンキー画面 -->
@@ -392,6 +396,28 @@ function calcBal(grants,usages){
   return b;
 }
 
+// ─── 共通セッション管理（勤怠・タブレット・研修共通） ───
+function savePorteSession(staffObj){
+  if(!staffObj)return;
+  var keepEl=el('chk-keep-login');
+  var keep=keepEl?keepEl.checked:(localStorage.getItem('porte_keep_login')==='1');
+  try{localStorage.setItem('porte_keep_login',keep?'1':'0');}catch(e){}
+  var payload=JSON.stringify(staffObj);
+  try{sessionStorage.setItem('porte_session',payload);sessionStorage.setItem('mp',payload);}catch(e){}
+  try{if(keep)localStorage.setItem('porte_session',payload);else localStorage.removeItem('porte_session');}catch(e){}
+}
+function loadPorteSession(){
+  try{
+    var s=sessionStorage.getItem('porte_session')||localStorage.getItem('porte_session')||sessionStorage.getItem('mp');
+    return s?JSON.parse(s):null;
+  }catch(e){return null;}
+}
+function clearPorteSession(){
+  try{sessionStorage.removeItem('porte_session');sessionStorage.removeItem('mp');sessionStorage.removeItem('tb_me');sessionStorage.removeItem('porte_training_admin_auth');}catch(e){}
+  try{localStorage.removeItem('porte_session');}catch(e){}
+}
+(function(){var c=el('chk-keep-login');if(c)try{c.checked=(localStorage.getItem('porte_keep_login')==='1');}catch(e){}})();
+
 // ─── ログイン ────────────────────────
 el('btn-login').onclick = async function(){
   var id=el('inp-id').value.trim(), pw=el('inp-pw').value;
@@ -408,7 +434,7 @@ el('btn-login').onclick = async function(){
       err.textContent='このアカウントは現在利用期間外です（入職日前または退職後）';
       return;
     }
-    try{sessionStorage.setItem('mp',JSON.stringify(ME));}catch(e){}
+    savePorteSession(ME);
     await boot();
   }catch(e){
     err.textContent='エラー: '+(e.message||String(e));
@@ -420,7 +446,7 @@ el('btn-login').onclick = async function(){
 el('inp-pw').onkeydown=function(e){if(e.key==='Enter')el('btn-login').onclick();};
 
 el('btn-logout').onclick=function(){
-  try{sessionStorage.removeItem('mp');}catch(e){}
+  clearPorteSession();
   ME=null;
   showMpCardView();
   hide('pg-main'); flex('pg-login');
@@ -558,7 +584,7 @@ async function verifyMpPinInput(){
       return;
     }
     ME = s;
-    try { sessionStorage.setItem('mp', JSON.stringify(ME)); } catch(e){}
+    savePorteSession(ME);
     await boot();
   } else {
     if (errEl) {
@@ -630,7 +656,7 @@ async function saveNewPassword(){
     if (res.error) throw res.error;
 
     ME.password = newPw;
-    try { sessionStorage.setItem('mp', JSON.stringify(ME)); } catch(e){}
+    savePorteSession(ME);
 
     alert('✅ 暗証番号（パスワード）を変更しました！');
     closeChgPwModal();
@@ -686,12 +712,22 @@ async function boot(){
   }
 }
 
-// セッション復元
+// セッション復元（勤怠・タブレット・研修共通）
 (async function(){
   try{
-    var s=sessionStorage.getItem('mp');
-    if(s){ME=JSON.parse(s); await boot();}
-  }catch(e){try{sessionStorage.removeItem('mp');}catch(e2){}}
+    var sess=loadPorteSession();
+    if(sess&&(sess.id||sess.name)){
+      if(!sess.shiftPattern&&sess.id){
+        try{
+          var r=await SB.from('スタッフ').select('*').eq('id',sess.id).limit(1);
+          if(r&&r.data&&r.data[0]) sess=r.data[0];
+        }catch(e2){}
+      }
+      ME=sess;
+      savePorteSession(ME);
+      await boot();
+    }
+  }catch(e){clearPorteSession();}
 })();
 
 // ─── タブ ────────────────────────────

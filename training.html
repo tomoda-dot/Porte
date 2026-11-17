@@ -1292,6 +1292,10 @@
           <a href="javascript:void(0)" onclick="showTrTradLogin()"
             style="font-size:12px;color:var(--pri);text-decoration:underline;font-weight:600;">🔑 従来のID・パスワードで入力</a>
         </div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;">
+          <input type="checkbox" id="chk-keep-login" onchange="try{localStorage.setItem('porte_keep_login',this.checked?'1':'0')}catch(e){}" style="width:16px;height:16px;accent-color:var(--pri);cursor:pointer;">
+          <span>📱 ログイン状態を保持する（個人スマホ用）</span>
+        </label>
       </div>
 
       <!-- Step B: 4桁PINテンキー画面 -->
@@ -2269,10 +2273,12 @@
       await loadAllTrainingData();
       populateOfficialVideoSelect();
 
-      // Porte 共通セッション（sessionStorage 'porte_session'）の確認
+      // Porte 共通セッション（sessionStorage / localStorage 'porte_session'）の確認
+      var keepChk = el('chk-keep-login');
+      if (keepChk) try { keepChk.checked = (localStorage.getItem('porte_keep_login') === '1'); } catch (e) { }
       var restoredStaff = null;
       try {
-        var sessStr = sessionStorage.getItem('porte_session');
+        var sessStr = sessionStorage.getItem('porte_session') || localStorage.getItem('porte_session');
         if (sessStr) {
           var sess = JSON.parse(sessStr);
           if (sess && (sess.id || sess.name)) {
@@ -2428,11 +2434,18 @@
     function completeTrStaffLogin(staffObj) {
       _curStaff = staffObj;
       try {
-        sessionStorage.setItem('porte_session', JSON.stringify({
+        var keepEl = el('chk-keep-login');
+        var keep = keepEl ? keepEl.checked : (localStorage.getItem('porte_keep_login') === '1');
+        localStorage.setItem('porte_keep_login', keep ? '1' : '0');
+        var payload = JSON.stringify({
           id: staffObj.id,
           name: staffObj.name,
-          role: staffObj.role || ''
-        }));
+          role: staffObj.role || '',
+          loginId: staffObj.loginId || ''
+        });
+        sessionStorage.setItem('porte_session', payload);
+        if (keep) localStorage.setItem('porte_session', payload);
+        else localStorage.removeItem('porte_session');
       } catch (e) { }
 
       if (isStaffAdminRole(staffObj)) {
@@ -2464,7 +2477,10 @@
       _isAdminAuthenticated = false;
       try {
         sessionStorage.removeItem('porte_session');
+        sessionStorage.removeItem('mp');
+        sessionStorage.removeItem('tb_me');
         sessionStorage.removeItem('porte_training_admin_auth');
+        localStorage.removeItem('porte_session');
       } catch (e) { }
       showTrLoginScreen();
     }

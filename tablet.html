@@ -1184,6 +1184,10 @@
           <a href="javascript:void(0)" onclick="showTbTradLogin()"
             style="font-size:12px;color:var(--pri);text-decoration:underline;font-weight:600">🔑 従来のID・パスワードで入力</a>
         </div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;">
+          <input type="checkbox" id="chk-keep-login" onchange="try{localStorage.setItem('porte_keep_login',this.checked?'1':'0')}catch(e){}" style="width:16px;height:16px;accent-color:var(--pri);cursor:pointer;">
+          <span>📱 ログイン状態を保持する（個人スマホ用）</span>
+        </label>
       </div>
 
       <!-- 4桁PINテンキー画面 -->
@@ -1642,7 +1646,7 @@
           return;
         }
         ME = s;
-        try { sessionStorage.setItem('tb_me', JSON.stringify(ME)); } catch (e) { }
+        savePorteSession(ME);
         await boot();
       } else {
         if (errEl) {
@@ -1676,21 +1680,54 @@
           return;
         }
         ME = found;
-        try { sessionStorage.setItem('tb_me', JSON.stringify(ME)); } catch (e) { }
+        savePorteSession(ME);
         await boot();
       } catch (e) { err.textContent = 'エラー: ' + (e.message || String(e)); }
       finally { btn.disabled = false; btn.textContent = 'ログイン'; }
     };
     el('inp-pw').onkeydown = function (e) { if (e.key === 'Enter') el('btn-login').onclick(); };
 
+    function savePorteSession(staffObj) {
+      if (!staffObj) return;
+      var keepEl = el('chk-keep-login');
+      var keep = keepEl ? keepEl.checked : (localStorage.getItem('porte_keep_login') === '1');
+      try { localStorage.setItem('porte_keep_login', keep ? '1' : '0'); } catch (e) { }
+      var payload = JSON.stringify(staffObj);
+      try { sessionStorage.setItem('porte_session', payload); sessionStorage.setItem('tb_me', payload); } catch (e) { }
+      try { if (keep) localStorage.setItem('porte_session', payload); else localStorage.removeItem('porte_session'); } catch (e) { }
+    }
+    function loadPorteSession() {
+      try {
+        var s = sessionStorage.getItem('porte_session') || localStorage.getItem('porte_session') || sessionStorage.getItem('tb_me');
+        return s ? JSON.parse(s) : null;
+      } catch (e) { return null; }
+    }
+    function clearPorteSession() {
+      try { sessionStorage.removeItem('porte_session'); sessionStorage.removeItem('tb_me'); sessionStorage.removeItem('mp'); sessionStorage.removeItem('porte_training_admin_auth'); } catch (e) { }
+      try { localStorage.removeItem('porte_session'); } catch (e) { }
+    }
+    (function () { var c = el('chk-keep-login'); if (c) try { c.checked = (localStorage.getItem('porte_keep_login') === '1'); } catch (e) { } })();
+
     el('btn-logout').onclick = function () {
-      try { sessionStorage.removeItem('tb_me'); } catch (e) { }
+      clearPorteSession();
       ME = null;
       showTbCardView();
       hide('pg-main'); el('pg-login').style.display = 'flex';
     };
 
     loadTbStaffCards();
+
+    // 共通セッション復元（勤怠・タブレット・研修共通）
+    (async function () {
+      try {
+        var sess = loadPorteSession();
+        if (sess && (sess.id || sess.name)) {
+          ME = sess;
+          savePorteSession(ME);
+          await boot();
+        }
+      } catch (e) { clearPorteSession(); }
+    })();
 
     // ─── 起動 ────────────────────────────
     async function boot() {
