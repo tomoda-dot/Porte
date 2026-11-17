@@ -3193,15 +3193,6 @@
       var mCommittees = _committeeMinutes.filter(function (cm) { return getCommitteeMonthLabel(cm) === mLabel; });
 
       var h = '';
-      // 0. 月切り替えピルバー（4月〜3月）
-      h += '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:10px;border-bottom:1.5px solid var(--bdr);">';
-      FISCAL_MONTHS.forEach(function (fm) {
-        var isSel = (fm === mLabel);
-        var hasCnt = TRAINING_COURSES.filter(function (c) { return c.month === fm; }).length +
-          _committeeMinutes.filter(function (cm) { return getCommitteeMonthLabel(cm) === fm; }).length;
-        h += '<button type="button" onclick="switchWizardMonth(\'' + fm + '\')" style="padding:6px 11px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;border:1.5px solid ' + (isSel ? 'var(--pri)' : 'var(--bdr)') + ';background:' + (isSel ? 'var(--pri)' : '#fff') + ';color:' + (isSel ? '#fff' : 'var(--pri-dark)') + ';">' + fm + (hasCnt > 0 ? ' (' + hasCnt + ')' : '') + '</button>';
-      });
-      h += '</div>';
 
       // ═══════════════════════════════════════════════════
       // 1. 現在この月に設定されている研修・委員会（受講状況確認・印刷・編集）
