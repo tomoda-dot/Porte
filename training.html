@@ -2870,8 +2870,8 @@
 
       // 4. 所感入力
       h += '<div class="quiz-step-card reflection-box">';
-      h += '  <label style="margin-bottom:8px;">✍️ 本日の所感・現場で意識したいこと（ひと言）</label>';
-      h += '  <textarea id="f-training-reflection" class="reflection-textarea" rows="3" placeholder="研修で学んだことや、明日から現場で意識したいことを入力してください">' + esc(savedReflection) + '</textarea>';
+      h += '  <label style="margin-bottom:8px;">✍️ 本日の所感・現場で意識したいこと（ひと言） <span style="color:#c62828;font-weight:900;font-size:12px;">* 必須</span></label>';
+      h += '  <textarea id="f-training-reflection" class="reflection-textarea" rows="3" required placeholder="研修で学んだことや、明日から現場で意識したいことを入力してください（必須）">' + esc(savedReflection) + '</textarea>';
       h += '</div>';
 
       // 5. 保存完了ボタン
@@ -2946,8 +2946,17 @@
         }
       }
 
-      var reflection = el('f-training-reflection') ? el('f-training-reflection').value.trim() : '';
-      var finalReflection = reflection || '研修内容を日々の支援業務で確実に実践します。';
+      var tfEl = el('f-training-reflection');
+      var reflection = tfEl ? tfEl.value.trim() : '';
+      if (!reflection) {
+        alert('✍️ 本日の所感・現場で意識したいこと（ひと言）を入力してください。');
+        if (tfEl) {
+          tfEl.focus();
+          tfEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+      var finalReflection = reflection;
 
       var record = {
         id: 'tr_rec_' + Date.now(),
