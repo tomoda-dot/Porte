@@ -1936,6 +1936,7 @@
     var _editingCourseId = null;
     var _aiGeneratedDraft = null;
     var _autoMonthSync = false;
+    var _viewerShowAllYears = false;
     var _facilityType = '就労継続支援B型';
     var _facilityName = 'ひとつぎ豊中小曽根';
 
@@ -2114,12 +2115,15 @@
           });
         }
 
-        // 月替わり自動切替がONなら当月の研修をisCurrentに設定
+        // 月替わり自動切替がONなら当年度当月の研修もisCurrentに設定（他の要受講は維持）
         if (_autoMonthSync) {
           var mLabel = currentMonthLabel();
-          var matchMonthCourse = TRAINING_COURSES.find(function (c) { return c.month === mLabel; });
+          var curFyNow = getCurrentFiscalYear();
+          var matchMonthCourse = TRAINING_COURSES.find(function (c) {
+            return getCourseFiscalYear(c) === curFyNow && c.month === mLabel;
+          }) || TRAINING_COURSES.find(function (c) { return c.month === mLabel; });
           if (matchMonthCourse) {
-            TRAINING_COURSES.forEach(function (c) { c.isCurrent = (c.id === matchMonthCourse.id); });
+            matchMonthCourse.isCurrent = true;
           }
         }
 
@@ -2615,9 +2619,19 @@
       var listEl = el('training-card-list');
       if (!listEl || !_curStaff) return;
 
-      var displayCourses = TRAINING_COURSES.slice().sort(function (a, b) {
+      var curFy = getCurrentFiscalYear();
+      var baseCourses = _viewerShowAllYears
+        ? TRAINING_COURSES.slice()
+        : TRAINING_COURSES.filter(function (tc) {
+            return getCourseFiscalYear(tc) === curFy || !!tc.isCurrent;
+          });
+
+      var displayCourses = baseCourses.sort(function (a, b) {
         if (a.isCurrent && !b.isCurrent) return -1;
         if (!a.isCurrent && b.isCurrent) return 1;
+        var fa = getCourseFiscalYear(a);
+        var fb = getCourseFiscalYear(b);
+        if (fa !== fb) return fb - fa;
         var ia = FISCAL_MONTHS.indexOf(a.month);
         var ib = FISCAL_MONTHS.indexOf(b.month);
         return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
@@ -2679,7 +2693,8 @@
         filterEl.innerHTML =
           '<button type="button" class="viewer-filter-btn' + (_viewerFilter === 'all' ? ' active' : '') + '" onclick="setViewerFilter(\'all\')">📋 すべて表示 (' + totalCount + '件)</button>' +
           '<button type="button" class="viewer-filter-btn' + (_viewerFilter === 'todo' ? ' active' : '') + '" onclick="setViewerFilter(\'todo\')">⏳ 未受講リスト (' + todoCount + '件)</button>' +
-          '<button type="button" class="viewer-filter-btn' + (_viewerFilter === 'done' ? ' active' : '') + '" onclick="setViewerFilter(\'done\')">✅ 受講済みリスト (' + doneCount + '件)</button>';
+          '<button type="button" class="viewer-filter-btn' + (_viewerFilter === 'done' ? ' active' : '') + '" onclick="setViewerFilter(\'done\')">✅ 受講済みリスト (' + doneCount + '件)</button>' +
+          '<button type="button" class="viewer-filter-btn' + (_viewerShowAllYears ? ' active' : '') + '" onclick="_viewerShowAllYears=!_viewerShowAllYears;renderStaffTrainingList();" style="margin-left:auto;">' + (_viewerShowAllYears ? '📅 今年度・要受講のみに戻す' : '📚 過年度の研修も表示') + '</button>';
       }
 
       // 3. 未受講リスト ＆ 受講済みリストの描画
@@ -3527,8 +3542,11 @@
           h += '    <button type="button" onclick="printTrainingOfficialReport(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#1565c0;color:#fff;font-weight:800;cursor:pointer;">🖨️ A4実施記録簿を印刷</button>';
           h += '    <button type="button" onclick="loadCourseIntoWizardEditor(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid #1565c0;background:#fff;color:#1565c0;font-weight:800;cursor:pointer;">✏️ テーマ・動画・クイズを編集</button>';
           if (!tc.isCurrent) {
-            h += '    <button type="button" onclick="setCurrentCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ef6c00;color:#fff;font-weight:800;cursor:pointer;">🔥 今月の要受講にする</button>';
+            h += '    <button type="button" onclick="toggleCurrentCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ef6c00;color:#fff;font-weight:800;cursor:pointer;">🔥 今月の要受講にする</button>';
+          } else {
+            h += '    <button type="button" onclick="toggleCurrentCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1.5px solid #ef6c00;background:#fff3e0;color:#e65100;font-weight:800;cursor:pointer;">🔥 要受講から外す</button>';
           }
+          h += '    <button type="button" onclick="duplicateCourseToCurrentMonth(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1.5px solid #2e7d32;background:#f1f8e9;color:#1b5e20;font-weight:800;cursor:pointer;">📋 今月（' + currentMonthLabel() + '）へコピー再受講</button>';
           h += '    <select onchange="moveCourseToMonth(\'' + tc.id + '\', this.value);renderMonthAssignModalBody();" style="font-size:11.5px;padding:4px 8px;border-radius:8px;border:1px solid #90caf9;background:#fff;font-weight:700;cursor:pointer;">' + moveOpts + '</select>';
           h += '    <button type="button" onclick="deleteCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ffebee;color:#c62828;font-weight:800;cursor:pointer;">🗑️ 削除</button>';
           h += '  </div>';
@@ -5577,10 +5595,6 @@
 
       var courseId = _editingCourseId || ('course_' + Date.now());
 
-      if (isCurrent) {
-        TRAINING_COURSES.forEach(function (c) { c.isCurrent = false; });
-      }
-
       var newCourse = {
         id: courseId,
         fy: _calFY,
@@ -5714,7 +5728,10 @@
             '</div>' +
             '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
             '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#fff;color:#1565c0;border:1.5px solid #1565c0;" onclick="_wizExpandedCourseId=\'' + tc.id + '\';openMonthAssignModal(\'' + tc.month + '\', \'kenshu\')">👥 受講所感・詳細 (' + doneCnt + '/' + STAFF.length + ')</button>' +
-            (!tc.isCurrent ? '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#e65100;" onclick="setCurrentCourse(\'' + tc.id + '\')">🔥 今月に設定</button>' : '') +
+            (!tc.isCurrent
+              ? '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#e65100;" onclick="toggleCurrentCourse(\'' + tc.id + '\')">🔥 今月に設定</button>'
+              : '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#fff3e0;color:#e65100;border:1.5px solid #ef6c00;" onclick="toggleCurrentCourse(\'' + tc.id + '\')">🔥 今月から外す</button>') +
+            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#2e7d32;" onclick="duplicateCourseToCurrentMonth(\'' + tc.id + '\')">📋 今月（' + currentMonthLabel() + '）へコピー再受講</button>' +
             '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#1565c0;" onclick="printTrainingOfficialReport(\'' + tc.id + '\')">🖨️ A4記録簿印刷</button>' +
             '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#455a64;" onclick="editCourse(\'' + tc.id + '\')">✏️ 編集</button>' +
             '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#c62828;" onclick="deleteCourse(\'' + tc.id + '\')">🗑️ 削除</button>' +
@@ -5749,17 +5766,64 @@
       loadCourseIntoWizardEditor(tc.id);
     }
 
-    async function setCurrentCourse(id) {
-      TRAINING_COURSES.forEach(function (c) {
-        c.isCurrent = (c.id === id);
-      });
+    async function toggleCurrentCourse(id) {
+      var target = TRAINING_COURSES.find(function (c) { return c.id === id; });
+      if (!target) return;
+      target.isCurrent = !target.isCurrent;
       await saveStorageData('porte_training_courses', TRAINING_COURSES);
       renderAnnualPlanner();
       renderPublishedCoursesList();
       renderStaffGrid();
       renderStaffTrainingList();
       renderAdminMatrix();
-      alert('🔥 今月の要受講研修を変更しました。スタッフ視聴画面のトップに反映されます。');
+    }
+
+    async function setCurrentCourse(id) {
+      return toggleCurrentCourse(id);
+    }
+
+    async function duplicateCourseToCurrentMonth(id) {
+      var src = TRAINING_COURSES.find(function (c) { return c.id === id; });
+      if (!src) return;
+      var curFy = getCurrentFiscalYear();
+      var curMonth = currentMonthLabel();
+      if (!confirm('「' + src.title + '」を令和' + (curFy - 2018) + '年度 ' + curMonth + 'の「🔥 今月の要受講」として新しくコピー作成しますか？\n\n・元の研修と過去の受講記録はそのまま残ります\n・スタッフ全員が新しい研修として再受講できます')) {
+        return;
+      }
+      var newId = 'course_copy_' + Date.now();
+      var newCopy = {
+        id: newId,
+        fy: curFy,
+        month: curMonth,
+        category: src.category,
+        title: stripSeqPrefix(src.title),
+        isCurrent: true,
+        dueText: getDueTextForMonth(curMonth, curFy),
+        desc: src.desc || '',
+        noVideo: !!src.noVideo,
+        videoEmbedUrl: src.videoEmbedUrl || '',
+        youtubeWatchUrl: src.youtubeWatchUrl || '',
+        caseSlides: src.caseSlides ? JSON.parse(JSON.stringify(src.caseSlides)) : [],
+        keypoints: src.keypoints ? src.keypoints.slice() : [],
+        quizzes: src.quizzes ? JSON.parse(JSON.stringify(src.quizzes)) : []
+      };
+      TRAINING_COURSES.push(newCopy);
+      resequenceFyCategoryTitles(curFy, newCopy.category);
+      sortCoursesByFiscalMonth();
+      await saveStorageData('porte_training_courses', TRAINING_COURSES);
+
+      _calFY = curFy;
+      _activeAssignMonth = curMonth;
+      _wizExpandedCourseId = newId;
+      renderAnnualPlanner();
+      renderPublishedCoursesList();
+      renderStaffGrid();
+      renderStaffTrainingList();
+      renderAdminMatrix();
+      if (el('month-assign-modal-overlay') && el('month-assign-modal-overlay').classList.contains('active')) {
+        renderMonthAssignModalBody();
+      }
+      alert('📋 「' + newCopy.title + '」を令和' + (curFy - 2018) + '年度 ' + curMonth + 'にコピーしました！（元の研修と記録は保持されています）');
     }
 
     async function deleteCourse(id) {
