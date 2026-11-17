@@ -2700,17 +2700,15 @@
         : '';
 
       return '<div class="' + cardClass + '">' +
-        '<div class="training-card-header">' +
-        '<div>' +
-        '<span class="training-tag">' + esc(tc.month) + '度 法定研修（' + esc(tc.category) + '）</span>' +
-        '<h3 class="training-title">' + esc(tc.title) + '</h3>' +
-        '<div class="training-meta">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">' +
+        '<span class="training-tag" style="margin-bottom:0;">' + esc(tc.month) + '度 法定研修（' + esc(tc.category) + '）</span>' +
+        '<div>' + statusBadge + '</div>' +
+        '</div>' +
+        '<h3 class="training-title" style="width:100%;margin-bottom:6px;">' + esc(tc.title) + '</h3>' +
+        '<div class="training-meta" style="margin-bottom:10px;">' +
         '<span>⏳ 受講期限: <b>' + esc(tc.dueText || '月末まで') + '</b></span>' +
         '<span>' + (hasVideo ? '🎬 教材: <b>動画＋レジュメ</b>' : '📖 教材: <b>AIスライド・事例読本</b>') + '</span>' +
         '<span>📝 理解度テスト: <b>全' + qCount + '問</b></span>' +
-        '</div>' +
-        '</div>' +
-        '<div style="flex-shrink:0;">' + statusBadge + '</div>' +
         '</div>' +
         '<div class="training-desc">' + esc(tc.desc) + '</div>' +
         reflectionHtml +
