@@ -2995,8 +2995,8 @@
     var MONTH_SEASONAL_HINTS = {
       '4月': '🌸 新年度・権利擁護・虐待防止',
       '5月': '🌿 個人情報保護・SNSルール',
-      '6月': '☔ 食中毒予防・ハラスメント防止',
-      '7月': '🌻 熱中症対策・夏期衛生管理',
+      '6月': '❄️ 梅雨・夏期 感染症・食中毒対策',
+      '7月': '🌻 熱中症予防・夏期安全衛生',
       '8月': '☀️ 身体拘束廃止の基本原則・3要件',
       '9月': '☕ 防災の日BCP・珈琲HACCP衛生',
       '10月': '🍂 不適切ケア防止・アンガーマネジメント',
@@ -3087,6 +3087,96 @@
       { month: '11月', category: '障害特性・就労支援', angle: '【④ 個別支援計画とアセスメント連動編】', title: '支援記録・アセスメント研修「日々の作業観察・面談から『強み（ストレングス）』を見つける支援記録の書き方」', desc: '「できなかったこと」ではなく「どうすればできたか・本人の強み」に着目し、個別支援計画の目標達成につなげる記録法を学びます。', ytQuery: '福祉 支援記録 書き方 ストレングス アセスメント 研修' },
       { month: '1月', category: '障害特性・就労支援', angle: '【⑤ 工賃向上と作業マッチング編】', title: '就労継続支援B型実践研修「珈琲製造・袋詰め・軽作業における適性マッチングと補助具（治具）開発」', desc: '一人ひとりの得意な動きに合わせて作業工程と治具（計量ガイド・シール貼り枠等）を工夫し、楽しく品質と工賃を高める実践を学びます。', ytQuery: '就労継続支援B型 工賃向上 治具 作業工夫' }
     ];
+
+    var MONTH_DEFAULT_CATEGORIES = {
+      '4月': '障害者虐待防止',
+      '5月': '個人情報保護',
+      '6月': '感染対策',
+      '7月': '事故防止・ヒヤリハット',
+      '8月': '身体拘束適正化',
+      '9月': '衛生管理・HACCP',
+      '10月': '障害者虐待防止',
+      '11月': '身体拘束適正化',
+      '12月': '感染対策',
+      '1月': '防災訓練',
+      '2月': '身体拘束適正化',
+      '3月': 'BCP研修・訓練'
+    };
+
+    function stripSeqPrefix(title) {
+      return String(title || '').replace(/^(?:令和\d+年度\s*)?(?:第\d+回\s*)+/, '').trim();
+    }
+
+    function normalizeThemeCore(title) {
+      var s = stripSeqPrefix(title);
+      var m = s.match(/「([^」]+)」/);
+      return m ? m[1].trim() : s;
+    }
+
+    function resequenceFyCategoryTitles(fy, category) {
+      if (!category) return;
+      var targetFy = Number(fy || _calFY);
+      var matches = TRAINING_COURSES.filter(function (c) {
+        return getCourseFiscalYear(c) === targetFy && c.category === category;
+      });
+      matches.sort(function (a, b) {
+        var ia = FISCAL_MONTHS.indexOf(a.month);
+        var ib = FISCAL_MONTHS.indexOf(b.month);
+        if (ia !== ib) return ia - ib;
+        return String(a.id || '').localeCompare(String(b.id || ''));
+      });
+      matches.forEach(function (c, idx) {
+        var base = stripSeqPrefix(c.title);
+        c.title = '第' + (idx + 1) + '回 ' + base;
+      });
+    }
+
+    function getNextCategorySeq(fy, category, editingId) {
+      var targetFy = Number(fy || _calFY);
+      var matches = TRAINING_COURSES.filter(function (c) {
+        return getCourseFiscalYear(c) === targetFy && c.category === category;
+      });
+      if (editingId) {
+        matches.sort(function (a, b) {
+          return FISCAL_MONTHS.indexOf(a.month) - FISCAL_MONTHS.indexOf(b.month);
+        });
+        var pos = matches.findIndex(function (c) { return c.id === editingId; });
+        if (pos >= 0) return pos + 1;
+      }
+      return matches.length + 1;
+    }
+
+    function getThemeUsageStatus(title, fy) {
+      var targetFy = Number(fy || _calFY);
+      var core = normalizeThemeCore(title);
+      var stripped = stripSeqPrefix(title);
+      var isSameTheme = function (c) {
+        var cCore = normalizeThemeCore(c.title);
+        var cStr = stripSeqPrefix(c.title);
+        return (core && cCore === core) || (stripped && cStr === stripped);
+      };
+      var curHit = getFyCourses(targetFy).find(isSameTheme);
+      var prevHit = getFyCourses(targetFy - 1).find(isSameTheme) || TRAINING_COURSES.find(function (c) {
+        return getCourseFiscalYear(c) < targetFy && isSameTheme(c);
+      });
+      return {
+        currentMonth: curHit ? curHit.month : null,
+        prevFyUsed: !!prevHit
+      };
+    }
+
+    function getSortedFilteredThemes(cat, fy) {
+      var combined = _wizAiThemes.concat(THEME_SUGGESTIONS_MASTER);
+      var filtered = combined.filter(function (t) { return t.category === cat; });
+      return filtered.map(function (t, idx) {
+        var st = getThemeUsageStatus(t.title, fy);
+        var rank = st.currentMonth ? 2 : (st.prevFyUsed ? 1 : 0);
+        return { item: t, status: st, rank: rank, origIdx: idx };
+      }).sort(function (a, b) {
+        if (a.rank !== b.rank) return a.rank - b.rank;
+        return a.origIdx - b.origIdx;
+      });
+    }
 
     function getCurrentFiscalYear() {
       var d = new Date();
@@ -3283,6 +3373,19 @@
     }
 
     // ─── 月別 研修・委員会 作成＆当てはめ3ステップウィザードモーダル ───
+    function syncWizardCategoryForMonth(mLabel) {
+      var mCourses = getFyCourses(_calFY).filter(function (c) { return c.month === mLabel; });
+      if (mCourses.length > 0 && mCourses[0].category) {
+        _wizFilterCat = mCourses[0].category;
+      } else {
+        _wizFilterCat = MONTH_DEFAULT_CATEGORIES[mLabel] || '身体拘束適正化';
+      }
+      _wizVideoCandidates = OFFICIAL_VIDEO_LIBRARY.filter(function (v) {
+        return v.category === _wizFilterCat;
+      });
+      if (_wizVideoCandidates.length === 0) _wizVideoCandidates = OFFICIAL_VIDEO_LIBRARY.slice(0, 6);
+    }
+
     function openMonthAssignModal(mLabel, mode) {
       _activeAssignMonth = mLabel || currentMonthLabel();
       if (mode) _wizMode = mode;
@@ -3291,12 +3394,7 @@
       _aiGeneratedDraft = null;
       _wizInlinePreviewId = '';
 
-      // 初期動画候補として当月推奨カテゴリの公的動画をセット
-      var defaultSuggest = THEME_SUGGESTIONS_MASTER.find(function (t) { return t.month === _activeAssignMonth; }) || THEME_SUGGESTIONS_MASTER[0];
-      _wizVideoCandidates = OFFICIAL_VIDEO_LIBRARY.filter(function (v) {
-        return !defaultSuggest || v.category === defaultSuggest.category;
-      });
-      if (_wizVideoCandidates.length === 0) _wizVideoCandidates = OFFICIAL_VIDEO_LIBRARY.slice(0, 6);
+      syncWizardCategoryForMonth(_activeAssignMonth);
 
       var titleEl = el('month-assign-modal-title');
       if (titleEl) titleEl.textContent = '📅 令和' + (_calFY - 2018) + '年度 ' + _activeAssignMonth + ' 研修・委員会の作成＆管理スタジオ';
@@ -3318,8 +3416,9 @@
       _editingCommitteeId = null;
       _aiGeneratedDraft = null;
       _wizInlinePreviewId = '';
+      syncWizardCategoryForMonth(fm);
       var titleEl = el('month-assign-modal-title');
-      if (titleEl) titleEl.textContent = '📅 ' + fm + '度 研修・委員会の作成＆管理スタジオ';
+      if (titleEl) titleEl.textContent = '📅 令和' + (_calFY - 2018) + '年度 ' + fm + ' 研修・委員会の作成＆管理スタジオ';
       renderMonthAssignModalBody();
     }
 
@@ -3522,21 +3621,27 @@
         h += '    </div>';
         h += '  </div>';
 
-        // 選択カテゴリの「切り口別テーマ候補」一覧
-        var combinedThemes = _wizAiThemes.concat(THEME_SUGGESTIONS_MASTER);
-        var filteredThemes = combinedThemes.filter(function (t) {
-          return t.category === _wizFilterCat;
-        });
+        // 選択カテゴリの「切り口別テーマ候補」一覧（未実施を優先表示）
+        var sortedEntries = getSortedFilteredThemes(_wizFilterCat, _calFY);
 
-        h += '  <div style="font-size:12.5px;font-weight:900;color:var(--pri-dark);margin-bottom:6px;">📋 「' + esc(_wizFilterCat) + '」の切り口別テーマ候補（全' + filteredThemes.length + '種類 ― 半年ごと・毎年でも被らない別視点）：</div>';
+        h += '  <div style="font-size:12.5px;font-weight:900;color:var(--pri-dark);margin-bottom:6px;">📋 「' + esc(_wizFilterCat) + '」の切り口別テーマ候補（全' + sortedEntries.length + '種類 ― 未実施のテーマを優先表示）：</div>';
         h += '  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
-        filteredThemes.forEach(function (t, idx) {
+        sortedEntries.forEach(function (entry, idx) {
+          var t = entry.item;
+          var st = entry.status;
           var angleLabel = t.angle || (t.isAi ? '【🤖 AI新規切り口】' : '【実践テーマ】');
-          h += '    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;border:1.5px solid ' + (t.isAi ? '#b39ddb' : 'var(--bdr)') + ';border-radius:10px;padding:9px 12px;flex-wrap:wrap;">';
+          var cardBg = st.currentMonth ? '#fafafa' : '#fff';
+          var cardOpacity = st.currentMonth ? 'opacity:0.72;' : '';
+          h += '    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:' + cardBg + ';border:1.5px solid ' + (t.isAi ? '#b39ddb' : 'var(--bdr)') + ';border-radius:10px;padding:9px 12px;flex-wrap:wrap;' + cardOpacity + '">';
           h += '      <div style="flex:1;min-width:220px;">';
           h += '        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">';
           h += '          <span style="background:' + (t.isAi ? '#ede7f6' : '#e3f2fd') + ';color:' + (t.isAi ? '#5e35b1' : '#1565c0') + ';font-weight:900;font-size:11px;padding:2px 7px;border-radius:5px;">' + esc(angleLabel) + '</span>';
           h += '          <span style="font-size:11px;font-weight:800;color:var(--sub);">[' + esc(t.category) + ']</span>';
+          if (st.currentMonth) {
+            h += '          <span style="background:#e8f5e9;color:#2e7d32;font-weight:900;font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid #a5d6a7;">✓ 今年度実施済（' + esc(st.currentMonth) + '）</span>';
+          } else if (st.prevFyUsed) {
+            h += '          <span style="background:#fff3e0;color:#e65100;font-weight:900;font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid #ffcc80;">📌 前回実施済</span>';
+          }
           h += '        </div>';
           h += '        <div style="font-size:13px;font-weight:900;color:var(--pri-dark);">' + esc(t.title) + '</div>';
           h += '        <div style="font-size:11px;color:var(--sub);margin-top:2px;">' + esc(t.desc) + '</div>';
@@ -3717,19 +3822,25 @@
     }
 
     async function selectSuggestedTheme(idx, matMode) {
-      var combinedThemes = _wizAiThemes.concat(THEME_SUGGESTIONS_MASTER);
-      var filteredThemes = combinedThemes.filter(function (t) {
-        return t.category === _wizFilterCat;
-      });
+      var sortedEntries = getSortedFilteredThemes(_wizFilterCat, _calFY);
+      var entry = sortedEntries[idx];
+      if (!entry) return;
+      var chosen = entry.item;
 
-      var chosen = filteredThemes[idx];
-      if (!chosen) return;
+      if (entry.status && entry.status.currentMonth) {
+        if (!confirm('このテーマは今年度（' + entry.status.currentMonth + '）にすでに登録されています。\n別の切り口を選ぶことを推奨しますが、このまま選択しますか？')) {
+          return;
+        }
+      }
+
+      var seqNum = getNextCategorySeq(_calFY, chosen.category, _editingCourseId);
+      var numberedTitle = '第' + seqNum + '回 ' + stripSeqPrefix(chosen.title);
 
       _wizMaterialMode = matMode || 'video';
       renderMonthAssignModalBody();
 
       if (el('cr-category')) el('cr-category').value = chosen.category;
-      if (el('cr-title')) el('cr-title').value = chosen.title;
+      if (el('cr-title')) el('cr-title').value = numberedTitle;
       if (el('cr-desc')) el('cr-desc').value = chosen.desc || '';
       if (el('yt-search-query')) el('yt-search-query').value = chosen.ytQuery || ('障害福祉 ' + chosen.category + ' 研修');
 
@@ -4879,6 +4990,7 @@
       };
 
       TRAINING_COURSES.push(newCourse);
+      resequenceFyCategoryTitles(_calFY, tpl.category);
       sortCoursesByFiscalMonth();
       await saveStorageData('porte_training_courses', TRAINING_COURSES);
 
@@ -4893,6 +5005,7 @@
       if (!tc) return;
       tc.month = newMonth;
       tc.dueText = getDueTextForMonth(newMonth, getCourseFiscalYear(tc));
+      resequenceFyCategoryTitles(getCourseFiscalYear(tc), tc.category);
       sortCoursesByFiscalMonth();
       await saveStorageData('porte_training_courses', TRAINING_COURSES);
 
@@ -4928,32 +5041,83 @@
         'restraint_case',   // 2月：身体拘束適正化（ヒヤリハット）
         'bcp'               // 3月：BCP研修・訓練
       ];
-      orderedKeys.forEach(function (k) {
-        var p = COURSE_PRESETS[k];
-        if (!p) return;
-        var hasInMonth = fyCourses.some(function (c) { return c.month === p.month; });
-        if (!hasInMonth) {
-          var vUrl = p.videoUrl || '';
-          var newItem = {
-            id: p.id + '_fy' + _calFY,
-            fy: _calFY,
-            month: p.month,
-            category: p.category,
-            title: p.title,
-            isCurrent: false,
-            dueText: getDueTextForMonth(p.month, _calFY),
-            desc: p.desc,
-            noVideo: !vUrl,
-            videoEmbedUrl: vUrl ? vUrl.replace('watch?v=', 'embed/') : '',
-            youtubeWatchUrl: vUrl,
-            keypoints: p.keypoints.slice(),
-            quizzes: JSON.parse(JSON.stringify(p.quizzes))
-          };
-          TRAINING_COURSES.push(newItem);
-          fyCourses.push(newItem);
-          added++;
+      FISCAL_MONTHS.forEach(function (mLabel, mIdx) {
+        var hasInMonth = fyCourses.some(function (c) { return c.month === mLabel; });
+        if (hasInMonth) return;
+
+        var preset = COURSE_PRESETS[orderedKeys[mIdx]];
+        var targetCat = MONTH_DEFAULT_CATEGORIES[mLabel] || (preset ? preset.category : '障害者虐待防止');
+        var catCandidates = THEME_SUGGESTIONS_MASTER.filter(function (t) { return t.category === targetCat; });
+
+        // 前年度（_calFY - 1）や今年度すでに使用済みの切り口を避けて選択
+        var chosenCand = catCandidates.find(function (t) {
+          var st = getThemeUsageStatus(t.title, _calFY);
+          return !st.currentMonth && !st.prevFyUsed;
+        }) || catCandidates.find(function (t) {
+          return !getThemeUsageStatus(t.title, _calFY).currentMonth;
+        }) || catCandidates[0];
+
+        var usePresetExact = preset && (!chosenCand || normalizeThemeCore(chosenCand.title) === normalizeThemeCore(preset.title));
+        var baseTitle = chosenCand ? chosenCand.title : (preset ? preset.title : (targetCat + '研修'));
+        var descText = chosenCand ? chosenCand.desc : (preset ? preset.desc : (baseTitle + 'を実施します。'));
+        var vUrl = usePresetExact ? (preset.videoUrl || '') : (CATEGORY_VERIFIED_VIDEOS[targetCat] || (preset ? (preset.videoUrl || '') : ''));
+        var kps = usePresetExact ? preset.keypoints.slice() : [
+          '<b>ねらい：</b>' + descText,
+          '<b>現場での確認：</b>「' + stripSeqPrefix(baseTitle) + '」の要点を日々の支援・作業指導で意識します。',
+          '<b>チーム連携：</b>気づいた点や迷う場面は速やかにサービス管理責任者・管理者へ共有します。'
+        ];
+        var qzs = usePresetExact ? JSON.parse(JSON.stringify(preset.quizzes)) : [
+          {
+            q: '「' + stripSeqPrefix(baseTitle) + '」における最も適切な基本姿勢はどれですか？',
+            choices: [
+              '迷った場合やヒヤリとした場面はチームで共有し、手順に沿って確認する',
+              '忙しいときは各自の判断だけで簡略化して対応する',
+              '問題が起きるまで特に記録や共有は行わない'
+            ],
+            ans: 0,
+            exp: 'チームでの情報共有と基本手順の確認が、利用者の安全と支援の質を守ります。'
+          },
+          {
+            q: targetCat + 'の取り組みを定着させるために重要なことはどれですか？',
+            choices: [
+              '研修内容を振り返り、日々の支援記録や声かけに活かすこと',
+              '年1回資料を読むだけで日常業務には反映しないこと',
+              '一部の担当者だけが把握していればよいとすること'
+            ],
+            ans: 0,
+            exp: '全職員が共通認識を持ち、日常業務の中で継続して実践することが重要です。'
+          }
+        ];
+
+        var newItem = {
+          id: (preset ? preset.id : 'auto') + '_fy' + _calFY + '_' + mIdx,
+          fy: _calFY,
+          month: mLabel,
+          category: targetCat,
+          title: baseTitle,
+          isCurrent: false,
+          dueText: getDueTextForMonth(mLabel, _calFY),
+          desc: descText,
+          noVideo: !vUrl,
+          videoEmbedUrl: vUrl ? vUrl.replace('watch?v=', 'embed/') : '',
+          youtubeWatchUrl: vUrl,
+          keypoints: kps,
+          quizzes: qzs
+        };
+        TRAINING_COURSES.push(newItem);
+        fyCourses.push(newItem);
+        added++;
+      });
+
+      // 年度×研修区分ごとに「第1回・第2回…」を時系列で連番付与
+      var touchedCats = {};
+      getFyCourses(_calFY).forEach(function (c) {
+        if (c.category && !touchedCats[c.category]) {
+          touchedCats[c.category] = true;
+          resequenceFyCategoryTitles(_calFY, c.category);
         }
       });
+
       sortCoursesByFiscalMonth();
       await saveStorageData('porte_training_courses', TRAINING_COURSES);
       renderAnnualPlanner();
@@ -5427,6 +5591,9 @@
         TRAINING_COURSES.push(newCourse);
       }
 
+      resequenceFyCategoryTitles(_calFY, category);
+      title = newCourse.title;
+
       await saveStorageData('porte_training_courses', TRAINING_COURSES);
 
       // Porte本体の「研修」テーブルにも自動同期
@@ -5583,7 +5750,11 @@
 
     async function deleteCourse(id) {
       if (!confirm('この研修カリキュラムを削除しますか？受講記録は保持されます。')) return;
+      var target = TRAINING_COURSES.find(function (c) { return c.id === id; });
       TRAINING_COURSES = TRAINING_COURSES.filter(function (c) { return c.id !== id; });
+      if (target) {
+        resequenceFyCategoryTitles(getCourseFiscalYear(target), target.category);
+      }
       await saveStorageData('porte_training_courses', TRAINING_COURSES);
       renderAnnualPlanner();
       renderPublishedCoursesList();
