@@ -28,6 +28,8 @@
     html,
     body {
       min-height: 100%;
+      background: #f4f8f5;
+      color: #1e3325;
       background: #f2faf5;
       color: #1f3a2c;
       font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Meiryo', sans-serif;
@@ -45,6 +47,19 @@
     }
 
     :root {
+      --pri: #2d5a3a;
+      /* ポルテ・フォレストグリーン (清潔感と安心感のある緑) */
+      --pri-dark: #1b3d25;
+      /* ディープ・フォレスト */
+      --pri-light: #eaf3ed;
+      /* ペールミント背景 */
+      --pri-hover: #386f48;
+      --forest: #386641;
+      --accent: #2e7d32;
+      /* エメラルドグリーン */
+      --accent-light: #e8f5e9;
+      --bg: #f4f8f5;
+      /* やさしいグリーンオフホワイト */
       --pri: #4ca67a;
       /* 研修アカデミー：やさしいミントグリーン */
       --pri-dark: #2c7a56;
@@ -59,6 +74,12 @@
       --bg: #f2faf5;
       /* 明るいペールミント背景 */
       --card: #ffffff;
+      --bdr: #cbe0d1;
+      /* 淡いグリーンボーダー */
+      --sub: #526e5b;
+      /* セージグレー */
+      --grn: #2e7d32;
+      --grn-bg: #e8f5e9;
       --bdr: #bfe3ce;
       /* やさしい薄緑ボーダー */
       --sub: #4d6b5a;
@@ -71,6 +92,9 @@
       --blue-bg: #e3f2fd;
       --ai-purple: #5e35b1;
       --ai-purple-light: #ede7f6;
+      --shadow-sm: 0 4px 14px rgba(27, 61, 37, 0.06);
+      --shadow-md: 0 8px 24px rgba(27, 61, 37, 0.10);
+      --shadow-lg: 0 16px 40px rgba(27, 61, 37, 0.14);
       --shadow-sm: 0 4px 14px rgba(44, 122, 86, 0.06);
       --shadow-md: 0 8px 24px rgba(44, 122, 86, 0.10);
       --shadow-lg: 0 16px 40px rgba(44, 122, 86, 0.14);
@@ -79,12 +103,14 @@
 
     /* ─── ヘッダー ───────────────────────────── */
     header {
+      background: linear-gradient(135deg, var(--pri) 0%, var(--pri-dark) 100%);
       background: linear-gradient(135deg, #56b485 0%, #3b9167 100%);
       color: #fff;
       padding: 14px 20px;
       position: sticky;
       top: 0;
       z-index: 100;
+      box-shadow: 0 4px 18px rgba(27, 61, 37, 0.18);
       box-shadow: 0 4px 18px rgba(44, 122, 86, 0.16);
     }
 
@@ -100,7 +126,7 @@
 
     .brand-title {
       font-size: 18px;
-      font-weight:700;
+      font-weight: 700;
       letter-spacing: 0.5px;
       display: flex;
       align-items: center;
@@ -112,7 +138,7 @@
       border: 1px solid rgba(255, 255, 255, 0.35);
       color: #fff;
       font-size: 11px;
-      font-weight:600;
+      font-weight: 600;
       padding: 2px 9px;
       border-radius: 10px;
     }
@@ -131,7 +157,7 @@
       border-radius: 20px;
       padding: 6px 14px;
       font-size: 13px;
-      font-weight:600;
+      font-weight: 600;
       cursor: pointer;
       transition: all .2s;
       display: inline-flex;
@@ -171,7 +197,7 @@
     /* ─── スタッフ選択グリッド（スマホ最適化） ── */
     .section-title {
       font-size: 16px;
-      font-weight:700;
+      font-weight: 700;
       color: var(--pri);
       margin-bottom: 12px;
       display: flex;
@@ -219,13 +245,13 @@
       align-items: center;
       justify-content: center;
       font-size: 20px;
-      font-weight:700;
+      font-weight: 700;
       margin: 0 auto 6px;
     }
 
     .staff-name {
       font-size: 14px;
-      font-weight:700;
+      font-weight: 700;
       color: var(--pri-dark);
     }
 
@@ -238,7 +264,7 @@
     .staff-status-badge {
       display: inline-block;
       font-size: 10px;
-      font-weight:600;
+      font-weight: 600;
       padding: 2px 7px;
       border-radius: 8px;
       margin-top: 6px;
@@ -270,13 +296,13 @@
 
     .cur-staff-name {
       font-size: 15px;
-      font-weight:600;
+      font-weight: 600;
       color: var(--pri-dark);
     }
 
     .cur-staff-progress {
       font-size: 13px;
-      font-weight:600;
+      font-weight: 600;
       color: var(--accent);
     }
 
@@ -307,7 +333,7 @@
     .training-tag {
       display: inline-block;
       font-size: 11px;
-      font-weight:700;
+      font-weight: 700;
       padding: 3px 8px;
       border-radius: 8px;
       background: var(--pri-light);
@@ -317,7 +343,7 @@
 
     .training-title {
       font-size: 17px;
-      font-weight:700;
+      font-weight: 700;
       color: var(--pri-dark);
       line-height: 1.4;
     }
@@ -346,7 +372,7 @@
       border-radius: 14px;
       padding: 13px 20px;
       font-size: 15px;
-      font-weight:700;
+      font-weight: 700;
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(45, 90, 58, 0.28);
       display: flex;
@@ -408,7 +434,7 @@
 
     .modal-title {
       font-size: 16px;
-      font-weight:700;
+      font-weight: 700;
     }
 
     .modal-close-btn {
@@ -464,7 +490,7 @@
 
     .keypoints-title {
       font-size: 14px;
-      font-weight:700;
+      font-weight: 700;
       color: var(--pri-dark);
       margin-bottom: 8px;
       display: flex;
@@ -491,7 +517,7 @@
 
     .quiz-q-num {
       font-size: 12px;
-      font-weight:700;
+      font-weight: 700;
       color: var(--accent);
       text-transform: uppercase;
       margin-bottom: 6px;
@@ -499,7 +525,7 @@
 
     .quiz-q-text {
       font-size: 16px;
-      font-weight:600;
+      font-weight: 600;
       color: var(--pri-dark);
       line-height: 1.5;
       margin-bottom: 16px;
@@ -564,7 +590,7 @@
 
     .reflection-box label {
       font-size: 13.5px;
-      font-weight:600;
+      font-weight: 600;
       color: var(--pri-dark);
       display: block;
       margin-bottom: 6px;
@@ -630,7 +656,7 @@
       border: 1.5px solid var(--bdr);
       padding: 8px 16px;
       font-size: 13.5px;
-      font-weight:600;
+      font-weight: 600;
       color: var(--sub);
       border-radius: 12px;
       cursor: pointer;
@@ -669,7 +695,7 @@
 
     .form-field label {
       font-size: 13px;
-      font-weight:600;
+      font-weight: 600;
       color: var(--pri-dark);
     }
 
@@ -718,7 +744,7 @@
       border-radius: 14px;
       padding: 12px 20px;
       font-size: 14.5px;
-      font-weight:600;
+      font-weight: 600;
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(94, 53, 177, 0.28);
       display: inline-flex;
@@ -767,18 +793,18 @@
     .matrix-table th {
       background: var(--pri-light);
       color: var(--pri-dark);
-      font-weight:600;
+      font-weight: 600;
     }
 
     .matrix-table td.staff-col {
       text-align: left;
-      font-weight:600;
+      font-weight: 600;
     }
 
     .badge-ok {
       background: var(--grn-bg);
       color: var(--grn);
-      font-weight:700;
+      font-weight: 700;
       padding: 3px 8px;
       border-radius: 10px;
       font-size: 11px;
@@ -788,7 +814,7 @@
     .badge-no {
       background: var(--warn-bg);
       color: var(--warn);
-      font-weight:600;
+      font-weight: 600;
       padding: 3px 8px;
       border-radius: 10px;
       font-size: 11px;
@@ -810,7 +836,7 @@
       border-radius: 12px;
       padding: 9px 15px;
       font-size: 13px;
-      font-weight:600;
+      font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -839,13 +865,13 @@
 
     .summary-kpi-label {
       font-size: 11.5px;
-      font-weight:600;
+      font-weight: 600;
       color: var(--sub);
     }
 
     .summary-kpi-val {
       font-size: 22px;
-      font-weight:700;
+      font-weight: 700;
       color: var(--pri-dark);
       margin-top: 4px;
     }
@@ -898,7 +924,7 @@
       border-radius: 8px;
       padding: 5px 12px;
       font-size: 13px;
-      font-weight:600;
+      font-weight: 600;
       cursor: pointer;
     }
 
@@ -949,7 +975,7 @@
 
     .fy-stat-val {
       font-size: 26px;
-      font-weight:700;
+      font-weight: 700;
       color: var(--pri-dark);
       line-height: 1.1;
     }
@@ -1018,7 +1044,7 @@
     }
 
     .fy-month-num {
-      font-weight:700;
+      font-weight: 700;
       font-size: 15px;
       color: #222;
     }
@@ -1034,7 +1060,7 @@
       border-radius: 6px;
       padding: 2px 7px;
       font-size: 10.5px;
-      font-weight:600;
+      font-weight: 600;
       cursor: pointer;
       transition: all .15s;
       white-space: nowrap;
@@ -1178,7 +1204,7 @@
       border-radius: 14px;
       padding: 10px 14px;
       font-size: 13.5px;
-      font-weight:600;
+      font-weight: 600;
       color: var(--sub);
       cursor: pointer;
       display: inline-flex;
@@ -1207,7 +1233,7 @@
       padding: 10px 14px;
       border-radius: 12px;
       font-size: 15px;
-      font-weight:700;
+      font-weight: 700;
       margin: 20px 0 12px;
     }
 
@@ -1292,8 +1318,11 @@
           <a href="javascript:void(0)" onclick="showTrTradLogin()"
             style="font-size:12px;color:var(--pri);text-decoration:underline;font-weight:600;">🔑 従来のID・パスワードで入力</a>
         </div>
-        <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;">
-          <input type="checkbox" id="chk-keep-login" onchange="try{localStorage.setItem('porte_keep_login',this.checked?'1':'0')}catch(e){}" style="width:16px;height:16px;accent-color:var(--pri);cursor:pointer;">
+        <label
+          style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;">
+          <input type="checkbox" id="chk-keep-login"
+            onchange="try{localStorage.setItem('porte_keep_login',this.checked?'1':'0')}catch(e){}"
+            style="width:16px;height:16px;accent-color:var(--pri);cursor:pointer;">
           <span>📱 ログイン状態を保持する（個人スマホ用）</span>
         </label>
       </div>
@@ -2459,7 +2488,7 @@
       if (el('pg-app')) el('pg-app').style.display = 'block';
 
       if (el('header-staff-badge')) {
-        el('header-staff-badge').textContent = '👤 ' + staffObj.name + '（' + (staffObj.role || 'スタッフ') + '）';
+        el('header-staff-badge').textContent = '👤 ' + staffObj.name;
       }
 
       _viewerFilter = 'current';
@@ -3672,93 +3701,93 @@
 
           // スタッフ5名の受講状況・点数・所感一覧テーブル（常時表示）
           h += '  <div style="margin-top:10px;background:#fff;border-radius:10px;padding:10px;border:1px solid #90caf9;">';
-            h += '    <div style="font-size:12px;font-weight:700;color:#0d47a1;margin-bottom:6px;">📋 スタッフ別 受講ステータス＆提出された所感（視聴側とリアルタイム連動）</div>';
-            h += '    <table style="width:100%;border-collapse:collapse;font-size:12px;">';
-            h += '      <thead><tr style="background:#f0f7ff;"><th style="border:1px solid #cfe2f3;padding:5px 8px;text-align:left;width:95px;">氏名</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:85px;">状態・得点</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:85px;">完了日</th><th style="border:1px solid #cfe2f3;padding:5px 8px;text-align:left;">提出された所感</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:75px;">操作</th></tr></thead><tbody>';
-            STAFF.forEach(function (s) {
-              var r = findStaffRecord(s, tc.id);
-              h += '      <tr>';
-              h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;font-weight:600;">' + esc(s.name) + '</td>';
-              if (r) {
-                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><span class="badge-ok">✅ ' + r.score + '点</span></td>';
-                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;">' + esc(r.completedDate) + '</td>';
-                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;">' + esc(r.reflection) + '</td>';
-                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><button type="button" onclick="markStaffCompleteByAdmin(\'' + tc.id + '\', \'' + s.id + '\')" style="font-size:10.5px;padding:2px 6px;border-radius:6px;border:1px solid #ccc;background:#f9f9f9;cursor:pointer;">所感修正</button></td>';
-              } else {
-                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><span class="badge-no">⏳ 未受講</span></td>';
-                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;color:#999;">-</td>';
-                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;color:#999;">未提出</td>';
-                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><button type="button" onclick="markStaffCompleteByAdmin(\'' + tc.id + '\', \'' + s.id + '\')" style="font-size:10.5px;padding:2px 6px;border-radius:6px;border:1px solid #1565c0;color:#1565c0;background:#fff;cursor:pointer;font-weight:700;">手動記録</button></td>';
-              }
-              h += '      </tr>';
-            });
-            h += '      </tbody></table>';
-            h += '  </div>';
+          h += '    <div style="font-size:12px;font-weight:700;color:#0d47a1;margin-bottom:6px;">📋 スタッフ別 受講ステータス＆提出された所感（視聴側とリアルタイム連動）</div>';
+          h += '    <table style="width:100%;border-collapse:collapse;font-size:12px;">';
+          h += '      <thead><tr style="background:#f0f7ff;"><th style="border:1px solid #cfe2f3;padding:5px 8px;text-align:left;width:95px;">氏名</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:85px;">状態・得点</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:85px;">完了日</th><th style="border:1px solid #cfe2f3;padding:5px 8px;text-align:left;">提出された所感</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:75px;">操作</th></tr></thead><tbody>';
+          STAFF.forEach(function (s) {
+            var r = findStaffRecord(s, tc.id);
+            h += '      <tr>';
+            h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;font-weight:600;">' + esc(s.name) + '</td>';
+            if (r) {
+              h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><span class="badge-ok">✅ ' + r.score + '点</span></td>';
+              h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;">' + esc(r.completedDate) + '</td>';
+              h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;">' + esc(r.reflection) + '</td>';
+              h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><button type="button" onclick="markStaffCompleteByAdmin(\'' + tc.id + '\', \'' + s.id + '\')" style="font-size:10.5px;padding:2px 6px;border-radius:6px;border:1px solid #ccc;background:#f9f9f9;cursor:pointer;">所感修正</button></td>';
+            } else {
+              h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><span class="badge-no">⏳ 未受講</span></td>';
+              h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;color:#999;">-</td>';
+              h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;color:#999;">未提出</td>';
+              h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><button type="button" onclick="markStaffCompleteByAdmin(\'' + tc.id + '\', \'' + s.id + '\')" style="font-size:10.5px;padding:2px 6px;border-radius:6px;border:1px solid #1565c0;color:#1565c0;background:#fff;cursor:pointer;font-weight:700;">手動記録</button></td>';
+            }
+            h += '      </tr>';
+          });
+          h += '      </tbody></table>';
+          h += '  </div>';
 
-            // 確認用（読み取り専用）：採用したテーマ・基本情報 / 教材タイプ / スライド読本・要点・クイズ
-            var vUrlRaw = tc.youtubeWatchUrl || tc.videoEmbedUrl || '';
-            var isSlideMode = !!tc.noVideo || !vUrlRaw;
-            var vidMatchRo = vUrlRaw.match(/(?:watch\?v=|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-            var vidIdRo = vidMatchRo ? vidMatchRo[1] : '';
-            var libHitRo = vidIdRo ? OFFICIAL_VIDEO_LIBRARY.find(function (v) { return v.id === vidIdRo; }) : null;
-            var vidTitleRo = tc.videoTitle || (libHitRo ? libHitRo.title : '') || vUrlRaw;
+          // 確認用（読み取り専用）：採用したテーマ・基本情報 / 教材タイプ / スライド読本・要点・クイズ
+          var vUrlRaw = tc.youtubeWatchUrl || tc.videoEmbedUrl || '';
+          var isSlideMode = !!tc.noVideo || !vUrlRaw;
+          var vidMatchRo = vUrlRaw.match(/(?:watch\?v=|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+          var vidIdRo = vidMatchRo ? vidMatchRo[1] : '';
+          var libHitRo = vidIdRo ? OFFICIAL_VIDEO_LIBRARY.find(function (v) { return v.id === vidIdRo; }) : null;
+          var vidTitleRo = tc.videoTitle || (libHitRo ? libHitRo.title : '') || vUrlRaw;
 
-            h += '  <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">';
-            // 1. 採用したテーマ・基本情報
-            h += '    <div style="background:#fff;border:1px solid #cfe2f3;border-radius:10px;padding:10px 12px;">';
-            h += '      <div style="font-size:12px;font-weight:700;color:#0d47a1;margin-bottom:6px;">📝 採用したテーマ・基本情報</div>';
-            h += '      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px 12px;font-size:12px;">';
-            h += '        <div><span style="color:var(--sub);font-weight:700;">研修区分：</span><b>' + esc(tc.category || '-') + '</b></div>';
-            h += '        <div><span style="color:var(--sub);font-weight:700;">受講期限：</span><b>' + esc(tc.dueText || '-') + '</b></div>';
+          h += '  <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">';
+          // 1. 採用したテーマ・基本情報
+          h += '    <div style="background:#fff;border:1px solid #cfe2f3;border-radius:10px;padding:10px 12px;">';
+          h += '      <div style="font-size:12px;font-weight:700;color:#0d47a1;margin-bottom:6px;">📝 採用したテーマ・基本情報</div>';
+          h += '      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px 12px;font-size:12px;">';
+          h += '        <div><span style="color:var(--sub);font-weight:700;">研修区分：</span><b>' + esc(tc.category || '-') + '</b></div>';
+          h += '        <div><span style="color:var(--sub);font-weight:700;">受講期限：</span><b>' + esc(tc.dueText || '-') + '</b></div>';
+          h += '      </div>';
+          h += '      <div style="font-size:12px;margin-top:4px;"><span style="color:var(--sub);font-weight:700;">タイトル：</span><b>' + esc(tc.title || '-') + '</b></div>';
+          h += '      <div style="font-size:12px;margin-top:4px;color:#333;line-height:1.5;"><span style="color:var(--sub);font-weight:700;">目的・概要：</span>' + esc(tc.desc || '-') + '</div>';
+          h += '    </div>';
+
+          // 2. 【STEP 2】教材タイプの選択
+          h += '    <div style="background:#fff;border:1px solid #cfe2f3;border-radius:10px;padding:10px 12px;">';
+          h += '      <div style="font-size:12px;font-weight:700;color:#0d47a1;margin-bottom:6px;">🔍 教材タイプの選択</div>';
+          if (isSlideMode) {
+            h += '      <div style="font-size:12.5px;font-weight:600;color:#4527a0;">📄 動画なしで作る（AIスライド・現場事例読本のみ）</div>';
+          } else {
+            h += '      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
+            if (vidIdRo) {
+              h += '        <img src="https://i.ytimg.com/vi/' + esc(vidIdRo) + '/mqdefault.jpg" alt="" style="width:110px;height:62px;object-fit:cover;border-radius:6px;border:1px solid #cfe2f3;">';
+            }
+            h += '        <div style="flex:1;min-width:180px;">';
+            h += '          <div style="font-size:12px;font-weight:700;color:#2e7d32;margin-bottom:2px;">🎬 参考動画を使う</div>';
+            h += '          <div style="font-size:12.5px;font-weight:600;color:var(--pri-dark);">' + esc(vidTitleRo) + '</div>';
+            h += '          <div style="font-size:11px;color:var(--sub);word-break:break-all;margin-top:2px;">' + esc(vUrlRaw) + '</div>';
+            h += '        </div>';
             h += '      </div>';
-            h += '      <div style="font-size:12px;margin-top:4px;"><span style="color:var(--sub);font-weight:700;">タイトル：</span><b>' + esc(tc.title || '-') + '</b></div>';
-            h += '      <div style="font-size:12px;margin-top:4px;color:#333;line-height:1.5;"><span style="color:var(--sub);font-weight:700;">目的・概要：</span>' + esc(tc.desc || '-') + '</div>';
-            h += '    </div>';
+          }
+          h += '    </div>';
 
-            // 2. 【STEP 2】教材タイプの選択
-            h += '    <div style="background:#fff;border:1px solid #cfe2f3;border-radius:10px;padding:10px 12px;">';
-            h += '      <div style="font-size:12px;font-weight:700;color:#0d47a1;margin-bottom:6px;">🔍 教材タイプの選択</div>';
-            if (isSlideMode) {
-              h += '      <div style="font-size:12.5px;font-weight:600;color:#4527a0;">📄 動画なしで作る（AIスライド・現場事例読本のみ）</div>';
-            } else {
-              h += '      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
-              if (vidIdRo) {
-                h += '        <img src="https://i.ytimg.com/vi/' + esc(vidIdRo) + '/mqdefault.jpg" alt="" style="width:110px;height:62px;object-fit:cover;border-radius:6px;border:1px solid #cfe2f3;">';
-              }
-              h += '        <div style="flex:1;min-width:180px;">';
-              h += '          <div style="font-size:12px;font-weight:700;color:#2e7d32;margin-bottom:2px;">🎬 参考動画を使う</div>';
-              h += '          <div style="font-size:12.5px;font-weight:600;color:var(--pri-dark);">' + esc(vidTitleRo) + '</div>';
-              h += '          <div style="font-size:11px;color:var(--sub);word-break:break-all;margin-top:2px;">' + esc(vUrlRaw) + '</div>';
-              h += '        </div>';
+          // 3. 📖 現場ケーススタディ・スライド読本（＋要点・クイズ）
+          h += '    <div style="background:#fff;border:1px solid #cfe2f3;border-radius:10px;padding:10px 12px;">';
+          h += '      <div style="font-size:12px;font-weight:700;color:#0d47a1;margin-bottom:6px;">📖 現場ケーススタディ・スライド読本</div>';
+          if (tc.caseSlides && tc.caseSlides.length > 0) {
+            tc.caseSlides.forEach(function (sl, sIdx) {
+              h += '      <div style="background:#fbf9ff;border:1px solid #e1bee7;border-radius:8px;padding:7px 10px;margin-bottom:6px;">';
+              h += '        <div style="font-size:12px;font-weight:700;color:#4527a0;">スライド' + (sIdx + 1) + '：' + esc(sl.heading || '') + '</div>';
+              h += '        <div style="font-size:11.5px;color:#333;white-space:pre-line;margin-top:2px;line-height:1.45;">' + esc(sl.body || '') + '</div>';
               h += '      </div>';
-            }
-            h += '    </div>';
-
-            // 3. 📖 現場ケーススタディ・スライド読本（＋要点・クイズ）
-            h += '    <div style="background:#fff;border:1px solid #cfe2f3;border-radius:10px;padding:10px 12px;">';
-            h += '      <div style="font-size:12px;font-weight:700;color:#0d47a1;margin-bottom:6px;">📖 現場ケーススタディ・スライド読本</div>';
-            if (tc.caseSlides && tc.caseSlides.length > 0) {
-              tc.caseSlides.forEach(function (sl, sIdx) {
-                h += '      <div style="background:#fbf9ff;border:1px solid #e1bee7;border-radius:8px;padding:7px 10px;margin-bottom:6px;">';
-                h += '        <div style="font-size:12px;font-weight:700;color:#4527a0;">スライド' + (sIdx + 1) + '：' + esc(sl.heading || '') + '</div>';
-                h += '        <div style="font-size:11.5px;color:#333;white-space:pre-line;margin-top:2px;line-height:1.45;">' + esc(sl.body || '') + '</div>';
-                h += '      </div>';
-              });
-            } else {
-              h += '      <div style="font-size:12px;color:var(--sub);margin-bottom:6px;">（スライド読本は未設定です）</div>';
-            }
-            if (tc.keypoints && tc.keypoints.length > 0) {
-              h += '      <div style="font-size:11.5px;font-weight:600;color:var(--pri-dark);margin-top:4px;">📌 学習ポイント（' + tc.keypoints.length + '件）</div>';
-              h += '      <ul style="margin:3px 0 6px 18px;padding:0;font-size:11.5px;color:#333;line-height:1.45;">';
-              tc.keypoints.forEach(function (kp) {
-                h += '        <li>' + kp + '</li>';
-              });
-              h += '      </ul>';
-            }
-            var qCountRo = (tc.quizzes && tc.quizzes.length) || 0;
-            h += '      <div style="font-size:11.5px;font-weight:600;color:#0d47a1;">📝 理解度テスト：全' + qCountRo + '問</div>';
-            h += '    </div>';
-            h += '  </div>';
+            });
+          } else {
+            h += '      <div style="font-size:12px;color:var(--sub);margin-bottom:6px;">（スライド読本は未設定です）</div>';
+          }
+          if (tc.keypoints && tc.keypoints.length > 0) {
+            h += '      <div style="font-size:11.5px;font-weight:600;color:var(--pri-dark);margin-top:4px;">📌 学習ポイント（' + tc.keypoints.length + '件）</div>';
+            h += '      <ul style="margin:3px 0 6px 18px;padding:0;font-size:11.5px;color:#333;line-height:1.45;">';
+            tc.keypoints.forEach(function (kp) {
+              h += '        <li>' + kp + '</li>';
+            });
+            h += '      </ul>';
+          }
+          var qCountRo = (tc.quizzes && tc.quizzes.length) || 0;
+          h += '      <div style="font-size:11.5px;font-weight:600;color:#0d47a1;">📝 理解度テスト：全' + qCountRo + '問</div>';
+          h += '    </div>';
+          h += '  </div>';
           h += '</div>';
         });
 
@@ -3787,233 +3816,233 @@
         h += '  <button type="button" onclick="_wizShowCreator=true;_editingCourseId=null;_editingCommitteeId=null;_aiGeneratedDraft=null;renderMonthAssignModalBody();" style="background:#fff;color:var(--pri);border:1.5px dashed var(--pri);border-radius:12px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;">＋ この月に新しい研修・委員会を追加する</button>';
         h += '</div>';
       } else {
-      h += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
-      h += '  <button type="button" onclick="_wizMode=\'kenshu\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMode === 'kenshu' ? '#1565c0' : 'var(--bdr)') + ';background:' + (_wizMode === 'kenshu' ? '#e3f2fd' : '#fff') + ';color:' + (_wizMode === 'kenshu' ? '#0d47a1' : 'var(--sub)') + ';">📖 研修テーマ作成</button>';
-      h += '  <button type="button" onclick="_wizMode=\'iinkai\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMode === 'iinkai' ? '#2e7d32' : 'var(--bdr)') + ';background:' + (_wizMode === 'iinkai' ? '#e8f5e9' : '#fff') + ';color:' + (_wizMode === 'iinkai' ? '#1b5e20' : 'var(--sub)') + ';">🏛️ 委員会議事録作成</button>';
-      h += '</div>';
-
-      if (_wizMode === 'kenshu') {
-        // ─────────────────────────────────────────────────
-        // 📖 研修作成 3ステップウィザード
-        // ─────────────────────────────────────────────────
-        if (!_wizFilterCat || _wizFilterCat === 'すべて') {
-          var mSug = THEME_SUGGESTIONS_MASTER.find(function (t) { return t.month === mLabel; });
-          _wizFilterCat = mSug ? mSug.category : '身体拘束適正化';
-        }
-        var defaultSug = THEME_SUGGESTIONS_MASTER.find(function (t) { return t.category === _wizFilterCat; }) || THEME_SUGGESTIONS_MASTER[0];
-        var initCat = curCatVal || _wizFilterCat || defaultSug.category;
-        var initTitle = curTitleVal;
-        var initDue = curDueVal || getDueTextForMonth(mLabel);
-        var initVideo = (_wizMaterialMode === 'slide_only') ? '' : (curVideoVal || CATEGORY_VERIFIED_VIDEOS[initCat] || 'https://www.youtube.com/watch?v=U5DBEouTQu8');
-        var initVideoTitle = curVideoTitleVal || '';
-        var initDesc = curDescVal;
-        var initYtQuery = curYtQueryVal || (defaultSug ? defaultSug.ytQuery : ('障害福祉 ' + initCat + ' 研修'));
-
-        // 【STEP 1】💡 法定必須・推奨ボタン ＆ 切り口別テーマ候補リスト
-        h += '<div style="background:var(--pri-light);border:1.5px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:16px;">';
-        h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
-        h += '    <div style="font-size:14.5px;font-weight:700;color:var(--pri-dark);">【STEP 1】💡 研修区分を選んで、下の「切り口別テーマ候補」から選択してください</div>';
-        h += '    <button type="button" id="btn-ai-suggest-themes" onclick="suggestThemesWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12px;">🤖 AIに「' + esc(_wizFilterCat) + '」のさらに違う切り口を5つ提案させる</button>';
-        h += '  </div>';
-
-        // ① 法定必須研修・訓練（5項目）ボタン群
-        h += '  <div style="background:#fff;border:1.5px solid #90caf9;border-radius:12px;padding:10px 12px;margin-bottom:8px;">';
-        h += '    <div style="font-size:11.5px;font-weight:700;color:#0d47a1;margin-bottom:6px;">🔴 ① 法定必須研修・訓練（運営基準義務・減算防止 5項目）</div>';
-        h += '    <div style="display:flex;gap:6px;flex-wrap:wrap;">';
-        MANDATORY_CATEGORIES.forEach(function (mc) {
-          var isAct = (_wizFilterCat === mc.cat);
-          h += '<button type="button" onclick="selectWizardCategory(\'' + mc.cat + '\')" style="padding:6px 12px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ' + (isAct ? '#1565c0' : '#bbdefb') + ';background:' + (isAct ? '#1565c0' : '#f5faff') + ';color:' + (isAct ? '#fff' : '#0d47a1') + ';transition:all .15s;">' + mc.label + '</button>';
-        });
-        h += '    </div>';
-        h += '  </div>';
-
-        // ② 準必須・推奨研修（6項目）ボタン群
-        h += '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:12px;padding:10px 12px;margin-bottom:12px;">';
-        h += '    <div style="font-size:11.5px;font-weight:700;color:var(--pri-dark);margin-bottom:6px;">🟢 ② 準必須・推奨研修（実地指導の資質向上・他法令対応 6項目）</div>';
-        h += '    <div style="display:flex;gap:6px;flex-wrap:wrap;">';
-        RECOMMENDED_CATEGORIES.forEach(function (rc) {
-          var isAct = (_wizFilterCat === rc.cat);
-          h += '<button type="button" onclick="selectWizardCategory(\'' + rc.cat + '\')" style="padding:6px 12px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ' + (isAct ? 'var(--pri)' : 'var(--bdr)') + ';background:' + (isAct ? 'var(--pri)' : '#f8fbf9') + ';color:' + (isAct ? '#fff' : 'var(--pri-dark)') + ';transition:all .15s;">' + rc.label + '</button>';
-        });
-        h += '    </div>';
-        h += '  </div>';
-
-        // 選択カテゴリの「切り口別テーマ候補」一覧（未実施を優先表示）
-        var sortedEntries = getSortedFilteredThemes(_wizFilterCat, _calFY);
-
-        h += '  <div style="font-size:12.5px;font-weight:700;color:var(--pri-dark);margin-bottom:6px;">📋 「' + esc(_wizFilterCat) + '」の切り口別テーマ候補（全' + sortedEntries.length + '種類 ― 未実施のテーマを優先表示）：</div>';
-        h += '  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
-        sortedEntries.forEach(function (entry, idx) {
-          var t = entry.item;
-          var st = entry.status;
-          var angleLabel = t.angle || (t.isAi ? '【🤖 AI新規切り口】' : '【実践テーマ】');
-          var cardBg = st.currentMonth ? '#fafafa' : '#fff';
-          var cardOpacity = st.currentMonth ? 'opacity:0.72;' : '';
-          h += '    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:' + cardBg + ';border:1.5px solid ' + (t.isAi ? '#b39ddb' : 'var(--bdr)') + ';border-radius:10px;padding:9px 12px;flex-wrap:wrap;' + cardOpacity + '">';
-          h += '      <div style="flex:1;min-width:220px;">';
-          h += '        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">';
-          h += '          <span style="background:' + (t.isAi ? '#ede7f6' : '#e3f2fd') + ';color:' + (t.isAi ? '#5e35b1' : '#1565c0') + ';font-weight:700;font-size:11px;padding:2px 7px;border-radius:5px;">' + esc(angleLabel) + '</span>';
-          h += '          <span style="font-size:11px;font-weight:600;color:var(--sub);">[' + esc(t.category) + ']</span>';
-          if (st.currentMonth) {
-            h += '          <span style="background:#e8f5e9;color:#2e7d32;font-weight:700;font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid #a5d6a7;">✓ 今年度実施済（' + esc(st.currentMonth) + '）</span>';
-          } else if (st.prevFyUsed) {
-            h += '          <span style="background:#fff3e0;color:#e65100;font-weight:700;font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid #ffcc80;">📌 前回実施済</span>';
-          }
-          h += '        </div>';
-          h += '        <div style="font-size:13px;font-weight:700;color:var(--pri-dark);">' + esc(t.title) + '</div>';
-          h += '        <div style="font-size:11px;color:var(--sub);margin-top:2px;">' + esc(t.desc) + '</div>';
-          h += '      </div>';
-          h += '      <div style="flex-shrink:0;">';
-          h += '        <button type="button" onclick="selectSuggestedTheme(' + idx + ')" style="background:var(--pri);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">選択</button>';
-          h += '      </div>';
-          h += '    </div>';
-        });
-        h += '  </div>';
-
-        // 選択・編集中のテーマ基本情報フォーム
-        var allCatNames = MANDATORY_CATEGORIES.concat(RECOMMENDED_CATEGORIES).map(function (x) { return x.cat; }).concat(['その他']);
-        h += '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:12px;padding:12px;">';
-        h += '    <div style="font-size:12px;font-weight:700;color:var(--pri-dark);margin-bottom:8px;">📝 採用したテーマ・基本情報（直接書き換えも可能）' + (_editingCourseId ? ' <span style="color:#e65100;">【既存研修の編集中】</span>' : '') + '</div>';
-        h += '    <input type="hidden" id="cr-month" value="' + esc(mLabel) + '">';
-        h += '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">';
-        h += '      <div class="form-field"><label>研修区分 *</label><select id="cr-category" onchange="onCreatorCategoryChange()">';
-        allCatNames.forEach(function (cOpt) {
-          h += '<option value="' + cOpt + '"' + (cOpt === initCat ? ' selected' : '') + '>' + cOpt + '</option>';
-        });
-        h += '      </select></div>';
-        h += '      <div class="form-field"><label>受講期限 *</label><input type="date" id="cr-due" value="' + esc(initDue) + '"></div>';
-        h += '    </div>';
-        h += '    <div class="form-field" style="margin-bottom:8px;"><label>研修タイトル *</label><input type="text" id="cr-title" value="' + esc(initTitle) + '" placeholder="上の候補から選ぶか、自由に入力してください"></div>';
-        h += '    <div class="form-field"><label>研修の目的・概要</label><textarea id="cr-desc" rows="2" placeholder="研修のねらい、学習内容">' + esc(initDesc) + '</textarea></div>';
-        h += '  </div>';
+        h += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
+        h += '  <button type="button" onclick="_wizMode=\'kenshu\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMode === 'kenshu' ? '#1565c0' : 'var(--bdr)') + ';background:' + (_wizMode === 'kenshu' ? '#e3f2fd' : '#fff') + ';color:' + (_wizMode === 'kenshu' ? '#0d47a1' : 'var(--sub)') + ';">📖 研修テーマ作成</button>';
+        h += '  <button type="button" onclick="_wizMode=\'iinkai\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMode === 'iinkai' ? '#2e7d32' : 'var(--bdr)') + ';background:' + (_wizMode === 'iinkai' ? '#e8f5e9' : '#fff') + ';color:' + (_wizMode === 'iinkai' ? '#1b5e20' : 'var(--sub)') + ';">🏛️ 委員会議事録作成</button>';
         h += '</div>';
 
-        // 【STEP 2】🔍 教材タイプの選択（YouTube参考動画 または 動画なしAIスライド読本）
-        h += '<div style="background:#f8fbf9;border:1.5px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:16px;" id="wiz-step2-box">';
-        h += '  <div style="font-size:14.5px;font-weight:700;color:var(--pri-dark);margin-bottom:8px;">【STEP 2】🔍 教材タイプの選択</div>';
+        if (_wizMode === 'kenshu') {
+          // ─────────────────────────────────────────────────
+          // 📖 研修作成 3ステップウィザード
+          // ─────────────────────────────────────────────────
+          if (!_wizFilterCat || _wizFilterCat === 'すべて') {
+            var mSug = THEME_SUGGESTIONS_MASTER.find(function (t) { return t.month === mLabel; });
+            _wizFilterCat = mSug ? mSug.category : '身体拘束適正化';
+          }
+          var defaultSug = THEME_SUGGESTIONS_MASTER.find(function (t) { return t.category === _wizFilterCat; }) || THEME_SUGGESTIONS_MASTER[0];
+          var initCat = curCatVal || _wizFilterCat || defaultSug.category;
+          var initTitle = curTitleVal;
+          var initDue = curDueVal || getDueTextForMonth(mLabel);
+          var initVideo = (_wizMaterialMode === 'slide_only') ? '' : (curVideoVal || CATEGORY_VERIFIED_VIDEOS[initCat] || 'https://www.youtube.com/watch?v=U5DBEouTQu8');
+          var initVideoTitle = curVideoTitleVal || '';
+          var initDesc = curDescVal;
+          var initYtQuery = curYtQueryVal || (defaultSug ? defaultSug.ytQuery : ('障害福祉 ' + initCat + ' 研修'));
 
-        h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
-        h += '    <button type="button" onclick="setWizardMaterialMode(\'video\')" style="flex:1;min-width:220px;padding:9px 12px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMaterialMode === 'video' ? 'var(--pri)' : 'var(--bdr)') + ';background:' + (_wizMaterialMode === 'video' ? 'var(--pri)' : '#fff') + ';color:' + (_wizMaterialMode === 'video' ? '#fff' : 'var(--pri-dark)') + ';">🎬 参考動画を使う</button>';
-        h += '    <button type="button" onclick="setWizardMaterialMode(\'slide_only\')" style="flex:1;min-width:220px;padding:9px 12px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMaterialMode === 'slide_only' ? '#5e35b1' : 'var(--bdr)') + ';background:' + (_wizMaterialMode === 'slide_only' ? '#5e35b1' : '#fff') + ';color:' + (_wizMaterialMode === 'slide_only' ? '#fff' : '#4527a0') + ';">📄 動画なしで作る</button>';
-        h += '  </div>';
-
-        if (_wizMaterialMode === 'slide_only') {
-          h += '  <input type="hidden" id="cr-video" value="">';
-          h += '  <input type="hidden" id="cr-video-title" value="AIスライド・現場事例読本">';
-        } else {
-          h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
-          h += '    <input type="text" id="yt-search-query" value="' + esc(initYtQuery) + '" placeholder="検索キーワード（YouTube・厚労省定番動画を一括検索）" style="flex:1;min-width:220px;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 12px;font-size:13.5px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();searchYouTubeVideosLive();}">';
-          h += '    <button type="button" id="btn-yt-live-search" onclick="searchYouTubeVideosLive()" style="background:var(--pri);color:#fff;border:none;border-radius:10px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;">🔍 検索</button>';
+          // 【STEP 1】💡 法定必須・推奨ボタン ＆ 切り口別テーマ候補リスト
+          h += '<div style="background:var(--pri-light);border:1.5px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:16px;">';
+          h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
+          h += '    <div style="font-size:14.5px;font-weight:700;color:var(--pri-dark);">【STEP 1】💡 研修区分を選んで、下の「切り口別テーマ候補」から選択してください</div>';
+          h += '    <button type="button" id="btn-ai-suggest-themes" onclick="suggestThemesWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12px;">🤖 AIに「' + esc(_wizFilterCat) + '」のさらに違う切り口を5つ提案させる</button>';
           h += '  </div>';
 
-          if (_wizInlinePreviewId) {
-            h += '  <div style="background:#000;border-radius:12px;padding:8px;margin-bottom:12px;">';
-            h += '    <div style="display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:12px;font-weight:600;margin-bottom:6px;padding:0 4px;">';
-            h += '      <span>▶ 動画プレビュー再生中（音声・内容を確認できます）</span>';
-            h += '      <button type="button" onclick="_wizInlinePreviewId=\'\';renderMonthAssignModalBody();" style="background:#444;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;">✕ プレビューを閉じる</button>';
+          // ① 法定必須研修・訓練（5項目）ボタン群
+          h += '  <div style="background:#fff;border:1.5px solid #90caf9;border-radius:12px;padding:10px 12px;margin-bottom:8px;">';
+          h += '    <div style="font-size:11.5px;font-weight:700;color:#0d47a1;margin-bottom:6px;">🔴 ① 法定必須研修・訓練（運営基準義務・減算防止 5項目）</div>';
+          h += '    <div style="display:flex;gap:6px;flex-wrap:wrap;">';
+          MANDATORY_CATEGORIES.forEach(function (mc) {
+            var isAct = (_wizFilterCat === mc.cat);
+            h += '<button type="button" onclick="selectWizardCategory(\'' + mc.cat + '\')" style="padding:6px 12px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ' + (isAct ? '#1565c0' : '#bbdefb') + ';background:' + (isAct ? '#1565c0' : '#f5faff') + ';color:' + (isAct ? '#fff' : '#0d47a1') + ';transition:all .15s;">' + mc.label + '</button>';
+          });
+          h += '    </div>';
+          h += '  </div>';
+
+          // ② 準必須・推奨研修（6項目）ボタン群
+          h += '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:12px;padding:10px 12px;margin-bottom:12px;">';
+          h += '    <div style="font-size:11.5px;font-weight:700;color:var(--pri-dark);margin-bottom:6px;">🟢 ② 準必須・推奨研修（実地指導の資質向上・他法令対応 6項目）</div>';
+          h += '    <div style="display:flex;gap:6px;flex-wrap:wrap;">';
+          RECOMMENDED_CATEGORIES.forEach(function (rc) {
+            var isAct = (_wizFilterCat === rc.cat);
+            h += '<button type="button" onclick="selectWizardCategory(\'' + rc.cat + '\')" style="padding:6px 12px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ' + (isAct ? 'var(--pri)' : 'var(--bdr)') + ';background:' + (isAct ? 'var(--pri)' : '#f8fbf9') + ';color:' + (isAct ? '#fff' : 'var(--pri-dark)') + ';transition:all .15s;">' + rc.label + '</button>';
+          });
+          h += '    </div>';
+          h += '  </div>';
+
+          // 選択カテゴリの「切り口別テーマ候補」一覧（未実施を優先表示）
+          var sortedEntries = getSortedFilteredThemes(_wizFilterCat, _calFY);
+
+          h += '  <div style="font-size:12.5px;font-weight:700;color:var(--pri-dark);margin-bottom:6px;">📋 「' + esc(_wizFilterCat) + '」の切り口別テーマ候補（全' + sortedEntries.length + '種類 ― 未実施のテーマを優先表示）：</div>';
+          h += '  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">';
+          sortedEntries.forEach(function (entry, idx) {
+            var t = entry.item;
+            var st = entry.status;
+            var angleLabel = t.angle || (t.isAi ? '【🤖 AI新規切り口】' : '【実践テーマ】');
+            var cardBg = st.currentMonth ? '#fafafa' : '#fff';
+            var cardOpacity = st.currentMonth ? 'opacity:0.72;' : '';
+            h += '    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:' + cardBg + ';border:1.5px solid ' + (t.isAi ? '#b39ddb' : 'var(--bdr)') + ';border-radius:10px;padding:9px 12px;flex-wrap:wrap;' + cardOpacity + '">';
+            h += '      <div style="flex:1;min-width:220px;">';
+            h += '        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">';
+            h += '          <span style="background:' + (t.isAi ? '#ede7f6' : '#e3f2fd') + ';color:' + (t.isAi ? '#5e35b1' : '#1565c0') + ';font-weight:700;font-size:11px;padding:2px 7px;border-radius:5px;">' + esc(angleLabel) + '</span>';
+            h += '          <span style="font-size:11px;font-weight:600;color:var(--sub);">[' + esc(t.category) + ']</span>';
+            if (st.currentMonth) {
+              h += '          <span style="background:#e8f5e9;color:#2e7d32;font-weight:700;font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid #a5d6a7;">✓ 今年度実施済（' + esc(st.currentMonth) + '）</span>';
+            } else if (st.prevFyUsed) {
+              h += '          <span style="background:#fff3e0;color:#e65100;font-weight:700;font-size:10.5px;padding:2px 7px;border-radius:5px;border:1px solid #ffcc80;">📌 前回実施済</span>';
+            }
+            h += '        </div>';
+            h += '        <div style="font-size:13px;font-weight:700;color:var(--pri-dark);">' + esc(t.title) + '</div>';
+            h += '        <div style="font-size:11px;color:var(--sub);margin-top:2px;">' + esc(t.desc) + '</div>';
+            h += '      </div>';
+            h += '      <div style="flex-shrink:0;">';
+            h += '        <button type="button" onclick="selectSuggestedTheme(' + idx + ')" style="background:var(--pri);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">選択</button>';
+            h += '      </div>';
             h += '    </div>';
-            h += '    <div class="video-wrapper" style="margin-bottom:0;"><iframe src="https://www.youtube.com/embed/' + esc(_wizInlinePreviewId) + '?autoplay=1" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>';
+          });
+          h += '  </div>';
+
+          // 選択・編集中のテーマ基本情報フォーム
+          var allCatNames = MANDATORY_CATEGORIES.concat(RECOMMENDED_CATEGORIES).map(function (x) { return x.cat; }).concat(['その他']);
+          h += '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:12px;padding:12px;">';
+          h += '    <div style="font-size:12px;font-weight:700;color:var(--pri-dark);margin-bottom:8px;">📝 採用したテーマ・基本情報（直接書き換えも可能）' + (_editingCourseId ? ' <span style="color:#e65100;">【既存研修の編集中】</span>' : '') + '</div>';
+          h += '    <input type="hidden" id="cr-month" value="' + esc(mLabel) + '">';
+          h += '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">';
+          h += '      <div class="form-field"><label>研修区分 *</label><select id="cr-category" onchange="onCreatorCategoryChange()">';
+          allCatNames.forEach(function (cOpt) {
+            h += '<option value="' + cOpt + '"' + (cOpt === initCat ? ' selected' : '') + '>' + cOpt + '</option>';
+          });
+          h += '      </select></div>';
+          h += '      <div class="form-field"><label>受講期限 *</label><input type="date" id="cr-due" value="' + esc(initDue) + '"></div>';
+          h += '    </div>';
+          h += '    <div class="form-field" style="margin-bottom:8px;"><label>研修タイトル *</label><input type="text" id="cr-title" value="' + esc(initTitle) + '" placeholder="上の候補から選ぶか、自由に入力してください"></div>';
+          h += '    <div class="form-field"><label>研修の目的・概要</label><textarea id="cr-desc" rows="2" placeholder="研修のねらい、学習内容">' + esc(initDesc) + '</textarea></div>';
+          h += '  </div>';
+          h += '</div>';
+
+          // 【STEP 2】🔍 教材タイプの選択（YouTube参考動画 または 動画なしAIスライド読本）
+          h += '<div style="background:#f8fbf9;border:1.5px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:16px;" id="wiz-step2-box">';
+          h += '  <div style="font-size:14.5px;font-weight:700;color:var(--pri-dark);margin-bottom:8px;">【STEP 2】🔍 教材タイプの選択</div>';
+
+          h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+          h += '    <button type="button" onclick="setWizardMaterialMode(\'video\')" style="flex:1;min-width:220px;padding:9px 12px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMaterialMode === 'video' ? 'var(--pri)' : 'var(--bdr)') + ';background:' + (_wizMaterialMode === 'video' ? 'var(--pri)' : '#fff') + ';color:' + (_wizMaterialMode === 'video' ? '#fff' : 'var(--pri-dark)') + ';">🎬 参考動画を使う</button>';
+          h += '    <button type="button" onclick="setWizardMaterialMode(\'slide_only\')" style="flex:1;min-width:220px;padding:9px 12px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMaterialMode === 'slide_only' ? '#5e35b1' : 'var(--bdr)') + ';background:' + (_wizMaterialMode === 'slide_only' ? '#5e35b1' : '#fff') + ';color:' + (_wizMaterialMode === 'slide_only' ? '#fff' : '#4527a0') + ';">📄 動画なしで作る</button>';
+          h += '  </div>';
+
+          if (_wizMaterialMode === 'slide_only') {
+            h += '  <input type="hidden" id="cr-video" value="">';
+            h += '  <input type="hidden" id="cr-video-title" value="AIスライド・現場事例読本">';
+          } else {
+            h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+            h += '    <input type="text" id="yt-search-query" value="' + esc(initYtQuery) + '" placeholder="検索キーワード（YouTube・厚労省定番動画を一括検索）" style="flex:1;min-width:220px;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 12px;font-size:13.5px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();searchYouTubeVideosLive();}">';
+            h += '    <button type="button" id="btn-yt-live-search" onclick="searchYouTubeVideosLive()" style="background:var(--pri);color:#fff;border:none;border-radius:10px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;">🔍 検索</button>';
+            h += '  </div>';
+
+            if (_wizInlinePreviewId) {
+              h += '  <div style="background:#000;border-radius:12px;padding:8px;margin-bottom:12px;">';
+              h += '    <div style="display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:12px;font-weight:600;margin-bottom:6px;padding:0 4px;">';
+              h += '      <span>▶ 動画プレビュー再生中（音声・内容を確認できます）</span>';
+              h += '      <button type="button" onclick="_wizInlinePreviewId=\'\';renderMonthAssignModalBody();" style="background:#444;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;">✕ プレビューを閉じる</button>';
+              h += '    </div>';
+              h += '    <div class="video-wrapper" style="margin-bottom:0;"><iframe src="https://www.youtube.com/embed/' + esc(_wizInlinePreviewId) + '?autoplay=1" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>';
+              h += '  </div>';
+            }
+
+            h += '  <div id="yt-search-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;padding:4px;margin-bottom:10px;">';
+            h += renderWizardVideoCardsHTML(initVideo);
+            h += '  </div>';
+
+            h += '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
+            h += '    <span style="font-size:12px;font-weight:700;color:var(--pri-dark);">🎬 採用中の動画URL：</span>';
+            h += '    <input type="text" id="cr-video" value="' + esc(initVideo) + '" style="flex:1;min-width:200px;border:1px solid var(--bdr);border-radius:8px;padding:5px 8px;font-size:12.5px;">';
+            h += '    <input type="hidden" id="cr-video-title" value="' + esc(initVideoTitle) + '">';
+            h += '    <button type="button" onclick="previewCreatorVideo()" style="background:var(--pri-light);color:var(--pri-dark);border:1px solid var(--bdr);border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">↗ 別タブで確認</button>';
             h += '  </div>';
           }
+          h += '</div>';
 
-          h += '  <div id="yt-search-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;padding:4px;margin-bottom:10px;">';
-          h += renderWizardVideoCardsHTML(initVideo);
+          // 【STEP 3】🤖 AIでスライド読本・要点レジュメ・4択クイズ（全4問）を自動生成 ➔ カレンダーに登録
+          h += '<div style="background:#fbf9ff;border:1.5px solid #b39ddb;border-radius:16px;padding:16px;" id="wiz-step3-box">';
+          h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">';
+          h += '    <div>';
+          h += '      <div style="font-size:14.5px;font-weight:700;color:#4527a0;">【STEP 3】🤖 スライド事例読本・要点レジュメ・4択クイズ（全4問）をAI生成 ➔ 登録</div>';
+          h += '      <div style="font-size:12px;color:var(--sub);" id="ai-engine-status-text">選択した切り口テーマに合わせて、現場ケーススタディ読本（3枚）＋要点まとめ＋4択テストをAIが自動作成します</div>';
+          h += '    </div>';
+          h += '    <button type="button" class="ai-gen-btn" id="btn-run-ai-course" onclick="generateCourseWithAI()">';
+          h += '      <span>🤖 スライド読本＆要点＆4択クイズをAI生成</span>';
+          h += '    </button>';
           h += '  </div>';
 
-          h += '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
-          h += '    <span style="font-size:12px;font-weight:700;color:var(--pri-dark);">🎬 採用中の動画URL：</span>';
-          h += '    <input type="text" id="cr-video" value="' + esc(initVideo) + '" style="flex:1;min-width:200px;border:1px solid var(--bdr);border-radius:8px;padding:5px 8px;font-size:12.5px;">';
-          h += '    <input type="hidden" id="cr-video-title" value="' + esc(initVideoTitle) + '">';
-          h += '    <button type="button" onclick="previewCreatorVideo()" style="background:var(--pri-light);color:var(--pri-dark);border:1px solid var(--bdr);border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">↗ 別タブで確認</button>';
+          h += '  <div class="form-field" style="margin-bottom:12px;">';
+          h += '    <label style="color:var(--ai-purple);font-size:12px;">💡 AIへの追加リクエスト・現場の課題（任意：入力するとスライド読本やクイズに反映されます）</label>';
+          h += '    <input type="text" id="cr-ai-prompt-notes" value="' + esc(curNotesVal) + '" placeholder="例：珈琲焙煎室での火傷防止、送迎時の声かけ、ノロウイルス嘔吐物処理手順など" style="border-color:#b39ddb;background:#fff;">';
           h += '  </div>';
-        }
-        h += '</div>';
 
-        // 【STEP 3】🤖 AIでスライド読本・要点レジュメ・4択クイズ（全4問）を自動生成 ➔ カレンダーに登録
-        h += '<div style="background:#fbf9ff;border:1.5px solid #b39ddb;border-radius:16px;padding:16px;" id="wiz-step3-box">';
-        h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">';
-        h += '    <div>';
-        h += '      <div style="font-size:14.5px;font-weight:700;color:#4527a0;">【STEP 3】🤖 スライド事例読本・要点レジュメ・4択クイズ（全4問）をAI生成 ➔ 登録</div>';
-        h += '      <div style="font-size:12px;color:var(--sub);" id="ai-engine-status-text">選択した切り口テーマに合わせて、現場ケーススタディ読本（3枚）＋要点まとめ＋4択テストをAIが自動作成します</div>';
-        h += '    </div>';
-        h += '    <button type="button" class="ai-gen-btn" id="btn-run-ai-course" onclick="generateCourseWithAI()">';
-        h += '      <span>🤖 スライド読本＆要点＆4択クイズをAI生成</span>';
-        h += '    </button>';
-        h += '  </div>';
+          h += '  <div id="cr-ai-preview" style="background:#fff;border:1.5px solid #d1c4e9;border-radius:12px;padding:14px;margin-bottom:14px;">';
+          if (_aiGeneratedDraft) {
+            h += '<!-- renderAiPreviewで描画 -->';
+          } else {
+            h += '    <div style="font-size:12.5px;color:var(--sub);text-align:center;padding:14px 0;">上の「🤖 スライド読本＆要点＆4択クイズをAI生成」を押すと、ここに教材スライド・要点・4択クイズ（全4問）のエディタが展開されます</div>';
+          }
+          h += '  </div>';
 
-        h += '  <div class="form-field" style="margin-bottom:12px;">';
-        h += '    <label style="color:var(--ai-purple);font-size:12px;">💡 AIへの追加リクエスト・現場の課題（任意：入力するとスライド読本やクイズに反映されます）</label>';
-        h += '    <input type="text" id="cr-ai-prompt-notes" value="' + esc(curNotesVal) + '" placeholder="例：珈琲焙煎室での火傷防止、送迎時の声かけ、ノロウイルス嘔吐物処理手順など" style="border-color:#b39ddb;background:#fff;">';
-        h += '  </div>';
+          h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding-top:10px;border-top:1.5px solid #d1c4e9;">';
+          h += '    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--pri-dark);">';
+          h += '      <input type="checkbox" id="cr-is-current" style="width:18px;height:18px;"' + (curIsCurrentVal ? ' checked' : '') + '>';
+          h += '      <span>🔥 この研修を「今月の要受講研修（視聴側トップ表示）」に設定する</span>';
+          h += '    </label>';
+          h += '    <div style="display:flex;gap:8px;">';
+          if (_editingCourseId) {
+            h += '      <button type="button" class="btn-print" style="background:#607d8b;" onclick="_editingCourseId=null;_aiGeneratedDraft=null;_wizShowCreator=false;renderMonthAssignModalBody();">編集キャンセル</button>';
+          }
+          h += '      <button type="button" class="training-start-btn" style="background:var(--accent);width:auto;padding:12px 26px;" onclick="saveCourseFromCreator()">';
+          h += '        <span>' + (_editingCourseId ? ('💾 「' + mLabel + '」の研修を更新・保存する') : ('💾 「' + mLabel + '」の研修としてカレンダーに登録・配信する')) + '</span>';
+          h += '      </button>';
+          h += '    </div>';
+          h += '  </div>';
+          h += '</div>';
 
-        h += '  <div id="cr-ai-preview" style="background:#fff;border:1.5px solid #d1c4e9;border-radius:12px;padding:14px;margin-bottom:14px;">';
-        if (_aiGeneratedDraft) {
-          h += '<!-- renderAiPreviewで描画 -->';
         } else {
-          h += '    <div style="font-size:12.5px;color:var(--sub);text-align:center;padding:14px 0;">上の「🤖 スライド読本＆要点＆4択クイズをAI生成」を押すと、ここに教材スライド・要点・4択クイズ（全4問）のエディタが展開されます</div>';
+          // ─────────────────────────────────────────────────
+          // 🏛️ 委員会・議事録作成（AI自動起案）
+          // ─────────────────────────────────────────────────
+          var mNum = parseInt(String(mLabel).replace('月', ''), 10) || 11;
+          var yr = (mNum >= 4) ? _calFY : (_calFY + 1);
+          var defaultCmDate = yr + '-' + String(mNum).padStart(2, '0') + '-24';
+          var staffNames = STAFF.map(function (s) { return s.name; }).join('、');
+
+          h += '<div style="background:#f1f8e9;border:1.5px solid #a5d6a7;border-radius:16px;padding:16px;">';
+          h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
+          h += '    <div style="font-size:14.5px;font-weight:700;color:#1b5e20;">🏛️ 「' + mLabel + '」の法定委員会・議事録を作成（AI自動起案）</div>';
+          h += '    <button type="button" id="btn-ai-committee" onclick="generateCommitteeWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12px;">🤖 AIで議題と決定事項を自動起案</button>';
+          h += '  </div>';
+
+          // 1クリック即時追加バー
+          h += '  <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed #a5d6a7;">';
+          h += '    <div style="font-size:12px;font-weight:600;color:#2e7d32;margin-bottom:6px;">⚡ 1クリックで「' + mLabel + '」に定例委員会（標準議事録付）を即時追加：</div>';
+          h += '    <div style="display:flex;flex-wrap:wrap;gap:6px;">';
+          ['身体拘束適正化委員会', '虐待防止委員会', '感染症対策委員会', 'BCP（業務継続計画）委員会', '安全衛生・HACCP委員会'].forEach(function (catName) {
+            h += '      <button type="button" onclick="quickAssignCommitteeToMonth(\'' + mLabel + '\', \'' + catName + '\')" style="background:#fff;border:1.5px solid #2e7d32;color:#1b5e20;border-radius:10px;padding:5px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">＋ ' + catName + 'を即追加</button>';
+          });
+          h += '    </div>';
+          h += '  </div>';
+
+          h += '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
+          h += '    <div class="form-field"><label>委員会種別</label><select id="cm-category" onchange="onCommitteeTypeChange()">';
+          ['身体拘束適正化委員会', '虐待防止委員会', '感染症対策委員会', 'BCP（業務継続計画）委員会', '安全衛生・HACCP委員会'].forEach(function (cOpt) {
+            h += '<option value="' + cOpt + '">' + cOpt + '</option>';
+          });
+          h += '    </select></div>';
+          h += '    <div class="form-field"><label>開催日</label><input type="date" id="cm-date" value="' + defaultCmDate + '"></div>';
+          h += '  </div>';
+          h += '  <div class="form-field" style="margin-bottom:10px;"><label>会議名</label><input type="text" id="cm-title" value="令和' + (_calFY - 2018) + '年度 ' + mLabel + '定例 身体拘束適正化委員会"></div>';
+          h += '  <div class="form-field" style="margin-bottom:10px;"><label>出席者</label><input type="text" id="cm-attendees" value="' + esc(staffNames) + '"></div>';
+          h += '  <div class="form-field" style="margin-bottom:10px;"><label>協議事項・議題</label><textarea id="cm-agenda" rows="3">1. 事業所における身体拘束ゼロの継続確認と指針の点検\n2. 現場におけるスピーチロック（言葉の拘束）のヒヤリハット事例共有\n3. 法定研修の受講進捗および代替支援の実践確認</textarea></div>';
+          h += '  <div class="form-field" style="margin-bottom:14px;"><label>決定事項・改善策</label><textarea id="cm-decisions" rows="3">・「ちょっと待って」ではなく具体的な見通し（◯分後など）を伝える声かけを全職員で徹底する。\n・作業環境や動線を調整し、利用者が落ち着いて過ごせる環境づくりを継続する。</textarea></div>';
+          h += '  <div style="text-align:right;">';
+          h += '    <button type="button" class="training-start-btn" style="background:#2e7d32;width:auto;padding:12px 26px;display:inline-flex;" onclick="saveCommitteeMinutesFromWizard()">';
+          h += '      <span>💾 「' + mLabel + '」の委員会としてカレンダーに登録・保存する</span>';
+          h += '    </button>';
+          h += '  </div>';
+          h += '</div>';
         }
-        h += '  </div>';
-
-        h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding-top:10px;border-top:1.5px solid #d1c4e9;">';
-        h += '    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--pri-dark);">';
-        h += '      <input type="checkbox" id="cr-is-current" style="width:18px;height:18px;"' + (curIsCurrentVal ? ' checked' : '') + '>';
-        h += '      <span>🔥 この研修を「今月の要受講研修（視聴側トップ表示）」に設定する</span>';
-        h += '    </label>';
-        h += '    <div style="display:flex;gap:8px;">';
-        if (_editingCourseId) {
-          h += '      <button type="button" class="btn-print" style="background:#607d8b;" onclick="_editingCourseId=null;_aiGeneratedDraft=null;_wizShowCreator=false;renderMonthAssignModalBody();">編集キャンセル</button>';
-        }
-        h += '      <button type="button" class="training-start-btn" style="background:var(--accent);width:auto;padding:12px 26px;" onclick="saveCourseFromCreator()">';
-        h += '        <span>' + (_editingCourseId ? ('💾 「' + mLabel + '」の研修を更新・保存する') : ('💾 「' + mLabel + '」の研修としてカレンダーに登録・配信する')) + '</span>';
-        h += '      </button>';
-        h += '    </div>';
-        h += '  </div>';
-        h += '</div>';
-
-      } else {
-        // ─────────────────────────────────────────────────
-        // 🏛️ 委員会・議事録作成（AI自動起案）
-        // ─────────────────────────────────────────────────
-        var mNum = parseInt(String(mLabel).replace('月', ''), 10) || 11;
-        var yr = (mNum >= 4) ? _calFY : (_calFY + 1);
-        var defaultCmDate = yr + '-' + String(mNum).padStart(2, '0') + '-24';
-        var staffNames = STAFF.map(function (s) { return s.name; }).join('、');
-
-        h += '<div style="background:#f1f8e9;border:1.5px solid #a5d6a7;border-radius:16px;padding:16px;">';
-        h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
-        h += '    <div style="font-size:14.5px;font-weight:700;color:#1b5e20;">🏛️ 「' + mLabel + '」の法定委員会・議事録を作成（AI自動起案）</div>';
-        h += '    <button type="button" id="btn-ai-committee" onclick="generateCommitteeWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12px;">🤖 AIで議題と決定事項を自動起案</button>';
-        h += '  </div>';
-
-        // 1クリック即時追加バー
-        h += '  <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed #a5d6a7;">';
-        h += '    <div style="font-size:12px;font-weight:600;color:#2e7d32;margin-bottom:6px;">⚡ 1クリックで「' + mLabel + '」に定例委員会（標準議事録付）を即時追加：</div>';
-        h += '    <div style="display:flex;flex-wrap:wrap;gap:6px;">';
-        ['身体拘束適正化委員会', '虐待防止委員会', '感染症対策委員会', 'BCP（業務継続計画）委員会', '安全衛生・HACCP委員会'].forEach(function (catName) {
-          h += '      <button type="button" onclick="quickAssignCommitteeToMonth(\'' + mLabel + '\', \'' + catName + '\')" style="background:#fff;border:1.5px solid #2e7d32;color:#1b5e20;border-radius:10px;padding:5px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">＋ ' + catName + 'を即追加</button>';
-        });
-        h += '    </div>';
-        h += '  </div>';
-
-        h += '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
-        h += '    <div class="form-field"><label>委員会種別</label><select id="cm-category" onchange="onCommitteeTypeChange()">';
-        ['身体拘束適正化委員会', '虐待防止委員会', '感染症対策委員会', 'BCP（業務継続計画）委員会', '安全衛生・HACCP委員会'].forEach(function (cOpt) {
-          h += '<option value="' + cOpt + '">' + cOpt + '</option>';
-        });
-        h += '    </select></div>';
-        h += '    <div class="form-field"><label>開催日</label><input type="date" id="cm-date" value="' + defaultCmDate + '"></div>';
-        h += '  </div>';
-        h += '  <div class="form-field" style="margin-bottom:10px;"><label>会議名</label><input type="text" id="cm-title" value="令和' + (_calFY - 2018) + '年度 ' + mLabel + '定例 身体拘束適正化委員会"></div>';
-        h += '  <div class="form-field" style="margin-bottom:10px;"><label>出席者</label><input type="text" id="cm-attendees" value="' + esc(staffNames) + '"></div>';
-        h += '  <div class="form-field" style="margin-bottom:10px;"><label>協議事項・議題</label><textarea id="cm-agenda" rows="3">1. 事業所における身体拘束ゼロの継続確認と指針の点検\n2. 現場におけるスピーチロック（言葉の拘束）のヒヤリハット事例共有\n3. 法定研修の受講進捗および代替支援の実践確認</textarea></div>';
-        h += '  <div class="form-field" style="margin-bottom:14px;"><label>決定事項・改善策</label><textarea id="cm-decisions" rows="3">・「ちょっと待って」ではなく具体的な見通し（◯分後など）を伝える声かけを全職員で徹底する。\n・作業環境や動線を調整し、利用者が落ち着いて過ごせる環境づくりを継続する。</textarea></div>';
-        h += '  <div style="text-align:right;">';
-        h += '    <button type="button" class="training-start-btn" style="background:#2e7d32;width:auto;padding:12px 26px;display:inline-flex;" onclick="saveCommitteeMinutesFromWizard()">';
-        h += '      <span>💾 「' + mLabel + '」の委員会としてカレンダーに登録・保存する</span>';
-        h += '    </button>';
-        h += '  </div>';
-        h += '</div>';
-      }
       }
 
       body.innerHTML = h;
@@ -5483,46 +5512,46 @@
 
       var slideSpecPrompt = isSlideOnly
         ? '今回は【動画教材なし】のため、受講スタッフがスライドと要点を読むだけで10分相当の深い理解を得られるよう、通常より説明を厚く・具体的に書いてください。\n' +
-          '「現場ケーススタディ・スライド読本（全5枚・各250〜350文字程度）」、「重要ポイント要約（5〜6項目・各項目に具体的な背景や理由を含める）」、「理解度確認4択クイズ（全4問・各問4つの選択肢・丁寧な解説付き）」をJSON形式のみで出力してください。\n\n'
+        '「現場ケーススタディ・スライド読本（全5枚・各250〜350文字程度）」、「重要ポイント要約（5〜6項目・各項目に具体的な背景や理由を含める）」、「理解度確認4択クイズ（全4問・各問4つの選択肢・丁寧な解説付き）」をJSON形式のみで出力してください。\n\n'
         : '以下の条件に基づき、動画とあわせて5分間で深く学べる「現場ケーススタディ・スライド読本（3枚）」、「重要ポイント要約（4項目）」、「理解度確認4択クイズ（全4問・各問4つの選択肢）」をJSON形式のみで出力してください。\n\n';
 
       var slideFormatJson = isSlideOnly
         ? '  "caseSlides": [\n' +
-          '    {\n' +
-          '      "heading": "1. この研修の目的と法令・現場上の位置づけ",\n' +
-          '      "body": "なぜこのテーマを学ぶのか、運営基準や利用者への影響を含めて丁寧に解説（250〜350文字）"\n' +
-          '    },\n' +
-          '    {\n' +
-          '      "heading": "2. 押さえておくべき基本原則と具体的な判断基準",\n' +
-          '      "body": "用語の意味・やってはいけないこと・迷ったときの判断軸を具体的に解説（250〜350文字）"\n' +
-          '    },\n' +
-          '    {\n' +
-          '      "heading": "3. 現場ケーススタディ①（作業・製造・衛生場面）",\n' +
-          '      "body": "【場面】...\\n【なぜ起きやすいか】...\\n❌NG対応：...\\n⭕OK対応：...\\n【支援のポイント】..."\n' +
-          '    },\n' +
-          '    {\n' +
-          '      "heading": "4. 現場ケーススタディ②（声かけ・体調変化・トラブル対応）",\n' +
-          '      "body": "【場面】...\\n【背景にある理由】...\\n❌NG対応：...\\n⭕OK対応：...\\n【振り返りの視点】..."\n' +
-          '    },\n' +
-          '    {\n' +
-          '      "heading": "5. 明日から' + _facilityName + 'で実践する行動チェックリスト",\n' +
-          '      "body": "① ...（具体的な手順・声かけ例）\\n② ...（確認・記録のタイミング）\\n③ ...（管理者・チームへの共有ルール）"\n' +
-          '    }\n' +
-          '  ],\n'
+        '    {\n' +
+        '      "heading": "1. この研修の目的と法令・現場上の位置づけ",\n' +
+        '      "body": "なぜこのテーマを学ぶのか、運営基準や利用者への影響を含めて丁寧に解説（250〜350文字）"\n' +
+        '    },\n' +
+        '    {\n' +
+        '      "heading": "2. 押さえておくべき基本原則と具体的な判断基準",\n' +
+        '      "body": "用語の意味・やってはいけないこと・迷ったときの判断軸を具体的に解説（250〜350文字）"\n' +
+        '    },\n' +
+        '    {\n' +
+        '      "heading": "3. 現場ケーススタディ①（作業・製造・衛生場面）",\n' +
+        '      "body": "【場面】...\\n【なぜ起きやすいか】...\\n❌NG対応：...\\n⭕OK対応：...\\n【支援のポイント】..."\n' +
+        '    },\n' +
+        '    {\n' +
+        '      "heading": "4. 現場ケーススタディ②（声かけ・体調変化・トラブル対応）",\n' +
+        '      "body": "【場面】...\\n【背景にある理由】...\\n❌NG対応：...\\n⭕OK対応：...\\n【振り返りの視点】..."\n' +
+        '    },\n' +
+        '    {\n' +
+        '      "heading": "5. 明日から' + _facilityName + 'で実践する行動チェックリスト",\n' +
+        '      "body": "① ...（具体的な手順・声かけ例）\\n② ...（確認・記録のタイミング）\\n③ ...（管理者・チームへの共有ルール）"\n' +
+        '    }\n' +
+        '  ],\n'
         : '  "caseSlides": [\n' +
-          '    {\n' +
-          '      "heading": "基本原則とこのテーマが重要な理由",\n' +
-          '      "body": "現場でなぜこの視点が大切なのかをわかりやすく解説（120〜180文字）"\n' +
-          '    },\n' +
-          '    {\n' +
-          '      "heading": "現場ケーススタディ（❌NG対応 ⇔ ⭕OK対応の比較）",\n' +
-          '      "body": "【場面】作業中や日常支援での具体的な場面\\n❌NG対応：やってしまいがちな不適切な言動・対応\\n⭕OK対応：利用者の尊厳と安心を守る具体的な言い換え・環境調整"\n' +
-          '    },\n' +
-          '    {\n' +
-          '      "heading": "明日から' + _facilityName + 'で実践する3つのアクション",\n' +
-          '      "body": "① ...\\n② ...\\n③ ..."\n' +
-          '    }\n' +
-          '  ],\n';
+        '    {\n' +
+        '      "heading": "基本原則とこのテーマが重要な理由",\n' +
+        '      "body": "現場でなぜこの視点が大切なのかをわかりやすく解説（120〜180文字）"\n' +
+        '    },\n' +
+        '    {\n' +
+        '      "heading": "現場ケーススタディ（❌NG対応 ⇔ ⭕OK対応の比較）",\n' +
+        '      "body": "【場面】作業中や日常支援での具体的な場面\\n❌NG対応：やってしまいがちな不適切な言動・対応\\n⭕OK対応：利用者の尊厳と安心を守る具体的な言い換え・環境調整"\n' +
+        '    },\n' +
+        '    {\n' +
+        '      "heading": "明日から' + _facilityName + 'で実践する3つのアクション",\n' +
+        '      "body": "① ...\\n② ...\\n③ ..."\n' +
+        '    }\n' +
+        '  ],\n';
 
       var prompt = 'あなたは障害福祉サービス（' + getFacilityFullName() + '：珈琲焙煎・製造・袋詰め・軽作業等を提供）の法定研修カリキュラム作成の専門家です。\n' +
         slideSpecPrompt +
