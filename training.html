@@ -2629,11 +2629,21 @@
       if (!listEl || !_curStaff) return;
 
       var curFy = getCurrentFiscalYear();
-      var baseCourses = _viewerShowAllYears
-        ? TRAINING_COURSES.slice()
-        : TRAINING_COURSES.filter(function (tc) {
-            return getCourseFiscalYear(tc) === curFy || !!tc.isCurrent;
-          });
+      var curMIdx = FISCAL_MONTHS.indexOf(currentMonthLabel());
+      var isReleasedCourse = function (tc) {
+        if (tc.isCurrent) return true;
+        var fy = getCourseFiscalYear(tc);
+        if (fy < curFy) return true;
+        if (fy > curFy) return false;
+        var mIdx = FISCAL_MONTHS.indexOf(tc.month);
+        return mIdx >= 0 && mIdx <= curMIdx;
+      };
+
+      var baseCourses = TRAINING_COURSES.filter(function (tc) {
+        if (!isReleasedCourse(tc) && !findStaffRecord(_curStaff, tc.id)) return false;
+        if (_viewerShowAllYears) return true;
+        return getCourseFiscalYear(tc) === curFy || !!tc.isCurrent;
+      });
 
       var displayCourses = baseCourses.sort(function (a, b) {
         if (a.isCurrent && !b.isCurrent) return -1;
