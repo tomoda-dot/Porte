@@ -1475,10 +1475,6 @@
             <button type="button" class="btn-print" style="background:#1565c0;" onclick="printAnnualMatrixReport()">
               📑 年間研修計画・受講実績総括表をA4印刷
             </button>
-            <button type="button" class="btn-print" style="background:#2e7d32;"
-              onclick="openMonthAssignModal(currentMonthLabel(), 'iinkai')">
-              🏛️ AIで委員会議事録を作成
-            </button>
           </div>
 
           <div class="section-title">
@@ -3430,6 +3426,7 @@
       h += '    <span style="font-size:22px;font-weight:700;color:var(--pri-dark);">📚 研修・委員会管理</span>';
       h += '  </div>';
       h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;">';
+      h += '    <button type="button" class="btn-print" style="background:#2e7d32;font-size:12px;padding:7px 14px;" onclick="openCommitteeStudio(currentMonthLabel())">🏛️ AIで委員会議事録を作成</button>';
       h += '    <button type="button" class="btn-print" style="background:var(--accent);font-size:12px;padding:7px 14px;" onclick="autoFill12MonthPlan()">✨ 推奨テーマを一括配置</button>';
       h += '  </div>';
       h += '</div>';
@@ -3509,7 +3506,7 @@
           });
           mCommittees.forEach(function (cm) {
             var dayStr = cm.date ? (parseInt(cm.date.split('-')[2], 10) + '日 ') : '';
-            h += '    <div class="fy-ev-pill iinkai" onclick="event.stopPropagation();openMonthAssignModal(\'' + mLabel + '\', \'iinkai\')" title="クリックして委員会議事録を確認・印刷：' + esc(cm.title) + '">';
+            h += '    <div class="fy-ev-pill iinkai" onclick="event.stopPropagation();openCommitteeStudio(\'' + mLabel + '\')" title="クリックして委員会議事録を確認・印刷：' + esc(cm.title) + '">';
             h += '      <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🏛️ ' + dayStr + esc(cm.title) + '</span>';
             h += '    </div>';
           });
@@ -3559,7 +3556,25 @@
       }
     }
 
+    var _wizDedicatedCommittee = false;
+
+    function openCommitteeStudio(mLabel, cmId) {
+      _wizDedicatedCommittee = true;
+      _activeAssignMonth = mLabel || currentMonthLabel();
+      _wizMode = 'iinkai';
+      _wizShowCreator = true;
+      _editingCourseId = null;
+      _editingCommitteeId = cmId || null;
+      _aiGeneratedDraft = null;
+      _wizInlinePreviewId = '';
+      var titleEl = el('month-assign-modal-title');
+      if (titleEl) titleEl.textContent = '🏛️ 令和' + (_calFY - 2018) + '年度 ' + _activeAssignMonth + ' 委員会議事録作成スタジオ';
+      renderMonthAssignModalBody();
+      el('month-assign-modal-overlay').classList.add('active');
+    }
+
     function openMonthAssignModal(mLabel, mode, showCreator) {
+      _wizDedicatedCommittee = false;
       _activeAssignMonth = mLabel || currentMonthLabel();
       if (mode) _wizMode = mode;
       _editingCourseId = null;
@@ -3597,7 +3612,12 @@
       _wizShowCreator = !hasItems;
       syncWizardCategoryForMonth(fm);
       var titleEl = el('month-assign-modal-title');
-      if (titleEl) titleEl.textContent = '📅 令和' + (_calFY - 2018) + '年度 ' + fm + ' 研修・委員会の作成＆管理スタジオ';
+      if (titleEl) {
+        titleEl.textContent = _wizDedicatedCommittee
+          ? ('🏛️ 令和' + (_calFY - 2018) + '年度 ' + fm + ' 委員会議事録作成スタジオ')
+          : ('📅 令和' + (_calFY - 2018) + '年度 ' + fm + ' 研修・委員会の作成＆管理スタジオ');
+      }
+      if (_wizDedicatedCommittee) _wizShowCreator = true;
       renderMonthAssignModalBody();
     }
 
@@ -3662,10 +3682,22 @@
       var curYtQueryVal = el('yt-search-query') ? el('yt-search-query').value : '';
 
       var mLabel = _activeAssignMonth;
-      var mCourses = getFyCourses(_calFY).filter(function (c) { return c.month === mLabel; });
+      var mCourses = _wizDedicatedCommittee ? [] : getFyCourses(_calFY).filter(function (c) { return c.month === mLabel; });
       var mCommittees = getFyCommittees(_calFY).filter(function (cm) { return getCommitteeMonthLabel(cm) === mLabel; });
 
       var h = '';
+
+      if (_wizDedicatedCommittee) {
+        h += '<div style="background:#f1f8e9;border:1px solid #c5e1a5;border-radius:12px;padding:10px 12px;margin-bottom:14px;">';
+        h += '  <div style="font-size:11.5px;font-weight:700;color:#2e7d32;margin-bottom:6px;">📅 開催月を選択：</div>';
+        h += '  <div style="display:flex;gap:5px;flex-wrap:wrap;">';
+        FISCAL_MONTHS.forEach(function (fm) {
+          var isAct = (fm === mLabel);
+          h += '<button type="button" onclick="switchWizardMonth(\'' + fm + '\')" style="padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ' + (isAct ? '#2e7d32' : '#c5e1a5') + ';background:' + (isAct ? '#2e7d32' : '#fff') + ';color:' + (isAct ? '#fff' : '#1b5e20') + ';">' + fm + '</button>';
+        });
+        h += '  </div>';
+        h += '</div>';
+      }
 
       // ═══════════════════════════════════════════════════
       // 1. 現在この月に設定されている研修・委員会（登録がある時のみ表示）
@@ -3813,10 +3845,12 @@
         h += '  <button type="button" onclick="_wizShowCreator=true;_editingCourseId=null;_editingCommitteeId=null;_aiGeneratedDraft=null;renderMonthAssignModalBody();" style="background:#fff;color:var(--pri);border:1.5px dashed var(--pri);border-radius:12px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;">＋ この月に新しい研修・委員会を追加する</button>';
         h += '</div>';
       } else {
-        h += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
-        h += '  <button type="button" onclick="_wizMode=\'kenshu\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMode === 'kenshu' ? '#1565c0' : 'var(--bdr)') + ';background:' + (_wizMode === 'kenshu' ? '#e3f2fd' : '#fff') + ';color:' + (_wizMode === 'kenshu' ? '#0d47a1' : 'var(--sub)') + ';">📖 研修テーマ作成</button>';
-        h += '  <button type="button" onclick="_wizMode=\'iinkai\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMode === 'iinkai' ? '#2e7d32' : 'var(--bdr)') + ';background:' + (_wizMode === 'iinkai' ? '#e8f5e9' : '#fff') + ';color:' + (_wizMode === 'iinkai' ? '#1b5e20' : 'var(--sub)') + ';">🏛️ 委員会議事録作成</button>';
-        h += '</div>';
+        if (!_wizDedicatedCommittee) {
+          h += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
+          h += '  <button type="button" onclick="_wizMode=\'kenshu\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMode === 'kenshu' ? '#1565c0' : 'var(--bdr)') + ';background:' + (_wizMode === 'kenshu' ? '#e3f2fd' : '#fff') + ';color:' + (_wizMode === 'kenshu' ? '#0d47a1' : 'var(--sub)') + ';">📖 研修テーマ作成</button>';
+          h += '  <button type="button" onclick="_wizMode=\'iinkai\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;border:2px solid ' + (_wizMode === 'iinkai' ? '#2e7d32' : 'var(--bdr)') + ';background:' + (_wizMode === 'iinkai' ? '#e8f5e9' : '#fff') + ';color:' + (_wizMode === 'iinkai' ? '#1b5e20' : 'var(--sub)') + ';">🏛️ 委員会議事録作成</button>';
+          h += '</div>';
+        }
 
         if (_wizMode === 'kenshu') {
           // ─────────────────────────────────────────────────
