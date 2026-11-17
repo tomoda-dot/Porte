@@ -10669,7 +10669,6 @@ async function renderExport(c){
     menuH+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">';
     menuH+='<button onclick="eT=\'incidents\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">⚠️ ヒヤリハット</button>';
     menuH+='<button onclick="eT=\'complaints\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📞 苦情・相談</button>';
-    menuH+='<button onclick="eT=\'training\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📚 研修・委員会</button>';
     menuH+='</div>';
     c.innerHTML=menuH;
     return;

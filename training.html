@@ -1373,299 +1373,94 @@
     </div>
 
     <!-- ══════════════════════════════════════════════
-       2. 管理者モード（受講星取表・AI作成スタジオ・議事録）
+       2. 管理者モード（4×3年間カレンダー・AI作成ウィザード・受講星取表・帳票出力）
        ══════════════════════════════════════════════ -->
     <div id="view-admin" class="admin-view">
 
-      <!-- 管理者サブタブ -->
-      <div class="admin-subtabs no-print">
-        <button type="button" class="admin-subtab-btn active" id="btn-subtab-matrix"
-          onclick="switchAdminSubtab('matrix')">
-          📅 年間カレンダー管理 ＆ 受講星取表
-        </button>
-        <button type="button" class="admin-subtab-btn" id="btn-subtab-planner" onclick="switchAdminSubtab('planner')">
-          🎬 厚労省・公的機関 参考動画カタログ
-        </button>
-        <button type="button" class="admin-subtab-btn" id="btn-subtab-creator" onclick="switchAdminSubtab('creator')">
-          ✨ 研修作成・AI自動生成スタジオ
-        </button>
-        <button type="button" class="admin-subtab-btn" id="btn-subtab-minutes" onclick="switchAdminSubtab('minutes')">
-          🏛️ 委員会議事録（AI自動起案）
-        </button>
-        <button type="button" class="admin-subtab-btn" id="btn-subtab-settings" onclick="switchAdminSubtab('settings')">
-          ⚙️ 自動配信・暗証番号設定
-        </button>
+      <!-- 1. 4×3年度カレンダー管理エリア（上部ヘッダー・KPI4枚・法定必須チェッカー・12ヶ月カレンダー） -->
+      <div id="fy-calendar-section" class="no-print">
+        <!-- 動的描画 -->
       </div>
 
-      <!-- ── サブタブ1: 年間カレンダー管理（4×3） ＆ スタッフ受講星取表 ── -->
-      <div id="subtab-content-matrix">
-        <!-- 1. 画像準拠の4×3年度カレンダー管理エリア -->
-        <div id="fy-calendar-section" class="no-print">
+      <!-- 2. スタッフ受講星取表カード -->
+      <div class="card">
+        <div class="print-action-bar no-print">
+          <button type="button" class="btn-print" onclick="printTrainingOfficialReport()">
+            🖨️ 今月の研修 実施記録簿をA4印刷
+          </button>
+          <button type="button" class="btn-print" style="background:#1565c0;" onclick="printAnnualMatrixReport()">
+            📑 年間研修計画・受講実績総括表をA4印刷
+          </button>
+          <button type="button" class="btn-print" style="background:#2e7d32;"
+            onclick="openMonthAssignModal(currentMonthLabel(), 'iinkai')">
+            🏛️ AIで委員会議事録を作成
+          </button>
+        </div>
+
+        <div class="section-title">
+          <span>📊 法定研修 スタッフ受講星取表（進捗マトリクス）</span>
+        </div>
+
+        <!-- リアルタイム受講状況サマリー＆未受講アラート -->
+        <div id="admin-matrix-summary" class="no-print">
           <!-- 動的描画 -->
         </div>
 
-        <!-- 2. スタッフ受講星取表カード -->
-        <div class="card">
-          <div class="print-action-bar no-print">
-            <button type="button" class="btn-print" onclick="printTrainingOfficialReport()">
-              🖨️ 今月の研修 実施記録簿をA4印刷
-            </button>
-            <button type="button" class="btn-print" style="background:#1565c0;" onclick="printAnnualMatrixReport()">
-              📑 年間研修計画・受講実績総括表をA4印刷
-            </button>
-            <button type="button" class="btn-print" style="background:#5e35b1;"
-              onclick="openCommitteeModal('restraint')">
-              🏛️ AIで委員会議事録を作成
-            </button>
-          </div>
+        <p style="font-size:12.5px;color:var(--sub);margin-bottom:12px;">
+          ※スタッフが受講・4択クイズに合格するとリアルタイムで自動反映されます。各列の「🖨️記録簿」から月別の公式記録簿（A4）を印刷できます。
+        </p>
 
-          <div class="section-title">
-            <span>📊 令和8年度 法定研修 スタッフ受講星取表（進捗マトリクス）</span>
-          </div>
-
-          <!-- リアルタイム受講状況サマリー＆未受講アラート -->
-          <div id="admin-matrix-summary" class="no-print">
+        <div style="overflow-x:auto;">
+          <table class="matrix-table" id="matrix-table-body">
             <!-- 動的描画 -->
-          </div>
-
-          <p style="font-size:12.5px;color:var(--sub);margin-bottom:12px;">
-            ※全職員の受講率100%達成を目指します。実地指導（運営指導）ではこの受講実績および研修実施記録簿を提出します。各列の「🖨️記録簿」から月別の公式記録簿も印刷できます。
-          </p>
-
-          <div style="overflow-x:auto;">
-            <table class="matrix-table" id="matrix-table-body">
-              <!-- 動的描画 -->
-            </table>
-          </div>
+          </table>
         </div>
       </div>
 
-      <!-- ── サブタブ1.5: 公的機関参考動画カタログ ＆ 法定必須チェッカー ── -->
-      <div id="subtab-content-planner" style="display:none;">
-        <div class="card">
-          <div class="section-title">
-            <span>✅ 法定必須研修・訓練の実施回数チェッカー（実地指導基準）</span>
+      <!-- 3. 登録済み 研修・委員会の一覧（受講所感確認・記録簿/議事録出力） -->
+      <div class="card no-print">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+          <div class="section-title" style="margin-bottom:0;">
+            <span>📋 登録済みの年間研修・委員会一覧（受講所感・記録簿・議事録の印刷）</span>
           </div>
-          <div id="planner-req-checker">
-            <!-- 動的描画 -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="archive-filter-bar">
+            <button type="button" class="template-chip" onclick="setArchiveFilter('all')" id="btn-arch-all" style="background:var(--pri);color:#fff;border-color:var(--pri);">すべて</button>
+            <button type="button" class="template-chip" onclick="setArchiveFilter('kenshu')" id="btn-arch-kenshu">📖 研修のみ</button>
+            <button type="button" class="template-chip" onclick="setArchiveFilter('iinkai')" id="btn-arch-iinkai">🏛️ 委員会のみ</button>
           </div>
         </div>
-
-        <!-- 厚生労働省・公的機関・専門研修 参考動画カタログ -->
-        <div class="card">
-          <div class="section-title">
-            <span>🎬 厚生労働省・自治体公式・専門法定研修 参考動画カタログ（全22本・再生確認済）</span>
-          </div>
-          <p style="font-size:12.5px;color:var(--sub);margin-bottom:12px;">
-            厚生労働省公式チャンネル（MHLWchannel）、総務省消防庁、自治体保健所公式、および障害福祉専門チャンネルの研修動画一覧です。「▶ YouTubeで視聴」で内容を確認したり、「＋
-            この動画で研修作成」で好きな月に当てはめることができます。
-          </p>
-          <div id="official-video-catalog-list">
-            <!-- 動的描画 -->
-          </div>
+        <div id="published-courses-list">
+          <!-- 動的描画（研修＋委員会統合リスト） -->
         </div>
       </div>
 
-      <!-- ── サブタブ2: 研修作成・AI自動生成スタジオ ── -->
-      <div id="subtab-content-creator" style="display:none;">
-        <div class="card" style="background:var(--pri-light);border:1.5px solid var(--bdr);margin-bottom:16px;">
-          <div
-            style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-            <div style="font-size:13.5px;font-weight:900;color:var(--pri-dark);">
-              ⚡ おすすめ法定研修テンプレート（1クリックで動画・要点・クイズを簡単セット）
-            </div>
-            <button type="button" class="btn-print"
-              style="font-size:11.5px;padding:5px 12px;background:var(--pri-dark);" onclick="ensureAllAnnualCourses()">
-              📅 年間法定研修（全7テーマ）をまとめてカリキュラムに追加
-            </button>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            <span class="template-chip" onclick="applyCourseTemplate('speechlock')">🗣️ 11月 身体拘束（スピーチロック防止）</span>
-            <span class="template-chip" onclick="applyCourseTemplate('infection')">❄️ 12月 感染対策（標準予防策とPPE着脱）</span>
-            <span class="template-chip" onclick="applyCourseTemplate('restraint_case')">🌱 2月 身体拘束（組織指針・ヒヤリハット）</span>
-            <span class="template-chip" onclick="applyCourseTemplate('bcp')">🌸 3月 BCP（自然災害・非常時初動訓練）</span>
-            <span class="template-chip" onclick="applyCourseTemplate('abuse')">🛡️ 4月 障害者虐待防止（5類型と通報義務）</span>
-            <span class="template-chip" onclick="applyCourseTemplate('harassment')">🤝 6月 ハラスメント防止・コンプライアンス</span>
-            <span class="template-chip" onclick="applyCourseTemplate('haccp')">☕ 9月 珈琲食品衛生・HACCP重要管理点</span>
-          </div>
-        </div>
+    </div>
 
-        <div class="card">
-          <div class="section-title">
-            <span id="creator-form-title">✨ 新規研修の作成・AI自動生成スタジオ</span>
-          </div>
+  </div>
+  </div><!-- /#pg-app -->
 
-          <div class="creator-form-grid">
-            <div class="form-field">
-              <label>実施月 *</label>
-              <select id="cr-month">
-                <option value="11月">11月度</option>
-                <option value="12月" selected>12月度</option>
-                <option value="1月">1月度</option>
-                <option value="2月">2月度</option>
-                <option value="3月">3月度</option>
-                <option value="4月">4月度</option>
-                <option value="5月">5月度</option>
-                <option value="6月">6月度</option>
-                <option value="7月">7月度</option>
-                <option value="8月">8月度</option>
-                <option value="9月">9月度</option>
-                <option value="10月">10月度</option>
-              </select>
-            </div>
-
-            <div class="form-field">
-              <label>研修区分 *</label>
-              <select id="cr-category" onchange="onCreatorCategoryChange()">
-                <option value="身体拘束適正化">身体拘束適正化</option>
-                <option value="感染対策" selected>感染対策</option>
-                <option value="BCP研修・訓練">BCP研修・訓練</option>
-                <option value="障害者虐待防止">障害者虐待防止</option>
-                <option value="防災訓練">防災訓練</option>
-                <option value="衛生管理・HACCP">衛生管理・HACCP</option>
-                <option value="ハラスメント防止">ハラスメント防止</option>
-                <option value="個人情報保護">個人情報保護</option>
-                <option value="その他">その他</option>
-              </select>
-            </div>
-
-            <div class="form-field" style="grid-column: 1 / -1;">
-              <label>研修タイトル * <span
-                  style="font-weight:normal;font-size:11.5px;color:var(--sub);">（空欄でもAIが自動提案します）</span></label>
-              <input type="text" id="cr-title" placeholder="例：第1回 感染対策研修「冬期の感染予防・標準予防策と防護具着脱手順」">
-            </div>
-
-            <div class="form-field">
-              <label>受講期限 *</label>
-              <input type="date" id="cr-due">
-            </div>
-
-            <div class="form-field">
-              <label>YouTube動画URL（直接入力 または 下の公的動画リストから選択）</label>
-              <div style="display:flex;gap:6px;">
-                <input type="text" id="cr-video" style="flex:1;" placeholder="https://www.youtube.com/watch?v=...">
-                <button type="button" onclick="previewCreatorVideo()"
-                  style="background:var(--pri-light);color:var(--pri-dark);border:1.5px solid var(--bdr);border-radius:10px;padding:0 10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">▶
-                  確認</button>
-              </div>
-              <select id="cr-official-video-select" onchange="onSelectOfficialVideo(this.value)"
-                style="margin-top:4px;font-size:12px;padding:6px 8px;border:1.5px solid var(--bdr);border-radius:8px;background:#f8fbf9;color:var(--pri-dark);font-weight:700;">
-                <option value="">🎬 厚生労働省・公的機関・専門研修の参考動画リストから選ぶ...</option>
-              </select>
-            </div>
-
-            <div class="form-field" style="grid-column: 1 / -1;">
-              <label>研修の目的・概要 <span
-                  style="font-weight:normal;font-size:11.5px;color:var(--sub);">（空欄でもAIが自動作成します）</span></label>
-              <textarea id="cr-desc" rows="2" placeholder="研修のねらい、学習内容を記入してください"></textarea>
-            </div>
-
-            <div class="form-field" style="grid-column: 1 / -1;">
-              <label style="color:var(--ai-purple);">🤖 AIへの追加リクエスト・現場の課題・参考資料テキスト（任意）</label>
-              <textarea id="cr-ai-prompt-notes" rows="2"
-                placeholder="例：「焙煎作業中の火傷防止と声かけ」「送迎時のヒヤリハット」「ノロウイルス嘔吐物処理の手順」など、AIに盛り込ませたい現場ルールや文章を自由に入力できます"
-                style="border-color:#b39ddb;background:#fbf9ff;"></textarea>
-            </div>
-
-            <div class="form-field" style="grid-column: 1 / -1;">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                <input type="checkbox" id="cr-is-current" style="width:18px;height:18px;">
-                <span>🔥 この研修を「今月の要受講研修（スタッフ画面で最優先表示）」に設定する</span>
-              </label>
-            </div>
-          </div>
-
-          <div style="border-top:1.5px solid var(--bdr);padding-top:16px;margin-top:12px;">
-            <div
-              style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-              <div>
-                <div style="font-size:14px;font-weight:900;color:var(--pri-dark);">📝 要点レジュメ ＆ 理解度クイズ（AI自動生成 ＋ 手動編集エディタ）
-                </div>
-                <div style="font-size:12px;color:var(--sub);" id="ai-engine-status-text">
-                  AI生成ボタンを押すと、テーマや現場課題に沿った要点と4択テストを自動作成します（生成後に直接書き換えも可能）</div>
-              </div>
-              <button type="button" class="ai-gen-btn" id="btn-run-ai-course" onclick="generateCourseWithAI()">
-                <span>🤖 AIで要点とテストを自動生成</span>
-              </button>
-            </div>
-
-            <div id="cr-ai-preview"
-              style="background:var(--pri-light);border:1.5px solid var(--bdr);border-radius:14px;padding:16px;">
-              <div style="font-size:13px;color:var(--sub);text-align:center;padding:20px 0;">
-                上の「🤖 AIで要点とテストを自動生成」または「おすすめテンプレート」を押すと、問題と解説のエディタがここに展開されます
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
-            <button type="button" class="btn-print" style="background:#607d8b;" onclick="resetCreatorForm()">
-              クリア
-            </button>
-            <button type="button" class="training-start-btn"
-              style="background:var(--accent);width:auto;padding:12px 28px;" onclick="saveCourseFromCreator()">
-              <span>💾 この研修を保存してスタッフに配信する</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 登録済み研修一覧 -->
-        <div class="card">
-          <div class="section-title">
-            <span>📋 登録・配信済みの年間研修カリキュラム一覧</span>
-          </div>
-          <div id="published-courses-list">
-            <!-- 動的描画 -->
-          </div>
-        </div>
+  <!-- ══════════════════════════════════════════════
+     管理者設定モーダル（月替わり自動配信・PIN変更）
+     ══════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="settings-modal-overlay">
+    <div class="modal-box" style="max-width:520px;">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ 自動配信・管理者暗証番号（PIN）設定</div>
+        <button type="button" class="modal-close-btn" onclick="el('settings-modal-overlay').classList.remove('active')">✕</button>
       </div>
-
-      <!-- ── サブタブ3: 委員会議事録アーカイブ ── -->
-      <div id="subtab-content-minutes" style="display:none;">
-        <div class="card">
-          <div class="print-action-bar no-print">
-            <button type="button" class="btn-print" style="background:#5e35b1;"
-              onclick="openCommitteeModal('restraint')">
-              🏛️ 新規 委員会議事録を作成（AI自動起案対応）
-            </button>
-          </div>
-          <div class="section-title">
-            <span>🏛️ 法定委員会議事録アーカイブ（実地指導・運営指導対応）</span>
-          </div>
-          <p style="font-size:12.5px;color:var(--sub);margin-bottom:12px;">
-            身体拘束適正化委員会・虐待防止委員会・感染症対策委員会・BCP委員会の議事録を作成・保管し、いつでも公文書様式でA4印刷できます。
-          </p>
-          <div id="committee-minutes-list">
-            <!-- 動的描画 -->
-          </div>
-        </div>
-      </div>
-
-      <!-- ── サブタブ4: 設定（自動配信・暗証番号変更） ── -->
-      <div id="subtab-content-settings" style="display:none;">
-        <div class="card" style="max-width:600px;margin:0 auto 16px;">
-          <div class="section-title">
-            <span>📅 月替わり自動配信モード設定</span>
-          </div>
-          <p style="font-size:13px;color:var(--sub);margin-bottom:12px;">
-            有効にすると、カレンダーの現在月（例：11月なら11月度、12月なら12月度）に一致する研修カリキュラムを自動的に「今月の要受講研修」に切り替えます。
-          </p>
-          <label
-            style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:800;color:var(--pri-dark);background:var(--pri-light);padding:12px 16px;border-radius:12px;border:1.5px solid var(--bdr);">
-            <input type="checkbox" id="chk-auto-month-sync" style="width:18px;height:18px;"
-              onchange="toggleAutoMonthSync(this.checked)">
+      <div class="modal-body">
+        <div style="background:var(--pri-light);border:1.5px solid var(--bdr);border-radius:14px;padding:14px;margin-bottom:18px;">
+          <div style="font-size:14px;font-weight:900;color:var(--pri-dark);margin-bottom:6px;">📅 月替わり自動配信モード</div>
+          <div style="font-size:12px;color:var(--sub);margin-bottom:10px;">有効にすると、カレンダーの現在月に一致する研修を自動的に「🔥 今月の要受講研修」に切り替えます。</div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:800;font-size:13px;color:var(--pri-dark);">
+            <input type="checkbox" id="chk-auto-month-sync" style="width:18px;height:18px;" onchange="toggleAutoMonthSync(this.checked)">
             <span>現在の月に合わせて「今月の要受講研修」を自動切替する</span>
           </label>
         </div>
 
-        <div class="card" style="max-width:600px;margin:0 auto;">
-          <div class="section-title">
-            <span>⚙️ 管理者暗証番号（PINコード）の変更</span>
-          </div>
-          <p style="font-size:13px;color:var(--sub);margin-bottom:16px;">
-            星取表や研修作成スタジオの閲覧を制限するための暗証番号です。
-          </p>
-
-          <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="border:1.5px solid var(--bdr);border-radius:14px;padding:14px;">
+          <div style="font-size:14px;font-weight:900;color:var(--pri-dark);margin-bottom:10px;">🔑 管理者暗証番号（PIN）の変更</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
             <div class="form-field">
               <label>現在の暗証番号</label>
               <input type="password" id="pin-current" placeholder="初期値: 0000" maxlength="8">
@@ -1678,18 +1473,14 @@
               <label>新しい暗証番号（確認用）</label>
               <input type="password" id="pin-new-confirm" placeholder="もう一度入力" maxlength="8">
             </div>
-            <button type="button" class="btn-print" style="margin-top:10px;justify-content:center;"
-              onclick="changeAdminPin()">
+            <button type="button" class="btn-print" style="justify-content:center;margin-top:4px;" onclick="changeAdminPin()">
               🔑 暗証番号を変更する
             </button>
           </div>
         </div>
       </div>
-
     </div>
-
   </div>
-  </div><!-- /#pg-app -->
 
   <!-- ══════════════════════════════════════════════
      管理者PIN認証モーダル
@@ -1751,12 +1542,12 @@
   </div>
 
   <!-- ══════════════════════════════════════════════
-     月別 研修・委員会 当てはめ管理モーダル（4×3カレンダー連動）
+     月別 研修・委員会 作成＆当てはめ管理ウィザードモーダル（4×3カレンダー連動）
      ══════════════════════════════════════════════ -->
   <div class="modal-overlay" id="month-assign-modal-overlay">
-    <div class="modal-box" style="max-width:680px;">
+    <div class="modal-box" style="max-width:880px;">
       <div class="modal-header" style="background:linear-gradient(135deg, var(--pri) 0%, var(--pri-dark) 100%);">
-        <div class="modal-title" id="month-assign-modal-title">📅 月別 研修・委員会の管理</div>
+        <div class="modal-title" id="month-assign-modal-title">📅 月別 研修・委員会の作成＆管理</div>
         <button type="button" class="modal-close-btn" onclick="closeMonthAssignModal()">✕</button>
       </div>
       <div class="modal-body" id="month-assign-modal-body">
@@ -3091,8 +2882,49 @@
       renderAdminMatrix();
     }
 
-    // ─── 管理者モード：4×3年度カレンダー ＆ 受講星取表の描画 ───
+    // ─── 管理者モード：4×3年度カレンダー ＆ 3ステップ月別作成ウィザード ＆ 受講星取表 ───
     var _calFY = 2026;
+    var _activeAssignMonth = '11月';
+    var _wizMode = 'kenshu'; // 'kenshu' | 'iinkai'
+    var _wizFilterCat = 'すべて';
+    var _wizAiThemes = [];
+    var _wizVideoCandidates = [];
+    var _wizInlinePreviewId = '';
+    var _wizExpandedCourseId = '';
+    var _editingCommitteeId = null;
+    var _archiveFilter = 'all';
+
+    var MONTH_SEASONAL_HINTS = {
+      '4月': '🌸 新年度・権利擁護・虐待防止',
+      '5月': '🌿 個人情報保護・SNSルール',
+      '6月': '☔ 食中毒予防・ハラスメント防止',
+      '7月': '🌻 熱中症対策・夏期衛生管理',
+      '8月': '☀️ 身体拘束廃止の基本原則・3要件',
+      '9月': '☕ 防災の日BCP・珈琲HACCP衛生',
+      '10月': '🍂 不適切ケア防止・アンガーマネジメント',
+      '11月': '🗣️ 身体拘束（スピーチロック防止）',
+      '12月': '❄️ 冬期感染症対策・PPE着脱手順',
+      '1月': '🚒 火災初期消火・避難誘導・救命',
+      '2月': '🌱 身体拘束廃止・ヒヤリハット分析',
+      '3月': '🌸 年度末BCP総括・安否確認訓練'
+    };
+
+    // 月別・カテゴリ別の豊富なテーマ提案マスター（1クリックでタイトル・概要・最新動画検索ワードを自動セット）
+    var THEME_SUGGESTIONS_MASTER = [
+      { month: '4月', category: '障害者虐待防止', presetKey: 'abuse', title: '第1回 障害者虐待防止研修「障害者権利擁護と5つの虐待定義・通報義務」', desc: '障害者虐待防止法における身体的・心理的・性的・ネグレクト・経済的虐待の5類型と、早期発見・通報義務について学びます。', ytQuery: '障害者虐待防止研修 通所サービス 5類型' },
+      { month: '5月', category: '個人情報保護', presetKey: 'privacy_sns', title: '第1回 個人情報保護・情報セキュリティ研修「利用者情報の適正管理とSNS・写真取扱ルール」', desc: '個人情報保護法および事業所の守秘義務規定に基づき、支援記録・書類の持ち出し禁止、SNSでの情報漏洩防止、写真掲載同意の徹底を学びます。', ytQuery: '福祉 個人情報保護 SNS 研修' },
+      { month: '6月', category: '感染対策', presetKey: 'infection_summer', title: '第1回 感染症・食中毒対策研修「梅雨・夏期の食中毒予防と標準予防策・手指衛生」', desc: '高温多湿となる梅雨・夏期における細菌性食中毒の予防3原則（つけない・増やさない・やっつける）と、日常の手洗い・共用部消毒を徹底します。', ytQuery: '厚生労働省 障害福祉 感染症対策 食中毒 手洗い' },
+      { month: '6月', category: 'ハラスメント防止', presetKey: 'harassment', title: '第1回 ハラスメント防止研修「健全で風通しの良い職場環境づくりとコンプライアンス」', desc: 'パワーハラスメント、セクシュアルハラスメント、カスタマーハラスメントの定義を理解し、お互いを尊重し合える心理的安全性の高い職場環境を醸成します。', ytQuery: '障害福祉 ハラスメント防止 職員研修 厚生労働省' },
+      { month: '7月', category: '衛生管理・HACCP', presetKey: 'haccp', title: '夏期 労働安全衛生研修「熱中症予防・水分補給の声かけと作業室温度管理」', desc: '夏場の作業室内および送迎時における熱中症リスクの早期察知、WBGT（暑さ指数）確認、こまめな水分・塩分補給の声かけ手順を習得します。', ytQuery: '厚生労働省 熱中症予防 職場 介護福祉 研修' },
+      { month: '8月', category: '身体拘束適正化', presetKey: 'restraint_basic', title: '第1回 身体拘束適正化研修「身体拘束廃止の基本原則・緊急やむを得ない3要件と尊厳の保持」', desc: '障害者総合支援法に基づく身体拘束の原則禁止、3つのロック（フィジカル・ドラッグ・スピーチ）の弊害、および例外3要件の厳格な解釈を学びます。', ytQuery: '障害福祉 身体拘束廃止 3要件 法定研修' },
+      { month: '9月', category: '衛生管理・HACCP', presetKey: 'haccp', title: '第1回 食品衛生・HACCP研修「珈琲製造工程における危害要因分析と交差汚染防止」', desc: '生豆受入、ハンドピック、焙煎、包装の各工程における金属・異物混入防止、手指衛生、およびHACCP衛生記録簿の適切な保管ルールを学びます。', ytQuery: 'HACCP 衛生管理 食品衛生責任者 講習' },
+      { month: '10月', category: '障害者虐待防止', presetKey: 'abuse_grayzone', title: '第2回 障害者虐待防止研修「不適切ケア（グレーゾーン）の気づきとアンガーマネジメント」', desc: '日常の支援に潜む「不適切ケア（タメ口、子ども扱い、焦らせる声かけ等）」を振り返り、感情をコントロールするアンガーマネジメントを学びます。', ytQuery: '不適切ケア グレーゾーン 虐待防止 アンガーマネジメント 福祉' },
+      { month: '11月', category: '身体拘束適正化', presetKey: 'speechlock', title: '第2回 身体拘束適正化研修「言葉の拘束（スピーチロック）防止と現場での代替支援事例」', desc: '「ちょっと待って」「座ってて」「触らないで」など、言葉によって行動を制限するスピーチロックの弊害を理解し、現場で相手に寄り添う代替支援と言い換えの工夫を習得します。', ytQuery: 'スピーチロック 身体拘束 言葉の拘束 福祉研修' },
+      { month: '12月', category: '感染対策', presetKey: 'infection', title: '第2回 感染対策研修「冬期の感染予防・標準予防策と個人防護具（PPE）着脱手順」', desc: 'インフルエンザ・ノロウイルス・新型コロナ等の感染経路を断つ標準予防策、正しい手洗い・手指消毒、およびガウン・手袋の汚染防止着脱手順を学びます。', ytQuery: '厚生労働省 障害福祉 感染症対策 基礎編 PPE 手袋' },
+      { month: '1月', category: '防災訓練', presetKey: 'disaster_fire', title: '第1回 防災・救命研修「火災・地震発生時の初期消火と避難誘導・救命救急フロー」', desc: '焙煎室や厨房からの出火想定を含む初期消火手順（119番通報・消火器操作）、障害特性に配慮した避難誘導、および救命処置（AED）を確認します。', ytQuery: '総務省消防庁 初期消火 消火器 避難訓練' },
+      { month: '2月', category: '身体拘束適正化', presetKey: 'restraint_case', title: '第3回 身体拘束適正化研修「身体拘束廃止の組織的取り組みとヒヤリハット分析」', desc: 'ヒヤリハット報告から身体拘束リスクを予見し、指針の見直しと環境調整によって未然に防ぐ組織マネジメントを学びます。', ytQuery: '身体拘束適正化 ヒヤリハット 縛らないケア 研修' },
+      { month: '3月', category: 'BCP研修・訓練', presetKey: 'bcp', title: '第1回 業務継続計画（BCP）研修「自然災害・非常時の初動対応と安否確認シミュレーション」', desc: '震災・風水害発生時における利用者・職員の安全確保、連絡網による迅速な安否確認、および事業継続のための初動フローを机上訓練します。', ytQuery: '厚生労働省 介護 福祉 業務継続計画 BCP 研修' }
+    ];
 
     function changeCalFY(delta) {
       _calFY += delta;
@@ -3121,7 +2953,38 @@
       var upcomingCount = TRAINING_COURSES.filter(function (tc) { return (tc.dueText || '9999') >= todayDate; }).length +
         _committeeMinutes.filter(function (cm) { return (cm.date || '') >= todayDate; }).length;
 
+      var counts = {
+        restraint: TRAINING_COURSES.filter(function (c) { return c.category === '身体拘束適正化'; }).length,
+        abuse: TRAINING_COURSES.filter(function (c) { return c.category === '障害者虐待防止'; }).length,
+        infection: TRAINING_COURSES.filter(function (c) { return c.category === '感染対策'; }).length,
+        bcp: TRAINING_COURSES.filter(function (c) { return c.category === 'BCP研修・訓練'; }).length,
+        disaster: TRAINING_COURSES.filter(function (c) { return c.category === '防災訓練'; }).length,
+        other: TRAINING_COURSES.filter(function (c) { return ['衛生管理・HACCP', 'ハラスメント防止', '個人情報保護', 'その他'].indexOf(c.category) >= 0; }).length
+      };
+
+      var reqItems = [
+        { label: '🗣️ 身体拘束適正化', cat: '身体拘束適正化', req: '年2回以上必須', cur: counts.restraint, min: 2 },
+        { label: '🛡️ 障害者虐待防止', cat: '障害者虐待防止', req: '年1回以上必須', cur: counts.abuse, min: 1 },
+        { label: '❄️ 感染症対策', cat: '感染対策', req: '年2回以上必須', cur: counts.infection, min: 2 },
+        { label: '🌸 BCP研修・訓練', cat: 'BCP研修・訓練', req: '年1回以上必須', cur: counts.bcp, min: 1 },
+        { label: '🚒 防災・救命訓練', cat: '防災訓練', req: '年1回以上推奨', cur: counts.disaster, min: 1 },
+        { label: '☕ 衛生・人権・情報', cat: '衛生管理・HACCP', req: '質の向上研修', cur: counts.other, min: 1 }
+      ];
+
       var h = '';
+      // 0. タイトルバー（画像準拠）
+      h += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">';
+      h += '  <div style="display:flex;align-items:center;gap:10px;">';
+      h += '    <span style="font-size:22px;font-weight:900;color:var(--pri-dark);">📚 研修・委員会管理</span>';
+      h += '    <span style="font-size:12px;color:var(--sub);font-weight:700;">（年間カレンダー計画・AI自動作成・実地指導帳票）</span>';
+      h += '  </div>';
+      h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;">';
+      h += '    <button type="button" class="btn-print" style="background:#fff;color:var(--pri-dark);border:1.5px solid var(--bdr);font-size:12px;padding:7px 12px;" onclick="el(\'settings-modal-overlay\').classList.add(\'active\')">⚙️ 自動配信・PIN設定</button>';
+      h += '    <button type="button" class="btn-print" style="background:var(--accent);font-size:12px;padding:7px 14px;" onclick="autoFill12MonthPlan()">✨ 空き月に推奨テーマを一括配置</button>';
+      h += '    <button type="button" class="btn-print" style="background:var(--pri-dark);font-size:12.5px;padding:7px 16px;" onclick="openMonthAssignModal(currentMonthLabel(), \'kenshu\')">＋ 新規登録（月別作成）</button>';
+      h += '  </div>';
+      h += '</div>';
+
       // 1. 年度ナビゲーションバー（画像準拠）
       h += '<div class="fy-nav-row">';
       h += '  <div class="fy-nav-left">';
@@ -3129,10 +2992,7 @@
       h += '    <span style="font-size:16px;font-weight:900;color:var(--pri-dark);">令和' + (_calFY - 2018) + '年度（' + _calFY + '年4月〜' + (_calFY + 1) + '年3月）</span>';
       h += '    <button type="button" class="fy-arrow-btn" onclick="changeCalFY(1)">▶</button>';
       h += '  </div>';
-      h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;">';
-      h += '    <button type="button" class="btn-print" style="background:var(--accent);font-size:12px;padding:7px 14px;" onclick="autoFill12MonthPlan()">✨ 12ヶ月法定研修・委員会を自動配置</button>';
-      h += '    <button type="button" class="btn-print" style="background:var(--pri-dark);font-size:12px;padding:7px 14px;" onclick="openMonthAssignModal(currentMonthLabel())">＋ 新規登録・月別当てはめ</button>';
-      h += '  </div>';
+      h += '  <div style="font-size:12px;color:var(--sub);font-weight:700;">💡 月の枠をクリックすると「テーマ提案 ➔ 最新動画検索 ➔ AIクイズ作成」が開きます</div>';
       h += '</div>';
 
       // 2. 4つのKPIカード（画像準拠）
@@ -3143,11 +3003,26 @@
       h += '  <div class="fy-stat-card stat-upcoming"><div class="fy-stat-label">📅 今後・進行中</div><div class="fy-stat-val" style="color:#ff9800;">' + upcomingCount + '</div></div>';
       h += '</div>';
 
+      // 2.5 法定必須回数チェッカー（コンパクトバー：クリックでその区分の作成へ）
+      h += '<div class="req-check-grid">';
+      reqItems.forEach(function (it) {
+        var isOk = it.cur >= it.min;
+        h += '<div class="req-check-item ' + (isOk ? 'ok' : 'warn') + '" style="cursor:pointer;transition:transform .15s;" onclick="_wizFilterCat=\'' + it.cat + '\';openMonthAssignModal(currentMonthLabel(), \'kenshu\');" title="クリックして「' + it.cat + '」の研修を作成・追加">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<span style="font-weight:900;color:var(--pri-dark);">' + it.label + '</span>' +
+          '<span style="font-weight:900;font-size:11.5px;color:' + (isOk ? 'var(--grn)' : 'var(--warn)') + ';">' + (isOk ? '✓ ' + it.cur + '回' : '⚠️ ' + it.cur + '/' + it.min + '回') + '</span>' +
+          '</div>' +
+          '<div style="font-size:10.5px;color:var(--sub);margin-top:2px;">基準: ' + it.req + '（タップで追加）</div>' +
+          '</div>';
+      });
+      h += '</div>';
+
       // 3. 4列×3段の年度カレンダー（4月〜3月）
       var curM = currentMonthLabel();
       h += '<div class="fy-cal-card">';
-      h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;">';
-      h += '    <span style="font-size:12.5px;color:var(--sub);font-weight:700;">💡 各月の枠（または「＋当てはめ」）をクリックすると、その月に実施する研修や委員会を自由に当てはめ・変更できます</span>';
+      h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px;">';
+      h += '    <span style="font-size:13px;color:var(--pri-dark);font-weight:900;">📅 年間計画カレンダー（4月〜翌3月）</span>';
+      h += '    <span style="font-size:12px;color:var(--sub);font-weight:700;">各月の「＋ 作成・追加」からAIテーマ提案＆最新YouTube動画検索で研修を作成できます</span>';
       h += '  </div>';
       h += '  <div class="fy-cal-grid">';
 
@@ -3155,30 +3030,34 @@
         var mCourses = TRAINING_COURSES.filter(function (c) { return c.month === mLabel; });
         var mCommittees = _committeeMinutes.filter(function (cm) { return getCommitteeMonthLabel(cm) === mLabel; });
         var isCurMonth = (mLabel === curM) || mCourses.some(function (c) { return c.isCurrent; });
+        var hint = MONTH_SEASONAL_HINTS[mLabel] || '';
 
-        h += '<div class="fy-month-cell' + (isCurMonth ? ' current-m' : '') + '" onclick="openMonthAssignModal(\'' + mLabel + '\')" style="cursor:pointer;">';
+        h += '<div class="fy-month-cell' + (isCurMonth ? ' current-m' : '') + '" onclick="openMonthAssignModal(\'' + mLabel + '\', \'kenshu\')" style="cursor:pointer;">';
         h += '  <div>';
         h += '    <div class="fy-month-hd">';
-        h += '      <span class="fy-month-num">' + mLabel + '</span>';
-        h += '      <button type="button" class="fy-month-add-btn" onclick="event.stopPropagation();openMonthAssignModal(\'' + mLabel + '\')">＋ 当てはめ</button>';
+        h += '      <div>';
+        h += '        <span class="fy-month-num">' + mLabel + '</span>';
+        if (hint) h += '<div style="font-size:10px;color:var(--sub);font-weight:700;margin-top:1px;">' + esc(hint) + '</div>';
+        h += '      </div>';
+        h += '      <button type="button" class="fy-month-add-btn" onclick="event.stopPropagation();openMonthAssignModal(\'' + mLabel + '\', \'kenshu\')">＋ 作成・追加</button>';
         h += '    </div>';
 
         if (mCourses.length === 0 && mCommittees.length === 0) {
-          h += '    <div style="font-size:11.5px;color:#bbb;padding:8px 0;">予定なし（タップで追加）</div>';
+          h += '    <div style="font-size:11.5px;color:#aaa;padding:10px 0;">予定なし（タップでテーマ提案から作成）</div>';
         } else {
           mCourses.forEach(function (tc) {
             var shortTitle = tc.title.replace(/^第\d+回\s*/, '');
             var doneCnt = STAFF.filter(function (s) {
               return !!findStaffRecord(s, tc.id);
             }).length;
-            h += '    <div class="fy-ev-pill kenshu" onclick="event.stopPropagation();openMonthAssignModal(\'' + mLabel + '\')" title="' + esc(tc.title) + '">';
+            h += '    <div class="fy-ev-pill kenshu" onclick="event.stopPropagation();_wizExpandedCourseId=\'' + tc.id + '\';openMonthAssignModal(\'' + mLabel + '\', \'kenshu\')" title="クリックして受講状況・記録簿印刷・編集を開く：' + esc(tc.title) + '">';
             h += '      <span style="overflow:hidden;text-overflow:ellipsis;">' + (tc.isCurrent ? '🔥 ' : '📖 ') + esc(shortTitle) + '</span>';
-            h += '      <span style="font-size:10px;opacity:0.85;flex-shrink:0;">' + doneCnt + '/' + STAFF.length + '</span>';
+            h += '      <span style="font-size:10px;background:rgba(255,255,255,0.75);padding:1px 5px;border-radius:4px;flex-shrink:0;font-weight:900;">' + doneCnt + '/' + STAFF.length + '</span>';
             h += '    </div>';
           });
           mCommittees.forEach(function (cm) {
             var dayStr = cm.date ? (parseInt(cm.date.split('-')[2], 10) + '日 ') : '';
-            h += '    <div class="fy-ev-pill iinkai" onclick="event.stopPropagation();openMonthAssignModal(\'' + mLabel + '\')" title="' + esc(cm.title) + '">';
+            h += '    <div class="fy-ev-pill iinkai" onclick="event.stopPropagation();openMonthAssignModal(\'' + mLabel + '\', \'iinkai\')" title="クリックして委員会議事録を確認・印刷：' + esc(cm.title) + '">';
             h += '      <span style="overflow:hidden;text-overflow:ellipsis;">🏛️ ' + dayStr + esc(cm.title) + '</span>';
             h += '    </div>';
           });
@@ -3189,21 +3068,32 @@
 
       h += '  </div>';
       h += '  <div style="display:flex;gap:20px;margin-top:12px;font-size:12px;color:#555;justify-content:center;font-weight:700;">';
-      h += '    <span><span style="display:inline-block;width:13px;height:13px;background:#e3f2fd;border:1px solid #90caf9;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>研修（青）</span>';
-      h += '    <span><span style="display:inline-block;width:13px;height:13px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>委員会（緑）</span>';
+      h += '    <span><span style="display:inline-block;width:13px;height:13px;background:#e3f2fd;border:1px solid #90caf9;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>研修（青・右の数字は受講完了人数）</span>';
+      h += '    <span><span style="display:inline-block;width:13px;height:13px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>委員会（緑・AI議事録対応）</span>';
       h += '  </div>';
       h += '</div>';
 
       sec.innerHTML = h;
     }
 
-    // ─── 月別 研修・委員会 当てはめモーダル ───────────────────
-    var _activeAssignMonth = '11月';
+    // ─── 月別 研修・委員会 作成＆当てはめ3ステップウィザードモーダル ───
+    function openMonthAssignModal(mLabel, mode) {
+      _activeAssignMonth = mLabel || currentMonthLabel();
+      if (mode) _wizMode = mode;
+      _editingCourseId = null;
+      _editingCommitteeId = null;
+      _aiGeneratedDraft = null;
+      _wizInlinePreviewId = '';
 
-    function openMonthAssignModal(mLabel) {
-      _activeAssignMonth = mLabel || '11月';
+      // 初期動画候補として当月推奨カテゴリの公的動画をセット
+      var defaultSuggest = THEME_SUGGESTIONS_MASTER.find(function (t) { return t.month === _activeAssignMonth; }) || THEME_SUGGESTIONS_MASTER[0];
+      _wizVideoCandidates = OFFICIAL_VIDEO_LIBRARY.filter(function (v) {
+        return !defaultSuggest || v.category === defaultSuggest.category;
+      });
+      if (_wizVideoCandidates.length === 0) _wizVideoCandidates = OFFICIAL_VIDEO_LIBRARY.slice(0, 6);
+
       var titleEl = el('month-assign-modal-title');
-      if (titleEl) titleEl.textContent = '📅 ' + _activeAssignMonth + '度 研修・委員会の当てはめ管理';
+      if (titleEl) titleEl.textContent = '📅 ' + _activeAssignMonth + '度 研修・委員会の作成＆管理スタジオ';
       renderMonthAssignModalBody();
       el('month-assign-modal-overlay').classList.add('active');
     }
@@ -3211,107 +3101,689 @@
     function closeMonthAssignModal() {
       var ov = el('month-assign-modal-overlay');
       if (ov) ov.classList.remove('active');
+      _wizInlinePreviewId = '';
+      var body = el('month-assign-modal-body');
+      if (body) body.innerHTML = ''; // プレビュー動画を停止
+    }
+
+    function switchWizardMonth(fm) {
+      _activeAssignMonth = fm;
+      _editingCourseId = null;
+      _editingCommitteeId = null;
+      _aiGeneratedDraft = null;
+      _wizInlinePreviewId = '';
+      var titleEl = el('month-assign-modal-title');
+      if (titleEl) titleEl.textContent = '📅 ' + fm + '度 研修・委員会の作成＆管理スタジオ';
+      renderMonthAssignModalBody();
+    }
+
+    function toggleCourseStaffInspector(courseId) {
+      if (_wizExpandedCourseId === courseId) _wizExpandedCourseId = '';
+      else _wizExpandedCourseId = courseId;
+      renderMonthAssignModalBody();
+    }
+
+    // 管理者による手動受講記録の登録（集合研修や紙受講の反映用）
+    async function markStaffCompleteByAdmin(courseId, staffId) {
+      var tc = TRAINING_COURSES.find(function (c) { return c.id === courseId; });
+      var s = STAFF.find(function (x) { return String(x.id) === String(staffId); });
+      if (!tc || !s) return;
+
+      var existing = findStaffRecord(s, tc.id);
+      var defRef = existing ? existing.reflection : ('「' + tc.category + '」の研修要点を理解し、日々の業務で実践します。');
+      var refInput = prompt(s.name + ' さんの受講所感・記録（実地指導記録簿に記載されます）：', defRef);
+      if (refInput === null) return;
+
+      var record = {
+        id: existing ? existing.id : ('tr_rec_' + Date.now()),
+        trainingId: tc.id,
+        trainingTitle: tc.title,
+        staffId: s.id,
+        staffName: s.name,
+        staffRole: s.role,
+        completedDate: todayStr(),
+        score: 100,
+        total: (tc.quizzes && tc.quizzes.length) || 4,
+        correctCount: (tc.quizzes && tc.quizzes.length) || 4,
+        reflection: refInput.trim() || defRef,
+        submittedAt: new Date().toISOString()
+      };
+
+      var idx = _trainingRecords.findIndex(function (r) {
+        return r.trainingId === tc.id && (String(r.staffId) === String(s.id) || r.staffName === s.name);
+      });
+      if (idx >= 0) _trainingRecords[idx] = record;
+      else _trainingRecords.unshift(record);
+
+      await saveStorageData('porte_training_records', _trainingRecords);
+      renderMonthAssignModalBody();
+      renderAdminMatrix();
+      renderPublishedCoursesList();
+      renderStaffTrainingList();
     }
 
     function renderMonthAssignModalBody() {
       var body = el('month-assign-modal-body');
       if (!body) return;
 
+      // 現在のフォーム入力値を退避（再描画時に消えないようにする）
+      var curCatVal = el('cr-category') ? el('cr-category').value : '';
+      var curTitleVal = el('cr-title') ? el('cr-title').value : '';
+      var curDueVal = el('cr-due') ? el('cr-due').value : '';
+      var curVideoVal = el('cr-video') ? el('cr-video').value : '';
+      var curVideoTitleVal = el('cr-video-title') ? el('cr-video-title').value : '';
+      var curDescVal = el('cr-desc') ? el('cr-desc').value : '';
+      var curNotesVal = el('cr-ai-prompt-notes') ? el('cr-ai-prompt-notes').value : '';
+      var curIsCurrentVal = el('cr-is-current') ? el('cr-is-current').checked : false;
+      var curYtQueryVal = el('yt-search-query') ? el('yt-search-query').value : '';
+
       var mLabel = _activeAssignMonth;
       var mCourses = TRAINING_COURSES.filter(function (c) { return c.month === mLabel; });
       var mCommittees = _committeeMinutes.filter(function (cm) { return getCommitteeMonthLabel(cm) === mLabel; });
 
       var h = '';
-      // 月切り替えピルバー
+      // 0. 月切り替えピルバー（4月〜3月）
       h += '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:10px;border-bottom:1.5px solid var(--bdr);">';
       FISCAL_MONTHS.forEach(function (fm) {
         var isSel = (fm === mLabel);
-        h += '<button type="button" onclick="_activeAssignMonth=\'' + fm + '\';el(\'month-assign-modal-title\').textContent=\'📅 \'+\'' + fm + '度 研修・委員会の当てはめ管理\';renderMonthAssignModalBody();" style="padding:5px 10px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;border:1.5px solid ' + (isSel ? 'var(--pri)' : 'var(--bdr)') + ';background:' + (isSel ? 'var(--pri)' : '#fff') + ';color:' + (isSel ? '#fff' : 'var(--pri-dark)') + ';">' + fm + '</button>';
+        var hasCnt = TRAINING_COURSES.filter(function (c) { return c.month === fm; }).length +
+          _committeeMinutes.filter(function (cm) { return getCommitteeMonthLabel(cm) === fm; }).length;
+        h += '<button type="button" onclick="switchWizardMonth(\'' + fm + '\')" style="padding:6px 11px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;border:1.5px solid ' + (isSel ? 'var(--pri)' : 'var(--bdr)') + ';background:' + (isSel ? 'var(--pri)' : '#fff') + ';color:' + (isSel ? '#fff' : 'var(--pri-dark)') + ';">' + fm + (hasCnt > 0 ? ' (' + hasCnt + ')' : '') + '</button>';
       });
       h += '</div>';
 
-      // 1. 現在この月に設定されている研修・委員会
-      h += '<div style="font-size:14px;font-weight:900;color:var(--pri-dark);margin-bottom:8px;">📌 現在「' + mLabel + '」に配置されている予定（' + (mCourses.length + mCommittees.length) + '件）</div>';
+      // ═══════════════════════════════════════════════════
+      // 1. 現在この月に設定されている研修・委員会（受講状況確認・印刷・編集）
+      // ═══════════════════════════════════════════════════
+      h += '<div style="font-size:14px;font-weight:900;color:var(--pri-dark);margin-bottom:8px;">📌 現在「' + mLabel + '」に登録されている研修・委員会（' + (mCourses.length + mCommittees.length) + '件）</div>';
 
       if (mCourses.length === 0 && mCommittees.length === 0) {
-        h += '<div style="background:#f8fbf9;border:1.5px dashed var(--bdr);border-radius:12px;padding:16px;text-align:center;color:var(--sub);font-size:13px;margin-bottom:18px;">まだ「' + mLabel + '」には予定がありません。下のリストからワンクリックで追加できます。</div>';
+        h += '<div style="background:#f8fbf9;border:1.5px dashed var(--bdr);border-radius:12px;padding:14px;text-align:center;color:var(--sub);font-size:13px;margin-bottom:18px;">まだ「' + mLabel + '」には予定がありません。下の「STEP 1：テーマの提案」から簡単に作成・追加できます。</div>';
       } else {
-        h += '<div style="margin-bottom:18px;">';
+        h += '<div style="margin-bottom:20px;">';
         mCourses.forEach(function (tc) {
-          var doneCnt = STAFF.filter(function (s) {
-            return !!findStaffRecord(s, tc.id);
-          }).length;
+          var doneCnt = STAFF.filter(function (s) { return !!findStaffRecord(s, tc.id); }).length;
+          var isExpanded = (_wizExpandedCourseId === tc.id);
           var moveOpts = FISCAL_MONTHS.map(function (fm) {
             return '<option value="' + fm + '"' + (fm === tc.month ? ' selected' : '') + '>' + fm + 'へ移動</option>';
           }).join('');
 
-          h += '<div style="background:#e3f2fd;border:1.5px solid #90caf9;border-radius:12px;padding:12px 14px;margin-bottom:8px;">';
+          h += '<div style="background:#e3f2fd;border:1.5px solid #90caf9;border-radius:14px;padding:12px 14px;margin-bottom:10px;">';
           h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:4px;">';
-          h += '    <span style="font-size:11px;font-weight:900;background:#1565c0;color:#fff;padding:2px 8px;border-radius:6px;">📖 研修 / ' + esc(tc.category) + '</span>';
-          h += '    <span style="font-size:12px;font-weight:800;color:#0d47a1;">受講完了: ' + doneCnt + '/' + STAFF.length + '名</span>';
+          h += '    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">';
+          h += '      <span style="font-size:11px;font-weight:900;background:#1565c0;color:#fff;padding:2px 8px;border-radius:6px;">📖 研修 / ' + esc(tc.category) + '</span>';
+          if (tc.isCurrent) h += '<span style="font-size:11px;font-weight:900;color:#ef6c00;background:#fff3e0;padding:2px 8px;border-radius:6px;border:1px solid #ffb74d;">🔥 今月の要受講に設定中</span>';
+          h += '    </div>';
+          h += '    <span style="font-size:12px;font-weight:900;color:#0d47a1;background:#fff;padding:2px 10px;border-radius:10px;">👥 受講完了: ' + doneCnt + ' / ' + STAFF.length + ' 名</span>';
           h += '  </div>';
-          h += '  <div style="font-size:14px;font-weight:900;color:#0d47a1;margin-bottom:8px;">' + esc(tc.title) + '</div>';
+          h += '  <div style="font-size:14.5px;font-weight:900;color:#0d47a1;margin:4px 0 8px;">' + esc(tc.title) + '</div>';
           h += '  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
-          h += '    <select onchange="moveCourseToMonth(\'' + tc.id + '\', this.value);renderMonthAssignModalBody();" style="font-size:11.5px;padding:4px 8px;border-radius:6px;border:1px solid #90caf9;background:#fff;font-weight:700;cursor:pointer;">' + moveOpts + '</select>';
+          h += '    <button type="button" onclick="toggleCourseStaffInspector(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1.5px solid #1565c0;background:' + (isExpanded ? '#1565c0' : '#fff') + ';color:' + (isExpanded ? '#fff' : '#1565c0') + ';font-weight:800;cursor:pointer;">👥 受講者・所感を確認 (' + doneCnt + '/' + STAFF.length + ')</button>';
+          h += '    <button type="button" onclick="printTrainingOfficialReport(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#1565c0;color:#fff;font-weight:800;cursor:pointer;">🖨️ A4実施記録簿を印刷</button>';
+          h += '    <button type="button" onclick="loadCourseIntoWizardEditor(\'' + tc.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid #1565c0;background:#fff;color:#1565c0;font-weight:800;cursor:pointer;">✏️ テーマ・動画・クイズを編集</button>';
           if (!tc.isCurrent) {
-            h += '    <button type="button" onclick="setCurrentCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:4px 10px;border-radius:6px;border:none;background:#ef6c00;color:#fff;font-weight:800;cursor:pointer;">🔥 今月の要受講に設定</button>';
-          } else {
-            h += '    <span style="font-size:11px;font-weight:900;color:#ef6c00;background:#fff3e0;padding:3px 8px;border-radius:6px;">🔥 現在配信中</span>';
+            h += '    <button type="button" onclick="setCurrentCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ef6c00;color:#fff;font-weight:800;cursor:pointer;">🔥 今月の要受講にする</button>';
           }
-          h += '    <button type="button" onclick="closeMonthAssignModal();editCourse(\'' + tc.id + '\');switchAdminSubtab(\'creator\');" style="font-size:11.5px;padding:4px 10px;border-radius:6px;border:1px solid #1565c0;background:#fff;color:#1565c0;font-weight:800;cursor:pointer;">✏️ 内容・クイズ編集</button>';
-          h += '    <button type="button" onclick="printTrainingOfficialReport(\'' + tc.id + '\')" style="font-size:11.5px;padding:4px 10px;border-radius:6px;border:none;background:#1565c0;color:#fff;font-weight:800;cursor:pointer;">🖨️ 記録簿印刷</button>';
-          h += '    <button type="button" onclick="deleteCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:4px 10px;border-radius:6px;border:none;background:#ffebee;color:#c62828;font-weight:800;cursor:pointer;">✕ 外す</button>';
+          h += '    <select onchange="moveCourseToMonth(\'' + tc.id + '\', this.value);renderMonthAssignModalBody();" style="font-size:11.5px;padding:4px 8px;border-radius:8px;border:1px solid #90caf9;background:#fff;font-weight:700;cursor:pointer;">' + moveOpts + '</select>';
+          h += '    <button type="button" onclick="deleteCourse(\'' + tc.id + '\');renderMonthAssignModalBody();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ffebee;color:#c62828;font-weight:800;cursor:pointer;">🗑️ 削除</button>';
           h += '  </div>';
+
+          // 展開時：スタッフ5名の受講状況・点数・所感一覧テーブル
+          if (isExpanded) {
+            h += '  <div style="margin-top:10px;background:#fff;border-radius:10px;padding:10px;border:1px solid #90caf9;">';
+            h += '    <div style="font-size:12px;font-weight:900;color:#0d47a1;margin-bottom:6px;">📋 スタッフ別 受講ステータス＆提出された所感（視聴側とリアルタイム連動）</div>';
+            h += '    <table style="width:100%;border-collapse:collapse;font-size:12px;">';
+            h += '      <thead><tr style="background:#f0f7ff;"><th style="border:1px solid #cfe2f3;padding:5px 8px;text-align:left;width:95px;">氏名</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:85px;">状態・得点</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:85px;">完了日</th><th style="border:1px solid #cfe2f3;padding:5px 8px;text-align:left;">提出された所感</th><th style="border:1px solid #cfe2f3;padding:5px 8px;width:75px;">操作</th></tr></thead><tbody>';
+            STAFF.forEach(function (s) {
+              var r = findStaffRecord(s, tc.id);
+              h += '      <tr>';
+              h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;font-weight:800;">' + esc(s.name) + '</td>';
+              if (r) {
+                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><span class="badge-ok">✅ ' + r.score + '点</span></td>';
+                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;">' + esc(r.completedDate) + '</td>';
+                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;">' + esc(r.reflection) + '</td>';
+                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><button type="button" onclick="markStaffCompleteByAdmin(\'' + tc.id + '\', \'' + s.id + '\')" style="font-size:10.5px;padding:2px 6px;border-radius:6px;border:1px solid #ccc;background:#f9f9f9;cursor:pointer;">所感修正</button></td>';
+              } else {
+                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><span class="badge-no">⏳ 未受講</span></td>';
+                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;color:#999;">-</td>';
+                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;color:#999;">未提出</td>';
+                h += '        <td style="border:1px solid #cfe2f3;padding:5px 8px;text-align:center;"><button type="button" onclick="markStaffCompleteByAdmin(\'' + tc.id + '\', \'' + s.id + '\')" style="font-size:10.5px;padding:2px 6px;border-radius:6px;border:1px solid #1565c0;color:#1565c0;background:#fff;cursor:pointer;font-weight:700;">手動記録</button></td>';
+              }
+              h += '      </tr>';
+            });
+            h += '      </tbody></table>';
+            h += '  </div>';
+          }
           h += '</div>';
         });
 
         mCommittees.forEach(function (cm) {
-          h += '<div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">';
-          h += '  <div>';
+          h += '<div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">';
+          h += '  <div style="flex:1;min-width:220px;">';
           h += '    <span style="font-size:11px;font-weight:900;background:#2e7d32;color:#fff;padding:2px 8px;border-radius:6px;">🏛️ 委員会 / ' + esc(cm.category) + '</span>';
-          h += '    <div style="font-size:14px;font-weight:900;color:#1b5e20;margin-top:4px;">' + esc(cm.title) + ' (' + esc(cm.date) + ')</div>';
+          h += '    <div style="font-size:14px;font-weight:900;color:#1b5e20;margin-top:4px;">' + esc(cm.title) + '（開催日: ' + esc(cm.date) + '）</div>';
+          h += '    <div style="font-size:11.5px;color:#2e4c21;margin-top:2px;">出席者: ' + esc(cm.attendees) + '</div>';
           h += '  </div>';
-          h += '  <div style="display:flex;gap:6px;">';
-          h += '    <button type="button" onclick="printCommitteeMinutes(\'' + cm.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:6px;border:none;background:#2e7d32;color:#fff;font-weight:800;cursor:pointer;">🖨️ 議事録印刷</button>';
-          h += '    <button type="button" onclick="deleteCommitteeMinutes(\'' + cm.id + '\');renderMonthAssignModalBody();renderFyCalendar();" style="font-size:11.5px;padding:5px 10px;border-radius:6px;border:none;background:#ffebee;color:#c62828;font-weight:800;cursor:pointer;">✕ 外す</button>';
+          h += '  <div style="display:flex;gap:6px;flex-wrap:wrap;">';
+          h += '    <button type="button" onclick="printCommitteeMinutes(\'' + cm.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#2e7d32;color:#fff;font-weight:800;cursor:pointer;">🖨️ A4議事録を印刷</button>';
+          h += '    <button type="button" onclick="loadCommitteeIntoWizardEditor(\'' + cm.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid #2e7d32;background:#fff;color:#1b5e20;font-weight:800;cursor:pointer;">✏️ 議事録を編集</button>';
+          h += '    <button type="button" onclick="deleteCommitteeMinutes(\'' + cm.id + '\');renderMonthAssignModalBody();renderFyCalendar();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ffebee;color:#c62828;font-weight:800;cursor:pointer;">🗑️ 削除</button>';
           h += '  </div>';
           h += '</div>';
         });
         h += '</div>';
       }
 
-      // 2. この月に「研修パック（全12種）」を1クリックで当てはめる
-      h += '<div style="background:var(--pri-light);border:1.5px solid var(--bdr);border-radius:14px;padding:14px;margin-bottom:14px;">';
-      h += '  <div style="font-size:13.5px;font-weight:900;color:var(--pri-dark);margin-bottom:8px;">📖 ① 「' + mLabel + '」に法定研修パック（動画・要点・4択クイズ付）を当てはめる</div>';
-      h += '  <div style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;padding-right:4px;">';
-      Object.keys(COURSE_PRESETS).forEach(function (pk) {
-        var p = COURSE_PRESETS[pk];
-        var isRec = (p.month === mLabel);
-        h += '    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:#fff;border:1px solid ' + (isRec ? '#1565c0' : 'var(--bdr)') + ';border-radius:10px;padding:8px 12px;">';
-        h += '      <div style="font-size:12.5px;">';
-        if (isRec) h += '<span style="background:#e3f2fd;color:#1565c0;font-weight:900;font-size:10.5px;padding:1px 6px;border-radius:4px;margin-right:4px;">★' + mLabel + '推奨</span>';
-        h += '        <b style="color:var(--pri-dark);">[' + esc(p.category) + ']</b> ' + esc(p.title.replace(/^第\d+回\s*/, ''));
-        h += '      </div>';
-        h += '      <button type="button" onclick="assignPresetToMonth(\'' + mLabel + '\', \'' + pk + '\');renderMonthAssignModalBody();" style="background:#1565c0;color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap;">＋ ' + mLabel + 'に追加</button>';
-        h += '    </div>';
-      });
-      h += '  </div>';
-      h += '  <div style="margin-top:10px;text-align:right;">';
-      h += '    <button type="button" onclick="closeMonthAssignModal();openCreatorForMonth(\'' + mLabel + '\');" class="ai-gen-btn" style="padding:8px 16px;font-size:12.5px;">🤖 AIで「' + mLabel + '」のオリジナル研修を新規作成する ➔</button>';
-      h += '  </div>';
+      // ═══════════════════════════════════════════════════
+      // 2. 新規作成モード切替タブ（📖 研修を作成 vs 🏛️ 委員会を作成）
+      // ═══════════════════════════════════════════════════
+      h += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
+      h += '  <button type="button" onclick="_wizMode=\'kenshu\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:13.5px;font-weight:900;cursor:pointer;border:2px solid ' + (_wizMode === 'kenshu' ? '#1565c0' : 'var(--bdr)') + ';background:' + (_wizMode === 'kenshu' ? '#e3f2fd' : '#fff') + ';color:' + (_wizMode === 'kenshu' ? '#0d47a1' : 'var(--sub)') + ';">📖 「' + mLabel + '」の研修を作成・追加する（テーマ提案 ➔ 最新動画検索 ➔ AIクイズ作成）</button>';
+      h += '  <button type="button" onclick="_wizMode=\'iinkai\';renderMonthAssignModalBody();" style="flex:1;padding:11px 14px;border-radius:12px;font-size:13.5px;font-weight:900;cursor:pointer;border:2px solid ' + (_wizMode === 'iinkai' ? '#2e7d32' : 'var(--bdr)') + ';background:' + (_wizMode === 'iinkai' ? '#e8f5e9' : '#fff') + ';color:' + (_wizMode === 'iinkai' ? '#1b5e20' : 'var(--sub)') + ';">🏛️ 「' + mLabel + '」の委員会・議事録を作成・追加する（AI自動起案）</button>';
       h += '</div>';
 
-      // 3. この月に「委員会」を1クリックで当てはめる
-      h += '<div style="background:#f1f8e9;border:1.5px solid #a5d6a7;border-radius:14px;padding:14px;">';
-      h += '  <div style="font-size:13.5px;font-weight:900;color:#1b5e20;margin-bottom:8px;">🏛️ ② 「' + mLabel + '」に法定委員会（AI議事録付き）を当てはめる</div>';
-      h += '  <div style="display:flex;flex-wrap:wrap;gap:8px;">';
-      ['身体拘束適正化委員会', '虐待防止委員会', '感染症対策委員会', 'BCP（業務継続計画）委員会', '安全衛生・HACCP委員会'].forEach(function (catName) {
-        h += '    <button type="button" onclick="quickAssignCommitteeToMonth(\'' + mLabel + '\', \'' + catName + '\')" style="background:#fff;border:1.5px solid #2e7d32;color:#1b5e20;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;">＋ ' + catName + 'を' + mLabel + 'に追加</button>';
-      });
-      h += '  </div>';
-      h += '</div>';
+      if (_wizMode === 'kenshu') {
+        // ─────────────────────────────────────────────────
+        // 📖 研修作成 3ステップウィザード
+        // ─────────────────────────────────────────────────
+        var defaultSug = THEME_SUGGESTIONS_MASTER.find(function (t) { return t.month === mLabel; }) || THEME_SUGGESTIONS_MASTER[0];
+        var initCat = curCatVal || defaultSug.category;
+        var initTitle = curTitleVal;
+        var initDue = curDueVal || getDueTextForMonth(mLabel);
+        var initVideo = curVideoVal || CATEGORY_VERIFIED_VIDEOS[initCat] || 'https://www.youtube.com/watch?v=U5DBEouTQu8';
+        var initVideoTitle = curVideoTitleVal || '';
+        var initDesc = curDescVal;
+        var initYtQuery = curYtQueryVal || (defaultSug ? defaultSug.ytQuery : ('障害福祉 ' + initCat + ' 研修'));
+
+        // 【STEP 1】💡 テーマの提案
+        h += '<div style="background:var(--pri-light);border:1.5px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:16px;">';
+        h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">';
+        h += '    <div style="font-size:14.5px;font-weight:900;color:var(--pri-dark);">【STEP 1】💡 「' + mLabel + '」の研修テーマ提案（選ぶだけ or AIに新しいテーマを提案させる）</div>';
+        h += '    <button type="button" id="btn-ai-suggest-themes" onclick="suggestThemesWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12px;">🤖 AIに「' + mLabel + '」の新しい研修テーマを5つ提案させる</button>';
+        h += '  </div>';
+
+        // カテゴリ絞り込みピル
+        var cats = ['すべて', '身体拘束適正化', '感染対策', '障害者虐待防止', 'BCP研修・訓練', '防災訓練', '衛生管理・HACCP', '個人情報保護', 'ハラスメント防止', 'その他'];
+        h += '  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">';
+        cats.forEach(function (cName) {
+          var isAct = (_wizFilterCat === cName);
+          h += '<button type="button" onclick="_wizFilterCat=\'' + cName + '\';renderMonthAssignModalBody();" style="padding:4px 10px;border-radius:14px;font-size:11.5px;font-weight:800;cursor:pointer;border:1px solid ' + (isAct ? 'var(--pri)' : 'var(--bdr)') + ';background:' + (isAct ? 'var(--pri)' : '#fff') + ';color:' + (isAct ? '#fff' : 'var(--pri-dark)') + ';">' + cName + '</button>';
+        });
+        h += '  </div>';
+
+        // 提案テーマリスト（AI提案テーマ + 標準推奨テーマ）
+        var combinedThemes = _wizAiThemes.concat(THEME_SUGGESTIONS_MASTER);
+        var filteredThemes = combinedThemes.filter(function (t) {
+          if (_wizFilterCat !== 'すべて' && t.category !== _wizFilterCat) return false;
+          return true;
+        });
+        // 当月推奨を先頭にソート
+        filteredThemes.sort(function (a, b) {
+          var aMatch = (a.month === mLabel) ? 0 : 1;
+          var bMatch = (b.month === mLabel) ? 0 : 1;
+          if (a.isAi && !b.isAi) return -1;
+          if (!a.isAi && b.isAi) return 1;
+          return aMatch - bMatch;
+        });
+
+        h += '  <div style="display:flex;flex-direction:column;gap:6px;max-height:195px;overflow-y:auto;padding-right:4px;margin-bottom:12px;">';
+        filteredThemes.forEach(function (t, idx) {
+          var isMonthRec = (t.month === mLabel);
+          h += '    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:#fff;border:1.5px solid ' + (t.isAi ? '#b39ddb' : (isMonthRec ? '#1565c0' : 'var(--bdr)')) + ';border-radius:10px;padding:8px 12px;">';
+          h += '      <div style="flex:1;min-width:200px;">';
+          h += '        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">';
+          if (t.isAi) h += '<span style="background:#ede7f6;color:#5e35b1;font-weight:900;font-size:10.5px;padding:1px 6px;border-radius:4px;">🤖 AI新規提案</span>';
+          else if (isMonthRec) h += '<span style="background:#e3f2fd;color:#1565c0;font-weight:900;font-size:10.5px;padding:1px 6px;border-radius:4px;">★' + mLabel + '推奨</span>';
+          h += '          <span style="font-size:11px;font-weight:800;color:var(--pri);">[' + esc(t.category) + ']</span>';
+          h += '        </div>';
+          h += '        <div style="font-size:13px;font-weight:900;color:var(--pri-dark);">' + esc(t.title) + '</div>';
+          h += '        <div style="font-size:11px;color:var(--sub);margin-top:1px;">' + esc(t.desc) + '</div>';
+          h += '      </div>';
+          h += '      <div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;">';
+          h += '        <button type="button" onclick="selectSuggestedTheme(' + idx + ')" style="background:var(--pri);color:#fff;border:none;border-radius:8px;padding:6px 11px;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap;">✨ このテーマを採用 ➔ 動画検索</button>';
+          if (t.presetKey) {
+            h += '      <button type="button" onclick="assignPresetToMonth(\'' + mLabel + '\', \'' + t.presetKey + '\');renderMonthAssignModalBody();" style="background:#e3f2fd;color:#1565c0;border:1px solid #90caf9;border-radius:8px;padding:6px 9px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;" title="定番動画と4択クイズ一式がセット済みの完成パックをそのまま1クリックで登録します">⚡ 完成パック即登録</button>';
+          }
+          h += '      </div>';
+          h += '    </div>';
+        });
+        h += '  </div>';
+
+        // 選択・編集中のテーマ基本情報フォーム
+        h += '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:12px;padding:12px;">';
+        h += '    <div style="font-size:12px;font-weight:900;color:var(--pri-dark);margin-bottom:8px;">📝 採用したテーマ・基本情報（直接書き換えも可能）' + (_editingCourseId ? ' <span style="color:#e65100;">【既存研修の編集中】</span>' : '') + '</div>';
+        h += '    <input type="hidden" id="cr-month" value="' + esc(mLabel) + '">';
+        h += '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">';
+        h += '      <div class="form-field"><label>研修区分 *</label><select id="cr-category" onchange="onCreatorCategoryChange()">';
+        ['身体拘束適正化', '感染対策', '障害者虐待防止', 'BCP研修・訓練', '防災訓練', '衛生管理・HACCP', '個人情報保護', 'ハラスメント防止', 'その他'].forEach(function (cOpt) {
+          h += '<option value="' + cOpt + '"' + (cOpt === initCat ? ' selected' : '') + '>' + cOpt + '</option>';
+        });
+        h += '      </select></div>';
+        h += '      <div class="form-field"><label>受講期限 *</label><input type="date" id="cr-due" value="' + esc(initDue) + '"></div>';
+        h += '    </div>';
+        h += '    <div class="form-field" style="margin-bottom:8px;"><label>研修タイトル *</label><input type="text" id="cr-title" value="' + esc(initTitle) + '" placeholder="上のテーマ提案から選ぶか、自由に入力してください"></div>';
+        h += '    <div class="form-field"><label>研修の目的・概要</label><textarea id="cr-desc" rows="2" placeholder="研修のねらい、学習内容">' + esc(initDesc) + '</textarea></div>';
+        h += '  </div>';
+        h += '</div>';
+
+        // 【STEP 2】🔍 参考動画のリアルタイム最新検索 ＆ 公的機関動画リスト
+        h += '<div style="background:#f8fbf9;border:1.5px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:16px;" id="wiz-step2-box">';
+        h += '  <div style="font-size:14.5px;font-weight:900;color:var(--pri-dark);margin-bottom:6px;">【STEP 2】🔍 参考動画の検索・選択（YouTubeリアルタイム最新検索 ＆ 厚労省・公的機関リスト）</div>';
+        h += '  <div style="font-size:12px;color:var(--sub);margin-bottom:10px;">テーマに合った最新動画をYouTubeからリアルタイム検索して、その場でプレビュー再生＆1クリック採用できます。</div>';
+
+        h += '  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">';
+        h += '    <input type="text" id="yt-search-query" value="' + esc(initYtQuery) + '" placeholder="検索キーワード（例：障害福祉 身体拘束 スピーチロック 研修）" style="flex:1;min-width:220px;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 12px;font-size:13.5px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();searchYouTubeVideosLive();}">';
+        h += '    <button type="button" id="btn-yt-live-search" onclick="searchYouTubeVideosLive()" style="background:#c62828;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">🔍 YouTubeで最新動画を検索</button>';
+        h += '    <button type="button" onclick="showOfficialVideoCandidates()" style="background:#fff;color:var(--pri-dark);border:1.5px solid var(--pri);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;">🏛️ 厚労省・公的機関の定番動画を表示</button>';
+        h += '  </div>';
+
+        // インライン動画プレビュー枠（▶プレビュー押下時に展開）
+        if (_wizInlinePreviewId) {
+          h += '  <div style="background:#000;border-radius:12px;padding:8px;margin-bottom:12px;">';
+          h += '    <div style="display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:12px;font-weight:800;margin-bottom:6px;padding:0 4px;">';
+          h += '      <span>▶ 動画プレビュー再生中（音声・内容を確認できます）</span>';
+          h += '      <button type="button" onclick="_wizInlinePreviewId=\'\';renderMonthAssignModalBody();" style="background:#444;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;">✕ プレビューを閉じる</button>';
+          h += '    </div>';
+          h += '    <div class="video-wrapper" style="margin-bottom:0;"><iframe src="https://www.youtube.com/embed/' + esc(_wizInlinePreviewId) + '?autoplay=1" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>';
+          h += '  </div>';
+        }
+
+        // 検索結果・候補リスト描画枠
+        h += '  <div id="yt-search-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;max-height:290px;overflow-y:auto;padding:4px;margin-bottom:10px;">';
+        h += renderWizardVideoCardsHTML(initVideo);
+        h += '  </div>';
+
+        // 現在採用されている動画URL表示バー
+        h += '  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
+        h += '    <span style="font-size:12px;font-weight:900;color:var(--pri-dark);">🎬 採用中の動画URL：</span>';
+        h += '    <input type="text" id="cr-video" value="' + esc(initVideo) + '" style="flex:1;min-width:200px;border:1px solid var(--bdr);border-radius:8px;padding:5px 8px;font-size:12.5px;">';
+        h += '    <input type="hidden" id="cr-video-title" value="' + esc(initVideoTitle) + '">';
+        h += '    <button type="button" onclick="previewCreatorVideo()" style="background:var(--pri-light);color:var(--pri-dark);border:1px solid var(--bdr);border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:800;cursor:pointer;">↗ 別タブで確認</button>';
+        h += '  </div>';
+        h += '</div>';
+
+        // 【STEP 3】🤖 AIで要点レジュメ ＆ 4択クイズ（全4問）を自動生成 ➔ カレンダーに登録
+        h += '<div style="background:#fbf9ff;border:1.5px solid #b39ddb;border-radius:16px;padding:16px;" id="wiz-step3-box">';
+        h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">';
+        h += '    <div>';
+        h += '      <div style="font-size:14.5px;font-weight:900;color:#4527a0;">【STEP 3】🤖 要点レジュメ ＆ 4択クイズ（全4問）のAI自動生成 ➔ カレンダー登録</div>';
+        h += '      <div style="font-size:12px;color:var(--sub);" id="ai-engine-status-text">採用したテーマと動画タイトルに合わせて、要点まとめと4択テストをAIが自動作成します（手動編集も可能）</div>';
+        h += '    </div>';
+        h += '    <button type="button" class="ai-gen-btn" id="btn-run-ai-course" onclick="generateCourseWithAI()">';
+        h += '      <span>🤖 テーマと動画から要点＆4択クイズをAI生成</span>';
+        h += '    </button>';
+        h += '  </div>';
+
+        h += '  <div class="form-field" style="margin-bottom:12px;">';
+        h += '    <label style="color:var(--ai-purple);font-size:12px;">💡 AIへの追加リクエスト・現場の課題（任意：入力するとクイズに反映されます）</label>';
+        h += '    <input type="text" id="cr-ai-prompt-notes" value="' + esc(curNotesVal) + '" placeholder="例：珈琲焙煎室での火傷防止、送迎時の声かけ、ノロウイルス嘔吐物処理手順など" style="border-color:#b39ddb;background:#fff;">';
+        h += '  </div>';
+
+        h += '  <div id="cr-ai-preview" style="background:#fff;border:1.5px solid #d1c4e9;border-radius:12px;padding:14px;margin-bottom:14px;">';
+        if (_aiGeneratedDraft) {
+          h += '<!-- renderAiPreviewで描画 -->';
+        } else {
+          h += '    <div style="font-size:12.5px;color:var(--sub);text-align:center;padding:14px 0;">上の「🤖 テーマと動画から要点＆4択クイズをAI生成」を押すと、ここに要点と4択クイズ（全4問）のエディタが展開されます（押さずにそのまま登録しても自動でAI生成されます）</div>';
+        }
+        h += '  </div>';
+
+        h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding-top:10px;border-top:1.5px solid #d1c4e9;">';
+        h += '    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:800;color:var(--pri-dark);">';
+        h += '      <input type="checkbox" id="cr-is-current" style="width:18px;height:18px;"' + (curIsCurrentVal ? ' checked' : '') + '>';
+        h += '      <span>🔥 この研修を「今月の要受講研修（視聴側トップ表示）」に設定する</span>';
+        h += '    </label>';
+        h += '    <div style="display:flex;gap:8px;">';
+        if (_editingCourseId) {
+          h += '      <button type="button" class="btn-print" style="background:#607d8b;" onclick="_editingCourseId=null;_aiGeneratedDraft=null;renderMonthAssignModalBody();">編集キャンセル</button>';
+        }
+        h += '      <button type="button" class="training-start-btn" style="background:var(--accent);width:auto;padding:12px 26px;" onclick="saveCourseFromCreator()">';
+        h += '        <span>💾 「' + mLabel + '」の研修としてカレンダーに登録・配信する</span>';
+        h += '      </button>';
+        h += '    </div>';
+        h += '  </div>';
+        h += '</div>';
+
+      } else {
+        // ─────────────────────────────────────────────────
+        // 🏛️ 委員会・議事録作成（AI自動起案）
+        // ─────────────────────────────────────────────────
+        var mNum = parseInt(String(mLabel).replace('月', ''), 10) || 11;
+        var yr = (mNum >= 4) ? _calFY : (_calFY + 1);
+        var defaultCmDate = yr + '-' + String(mNum).padStart(2, '0') + '-24';
+        var staffNames = STAFF.map(function (s) { return s.name; }).join('、');
+
+        h += '<div style="background:#f1f8e9;border:1.5px solid #a5d6a7;border-radius:16px;padding:16px;">';
+        h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
+        h += '    <div style="font-size:14.5px;font-weight:900;color:#1b5e20;">🏛️ 「' + mLabel + '」の法定委員会・議事録を作成（AI自動起案）</div>';
+        h += '    <button type="button" id="btn-ai-committee" onclick="generateCommitteeWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12px;">🤖 AIで議題と決定事項を自動起案</button>';
+        h += '  </div>';
+
+        // 1クリック即時追加バー
+        h += '  <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed #a5d6a7;">';
+        h += '    <div style="font-size:12px;font-weight:800;color:#2e7d32;margin-bottom:6px;">⚡ 1クリックで「' + mLabel + '」に定例委員会（標準議事録付）を即時追加：</div>';
+        h += '    <div style="display:flex;flex-wrap:wrap;gap:6px;">';
+        ['身体拘束適正化委員会', '虐待防止委員会', '感染症対策委員会', 'BCP（業務継続計画）委員会', '安全衛生・HACCP委員会'].forEach(function (catName) {
+          h += '      <button type="button" onclick="quickAssignCommitteeToMonth(\'' + mLabel + '\', \'' + catName + '\')" style="background:#fff;border:1.5px solid #2e7d32;color:#1b5e20;border-radius:10px;padding:5px 10px;font-size:11.5px;font-weight:800;cursor:pointer;">＋ ' + catName + 'を即追加</button>';
+        });
+        h += '    </div>';
+        h += '  </div>';
+
+        h += '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
+        h += '    <div class="form-field"><label>委員会種別</label><select id="cm-category" onchange="onCommitteeTypeChange()">';
+        ['身体拘束適正化委員会', '虐待防止委員会', '感染症対策委員会', 'BCP（業務継続計画）委員会', '安全衛生・HACCP委員会'].forEach(function (cOpt) {
+          h += '<option value="' + cOpt + '">' + cOpt + '</option>';
+        });
+        h += '    </select></div>';
+        h += '    <div class="form-field"><label>開催日</label><input type="date" id="cm-date" value="' + defaultCmDate + '"></div>';
+        h += '  </div>';
+        h += '  <div class="form-field" style="margin-bottom:10px;"><label>会議名</label><input type="text" id="cm-title" value="令和' + (_calFY - 2018) + '年度 ' + mLabel + '定例 身体拘束適正化委員会"></div>';
+        h += '  <div class="form-field" style="margin-bottom:10px;"><label>出席者</label><input type="text" id="cm-attendees" value="' + esc(staffNames) + '"></div>';
+        h += '  <div class="form-field" style="margin-bottom:10px;"><label>協議事項・議題</label><textarea id="cm-agenda" rows="3">1. 事業所における身体拘束ゼロの継続確認と指針の点検\n2. 現場におけるスピーチロック（言葉の拘束）のヒヤリハット事例共有\n3. 法定研修の受講進捗および代替支援の実践確認</textarea></div>';
+        h += '  <div class="form-field" style="margin-bottom:14px;"><label>決定事項・改善策</label><textarea id="cm-decisions" rows="3">・「ちょっと待って」ではなく具体的な見通し（◯分後など）を伝える声かけを全職員で徹底する。\n・作業環境や動線を調整し、利用者が落ち着いて過ごせる環境づくりを継続する。</textarea></div>';
+        h += '  <div style="text-align:right;">';
+        h += '    <button type="button" class="training-start-btn" style="background:#2e7d32;width:auto;padding:12px 26px;display:inline-flex;" onclick="saveCommitteeMinutesFromWizard()">';
+        h += '      <span>💾 「' + mLabel + '」の委員会としてカレンダーに登録・保存する</span>';
+        h += '    </button>';
+        h += '  </div>';
+        h += '</div>';
+      }
 
       body.innerHTML = h;
+      if (_wizMode === 'kenshu' && _aiGeneratedDraft) {
+        renderAiPreview();
+      }
+    }
+
+    // ─── STEP 1: テーマ選択 ＆ AIによる新規テーマ提案 ──────────
+    function selectSuggestedTheme(idx) {
+      var mLabel = _activeAssignMonth;
+      var combinedThemes = _wizAiThemes.concat(THEME_SUGGESTIONS_MASTER);
+      var filteredThemes = combinedThemes.filter(function (t) {
+        if (_wizFilterCat !== 'すべて' && t.category !== _wizFilterCat) return false;
+        return true;
+      });
+      filteredThemes.sort(function (a, b) {
+        var aMatch = (a.month === mLabel) ? 0 : 1;
+        var bMatch = (b.month === mLabel) ? 0 : 1;
+        if (a.isAi && !b.isAi) return -1;
+        if (!a.isAi && b.isAi) return 1;
+        return aMatch - bMatch;
+      });
+
+      var chosen = filteredThemes[idx];
+      if (!chosen) return;
+
+      if (el('cr-category')) el('cr-category').value = chosen.category;
+      if (el('cr-title')) el('cr-title').value = chosen.title;
+      if (el('cr-desc')) el('cr-desc').value = chosen.desc || '';
+      if (el('yt-search-query')) el('yt-search-query').value = chosen.ytQuery || ('障害福祉 ' + chosen.category + ' 研修');
+
+      // プリセットがあれば下書きにもセット
+      if (chosen.presetKey && COURSE_PRESETS[chosen.presetKey]) {
+        var tpl = COURSE_PRESETS[chosen.presetKey];
+        if (el('cr-video')) el('cr-video').value = tpl.videoUrl;
+        _aiGeneratedDraft = {
+          keypoints: tpl.keypoints.slice(),
+          quizzes: JSON.parse(JSON.stringify(tpl.quizzes))
+        };
+        renderAiPreview();
+      }
+
+      // 自動的にSTEP 2のYouTube最新動画検索を実行！
+      searchYouTubeVideosLive();
+      var step2 = el('wiz-step2-box');
+      if (step2) step2.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async function suggestThemesWithAI() {
+      var mLabel = _activeAssignMonth;
+      var cat = (_wizFilterCat !== 'すべて') ? _wizFilterCat : (el('cr-category') ? el('cr-category').value : '身体拘束適正化');
+      var btn = el('btn-ai-suggest-themes');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ AIがテーマを考案中...'; }
+
+      var prompt = 'あなたは就労継続支援B型事業所「Porte（ポルテ）」（珈琲焙煎・製造・袋詰め・軽作業等を提供）の研修企画アドバイザーです。\n' +
+        '「' + mLabel + '」に実施するスタッフ向け法定研修（重点カテゴリ：' + cat + '）として、現場で役立つ実践的な研修テーマ案を5つ、JSON形式のみで出力してください。\n' +
+        '{\n' +
+        '  "themes": [\n' +
+        '    {\n' +
+        '      "category": "' + cat + '",\n' +
+        '      "title": "第○回 ○○研修「...」",\n' +
+        '      "desc": "研修のねらいと具体的内容（60〜90文字）",\n' +
+        '      "ytQuery": "YouTubeで参考動画を検索するための最適な検索キーワード（3〜4語）"\n' +
+        '    }\n' +
+        '  ]\n' +
+        '}';
+
+      var res = await callPorteAI(prompt);
+      var parsed = res ? extractJsonFromText(res.text) : null;
+      if (parsed && Array.isArray(parsed.themes) && parsed.themes.length > 0) {
+        _wizAiThemes = parsed.themes.map(function (t) {
+          return {
+            isAi: true,
+            month: mLabel,
+            category: t.category || cat,
+            title: t.title || (cat + '研修'),
+            desc: t.desc || '',
+            ytQuery: t.ytQuery || ('障害福祉 ' + (t.category || cat) + ' 研修')
+          };
+        });
+      } else {
+        _wizAiThemes = [
+          { isAi: true, month: mLabel, category: cat, title: mLabel + '度 ' + cat + '研修「珈琲作業・日常支援におけるリスク予見と丁寧な声かけ実践」', desc: '作業現場での具体的なケースをもとに、利用者様が安心して取り組める環境調整と声かけの工夫を学びます。', ytQuery: '障害福祉 ' + cat + ' 研修' }
+        ];
+      }
+
+      if (btn) { btn.disabled = false; btn.textContent = '🤖 AIに「' + mLabel + '」の新しい研修テーマを5つ提案させる'; }
+      renderMonthAssignModalBody();
+    }
+
+    // ─── STEP 2: YouTubeリアルタイム最新検索 ＆ 公的動画カタログ ───
+    function renderWizardVideoCardsHTML(currentVideoUrl) {
+      if (!_wizVideoCandidates || _wizVideoCandidates.length === 0) {
+        return '<div style="grid-column:1/-1;text-align:center;padding:18px;color:var(--sub);font-size:12.5px;">上の「🔍 YouTubeで最新動画を検索」を押すと、YouTubeから最新の参考動画を取得して表示します。</div>';
+      }
+      return _wizVideoCandidates.map(function (v) {
+        var watchUrl = 'https://www.youtube.com/watch?v=' + v.id;
+        var isSelected = (currentVideoUrl && currentVideoUrl.indexOf(v.id) >= 0);
+        var thumb = v.thumbnail || ('https://i.ytimg.com/vi/' + v.id + '/mqdefault.jpg');
+        var badgeBg = v.isLive ? 'background:#ffebee;color:#c62828;border:1px solid #ef9a9a;' : 'background:#e8f5e9;color:#1b5e20;border:1px solid #81c784;';
+        var safeTitle = String(v.title || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+
+        return '<div style="background:#fff;border:2px solid ' + (isSelected ? '#2e7d32' : 'var(--bdr)') + ';border-radius:12px;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 2px 6px rgba(0,0,0,0.04);">' +
+          '<div>' +
+          '  <div style="position:relative;padding-bottom:52%;background:#111;overflow:hidden;cursor:pointer;" onclick="previewWizardVideoInline(\'' + v.id + '\')">' +
+          '    <img src="' + esc(thumb) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">' +
+          '    <span style="position:absolute;top:6px;left:6px;font-size:10px;font-weight:900;padding:2px 6px;border-radius:6px;' + badgeBg + '">' + esc(v.badge || '🎬 参考動画') + '</span>' +
+          '    <span style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.75);color:#fff;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:6px;">▶ プレビュー</span>' +
+          '  </div>' +
+          '  <div style="padding:8px 10px;">' +
+          '    <div style="font-size:12px;font-weight:900;color:var(--pri-dark);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + esc(v.title) + '</div>' +
+          '    <div style="font-size:10.5px;color:var(--sub);margin-top:3px;">📺 ' + esc(v.author || 'YouTube') + '</div>' +
+          '  </div>' +
+          '</div>' +
+          '<div style="padding:0 10px 10px;display:flex;gap:6px;">' +
+          '  <button type="button" onclick="previewWizardVideoInline(\'' + v.id + '\')" style="flex:1;background:#f0f4f1;color:var(--pri-dark);border:1px solid var(--bdr);border-radius:8px;padding:5px 0;font-size:11px;font-weight:800;cursor:pointer;">▶ その場で再生</button>' +
+          '  <button type="button" onclick="adoptWizardVideo(\'' + v.id + '\', \'' + safeTitle + '\')" style="flex:1.2;background:' + (isSelected ? '#2e7d32' : 'var(--pri)') + ';color:#fff;border:none;border-radius:8px;padding:5px 0;font-size:11px;font-weight:900;cursor:pointer;">' + (isSelected ? '✓ 採用中' : '✅ この動画を採用') + '</button>' +
+          '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    function previewWizardVideoInline(videoId) {
+      _wizInlinePreviewId = videoId;
+      renderMonthAssignModalBody();
+    }
+
+    function adoptWizardVideo(videoId, videoTitle) {
+      var watchUrl = 'https://www.youtube.com/watch?v=' + videoId;
+      if (el('cr-video')) el('cr-video').value = watchUrl;
+      if (el('cr-video-title')) el('cr-video-title').value = videoTitle || '';
+      if (el('cr-title') && !el('cr-title').value.trim() && videoTitle) {
+        var cat = el('cr-category') ? el('cr-category').value : '法定';
+        el('cr-title').value = cat + '研修「' + videoTitle + '」';
+      }
+      var resBox = el('yt-search-results');
+      if (resBox) resBox.innerHTML = renderWizardVideoCardsHTML(watchUrl);
+      var step3 = el('wiz-step3-box');
+      if (step3) step3.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function showOfficialVideoCandidates() {
+      var cat = el('cr-category') ? el('cr-category').value : '';
+      var matched = OFFICIAL_VIDEO_LIBRARY.filter(function (v) { return !cat || v.category === cat; });
+      var others = OFFICIAL_VIDEO_LIBRARY.filter(function (v) { return cat && v.category !== cat; });
+      _wizVideoCandidates = matched.concat(others);
+      var resBox = el('yt-search-results');
+      if (resBox) resBox.innerHTML = renderWizardVideoCardsHTML(el('cr-video') ? el('cr-video').value : '');
+    }
+
+    async function searchYouTubeVideosLive() {
+      var qInput = el('yt-search-query');
+      var query = qInput ? qInput.value.trim() : '';
+      var cat = el('cr-category') ? el('cr-category').value : '身体拘束適正化';
+      if (!query) {
+        query = '障害福祉 ' + cat + ' 研修';
+        if (qInput) qInput.value = query;
+      }
+
+      var btn = el('btn-yt-live-search');
+      var resBox = el('yt-search-results');
+      if (btn) { btn.disabled = true; btn.textContent = '🔄 YouTube検索中...'; }
+      if (resBox) {
+        resBox.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--pri-dark);font-weight:800;font-size:13px;">🔄 YouTubeから「' + esc(query) + '」の最新動画をリアルタイム検索しています...</div>';
+      }
+
+      var foundIds = [];
+      try {
+        var searchUrl = 'https://r.jina.ai/https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+        var resp = await fetch(searchUrl);
+        if (resp.ok) {
+          var text = await resp.text();
+          var regex = /watch\?v=([a-zA-Z0-9_-]{11})/g;
+          var m;
+          while ((m = regex.exec(text)) !== null) {
+            if (foundIds.indexOf(m[1]) < 0) foundIds.push(m[1]);
+            if (foundIds.length >= 8) break;
+          }
+        }
+      } catch (e) {
+        console.warn('Live YouTube search via r.jina.ai failed:', e);
+      }
+
+      var liveItems = [];
+      if (foundIds.length > 0) {
+        var metaPromises = foundIds.map(async function (vid) {
+          try {
+            var oeResp = await fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=' + vid + '&format=json');
+            if (!oeResp.ok) {
+              oeResp = await fetch('https://noembed.com/embed?url=https://www.youtube.com/watch?v=' + vid);
+            }
+            if (oeResp.ok) {
+              var oe = await oeResp.json();
+              if (oe && oe.title) {
+                return {
+                  id: vid,
+                  isLive: true,
+                  category: cat,
+                  badge: '🆕 YouTube最新検索',
+                  title: oe.title,
+                  author: oe.author_name || 'YouTube',
+                  thumbnail: 'https://i.ytimg.com/vi/' + vid + '/mqdefault.jpg'
+                };
+              }
+            }
+          } catch (e2) { }
+          return null;
+        });
+        var resolved = await Promise.all(metaPromises);
+        liveItems = resolved.filter(function (x) { return !!x; });
+      }
+
+      // 厚労省・公的機関の該当カテゴリ動画もあわせて表示（比較・選択しやすくする）
+      var officialMatches = OFFICIAL_VIDEO_LIBRARY.filter(function (v) {
+        return v.category === cat && !liveItems.some(function (lv) { return lv.id === v.id; });
+      });
+
+      _wizVideoCandidates = liveItems.concat(officialMatches);
+      if (_wizVideoCandidates.length === 0) {
+        _wizVideoCandidates = OFFICIAL_VIDEO_LIBRARY.slice(0, 8);
+      }
+
+      if (btn) { btn.disabled = false; btn.textContent = '🔍 YouTubeで最新動画を検索'; }
+      if (resBox) {
+        resBox.innerHTML = renderWizardVideoCardsHTML(el('cr-video') ? el('cr-video').value : '');
+      }
+    }
+
+    function loadCourseIntoWizardEditor(courseId) {
+      var tc = TRAINING_COURSES.find(function (c) { return c.id === courseId; });
+      if (!tc) return;
+      _editingCourseId = tc.id;
+      _activeAssignMonth = tc.month;
+      _wizMode = 'kenshu';
+      _aiGeneratedDraft = {
+        keypoints: tc.keypoints ? tc.keypoints.slice() : [],
+        quizzes: tc.quizzes ? JSON.parse(JSON.stringify(tc.quizzes)) : []
+      };
+      renderMonthAssignModalBody();
+      if (el('cr-category')) el('cr-category').value = tc.category;
+      if (el('cr-title')) el('cr-title').value = tc.title;
+      if (el('cr-due')) el('cr-due').value = tc.dueText || '';
+      if (el('cr-video')) el('cr-video').value = tc.youtubeWatchUrl || tc.videoEmbedUrl || '';
+      if (el('cr-desc')) el('cr-desc').value = tc.desc || '';
+      if (el('cr-is-current')) el('cr-is-current').checked = !!tc.isCurrent;
+      renderAiPreview();
+      var step3 = el('wiz-step3-box');
+      if (step3) step3.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function loadCommitteeIntoWizardEditor(cmId) {
+      var cm = _committeeMinutes.find(function (x) { return x.id === cmId; });
+      if (!cm) return;
+      _editingCommitteeId = cm.id;
+      _activeAssignMonth = getCommitteeMonthLabel(cm);
+      _wizMode = 'iinkai';
+      renderMonthAssignModalBody();
+      if (el('cm-category')) el('cm-category').value = cm.category || '身体拘束適正化委員会';
+      if (el('cm-date')) el('cm-date').value = cm.date || todayStr();
+      if (el('cm-title')) el('cm-title').value = cm.title || '';
+      if (el('cm-attendees')) el('cm-attendees').value = cm.attendees || '';
+      if (el('cm-agenda')) el('cm-agenda').value = cm.agenda || '';
+      if (el('cm-decisions')) el('cm-decisions').value = cm.decisions || '';
+    }
+
+    async function saveCommitteeMinutesFromWizard() {
+      var mLabel = _activeAssignMonth;
+      var cat = el('cm-category') ? el('cm-category').value : '身体拘束適正化委員会';
+      var date = el('cm-date') ? el('cm-date').value : todayStr();
+      var title = el('cm-title') ? el('cm-title').value.trim() : (cat + ' 議事録');
+      var attendees = el('cm-attendees') ? el('cm-attendees').value.trim() : '';
+      var agenda = el('cm-agenda') ? el('cm-agenda').value.trim() : '';
+      var decisions = el('cm-decisions') ? el('cm-decisions').value.trim() : '';
+
+      var cmId = _editingCommitteeId || ('cm_' + Date.now());
+      var cm = {
+        id: cmId,
+        category: cat,
+        month: mLabel,
+        date: date,
+        title: title,
+        attendees: attendees,
+        agenda: agenda,
+        decisions: decisions,
+        createdAt: new Date().toISOString()
+      };
+
+      var existIdx = _committeeMinutes.findIndex(function (x) { return x.id === cmId; });
+      if (existIdx >= 0) _committeeMinutes[existIdx] = cm;
+      else _committeeMinutes.unshift(cm);
+
+      _editingCommitteeId = null;
+      await saveStorageData('porte_committee_minutes', _committeeMinutes);
+      renderMonthAssignModalBody();
+      renderFyCalendar();
+      renderPublishedCoursesList();
+      alert('🏛️ 「' + mLabel + '」の委員会議事録としてカレンダーに登録しました！');
     }
 
     async function quickAssignCommitteeToMonth(mLabel, catName) {
@@ -3360,7 +3832,7 @@
       await saveStorageData('porte_committee_minutes', _committeeMinutes);
       renderMonthAssignModalBody();
       renderFyCalendar();
-      renderCommitteeList();
+      renderPublishedCoursesList();
     }
 
     function renderAdminMatrix() {
@@ -3408,7 +3880,6 @@
       h += '</tr></thead><tbody>';
 
       STAFF.forEach(function (s) {
-        var myRecs = getStaffAllRecords(s);
         var doneCnt = TRAINING_COURSES.filter(function (tc) { return !!findStaffRecord(s, tc.id); }).length;
         var totalCnt = TRAINING_COURSES.length;
         var pct = totalCnt > 0 ? Math.round((doneCnt / totalCnt) * 100) : 0;
@@ -4238,32 +4709,34 @@
       renderAiPreview();
     }
 
-    // ─── 本物のAIによる研修カリキュラム自動生成 ─────────────
+    // ─── 本物のAIによる研修カリキュラム＆4択テスト自動生成 ─────────────
     async function generateCourseWithAI() {
-      var month = el('cr-month').value;
-      var cat = el('cr-category').value;
-      var title = el('cr-title').value.trim();
-      var desc = el('cr-desc').value.trim();
+      var month = (el('cr-month') && el('cr-month').value) ? el('cr-month').value : _activeAssignMonth;
+      var cat = el('cr-category') ? el('cr-category').value : '身体拘束適正化';
+      var title = el('cr-title') ? el('cr-title').value.trim() : '';
+      var desc = el('cr-desc') ? el('cr-desc').value.trim() : '';
+      var videoTitle = el('cr-video-title') ? el('cr-video-title').value.trim() : '';
       var customNotes = el('cr-ai-prompt-notes') ? el('cr-ai-prompt-notes').value.trim() : '';
 
-      if (!el('cr-video').value.trim() && CATEGORY_VERIFIED_VIDEOS[cat]) {
+      if (el('cr-video') && !el('cr-video').value.trim() && CATEGORY_VERIFIED_VIDEOS[cat]) {
         el('cr-video').value = CATEGORY_VERIFIED_VIDEOS[cat];
       }
-      if (!el('cr-due').value) {
-        el('cr-due').value = todayStr();
+      if (el('cr-due') && !el('cr-due').value) {
+        el('cr-due').value = getDueTextForMonth(month);
       }
 
       var btn = el('btn-run-ai-course');
       var st = el('ai-engine-status-text');
-      if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳ AIが研修カリキュラムと4択テストを生成中...</span>'; }
-      if (st) { st.innerHTML = '🤖 AIエンジン（ai-config.js連携）が要点と理解度クイズを生成しています...'; }
+      if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳ AIが要点と4択クイズ（全4問）を生成中...</span>'; }
+      if (st) { st.innerHTML = '🤖 AIエンジン（ai-config.js連携）がテーマと動画に沿った要点・4択クイズを生成しています...'; }
 
       var prompt = 'あなたは障害福祉サービス（就労継続支援B型事業所「Porte（ポルテ）」：珈琲焙煎・製造・軽作業等を提供）の法定研修カリキュラム作成の専門家です。\n' +
-        '以下の条件に基づき、スタッフ向けeラーニング研修の「タイトル」「目的・概要」「重要ポイント要約（4項目）」「理解度確認3択クイズ（4問）」をJSON形式のみで出力してください。\n\n' +
+        '以下の条件に基づき、スタッフ向けeラーニング研修の「タイトル」「目的・概要」「重要ポイント要約（4項目）」「理解度確認4択クイズ（全4問・各問4つの選択肢）」をJSON形式のみで出力してください。\n\n' +
         '【条件】\n' +
         '・実施月：' + month + '\n' +
         '・研修区分：' + cat + '\n' +
         (title ? '・希望タイトル：' + title + '\n' : '・タイトル：実地指導の記録簿にふさわしい専門的な研修タイトルを考案してください\n') +
+        (videoTitle ? '・採用した参考動画タイトル：' + videoTitle + '\n' : '') +
         (desc ? '・概要：' + desc + '\n' : '') +
         (customNotes ? '・現場の課題・盛り込むべき重点内容：' + customNotes + '\n' : '') +
         '\n【出力JSONフォーマット（厳守・マークダウン装飾なし）】\n' +
@@ -4279,7 +4752,7 @@
         '  "quizzes": [\n' +
         '    {\n' +
         '      "q": "【第1問】問題文...",\n' +
-        '      "choices": ["選択肢1", "選択肢2", "選択肢3"],\n' +
+        '      "choices": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"],\n' +
         '      "ans": 0,\n' +
         '      "exp": "正解！丁寧な解説文..."\n' +
         '    }\n' +
@@ -4290,18 +4763,19 @@
       var parsed = aiResult ? extractJsonFromText(aiResult.text) : null;
 
       if (parsed && Array.isArray(parsed.keypoints) && Array.isArray(parsed.quizzes) && parsed.quizzes.length > 0) {
-        if (!title && parsed.title) el('cr-title').value = parsed.title;
-        if (!desc && parsed.desc) el('cr-desc').value = parsed.desc;
+        if (!title && parsed.title && el('cr-title')) el('cr-title').value = parsed.title;
+        if (!desc && parsed.desc && el('cr-desc')) el('cr-desc').value = parsed.desc;
 
         _aiGeneratedDraft = {
           keypoints: parsed.keypoints,
           quizzes: parsed.quizzes.map(function (q, idx) {
             var qText = String(q.q || '');
             if (qText.indexOf('【第') < 0) qText = '【第' + (idx + 1) + '問】' + qText;
+            var chArr = Array.isArray(q.choices) && q.choices.length >= 2 ? q.choices : ['適切な対応を行う', '不適切な対応を行う', '自己判断で省略する', '誰にも報告しない'];
             return {
               q: qText,
-              choices: Array.isArray(q.choices) && q.choices.length >= 2 ? q.choices : ['適切な対応を行う', '不適切な対応を行う', '何もしない'],
-              ans: (typeof q.ans === 'number' && q.ans >= 0 && q.ans < (q.choices ? q.choices.length : 3)) ? q.ans : 0,
+              choices: chArr,
+              ans: (typeof q.ans === 'number' && q.ans >= 0 && q.ans < chArr.length) ? q.ans : 0,
               exp: q.exp || '正解！研修の重要ポイントを確認しましょう。'
             };
           })
@@ -4314,16 +4788,16 @@
         });
         if (foundKey && COURSE_PRESETS[foundKey].quizzes && COURSE_PRESETS[foundKey].quizzes.length > 0) {
           var tpl = COURSE_PRESETS[foundKey];
-          if (!title) el('cr-title').value = tpl.title;
-          if (!desc) el('cr-desc').value = tpl.desc;
+          if (!title && el('cr-title')) el('cr-title').value = tpl.title;
+          if (!desc && el('cr-desc')) el('cr-desc').value = tpl.desc;
           _aiGeneratedDraft = {
             keypoints: tpl.keypoints.slice(),
             quizzes: JSON.parse(JSON.stringify(tpl.quizzes))
           };
         } else {
           var finalTitle = title || ('第1回 ' + cat + '研修「現場における基本指針の理解と実践」');
-          if (!title) el('cr-title').value = finalTitle;
-          if (!desc) el('cr-desc').value = cat + 'に関する法令基準と現場での実践手順を学び、安全で質の高い支援を徹底します。';
+          if (!title && el('cr-title')) el('cr-title').value = finalTitle;
+          if (!desc && el('cr-desc')) el('cr-desc').value = cat + 'に関する法令基準と現場での実践手順を学び、安全で質の高い支援を徹底します。';
           _aiGeneratedDraft = {
             keypoints: [
               '<b>' + esc(cat) + 'の基本理念：</b>法令やガイドラインを遵守し、利用者の尊厳と安全を守る支援を徹底する。',
@@ -4337,7 +4811,8 @@
                 choices: [
                   '日頃の業務手順と指針を守り、利用者様の尊厳と安全を最優先に関わること。',
                   '忙しい時はルールを省略して自分の判断だけで進めること。',
-                  'ミスが起きても周囲に隠して自分で何とか処理すること。'
+                  'ミスが起きても周囲に隠して自分で何とか処理すること。',
+                  'マニュアルは読まずに慣れたやり方だけで対応すること。'
                 ],
                 ans: 0,
                 exp: '正解！福祉現場ではマニュアルや指針を遵守し、利用者様の尊厳と安全を守ることが基本です。'
@@ -4347,7 +4822,8 @@
                 choices: [
                   '他のスタッフに知られないよう見ないふりをする。',
                   '速やかに同僚や管理者（サビ管）に報告・相談し、組織として適切な対応を検討する。',
-                  '利用者様に責任を押し付けて我慢してもらう。'
+                  '利用者様に責任を押し付けて我慢してもらう。',
+                  '翌月まで待ってから気が向いたら報告する。'
                 ],
                 ans: 1,
                 exp: '正解！1人で抱え込まずチームで相談・情報共有することが事故や不適切ケアの防止につながります。'
@@ -4357,7 +4833,8 @@
                 choices: [
                   '研修を受けただけで満足し、現場の業務は今まで通り何も変えない。',
                   '学んだポイントを意識して日々の声かけや支援手順を振り返り、改善を続ける。',
-                  '他のスタッフのやり方に口出しせず無関心でいる。'
+                  '他のスタッフのやり方に口出しせず無関心でいる。',
+                  '記録簿に名前だけ書いて内容は忘れる。'
                 ],
                 ans: 1,
                 exp: '正解！研修は受講して終わりにせず、日々の支援業務の中で実践・振り返りを行うことが大切です。'
@@ -4367,7 +4844,8 @@
                 choices: [
                   '記録は残さなくても口頭で説明できれば行政の指導上問題ない。',
                   '受講実績や研修実施記録簿を適切に作成・保管し、事業所の適正運営を証明できるようにする。',
-                  '記録は作成した年度内に破棄しなければならない。'
+                  '記録は作成した年度内に破棄しなければならない。',
+                  '研修は3年に1回だけ実施すればよい。'
                 ],
                 ans: 1,
                 exp: '正解！法定研修や委員会の記録は、基準に基づき事業所内で適正に保管し、実地指導で提示できるようにすることが義務付けられています。'
@@ -4378,7 +4856,7 @@
         if (st) st.innerHTML = '✨ <b>標準AIテンプレートから生成完了</b>：下のエディタで自由に編集・微調整できます。';
       }
 
-      if (btn) { btn.disabled = false; btn.innerHTML = '<span>🤖 AIで要点とテストを自動生成</span>'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<span>🤖 テーマと動画から要点＆4択クイズをAI生成</span>'; }
       renderAiPreview();
     }
 
@@ -4464,7 +4942,7 @@
       var nextNum = _aiGeneratedDraft.quizzes.length + 1;
       _aiGeneratedDraft.quizzes.push({
         q: '【第' + nextNum + '問】ここに問題文を入力してください',
-        choices: ['正しい選択肢（ここが正解）', '誤った選択肢1', '誤った選択肢2'],
+        choices: ['正しい選択肢（ここが正解）', '誤った選択肢1', '誤った選択肢2', '誤った選択肢3'],
         ans: 0,
         exp: '正解！ここに解説文を入力してください。'
       });
@@ -4478,32 +4956,26 @@
 
     function resetCreatorForm() {
       _editingCourseId = null;
-      el('creator-form-title').textContent = '✨ 新規研修の作成・AI自動生成スタジオ';
-      el('cr-month').value = '12月';
-      el('cr-category').value = '感染対策';
-      el('cr-title').value = '';
-      el('cr-due').value = '';
-      el('cr-video').value = '';
-      el('cr-desc').value = '';
-      if (el('cr-ai-prompt-notes')) el('cr-ai-prompt-notes').value = '';
-      el('cr-is-current').checked = false;
       _aiGeneratedDraft = null;
-      el('cr-ai-preview').innerHTML = '<div style="font-size:13px;color:var(--sub);text-align:center;padding:20px 0;">上の「🤖 AIで要点とテストを自動生成」または「おすすめテンプレート」を押すと、問題と解説のエディタがここに展開されます</div>';
+      if (el('cr-title')) el('cr-title').value = '';
+      if (el('cr-desc')) el('cr-desc').value = '';
+      if (el('cr-ai-prompt-notes')) el('cr-ai-prompt-notes').value = '';
+      if (el('cr-is-current')) el('cr-is-current').checked = false;
     }
 
     async function saveCourseFromCreator() {
-      var month = el('cr-month').value;
-      var category = el('cr-category').value;
-      var title = el('cr-title').value.trim();
-      var due = el('cr-due').value || todayStr();
-      var videoUrl = el('cr-video').value.trim() || CATEGORY_VERIFIED_VIDEOS[category] || 'https://www.youtube.com/watch?v=U5DBEouTQu8';
-      var desc = el('cr-desc').value.trim();
-      var isCurrent = el('cr-is-current').checked;
+      var month = (el('cr-month') && el('cr-month').value) ? el('cr-month').value : _activeAssignMonth;
+      var category = el('cr-category') ? el('cr-category').value : '身体拘束適正化';
+      var title = el('cr-title') ? el('cr-title').value.trim() : '';
+      var due = (el('cr-due') && el('cr-due').value) ? el('cr-due').value : getDueTextForMonth(month);
+      var videoUrl = (el('cr-video') && el('cr-video').value.trim()) ? el('cr-video').value.trim() : (CATEGORY_VERIFIED_VIDEOS[category] || 'https://www.youtube.com/watch?v=U5DBEouTQu8');
+      var desc = el('cr-desc') ? el('cr-desc').value.trim() : '';
+      var isCurrent = el('cr-is-current') ? el('cr-is-current').checked : false;
 
       if (!_aiGeneratedDraft) {
         await generateCourseWithAI();
-        title = el('cr-title').value.trim();
-        desc = el('cr-desc').value.trim();
+        title = el('cr-title') ? el('cr-title').value.trim() : title;
+        desc = el('cr-desc') ? el('cr-desc').value.trim() : desc;
       }
 
       if (!title) {
@@ -4570,74 +5042,117 @@
         }
       } catch (e) { }
 
-      alert('🎉 研修カリキュラム「' + title + '」を保存・配信しました！\nスタッフのスマホ受講画面および星取表に即座に反映されます。');
+      alert('🎉 「' + month + '」の研修カリキュラム「' + title + '」をカレンダーに登録・配信しました！\nスタッフ視聴側および星取表に即座に反映されます。');
 
-      resetCreatorForm();
+      _editingCourseId = null;
+      _aiGeneratedDraft = null;
+      _wizExpandedCourseId = courseId;
       sortCoursesByFiscalMonth();
       renderAnnualPlanner();
       renderPublishedCoursesList();
       renderStaffTrainingList();
       renderStaffGrid();
       renderAdminMatrix();
+      if (el('month-assign-modal-overlay') && el('month-assign-modal-overlay').classList.contains('active')) {
+        renderMonthAssignModalBody();
+      }
+    }
+
+    function setArchiveFilter(f) {
+      _archiveFilter = f || 'all';
+      ['all', 'kenshu', 'iinkai'].forEach(function (k) {
+        var b = el('btn-arch-' + k);
+        if (b) {
+          var isAct = (k === _archiveFilter);
+          b.style.background = isAct ? 'var(--pri)' : '#fff';
+          b.style.color = isAct ? '#fff' : 'var(--pri-dark)';
+          b.style.borderColor = isAct ? 'var(--pri)' : 'var(--bdr)';
+        }
+      });
+      renderPublishedCoursesList();
     }
 
     function renderPublishedCoursesList() {
       var c = el('published-courses-list');
       if (!c) return;
 
-      if (TRAINING_COURSES.length === 0) {
-        c.innerHTML = '<div style="text-align:center;padding:20px;color:var(--sub);">登録された研修はありません</div>';
+      sortCoursesByFiscalMonth();
+
+      var items = [];
+      if (_archiveFilter === 'all' || _archiveFilter === 'kenshu') {
+        TRAINING_COURSES.forEach(function (tc) {
+          items.push({ kind: 'kenshu', month: tc.month, data: tc });
+        });
+      }
+      if (_archiveFilter === 'all' || _archiveFilter === 'iinkai') {
+        _committeeMinutes.forEach(function (cm) {
+          items.push({ kind: 'iinkai', month: getCommitteeMonthLabel(cm), data: cm });
+        });
+      }
+
+      items.sort(function (a, b) {
+        var ia = FISCAL_MONTHS.indexOf(a.month);
+        var ib = FISCAL_MONTHS.indexOf(b.month);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+
+      if (items.length === 0) {
+        c.innerHTML = '<div style="text-align:center;padding:24px;color:var(--sub);">登録された研修・委員会はありません。上の4×3カレンダーの月をクリックして追加してください。</div>';
         return;
       }
 
-      c.innerHTML = TRAINING_COURSES.map(function (tc) {
-        var currentBadge = tc.isCurrent ? '<span style="background:var(--warn-bg);color:var(--warn);font-size:11px;font-weight:900;padding:2px 8px;border-radius:10px;">🔥 現在配信中（今月の研修）</span>' : '';
-        var qLen = (tc.quizzes && tc.quizzes.length) || 0;
-        var doneCnt = STAFF.filter(function (s) {
-          return !!findStaffRecord(s, tc.id);
-        }).length;
+      c.innerHTML = items.map(function (it) {
+        if (it.kind === 'kenshu') {
+          var tc = it.data;
+          var currentBadge = tc.isCurrent ? '<span style="background:var(--warn-bg);color:var(--warn);font-size:11px;font-weight:900;padding:2px 8px;border-radius:10px;">🔥 今月の要受講</span>' : '';
+          var qLen = (tc.quizzes && tc.quizzes.length) || 0;
+          var doneCnt = STAFF.filter(function (s) { return !!findStaffRecord(s, tc.id); }).length;
 
-        return '<div class="course-list-item">' +
-          '<div style="flex:1;min-width:240px;">' +
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">' +
-          '<span class="training-tag">' + tc.month + '度</span>' +
-          '<span style="font-size:12px;font-weight:bold;color:var(--pri);">' + esc(tc.category) + '</span>' +
-          currentBadge +
-          '</div>' +
-          '<div style="font-size:15px;font-weight:900;color:var(--pri-dark);">' + esc(tc.title) + '</div>' +
-          '<div style="font-size:12px;color:var(--sub);margin-top:4px;">期限: ' + (tc.dueText || '-') + ' ｜ クイズ: ' + qLen + '問 ｜ 受講完了: <b>' + doneCnt + '/' + STAFF.length + '名</b></div>' +
-          '</div>' +
-          '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-          (!tc.isCurrent ? '<button type="button" class="btn-print" style="font-size:11px;padding:6px 10px;background:#e65100;" onclick="setCurrentCourse(\'' + tc.id + '\')">🔥 今月に設定</button>' : '') +
-          '<button type="button" class="btn-print" style="font-size:11px;padding:6px 10px;background:var(--pri);" onclick="printTrainingOfficialReport(\'' + tc.id + '\')">🖨️ 記録簿印刷</button>' +
-          '<button type="button" class="btn-print" style="font-size:11px;padding:6px 10px;background:#455a64;" onclick="editCourse(\'' + tc.id + '\')">✏️ 編集</button>' +
-          '<button type="button" class="btn-print" style="font-size:11px;padding:6px 10px;background:#c62828;" onclick="deleteCourse(\'' + tc.id + '\')">🗑️ 削除</button>' +
-          '</div>' +
-          '</div>';
+          return '<div class="course-list-item" style="border-left:5px solid #1565c0;">' +
+            '<div style="flex:1;min-width:240px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">' +
+            '<span class="training-tag" style="background:#e3f2fd;color:#1565c0;margin:0;">📖 ' + esc(tc.month) + '度 研修</span>' +
+            '<span style="font-size:12px;font-weight:800;color:var(--pri-dark);">' + esc(tc.category) + '</span>' +
+            currentBadge +
+            '</div>' +
+            '<div style="font-size:15px;font-weight:900;color:var(--pri-dark);">' + esc(tc.title) + '</div>' +
+            '<div style="font-size:12px;color:var(--sub);margin-top:4px;">期限: ' + esc(tc.dueText || '-') + ' ｜ クイズ: ' + qLen + '問 ｜ 受講完了: <b style="color:#1565c0;">' + doneCnt + '/' + STAFF.length + '名</b></div>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#fff;color:#1565c0;border:1.5px solid #1565c0;" onclick="_wizExpandedCourseId=\'' + tc.id + '\';openMonthAssignModal(\'' + tc.month + '\', \'kenshu\')">👥 受講所感・詳細 (' + doneCnt + '/' + STAFF.length + ')</button>' +
+            (!tc.isCurrent ? '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#e65100;" onclick="setCurrentCourse(\'' + tc.id + '\')">🔥 今月に設定</button>' : '') +
+            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#1565c0;" onclick="printTrainingOfficialReport(\'' + tc.id + '\')">🖨️ A4記録簿印刷</button>' +
+            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#455a64;" onclick="editCourse(\'' + tc.id + '\')">✏️ 編集</button>' +
+            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#c62828;" onclick="deleteCourse(\'' + tc.id + '\')">🗑️ 削除</button>' +
+            '</div>' +
+            '</div>';
+        } else {
+          var cm = it.data;
+          var mLabel = it.month;
+          return '<div class="course-list-item" style="border-left:5px solid #2e7d32;background:#fbfefb;">' +
+            '<div style="flex:1;min-width:240px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">' +
+            '<span class="training-tag" style="background:#e8f5e9;color:#2e7d32;margin:0;">🏛️ ' + esc(mLabel) + '度 委員会</span>' +
+            '<span style="font-size:12px;font-weight:800;color:#1b5e20;">' + esc(cm.category) + '</span>' +
+            '</div>' +
+            '<div style="font-size:15px;font-weight:900;color:#1b5e20;">' + esc(cm.title) + '</div>' +
+            '<div style="font-size:12px;color:var(--sub);margin-top:4px;">開催日: ' + esc(cm.date || '-') + ' ｜ 出席者: ' + esc(cm.attendees || '-') + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#2e7d32;" onclick="printCommitteeMinutes(\'' + cm.id + '\')">🖨️ A4議事録印刷</button>' +
+            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#455a64;" onclick="openMonthAssignModal(\'' + mLabel + '\', \'iinkai\');loadCommitteeIntoWizardEditor(\'' + cm.id + '\')">✏️ 編集</button>' +
+            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 10px;background:#c62828;" onclick="deleteCommitteeMinutes(\'' + cm.id + '\')">🗑️ 削除</button>' +
+            '</div>' +
+            '</div>';
+        }
       }).join('');
     }
 
     function editCourse(id) {
       var tc = TRAINING_COURSES.find(function (c) { return c.id === id; });
       if (!tc) return;
-
-      _editingCourseId = tc.id;
-      el('creator-form-title').textContent = '✏️ 研修の編集：「' + tc.title + '」';
-      el('cr-month').value = tc.month;
-      el('cr-category').value = tc.category;
-      el('cr-title').value = tc.title;
-      el('cr-due').value = tc.dueText || '';
-      el('cr-video').value = tc.youtubeWatchUrl || tc.videoEmbedUrl || '';
-      el('cr-desc').value = tc.desc || '';
-      el('cr-is-current').checked = !!tc.isCurrent;
-
-      _aiGeneratedDraft = {
-        keypoints: tc.keypoints ? tc.keypoints.slice() : [],
-        quizzes: tc.quizzes ? JSON.parse(JSON.stringify(tc.quizzes)) : []
-      };
-
-      renderAiPreview();
-      window.scrollTo({ top: el('subtab-content-creator').offsetTop - 20, behavior: 'smooth' });
+      openMonthAssignModal(tc.month, 'kenshu');
+      loadCourseIntoWizardEditor(tc.id);
     }
 
     async function setCurrentCourse(id) {
@@ -4650,7 +5165,7 @@
       renderStaffGrid();
       renderStaffTrainingList();
       renderAdminMatrix();
-      alert('今月の要受講研修を変更しました。スタッフ画面のトップに反映されます。');
+      alert('🔥 今月の要受講研修を変更しました。スタッフ視聴画面のトップに反映されます。');
     }
 
     async function deleteCourse(id) {
@@ -4833,6 +5348,8 @@
       _committeeMinutes = _committeeMinutes.filter(function (x) { return x.id !== id; });
       await saveStorageData('porte_committee_minutes', _committeeMinutes);
       renderCommitteeList();
+      renderPublishedCoursesList();
+      renderFyCalendar();
     }
 
     // ─── 委員会議事録 入力モーダル（AI自動起案対応） ──────────
