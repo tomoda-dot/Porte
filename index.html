@@ -10676,7 +10676,6 @@ async function renderExport(c){
   // 管理記録：専用画面に遷移
   if(eT==='incidents'){renderIncidents(c);return;}
   if(eT==='complaints'){renderComplaints(c);return;}
-  if(eT==='training'){renderTraining(c);return;}
 
   var curGroup = groups.find(function(g){
     return g.items.some(function(item){ return item[0] === eT; });
