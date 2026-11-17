@@ -1935,7 +1935,7 @@
     var _adminPin = '0000';
     var _editingCourseId = null;
     var _aiGeneratedDraft = null;
-    var _autoMonthSync = false;
+    var _autoMonthSync = true;
     var _viewerShowAllYears = false;
     var _facilityType = '就労継続支援B型';
     var _facilityName = 'ひとつぎ豊中小曽根';
@@ -2061,9 +2061,9 @@
         var savedPin = await getStorageData('porte_training_admin_pin', '0000');
         _adminPin = String(savedPin || '0000');
 
-        // 月替わり自動同期設定
-        var autoSyncVal = await getStorageData('porte_training_auto_month', false);
-        _autoMonthSync = !!autoSyncVal;
+        // 月替わり自動同期設定（デフォルトON）
+        var autoSyncVal = await getStorageData('porte_training_auto_month', true);
+        _autoMonthSync = (autoSyncVal === false) ? false : true;
         if (el('chk-auto-month-sync')) el('chk-auto-month-sync').checked = _autoMonthSync;
 
         // セッション認証状態の復元（Porteセッションとの連動）
@@ -2115,16 +2115,15 @@
           });
         }
 
-        // 月替わり自動切替がONなら当年度当月の研修もisCurrentに設定（他の要受講は維持）
+        // 月替わり自動切替がONなら当年度当月の研修をすべてisCurrentに設定（他の要受講も維持）
         if (_autoMonthSync) {
           var mLabel = currentMonthLabel();
           var curFyNow = getCurrentFiscalYear();
-          var matchMonthCourse = TRAINING_COURSES.find(function (c) {
-            return getCourseFiscalYear(c) === curFyNow && c.month === mLabel;
-          }) || TRAINING_COURSES.find(function (c) { return c.month === mLabel; });
-          if (matchMonthCourse) {
-            matchMonthCourse.isCurrent = true;
-          }
+          TRAINING_COURSES.forEach(function (c) {
+            if (getCourseFiscalYear(c) === curFyNow && c.month === mLabel) {
+              c.isCurrent = true;
+            }
+          });
         }
 
         // 受講レコードの取得
@@ -2202,7 +2201,7 @@
     // ─── Porte 共通ログイン管理（スタッフカード ＋ 4桁PIN / IDログイン） ───
     var _trSelectedLoginStaff = null;
     var _trPinInput = '';
-    var _viewerFilter = 'all'; // 'all' | 'todo' | 'done'
+    var _viewerFilter = 'current'; // 'current' | 'todo' | 'done' | 'all'
 
     window.addEventListener('DOMContentLoaded', async function () {
       await loadAllTrainingData();
@@ -2397,7 +2396,7 @@
         el('header-staff-badge').textContent = '👤 ' + staffObj.name + '（' + (staffObj.role || 'スタッフ') + '）';
       }
 
-      _viewerFilter = 'all';
+      _viewerFilter = 'current';
       updateHeaderLockState();
       switchMode('staff');
       renderStaffTrainingList();
@@ -2428,9 +2427,15 @@
       await saveStorageData('porte_training_auto_month', _autoMonthSync);
       if (_autoMonthSync) {
         var mLabel = currentMonthLabel();
-        var matchCourse = TRAINING_COURSES.find(function (c) { return c.month === mLabel; });
-        if (matchCourse) {
-          TRAINING_COURSES.forEach(function (c) { c.isCurrent = (c.id === matchCourse.id); });
+        var curFyNow = getCurrentFiscalYear();
+        var changed = false;
+        TRAINING_COURSES.forEach(function (c) {
+          if (getCourseFiscalYear(c) === curFyNow && c.month === mLabel && !c.isCurrent) {
+            c.isCurrent = true;
+            changed = true;
+          }
+        });
+        if (changed) {
           await saveStorageData('porte_training_courses', TRAINING_COURSES);
           renderStaffGrid();
           renderStaffTrainingList();
@@ -2561,7 +2566,7 @@
 
     // ─── スタッフ視聴側：マイ受講画面（未受講・受講済リスト）描画 ───
     function setViewerFilter(f) {
-      _viewerFilter = f || 'all';
+      _viewerFilter = f || 'current';
       renderStaffTrainingList();
     }
 
@@ -2688,17 +2693,40 @@
           '</div>';
       }
 
+      var curMonthNow = currentMonthLabel();
+      var currentCourses = displayCourses.filter(function (tc) {
+        return !!tc.isCurrent || (getCourseFiscalYear(tc) === curFy && tc.month === curMonthNow);
+      }).map(function (tc) {
+        return { course: tc, rec: findStaffRecord(_curStaff, tc.id) };
+      });
+
       // 2. 絞り込みフィルターボタンバー
       if (filterEl) {
         filterEl.innerHTML =
-          '<button type="button" class="viewer-filter-btn' + (_viewerFilter === 'all' ? ' active' : '') + '" onclick="setViewerFilter(\'all\')">📋 すべて表示 (' + totalCount + '件)</button>' +
+          '<button type="button" class="viewer-filter-btn' + (_viewerFilter === 'current' ? ' active' : '') + '" onclick="setViewerFilter(\'current\')">🔥 今月の研修 (' + currentCourses.length + '件)</button>' +
           '<button type="button" class="viewer-filter-btn' + (_viewerFilter === 'todo' ? ' active' : '') + '" onclick="setViewerFilter(\'todo\')">⏳ 未受講リスト (' + todoCount + '件)</button>' +
           '<button type="button" class="viewer-filter-btn' + (_viewerFilter === 'done' ? ' active' : '') + '" onclick="setViewerFilter(\'done\')">✅ 受講済みリスト (' + doneCount + '件)</button>' +
+          '<button type="button" class="viewer-filter-btn' + (_viewerFilter === 'all' ? ' active' : '') + '" onclick="setViewerFilter(\'all\')">📋 すべて表示 (' + totalCount + '件)</button>' +
           '<button type="button" class="viewer-filter-btn' + (_viewerShowAllYears ? ' active' : '') + '" onclick="_viewerShowAllYears=!_viewerShowAllYears;renderStaffTrainingList();" style="margin-left:auto;">' + (_viewerShowAllYears ? '📅 今年度・要受講のみに戻す' : '📚 過年度の研修も表示') + '</button>';
       }
 
-      // 3. 未受講リスト ＆ 受講済みリストの描画
+      // 3. 今月の研修 / 未受講リスト / 受講済みリストの描画
       var html = '';
+
+      if (_viewerFilter === 'current') {
+        html += '<div class="list-group-header todo-hd">' +
+          '<span>🔥 今月（' + esc(curMonthNow) + '）の要受講研修</span>' +
+          '<span style="font-size:12.5px;">' + currentCourses.length + ' 件</span>' +
+          '</div>';
+
+        if (currentCourses.length === 0) {
+          html += '<div class="card" style="text-align:center;padding:24px;color:var(--sub);font-size:13.5px;">今月に指定されている研修はありません。他の研修は上の「⏳ 未受講リスト」から確認できます。</div>';
+        } else {
+          html += currentCourses.map(function (item) {
+            return renderCourseCardHTML(item.course, item.rec);
+          }).join('');
+        }
+      }
 
       if (_viewerFilter === 'all' || _viewerFilter === 'todo') {
         html += '<div class="list-group-header todo-hd">' +
