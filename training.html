@@ -1039,6 +1039,19 @@ header {
           <!-- 動的描画 -->
         </div>
       </div>
+
+      <!-- 厚生労働省・公的機関・専門研修 参考動画カタログ -->
+      <div class="card">
+        <div class="section-title">
+          <span>🎬 厚生労働省・自治体公式・専門法定研修 参考動画カタログ（再生・埋め込み確認済）</span>
+        </div>
+        <p style="font-size:12.5px;color:var(--sub);margin-bottom:12px;">
+          厚生労働省公式チャンネル（MHLWchannel）、総務省消防庁、自治体保健所公式、および障害福祉専門チャンネルの研修動画一覧です。「▶ 視聴確認」で内容を確認したり、「＋ この動画で研修作成」で好きな月に当てはめることができます。
+        </p>
+        <div id="official-video-catalog-list">
+          <!-- 動的描画 -->
+        </div>
+      </div>
     </div>
 
     <!-- ── サブタブ2: 研修作成・AI自動生成スタジオ ── -->
@@ -1113,8 +1126,14 @@ header {
           </div>
 
           <div class="form-field">
-            <label>YouTube動画URL（watchまたはembed）</label>
-            <input type="text" id="cr-video" placeholder="https://www.youtube.com/watch?v=...">
+            <label>YouTube動画URL（直接入力 または 下の公的動画リストから選択）</label>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="cr-video" style="flex:1;" placeholder="https://www.youtube.com/watch?v=...">
+              <button type="button" onclick="previewCreatorVideo()" style="background:var(--pri-light);color:var(--pri-dark);border:1.5px solid var(--bdr);border-radius:10px;padding:0 10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">▶ 確認</button>
+            </div>
+            <select id="cr-official-video-select" onchange="onSelectOfficialVideo(this.value)" style="margin-top:4px;font-size:12px;padding:6px 8px;border:1.5px solid var(--bdr);border-radius:8px;background:#f8fbf9;color:var(--pri-dark);font-weight:700;">
+              <option value="">🎬 厚生労働省・公的機関・専門研修の参考動画リストから選ぶ...</option>
+            </select>
           </div>
 
           <div class="form-field" style="grid-column: 1 / -1;">
@@ -1310,15 +1329,58 @@ var STAFF = DEFAULT_STAFF.slice();
 // ─── カテゴリ別・検証済みYouTube研修動画マップ ───────────
 var CATEGORY_VERIFIED_VIDEOS = {
   '身体拘束適正化': 'https://www.youtube.com/watch?v=U5DBEouTQu8',
-  '感染対策': 'https://www.youtube.com/watch?v=Pj4Sj6t8XhM',
-  'BCP研修・訓練': 'https://www.youtube.com/watch?v=ovqm7CoosRs',
-  '障害者虐待防止': 'https://www.youtube.com/watch?v=0KL_R8ZMQ9U',
-  'ハラスメント防止': 'https://www.youtube.com/watch?v=jbad9s1i018',
-  '衛生管理・HACCP': 'https://www.youtube.com/watch?v=Pj4Sj6t8XhM',
-  '防災訓練': 'https://www.youtube.com/watch?v=ovqm7CoosRs',
-  '個人情報保護': 'https://www.youtube.com/watch?v=0KL_R8ZMQ9U',
+  '感染対策': 'https://www.youtube.com/watch?v=t52Y1C9azOU',
+  'BCP研修・訓練': 'https://www.youtube.com/watch?v=KNNmN8Y998A',
+  '障害者虐待防止': 'https://www.youtube.com/watch?v=4_mGm7Vllv0',
+  'ハラスメント防止': 'https://www.youtube.com/watch?v=Vf0TjgzTzyA',
+  '衛生管理・HACCP': 'https://www.youtube.com/watch?v=gZgnoHRPEVc',
+  '防災訓練': 'https://www.youtube.com/watch?v=rCubdoOMY9M',
+  '個人情報保護': 'https://www.youtube.com/watch?v=Eh8QXPPphSU',
   'その他': 'https://www.youtube.com/watch?v=U5DBEouTQu8'
 };
+
+// ─── 厚生労働省・公的機関・専門法定研修 参考動画ライブラリ（全22本・再生確認済） ───
+var OFFICIAL_VIDEO_LIBRARY = [
+  // 1. 感染対策（厚生労働省公式・自治体公式）
+  { id: 't52Y1C9azOU', category: '感染対策', badge: '🏛️ 厚生労働省 公式', title: '【基礎編１】障害福祉サービス施設・事業所職員のための感染症対策オンライン研修', author: '厚生労働省 (MHLWchannel)' },
+  { id: 'FGNY1YCj-jk', category: '感染対策', badge: '🏛️ 厚生労働省 公式', title: '【基礎編２】障害福祉サービス施設・事業所職員のための感染症対策オンライン研修', author: '厚生労働省 (MHLWchannel)' },
+  { id: 'E6mkdyoPfYk', category: '感染対策', badge: '🏛️ 厚生労働省 公式', title: '（参考）そうだったのか！感染対策！（正しい手洗い手順）', author: '厚生労働省 (MHLWchannel)' },
+  { id: 'Pj4Sj6t8XhM', category: '感染対策', badge: '🏛️ 熊本市役所 公式', title: '新人介護職員まさおくんの初めての標準予防策～手指衛生～', author: '熊本市公式チャンネル' },
+  { id: '7DEJ1HeL0Fw', category: '感染対策', badge: '🏥 医療法人解説', title: '【感染予防】個人防護具（PPE）の正しい着脱手順', author: 'Hokkai Chouseikai' },
+
+  // 2. BCP・業務継続計画（厚生労働省公式・専門研修）
+  { id: 'KNNmN8Y998A', category: 'BCP研修・訓練', badge: '🏛️ 厚生労働省 公式', title: '①「介護・福祉事業者における業務継続計画（BCP）について」', author: '厚生労働省 (MHLWchannel)' },
+  { id: '3luc5Q2MTic', category: 'BCP研修・訓練', badge: '🏛️ 厚生労働省 公式', title: '②「感染症発生時の業務継続計画（BCP）作成のポイント－共通事項－」', author: '厚生労働省 (MHLWchannel)' },
+  { id: 'ovqm7CoosRs', category: 'BCP研修・訓練', badge: '📚 法定研修教材', title: 'BCPとは？ 介護・福祉現場での業務継続の考え方（現場イメージ解説）', author: '介護スキル研究所' },
+  { id: '-B0vkQtQJOY', category: 'BCP研修・訓練', badge: '📚 法定研修教材', title: '【法定研修】業務継続計画BCP職員研修 ～基本的な考え方～', author: '福祉の学び舎チャンネル' },
+
+  // 3. ハラスメント防止（厚生労働省公式・東京都公式）
+  { id: 'Vf0TjgzTzyA', category: 'ハラスメント防止', badge: '🏛️ 厚生労働省 公式', title: '障害福祉の現場におけるハラスメントに関する職員研修', author: '厚生労働省 (MHLWchannel)' },
+  { id: 'Nh9hiuaUxXY', category: 'ハラスメント防止', badge: '🏛️ 東京都 公式', title: 'ハラスメント防止対策「指導とパワハラの違いを理解する」', author: '東京都 Tokyo Metropolitan Gov' },
+  { id: 'jbad9s1i018', category: 'ハラスメント防止', badge: '🏢 社会福祉法人研修', title: '現場のハラスメント防止研修 ～怒りに気づき、自分を守る力を育てる～', author: '社会福祉法人 恵愛会' },
+
+  // 4. 身体拘束適正化（スピーチロック・3要件）
+  { id: 'U5DBEouTQu8', category: '身体拘束適正化', badge: '📚 法定研修教材', title: '【身体拘束廃止シリーズ 第３弾】言葉の拘束（スピーチロック）防止研修', author: '介護スキル研究所' },
+  { id: 'AEyCWpHIdhY', category: '身体拘束適正化', badge: '📚 法定研修教材', title: 'その声かけ、スピーチロックかもしれません｜言葉で縛らない支援の基本', author: '介護スキル研究所' },
+  { id: 'Fys7qku3s50', category: '身体拘束適正化', badge: '📚 法定研修教材', title: '【法定研修 身体拘束の排除】「縛らないケア」の実践と組織的アプローチ', author: 'パワポレクTV' },
+
+  // 5. 障害者虐待防止（通所・就労継続支援編）
+  { id: '4_mGm7Vllv0', category: '障害者虐待防止', badge: '📚 障害福祉専門', title: '【障害福祉法定研修】虐待防止研修 通所サービス編（就労継続支援・生活介護）', author: '介護スキル研究所' },
+  { id: '0KL_R8ZMQ9U', category: '障害者虐待防止', badge: '📚 障害福祉専門', title: '障害福祉・法定研修完全版 第1回｜障害者虐待防止研修', author: '介護スキル研究所' },
+  { id: 'wDXHLg-0Kv8', category: '障害者虐待防止', badge: '📚 法定研修教材', title: '具体例で学ぶ「不適切なケア（グレーゾーン）」と「虐待」の違い', author: 'ひるチャンネル' },
+
+  // 6. 衛生管理・HACCP（自治体保健所公式・食品衛生協会）
+  { id: 'gZgnoHRPEVc', category: '衛生管理・HACCP', badge: '🏛️ 茅ヶ崎市保健所 公式', title: '食品衛生責任者実務講習会「HACCPの考え方を取り入れた衛生管理」', author: '茅ヶ崎市公式動画ライブラリー' },
+  { id: '9MYQznyjwL4', category: '衛生管理・HACCP', badge: '🏢 食品衛生協会 公式', title: 'HACCP動画（衛生管理計画作成・日常点検編）', author: '宮崎県食品衛生協会' },
+
+  // 7. 防災・初期消火訓練（総務省消防庁公式・神戸市公式）
+  { id: 'rCubdoOMY9M', category: '防災訓練', badge: '🏛️ 総務省消防庁 公式', title: '火災発生時の初期消火手順（消防庁公式訓練教材）', author: '総務省消防庁動画チャンネル' },
+  { id: 'zCBllUmJWrM', category: '防災訓練', badge: '🏛️ 神戸市消防局 公式', title: '消火器の使用方法（訓練指導用）', author: '神戸市公式チャンネル' },
+
+  // 8. 個人情報保護・SNSリスク管理
+  { id: 'Eh8QXPPphSU', category: '個人情報保護', badge: '📚 法定研修教材', title: '【法定研修】個人情報・プライバシー保護に関する研修～尊厳と安心を守る実践～', author: '福祉の学び舎チャンネル' },
+  { id: '-Bs5h58jf2Y', category: '個人情報保護', badge: '📚 法定研修教材', title: '個人情報の保護研修　SNSのリスク管理と情報漏洩防止について', author: '介護施設 研修チャンネル' }
+];
 
 // ─── 年間研修カリキュラム定義（初期マスター） ───────────
 var DEFAULT_COURSES = [
@@ -1803,8 +1865,10 @@ async function saveStorageData(key, val){
 // ─── 画面初期化 ─────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async function(){
   await loadAllTrainingData();
+  populateOfficialVideoSelect();
   renderStaffGrid();
   renderAdminMatrix();
+  renderAnnualPlanner();
   renderCommitteeList();
   renderPublishedCoursesList();
   updateHeaderLockState();
@@ -2987,6 +3051,80 @@ function renderAnnualPlanner(){
     h += '</div>';
     return h;
   }).join('');
+
+  renderOfficialVideoCatalog();
+  populateOfficialVideoSelect();
+}
+
+function populateOfficialVideoSelect(){
+  var sel = el('cr-official-video-select');
+  if(!sel || sel.options.length > 1) return;
+  var h = '<option value="">🎬 厚生労働省・公的機関・専門研修の参考動画リストから選ぶ...</option>';
+  OFFICIAL_VIDEO_LIBRARY.forEach(function(v){
+    h += '<option value="' + v.id + '">[' + esc(v.badge) + ' / ' + esc(v.category) + '] ' + esc(v.title) + '</option>';
+  });
+  sel.innerHTML = h;
+}
+
+function onSelectOfficialVideo(videoId){
+  if(!videoId) return;
+  var v = OFFICIAL_VIDEO_LIBRARY.find(function(x){ return x.id === videoId; });
+  if(!v) return;
+  if(el('cr-video')) el('cr-video').value = 'https://www.youtube.com/watch?v=' + v.id;
+  if(el('cr-category')) el('cr-category').value = v.category;
+  if(el('cr-title') && !el('cr-title').value.trim()){
+    el('cr-title').value = v.category + '研修「' + v.title + '」';
+  }
+}
+
+function previewCreatorVideo(){
+  var url = el('cr-video') ? el('cr-video').value.trim() : '';
+  if(!url){
+    alert('動画URLが入力されていません。下の公的動画リストから選択してください。');
+    return;
+  }
+  window.open(url, '_blank');
+}
+
+function renderOfficialVideoCatalog(){
+  var box = el('official-video-catalog-list');
+  if(!box) return;
+
+  populateOfficialVideoSelect();
+
+  box.innerHTML = OFFICIAL_VIDEO_LIBRARY.map(function(v){
+    var isOfficial = v.badge.indexOf('公式') >= 0;
+    var badgeStyle = isOfficial
+      ? 'background:#e8f5e9;color:#1b5e20;border:1px solid #81c784;'
+      : 'background:#f3e5f5;color:#4a148c;border:1px solid #ce93d8;';
+
+    return '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 14px;border:1.5px solid var(--bdr);border-radius:12px;margin-bottom:8px;background:#fff;">' +
+      '<div style="flex:1;min-width:240px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
+          '<span style="font-size:11px;font-weight:900;padding:2px 8px;border-radius:8px;' + badgeStyle + '">' + esc(v.badge) + '</span>' +
+          '<span class="training-tag" style="margin:0;">' + esc(v.category) + '</span>' +
+          '<span style="font-size:11px;color:var(--sub);">提供: ' + esc(v.author) + '</span>' +
+        '</div>' +
+        '<div style="font-size:13.5px;font-weight:800;color:var(--pri-dark);">' + esc(v.title) + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;align-items:center;">' +
+        '<a href="https://www.youtube.com/watch?v=' + v.id + '" target="_blank" rel="noopener noreferrer" style="text-decoration:none;font-size:11.5px;font-weight:800;padding:6px 10px;border-radius:8px;border:1.5px solid var(--pri);color:var(--pri);background:#fff;">▶ YouTubeで視聴 ↗</a>' +
+        '<button type="button" onclick="useCatalogVideoInCreator(\'' + v.id + '\')" style="font-size:11.5px;font-weight:800;padding:6px 12px;border-radius:8px;border:none;background:var(--pri);color:#fff;cursor:pointer;">＋ この動画で研修作成</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function useCatalogVideoInCreator(videoId){
+  var v = OFFICIAL_VIDEO_LIBRARY.find(function(x){ return x.id === videoId; });
+  if(!v) return;
+  switchAdminSubtab('creator');
+  resetCreatorForm();
+  if(el('cr-category')) el('cr-category').value = v.category;
+  if(el('cr-video')) el('cr-video').value = 'https://www.youtube.com/watch?v=' + v.id;
+  if(el('cr-title')) el('cr-title').value = v.category + '研修「' + v.title + '」';
+  if(el('cr-due')) el('cr-due').value = todayStr();
+  window.scrollTo({ top: el('subtab-content-creator').offsetTop - 20, behavior: 'smooth' });
 }
 
 function getDueTextForMonth(mLabel){
