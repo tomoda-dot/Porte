@@ -3616,6 +3616,71 @@
             });
             h += '      </tbody></table>';
             h += '  </div>';
+
+            // 確認用（読み取り専用）：採用したテーマ・基本情報 / 教材タイプ / スライド読本・要点・クイズ
+            var vUrlRaw = tc.youtubeWatchUrl || tc.videoEmbedUrl || '';
+            var isSlideMode = !!tc.noVideo || !vUrlRaw;
+            var vidMatchRo = vUrlRaw.match(/(?:watch\?v=|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            var vidIdRo = vidMatchRo ? vidMatchRo[1] : '';
+            var libHitRo = vidIdRo ? OFFICIAL_VIDEO_LIBRARY.find(function (v) { return v.id === vidIdRo; }) : null;
+            var vidTitleRo = tc.videoTitle || (libHitRo ? libHitRo.title : '') || vUrlRaw;
+
+            h += '  <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">';
+            // 1. 採用したテーマ・基本情報
+            h += '    <div style="background:#fff;border:1px solid #cfe2f3;border-radius:10px;padding:10px 12px;">';
+            h += '      <div style="font-size:12px;font-weight:900;color:#0d47a1;margin-bottom:6px;">📝 採用したテーマ・基本情報</div>';
+            h += '      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px 12px;font-size:12px;">';
+            h += '        <div><span style="color:var(--sub);font-weight:700;">研修区分：</span><b>' + esc(tc.category || '-') + '</b></div>';
+            h += '        <div><span style="color:var(--sub);font-weight:700;">受講期限：</span><b>' + esc(tc.dueText || '-') + '</b></div>';
+            h += '      </div>';
+            h += '      <div style="font-size:12px;margin-top:4px;"><span style="color:var(--sub);font-weight:700;">タイトル：</span><b>' + esc(tc.title || '-') + '</b></div>';
+            h += '      <div style="font-size:12px;margin-top:4px;color:#333;line-height:1.5;"><span style="color:var(--sub);font-weight:700;">目的・概要：</span>' + esc(tc.desc || '-') + '</div>';
+            h += '    </div>';
+
+            // 2. 【STEP 2】教材タイプの選択
+            h += '    <div style="background:#fff;border:1px solid #cfe2f3;border-radius:10px;padding:10px 12px;">';
+            h += '      <div style="font-size:12px;font-weight:900;color:#0d47a1;margin-bottom:6px;">🔍 教材タイプの選択</div>';
+            if (isSlideMode) {
+              h += '      <div style="font-size:12.5px;font-weight:800;color:#4527a0;">📄 動画なしで作る（AIスライド・現場事例読本のみ）</div>';
+            } else {
+              h += '      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
+              if (vidIdRo) {
+                h += '        <img src="https://i.ytimg.com/vi/' + esc(vidIdRo) + '/mqdefault.jpg" alt="" style="width:110px;height:62px;object-fit:cover;border-radius:6px;border:1px solid #cfe2f3;">';
+              }
+              h += '        <div style="flex:1;min-width:180px;">';
+              h += '          <div style="font-size:12px;font-weight:900;color:#2e7d32;margin-bottom:2px;">🎬 参考動画を使う</div>';
+              h += '          <div style="font-size:12.5px;font-weight:800;color:var(--pri-dark);">' + esc(vidTitleRo) + '</div>';
+              h += '          <div style="font-size:11px;color:var(--sub);word-break:break-all;margin-top:2px;">' + esc(vUrlRaw) + '</div>';
+              h += '        </div>';
+              h += '      </div>';
+            }
+            h += '    </div>';
+
+            // 3. 📖 現場ケーススタディ・スライド読本（＋要点・クイズ）
+            h += '    <div style="background:#fff;border:1px solid #cfe2f3;border-radius:10px;padding:10px 12px;">';
+            h += '      <div style="font-size:12px;font-weight:900;color:#0d47a1;margin-bottom:6px;">📖 現場ケーススタディ・スライド読本</div>';
+            if (tc.caseSlides && tc.caseSlides.length > 0) {
+              tc.caseSlides.forEach(function (sl, sIdx) {
+                h += '      <div style="background:#fbf9ff;border:1px solid #e1bee7;border-radius:8px;padding:7px 10px;margin-bottom:6px;">';
+                h += '        <div style="font-size:12px;font-weight:900;color:#4527a0;">スライド' + (sIdx + 1) + '：' + esc(sl.heading || '') + '</div>';
+                h += '        <div style="font-size:11.5px;color:#333;white-space:pre-line;margin-top:2px;line-height:1.45;">' + esc(sl.body || '') + '</div>';
+                h += '      </div>';
+              });
+            } else {
+              h += '      <div style="font-size:12px;color:var(--sub);margin-bottom:6px;">（スライド読本は未設定です）</div>';
+            }
+            if (tc.keypoints && tc.keypoints.length > 0) {
+              h += '      <div style="font-size:11.5px;font-weight:800;color:var(--pri-dark);margin-top:4px;">📌 学習ポイント（' + tc.keypoints.length + '件）</div>';
+              h += '      <ul style="margin:3px 0 6px 18px;padding:0;font-size:11.5px;color:#333;line-height:1.45;">';
+              tc.keypoints.forEach(function (kp) {
+                h += '        <li>' + kp + '</li>';
+              });
+              h += '      </ul>';
+            }
+            var qCountRo = (tc.quizzes && tc.quizzes.length) || 0;
+            h += '      <div style="font-size:11.5px;font-weight:800;color:#0d47a1;">📝 理解度テスト：全' + qCountRo + '問</div>';
+            h += '    </div>';
+            h += '  </div>';
           h += '</div>';
         });
 
