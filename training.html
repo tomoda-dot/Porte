@@ -4119,19 +4119,48 @@
       _activeAssignMonth = tc.month;
       _wizMode = 'kenshu';
       _wizFilterCat = tc.category || '身体拘束適正化';
-      _wizMaterialMode = (tc.noVideo || (!tc.videoEmbedUrl && !tc.youtubeWatchUrl)) ? 'slide_only' : 'video';
+      var savedVideoUrl = tc.youtubeWatchUrl || tc.videoEmbedUrl || '';
+      _wizMaterialMode = (tc.noVideo || !savedVideoUrl) ? 'slide_only' : 'video';
       _aiGeneratedDraft = {
         caseSlides: tc.caseSlides ? JSON.parse(JSON.stringify(tc.caseSlides)) : [],
         keypoints: tc.keypoints ? tc.keypoints.slice() : [],
         quizzes: tc.quizzes ? JSON.parse(JSON.stringify(tc.quizzes)) : []
       };
+
+      // 保存済み動画を候補リストに必ず含める（YouTube検索で採用した動画も正しく「✓ 採用中」にするため）
+      var catVideos = OFFICIAL_VIDEO_LIBRARY.filter(function (v) { return v.category === _wizFilterCat; });
+      if (catVideos.length === 0) catVideos = OFFICIAL_VIDEO_LIBRARY.slice(0, 6);
+      var vidMatch = savedVideoUrl.match(/(?:watch\?v=|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      if (vidMatch && vidMatch[1]) {
+        var savedVidId = vidMatch[1];
+        var existInCat = catVideos.find(function (v) { return v.id === savedVidId; });
+        if (!existInCat) {
+          var existInLib = OFFICIAL_VIDEO_LIBRARY.find(function (v) { return v.id === savedVidId; });
+          var customEntry = existInLib || {
+            id: savedVidId,
+            isLive: true,
+            category: tc.category,
+            badge: '✓ 現在の採用動画',
+            title: tc.videoTitle || stripSeqPrefix(tc.title),
+            author: '採用中のYouTube動画',
+            thumbnail: 'https://i.ytimg.com/vi/' + savedVidId + '/mqdefault.jpg'
+          };
+          catVideos = [customEntry].concat(catVideos);
+        }
+      }
+      _wizVideoCandidates = catVideos;
+
       renderMonthAssignModalBody();
       if (el('cr-category')) el('cr-category').value = tc.category;
       if (el('cr-title')) el('cr-title').value = tc.title;
       if (el('cr-due')) el('cr-due').value = tc.dueText || '';
-      if (el('cr-video')) el('cr-video').value = tc.youtubeWatchUrl || tc.videoEmbedUrl || '';
+      if (el('cr-video')) el('cr-video').value = savedVideoUrl;
       if (el('cr-desc')) el('cr-desc').value = tc.desc || '';
       if (el('cr-is-current')) el('cr-is-current').checked = !!tc.isCurrent;
+      if (el('yt-search-query')) el('yt-search-query').value = (tc.category || '') + ' ' + stripSeqPrefix(tc.title);
+      if (el('yt-search-results')) {
+        el('yt-search-results').innerHTML = renderWizardVideoCardsHTML(savedVideoUrl);
+      }
       renderAiPreview();
       if (shouldScroll !== false) {
         var step3 = el('wiz-step3-box');
