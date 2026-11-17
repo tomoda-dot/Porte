@@ -5462,10 +5462,10 @@
         '  "desc": "研修のねらいと概要（' + (isSlideOnly ? '120〜180' : '80〜120') + '文字）",\n' +
         slideFormatJson +
         '  "keypoints": [\n' +
-        '    "<b>見出し1：</b>具体的な要点説明' + (isSlideOnly ? '（背景・実践方法まで詳しく）' : '') + '",\n' +
-        '    "<b>見出し2：</b>具体的な要点説明",\n' +
-        '    "<b>見出し3：</b>具体的な要点説明",\n' +
-        '    "<b>見出し4：</b>具体的な要点説明"' + (isSlideOnly ? ',\n    "<b>見出し5：</b>具体的な要点説明"' : '') + '\n' +
+        '    "見出し1：具体的な要点説明' + (isSlideOnly ? '（背景・実践方法まで詳しく）' : '') + '",\n' +
+        '    "見出し2：具体的な要点説明",\n' +
+        '    "見出し3：具体的な要点説明",\n' +
+        '    "見出し4：具体的な要点説明"' + (isSlideOnly ? ',\n    "見出し5：具体的な要点説明"' : '') + '\n' +
         '  ],\n' +
         '  "quizzes": [\n' +
         '    {\n' +
@@ -5652,9 +5652,11 @@
       h += '    <button type="button" onclick="addDraftKeypoint()" style="background:#fff;border:1.5px solid var(--pri);color:var(--pri);border-radius:10px;padding:3px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">＋ 要点を追加</button>';
       h += '  </div>';
       _aiGeneratedDraft.keypoints.forEach(function (kp, idx) {
+        var cleanKp = String(kp || '').replace(/<\/?(?:b|strong)>/gi, '');
+        _aiGeneratedDraft.keypoints[idx] = cleanKp;
         h += '  <div class="editor-kp-row">';
         h += '    <span style="font-size:12px;font-weight:600;color:var(--pri);">' + (idx + 1) + '.</span>';
-        h += '    <input type="text" value="' + esc(kp) + '" oninput="updateDraftKeypoint(' + idx + ', this.value)">';
+        h += '    <input type="text" value="' + esc(cleanKp) + '" oninput="updateDraftKeypoint(' + idx + ', this.value)">';
         h += '    <button type="button" onclick="removeDraftKeypoint(' + idx + ')" style="background:#ffebee;color:#c62828;border:1px solid #ef9a9a;border-radius:8px;padding:5px 8px;font-size:11px;cursor:pointer;">削除</button>';
         h += '  </div>';
       });
@@ -5718,7 +5720,7 @@
     }
     function addDraftKeypoint() {
       if (!_aiGeneratedDraft) _aiGeneratedDraft = { caseSlides: [], keypoints: [], quizzes: [] };
-      _aiGeneratedDraft.keypoints.push('<b>追加ポイント：</b>ここに要点を入力してください。');
+      _aiGeneratedDraft.keypoints.push('追加ポイント：ここに要点を入力してください。');
       renderAiPreview();
     }
     function removeDraftKeypoint(idx) {
