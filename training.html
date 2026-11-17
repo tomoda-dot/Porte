@@ -3743,10 +3743,9 @@
           h += '    <input type="hidden" id="cr-video-title" value="AIスライド・現場事例読本">';
           h += '  </div>';
         } else {
-          h += '  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">';
-          h += '    <input type="text" id="yt-search-query" value="' + esc(initYtQuery) + '" placeholder="検索キーワード（例：障害福祉 身体拘束 スピーチロック 研修）" style="flex:1;min-width:220px;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 12px;font-size:13.5px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();searchYouTubeVideosLive();}">';
-          h += '    <button type="button" id="btn-yt-live-search" onclick="searchYouTubeVideosLive()" style="background:#c62828;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">🔍 YouTubeで最新動画を検索</button>';
-          h += '    <button type="button" onclick="showOfficialVideoCandidates()" style="background:#fff;color:var(--pri-dark);border:1.5px solid var(--pri);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;">🏛️ 厚労省・公的機関の定番動画を表示</button>';
+          h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+          h += '    <input type="text" id="yt-search-query" value="' + esc(initYtQuery) + '" placeholder="検索キーワード（YouTube・厚労省定番動画を一括検索）" style="flex:1;min-width:220px;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 12px;font-size:13.5px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();searchYouTubeVideosLive();}">';
+          h += '    <button type="button" id="btn-yt-live-search" onclick="searchYouTubeVideosLive()" style="background:var(--pri);color:#fff;border:none;border-radius:10px;padding:8px 20px;font-size:13px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;">🔍 検索</button>';
           h += '  </div>';
 
           if (_wizInlinePreviewId) {
@@ -4046,9 +4045,9 @@
 
       var btn = el('btn-yt-live-search');
       var resBox = el('yt-search-results');
-      if (btn) { btn.disabled = true; btn.textContent = '🔄 YouTube検索中...'; }
+      if (btn) { btn.disabled = true; btn.textContent = '🔄 検索中...'; }
       if (resBox) {
-        resBox.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--pri-dark);font-weight:800;font-size:13px;">🔄 YouTubeから「' + esc(query) + '」の最新動画をリアルタイム検索しています...</div>';
+        resBox.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--pri-dark);font-weight:800;font-size:13px;">🔄 YouTubeと厚労省・公的機関の定番動画から「' + esc(query) + '」を検索しています...</div>';
       }
 
       var foundIds = [];
@@ -4097,17 +4096,21 @@
         liveItems = resolved.filter(function (x) { return !!x; });
       }
 
-      // 厚労省・公的機関の該当カテゴリ動画もあわせて表示（比較・選択しやすくする）
+      // 厚労省・公的機関の定番動画もキーワード＋カテゴリで同時検索
+      var qTokens = query.split(/[\s　]+/).map(function (s) { return s.trim().toLowerCase(); }).filter(function (s) { return s && s !== '厚生労働省' && s !== '障害福祉' && s !== '研修'; });
       var officialMatches = OFFICIAL_VIDEO_LIBRARY.filter(function (v) {
-        return v.category === cat && !liveItems.some(function (lv) { return lv.id === v.id; });
+        if (liveItems.some(function (lv) { return lv.id === v.id; })) return false;
+        var hay = (String(v.title || '') + ' ' + String(v.category || '') + ' ' + String(v.author || '') + ' ' + String(v.badge || '')).toLowerCase();
+        var kwHit = qTokens.length > 0 && qTokens.some(function (tk) { return hay.indexOf(tk) >= 0; });
+        return kwHit || v.category === cat;
       });
 
-      _wizVideoCandidates = liveItems.concat(officialMatches);
+      _wizVideoCandidates = officialMatches.concat(liveItems);
       if (_wizVideoCandidates.length === 0) {
         _wizVideoCandidates = OFFICIAL_VIDEO_LIBRARY.slice(0, 8);
       }
 
-      if (btn) { btn.disabled = false; btn.textContent = '🔍 YouTubeで最新動画を検索'; }
+      if (btn) { btn.disabled = false; btn.textContent = '🔍 検索'; }
       if (resBox) {
         resBox.innerHTML = renderWizardVideoCardsHTML(el('cr-video') ? el('cr-video').value : '');
       }
