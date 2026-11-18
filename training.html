@@ -3657,6 +3657,8 @@
       var ov = el('month-assign-modal-overlay');
       if (ov) ov.classList.remove('active');
       _wizInlinePreviewId = '';
+      _wizExpandedCourseId = '';
+      _wizExpandedCommitteeId = '';
       var body = el('month-assign-modal-body');
       if (body) body.innerHTML = ''; // プレビュー動画を停止
     }
@@ -3667,6 +3669,8 @@
       _editingCommitteeId = null;
       _aiGeneratedDraft = null;
       _wizInlinePreviewId = '';
+      _wizExpandedCourseId = '';
+      _wizExpandedCommitteeId = '';
       var hasItems = _wizDedicatedCommittee
         ? getFyCommittees(_calFY).some(function (cm) { return getCommitteeMonthLabel(cm) === fm; })
         : (getFyCourses(_calFY).some(function (c) { return c.month === fm; }) ||
@@ -3748,17 +3752,15 @@
 
       var h = '';
 
-      if (_wizDedicatedCommittee) {
-        h += '<div style="background:#f1f8e9;border:1px solid #c5e1a5;border-radius:12px;padding:10px 12px;margin-bottom:14px;">';
-        h += '  <div style="font-size:11.5px;font-weight:700;color:#2e7d32;margin-bottom:6px;">📅 開催月を選択：</div>';
-        h += '  <div style="display:flex;gap:5px;flex-wrap:wrap;">';
-        FISCAL_MONTHS.forEach(function (fm) {
-          var isAct = (fm === mLabel);
-          h += '<button type="button" onclick="switchWizardMonth(\'' + fm + '\')" style="padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ' + (isAct ? '#2e7d32' : '#c5e1a5') + ';background:' + (isAct ? '#2e7d32' : '#fff') + ';color:' + (isAct ? '#fff' : '#1b5e20') + ';">' + fm + '</button>';
-        });
-        h += '  </div>';
-        h += '</div>';
-      }
+      h += '<div style="background:var(--pri-light);border:1px solid var(--bdr);border-radius:12px;padding:10px 12px;margin-bottom:14px;">';
+      h += '  <div style="font-size:11.5px;font-weight:700;color:var(--pri-dark);margin-bottom:6px;">📅 月を選択：</div>';
+      h += '  <div style="display:flex;gap:5px;flex-wrap:wrap;">';
+      FISCAL_MONTHS.forEach(function (fm) {
+        var isAct = (fm === mLabel);
+        h += '<button type="button" onclick="switchWizardMonth(\'' + fm + '\')" style="padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ' + (isAct ? 'var(--pri)' : 'var(--bdr)') + ';background:' + (isAct ? 'var(--pri)' : '#fff') + ';color:' + (isAct ? '#fff' : 'var(--pri-dark)') + ';">' + fm + '</button>';
+      });
+      h += '  </div>';
+      h += '</div>';
 
       // ═══════════════════════════════════════════════════
       // 1. 現在この月に設定されている研修・委員会（登録がある時のみ表示）
@@ -6213,7 +6215,7 @@
             '<div style="font-size:12px;color:var(--sub);margin-top:4px;">開催日: ' + esc(cm.date || '-') + ' ｜ 出席者: ' + esc(cm.attendees || '-') + '</div>' +
             '</div>' +
             '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 14px;background:#fff;color:#2e7d32;border:1.5px solid #2e7d32;" onclick="openCommitteeStudio(\'' + mLabel + '\', \'' + cm.id + '\', false)">👥 詳細</button>' +
+            '<button type="button" class="btn-print" style="font-size:11.5px;padding:6px 14px;background:#fff;color:#2e7d32;border:1.5px solid #2e7d32;" onclick="openCommitteeForEditFromCalendar(\'' + mLabel + '\', \'' + cm.id + '\')">👥 詳細</button>' +
             '</div>' +
             '</div>';
         }
