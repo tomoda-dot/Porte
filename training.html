@@ -3555,7 +3555,7 @@
           });
           mCommittees.forEach(function (cm) {
             var dayStr = cm.date ? (parseInt(cm.date.split('-')[2], 10) + '日 ') : '';
-            h += '    <div class="fy-ev-pill iinkai" onclick="event.stopPropagation();openCommitteeStudio(\'' + mLabel + '\', \'' + cm.id + '\', false)" title="クリックして委員会議事録を確認・印刷：' + esc(cm.title) + '">';
+            h += '    <div class="fy-ev-pill iinkai" onclick="event.stopPropagation();openCommitteeForEditFromCalendar(\'' + mLabel + '\', \'' + cm.id + '\')" title="クリックして委員会議事録を確認・印刷：' + esc(cm.title) + '">';
             h += '      <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🏛️ ' + dayStr + esc(cm.title) + '</span>';
             h += '    </div>';
           });
@@ -3594,6 +3594,12 @@
       _wizExpandedCourseId = courseId;
       _wizExpandedCommitteeId = '';
       openMonthAssignModal(mLabel, 'kenshu', false);
+    }
+
+    function openCommitteeForEditFromCalendar(mLabel, cmId) {
+      _wizExpandedCourseId = '';
+      _wizExpandedCommitteeId = cmId || '';
+      openMonthAssignModal(mLabel, 'iinkai', false);
     }
 
     function openMonthCellWithAutoEdit(mLabel) {
