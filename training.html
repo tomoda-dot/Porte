@@ -3555,7 +3555,7 @@
           });
           mCommittees.forEach(function (cm) {
             var dayStr = cm.date ? (parseInt(cm.date.split('-')[2], 10) + '日 ') : '';
-            h += '    <div class="fy-ev-pill iinkai" onclick="event.stopPropagation();openCommitteeStudio(\'' + mLabel + '\')" title="クリックして委員会議事録を確認・印刷：' + esc(cm.title) + '">';
+            h += '    <div class="fy-ev-pill iinkai" onclick="event.stopPropagation();openCommitteeStudio(\'' + mLabel + '\', \'' + cm.id + '\', false)" title="クリックして委員会議事録を確認・印刷：' + esc(cm.title) + '">';
             h += '      <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🏛️ ' + dayStr + esc(cm.title) + '</span>';
             h += '    </div>';
           });
@@ -3656,8 +3656,10 @@
       _editingCommitteeId = null;
       _aiGeneratedDraft = null;
       _wizInlinePreviewId = '';
-      var hasItems = getFyCourses(_calFY).some(function (c) { return c.month === fm; }) ||
-        getFyCommittees(_calFY).some(function (cm) { return getCommitteeMonthLabel(cm) === fm; });
+      var hasItems = _wizDedicatedCommittee
+        ? getFyCommittees(_calFY).some(function (cm) { return getCommitteeMonthLabel(cm) === fm; })
+        : (getFyCourses(_calFY).some(function (c) { return c.month === fm; }) ||
+          getFyCommittees(_calFY).some(function (cm) { return getCommitteeMonthLabel(cm) === fm; }));
       _wizShowCreator = !hasItems;
       syncWizardCategoryForMonth(fm);
       var titleEl = el('month-assign-modal-title');
@@ -3666,7 +3668,6 @@
           ? ('🏛️ 令和' + (_calFY - 2018) + '年度 ' + fm + ' 委員会議事録作成スタジオ')
           : ('📅 令和' + (_calFY - 2018) + '年度 ' + fm + ' 研修・委員会の作成＆管理スタジオ');
       }
-      if (_wizDedicatedCommittee) _wizShowCreator = true;
       renderMonthAssignModalBody();
     }
 
@@ -3874,16 +3875,28 @@
         });
 
         mCommittees.forEach(function (cm) {
-          h += '<div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">';
-          h += '  <div style="flex:1;min-width:220px;">';
-          h += '    <span style="font-size:11px;font-weight:700;background:#2e7d32;color:#fff;padding:2px 8px;border-radius:6px;">🏛️ 委員会 / ' + esc(cm.category) + '</span>';
-          h += '    <div style="font-size:14px;font-weight:700;color:#1b5e20;margin-top:4px;">' + esc(cm.title) + '（開催日: ' + esc(cm.date) + '）</div>';
-          h += '    <div style="font-size:11.5px;color:#2e4c21;margin-top:2px;">出席者: ' + esc(cm.attendees) + '</div>';
+          h += '<div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:14px;padding:12px 14px;margin-bottom:10px;">';
+          h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">';
+          h += '    <div style="flex:1;min-width:220px;">';
+          h += '      <span style="font-size:11px;font-weight:700;background:#2e7d32;color:#fff;padding:2px 8px;border-radius:6px;">🏛️ 委員会 / ' + esc(cm.category) + '</span>';
+          h += '      <div style="font-size:14.5px;font-weight:700;color:#1b5e20;margin-top:4px;">' + esc(cm.title) + '（開催日: ' + esc(cm.date) + '）</div>';
+          h += '      <div style="font-size:12px;color:#2e4c21;margin-top:2px;">出席者: ' + esc(cm.attendees) + '</div>';
+          h += '    </div>';
+          h += '    <div style="display:flex;gap:6px;flex-wrap:wrap;">';
+          h += '      <button type="button" onclick="printCommitteeMinutes(\'' + cm.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#2e7d32;color:#fff;font-weight:600;cursor:pointer;">🖨️ A4議事録を印刷</button>';
+          h += '      <button type="button" onclick="loadCommitteeIntoWizardEditor(\'' + cm.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid #2e7d32;background:#fff;color:#1b5e20;font-weight:600;cursor:pointer;">✏️ 編集</button>';
+          h += '      <button type="button" onclick="deleteCommitteeMinutes(\'' + cm.id + '\');renderMonthAssignModalBody();renderFyCalendar();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ffebee;color:#c62828;font-weight:600;cursor:pointer;">🗑️ 削除</button>';
+          h += '    </div>';
           h += '  </div>';
-          h += '  <div style="display:flex;gap:6px;flex-wrap:wrap;">';
-          h += '    <button type="button" onclick="printCommitteeMinutes(\'' + cm.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#2e7d32;color:#fff;font-weight:600;cursor:pointer;">🖨️ A4議事録を印刷</button>';
-          h += '    <button type="button" onclick="loadCommitteeIntoWizardEditor(\'' + cm.id + '\')" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid #2e7d32;background:#fff;color:#1b5e20;font-weight:600;cursor:pointer;">✏️ 議事録を編集</button>';
-          h += '    <button type="button" onclick="deleteCommitteeMinutes(\'' + cm.id + '\');renderMonthAssignModalBody();renderFyCalendar();" style="font-size:11.5px;padding:5px 10px;border-radius:8px;border:none;background:#ffebee;color:#c62828;font-weight:600;cursor:pointer;">🗑️ 削除</button>';
+          h += '  <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">';
+          h += '    <div style="background:#fff;border:1px solid #c8e6c9;border-radius:10px;padding:9px 12px;">';
+          h += '      <div style="font-size:11.5px;font-weight:700;color:#1b5e20;margin-bottom:3px;">📋 協議事項・議題</div>';
+          h += '      <div style="font-size:12px;color:#333;white-space:pre-line;line-height:1.5;">' + esc(cm.agenda || '（未入力）') + '</div>';
+          h += '    </div>';
+          h += '    <div style="background:#fff;border:1px solid #c8e6c9;border-radius:10px;padding:9px 12px;">';
+          h += '      <div style="font-size:11.5px;font-weight:700;color:#1b5e20;margin-bottom:3px;">✅ 決定事項・改善策</div>';
+          h += '      <div style="font-size:12px;color:#333;white-space:pre-line;line-height:1.5;">' + esc(cm.decisions || '（未入力）') + '</div>';
+          h += '    </div>';
           h += '  </div>';
           h += '</div>';
         });
