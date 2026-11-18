@@ -3456,7 +3456,11 @@
       h += '  <div class="req-check-grid" style="margin-bottom:0;">';
       reqItems.forEach(function (it) {
         var isOk = it.cur >= it.min;
-        h += '<div class="req-check-item ' + (isOk ? 'ok' : 'warn') + '" style="cursor:pointer;transition:transform .15s;" onclick="_wizFilterCat=\'' + it.cat + '\';openMonthAssignModal(currentMonthLabel(), \'kenshu\');" title="クリックして「' + it.cat + '」の研修を作成・追加">' +
+        var hitCourse = fyCourses.find(function (c) { return c.category === it.cat; });
+        var clickJs = hitCourse
+          ? ('openCourseForEditFromCalendar(\'' + hitCourse.month + '\', \'' + hitCourse.id + '\')')
+          : ('_wizFilterCat=\'' + it.cat + '\';openMonthAssignModal(currentMonthLabel(), \'kenshu\')');
+        h += '<div class="req-check-item ' + (isOk ? 'ok' : 'warn') + '" style="cursor:pointer;transition:transform .15s;" onclick="' + clickJs + '" title="クリックして「' + it.cat + '」の詳細・作成を開く">' +
           '<div style="font-weight:700;color:var(--pri-dark);">' + it.label + '</div>' +
           '<div style="font-size:11px;color:var(--sub);margin:2px 0;">基準: ' + it.req + '</div>' +
           '<div style="font-weight:700;font-size:13px;color:' + (isOk ? 'var(--grn)' : 'var(--warn)') + ';">' +
@@ -3471,6 +3475,7 @@
       var cmReqItems = [
         {
           cat: '虐待防止委員会',
+          kw: '虐待防止',
           label: '🛡️ 虐待防止委員会',
           req: '年1回以上必須',
           min: 1,
@@ -3478,6 +3483,7 @@
         },
         {
           cat: '身体拘束適正化委員会',
+          kw: '身体拘束',
           label: '🫂 身体拘束適正化委員会',
           req: '年1回以上必須',
           min: 1,
@@ -3485,6 +3491,7 @@
         },
         {
           cat: '感染症対策委員会',
+          kw: '感染症',
           label: '❄️ 感染症対策委員会',
           req: 'おおむね3か月に1回（年4回）',
           min: 4,
@@ -3492,6 +3499,7 @@
         },
         {
           cat: 'BCP（業務継続計画）委員会',
+          kw: 'BCP',
           label: '🌸 BCP（業務継続計画）委員会',
           req: '年1回以上推奨',
           min: 1,
@@ -3505,7 +3513,11 @@
       h += '  <div class="req-check-grid" style="margin-bottom:0;">';
       cmReqItems.forEach(function (it) {
         var isOk = it.cur >= it.min;
-        h += '<div class="req-check-item ' + (isOk ? 'ok' : 'warn') + '" style="cursor:pointer;transition:transform .15s;" onclick="openCommitteeStudio(currentMonthLabel())" title="クリックして「' + it.cat + '」の議事録を作成">' +
+        var hitCm = fyCommittees.find(function (cm) { return String(cm.category || '').indexOf(it.kw) >= 0; });
+        var cmClickJs = hitCm
+          ? ('openCommitteeForEditFromCalendar(\'' + getCommitteeMonthLabel(hitCm) + '\', \'' + hitCm.id + '\')')
+          : ('openMonthAssignModal(currentMonthLabel(), \'iinkai\')');
+        h += '<div class="req-check-item ' + (isOk ? 'ok' : 'warn') + '" style="cursor:pointer;transition:transform .15s;" onclick="' + cmClickJs + '" title="クリックして「' + it.cat + '」の詳細・作成を開く">' +
           '<div style="font-weight:700;color:var(--pri-dark);">' + it.label + '</div>' +
           '<div style="font-size:11px;color:var(--sub);margin:2px 0;">基準: ' + it.req + '</div>' +
           '<div style="font-weight:700;font-size:13px;color:' + (isOk ? 'var(--grn)' : 'var(--warn)') + ';">' +
