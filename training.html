@@ -3426,8 +3426,8 @@
       h += '    <span style="font-size:22px;font-weight:700;color:var(--pri-dark);">📚 研修・委員会管理</span>';
       h += '  </div>';
       h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;">';
-      h += '    <button type="button" class="btn-print" style="background:#2e7d32;font-size:12px;padding:7px 14px;" onclick="autoFillAnnualCommittees()">✨ 委員会の年間予定を一括配置</button>';
-      h += '    <button type="button" class="btn-print" style="background:var(--accent);font-size:12px;padding:7px 14px;" onclick="autoFill12MonthPlan()">✨ 推奨研修テーマ一括配置</button>';
+      h += '    <button type="button" class="btn-print" style="background:#2e7d32;font-size:12px;padding:7px 14px;" onclick="previewAutoFillAnnualCommittees()">✨ 委員会の年間予定を一括配置</button>';
+      h += '    <button type="button" class="btn-print" style="background:var(--accent);font-size:12px;padding:7px 14px;" onclick="previewAutoFill12MonthPlan()">✨ 推奨研修テーマ一括配置</button>';
       h += '  </div>';
       h += '</div>';
 
@@ -5383,9 +5383,8 @@
       window.scrollTo({ top: el('subtab-content-creator').offsetTop - 20, behavior: 'smooth' });
     }
 
-    async function autoFill12MonthPlan() {
-      var added = 0;
-      var fyCourses = getFyCourses(_calFY);
+    function buildAutoFill12MonthPlanPreview(targetFy) {
+      var fyCourses = getFyCourses(targetFy);
       var orderedKeys = [
         'abuse',            // 4月：障害者虐待防止
         'privacy_sns',      // 5月：個人情報保護
@@ -5400,20 +5399,19 @@
         'restraint_case',   // 2月：身体拘束適正化（ヒヤリハット）
         'bcp'               // 3月：BCP研修・訓練
       ];
-      FISCAL_MONTHS.forEach(function (mLabel, mIdx) {
-        var hasInMonth = fyCourses.some(function (c) { return c.month === mLabel; });
-        if (hasInMonth) return;
-
+      return FISCAL_MONTHS.map(function (mLabel, mIdx) {
+        var existingInMonth = fyCourses.filter(function (c) { return c.month === mLabel; });
+        if (existingInMonth.length > 0) {
+          return { month: mLabel, exists: true, existingTitles: existingInMonth.map(function (c) { return c.title; }), item: null };
+        }
         var preset = COURSE_PRESETS[orderedKeys[mIdx]];
         var targetCat = MONTH_DEFAULT_CATEGORIES[mLabel] || (preset ? preset.category : '障害者虐待防止');
         var catCandidates = THEME_SUGGESTIONS_MASTER.filter(function (t) { return t.category === targetCat; });
-
-        // 前年度（_calFY - 1）や今年度すでに使用済みの切り口を避けて選択
         var chosenCand = catCandidates.find(function (t) {
-          var st = getThemeUsageStatus(t.title, _calFY);
+          var st = getThemeUsageStatus(t.title, targetFy);
           return !st.currentMonth && !st.prevFyUsed;
         }) || catCandidates.find(function (t) {
-          return !getThemeUsageStatus(t.title, _calFY).currentMonth;
+          return !getThemeUsageStatus(t.title, targetFy).currentMonth;
         }) || catCandidates[0];
 
         var usePresetExact = preset && (!chosenCand || normalizeThemeCore(chosenCand.title) === normalizeThemeCore(preset.title));
@@ -5421,9 +5419,9 @@
         var descText = chosenCand ? chosenCand.desc : (preset ? preset.desc : (baseTitle + 'を実施します。'));
         var vUrl = usePresetExact ? (preset.videoUrl || '') : (CATEGORY_VERIFIED_VIDEOS[targetCat] || (preset ? (preset.videoUrl || '') : ''));
         var kps = usePresetExact ? preset.keypoints.slice() : [
-          '<b>ねらい：</b>' + descText,
-          '<b>現場での確認：</b>「' + stripSeqPrefix(baseTitle) + '」の要点を日々の支援・作業指導で意識します。',
-          '<b>チーム連携：</b>気づいた点や迷う場面は速やかにサービス管理責任者・管理者へ共有します。'
+          'ねらい：' + descText,
+          '現場での確認：「' + stripSeqPrefix(baseTitle) + '」の要点を日々の支援・作業指導で意識します。',
+          'チーム連携：気づいた点や迷う場面は速やかにサービス管理責任者・管理者へ共有します。'
         ];
         var qzs = usePresetExact ? JSON.parse(JSON.stringify(preset.quizzes)) : [
           {
@@ -5449,13 +5447,13 @@
         ];
 
         var newItem = {
-          id: (preset ? preset.id : 'auto') + '_fy' + _calFY + '_' + mIdx,
-          fy: _calFY,
+          id: (preset ? preset.id : 'auto') + '_fy' + targetFy + '_' + mIdx,
+          fy: targetFy,
           month: mLabel,
           category: targetCat,
           title: baseTitle,
           isCurrent: false,
-          dueText: getDueTextForMonth(mLabel, _calFY),
+          dueText: getDueTextForMonth(mLabel, targetFy),
           desc: descText,
           noVideo: !vUrl,
           videoEmbedUrl: vUrl ? vUrl.replace('watch?v=', 'embed/') : '',
@@ -5463,9 +5461,57 @@
           keypoints: kps,
           quizzes: qzs
         };
-        TRAINING_COURSES.push(newItem);
-        fyCourses.push(newItem);
-        added++;
+        return { month: mLabel, exists: false, existingTitles: [], item: newItem };
+      });
+    }
+
+    function previewAutoFill12MonthPlan() {
+      var entries = buildAutoFill12MonthPlanPreview(_calFY);
+      var newCount = entries.filter(function (e) { return !e.exists; }).length;
+      var titleEl = el('month-assign-modal-title');
+      if (titleEl) titleEl.textContent = '✨ 令和' + (_calFY - 2018) + '年度 推奨研修テーマ一括配置（内容確認）';
+      var body = el('month-assign-modal-body');
+      if (!body) return;
+
+      var h = '<div style="font-size:13px;color:var(--sub);margin-bottom:12px;">以下の内容で空き月に研修を一括配置します。すでに登録済みの月はそのまま残ります。</div>';
+      h += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">';
+      entries.forEach(function (e) {
+        if (e.exists) {
+          h += '<div style="display:flex;align-items:center;gap:10px;background:#f7f7f7;border:1px solid #e0e0e0;border-radius:10px;padding:9px 12px;opacity:0.75;">';
+          h += '  <span style="min-width:46px;font-weight:700;color:#666;">' + esc(e.month) + '</span>';
+          h += '  <span style="font-size:11px;font-weight:700;background:#eeeeee;color:#616161;padding:2px 8px;border-radius:6px;white-space:nowrap;">登録済・スキップ</span>';
+          h += '  <span style="font-size:12.5px;color:#555;flex:1;">' + esc(e.existingTitles.join(' ／ ')) + '</span>';
+          h += '</div>';
+        } else {
+          h += '<div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #90caf9;border-radius:10px;padding:9px 12px;flex-wrap:wrap;">';
+          h += '  <span style="min-width:46px;font-weight:700;color:#0d47a1;">' + esc(e.month) + '</span>';
+          h += '  <span style="font-size:11px;font-weight:700;background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:6px;white-space:nowrap;">新規：' + esc(e.item.category) + '</span>';
+          h += '  <span style="font-size:13px;font-weight:700;color:var(--pri-dark);flex:1;min-width:200px;">' + esc(e.item.title) + '</span>';
+          h += '</div>';
+        }
+      });
+      h += '</div>';
+      h += '<div style="display:flex;justify-content:flex-end;gap:10px;padding-top:10px;border-top:1px solid var(--bdr);">';
+      h += '  <button type="button" class="btn-print" style="background:#fff;color:var(--sub);border:1.5px solid var(--bdr);" onclick="closeMonthAssignModal()">キャンセル</button>';
+      if (newCount > 0) {
+        h += '  <button type="button" class="btn-print" style="background:var(--accent);" onclick="autoFill12MonthPlan()">✨ この内容で一括配置する（新規 ' + newCount + '件）</button>';
+      } else {
+        h += '  <span style="font-size:12.5px;font-weight:700;color:var(--grn);align-self:center;">✓ 12か月すべてすでに登録済みです</span>';
+      }
+      h += '</div>';
+
+      body.innerHTML = h;
+      el('month-assign-modal-overlay').classList.add('active');
+    }
+
+    async function autoFill12MonthPlan() {
+      var entries = buildAutoFill12MonthPlanPreview(_calFY);
+      var added = 0;
+      entries.forEach(function (e) {
+        if (!e.exists && e.item) {
+          TRAINING_COURSES.push(e.item);
+          added++;
+        }
       });
 
       // 年度×研修区分ごとに「第1回・第2回…」を時系列で連番付与
@@ -5479,6 +5525,7 @@
 
       sortCoursesByFiscalMonth();
       await saveStorageData('porte_training_courses', TRAINING_COURSES);
+      closeMonthAssignModal();
       renderAnnualPlanner();
       renderPublishedCoursesList();
       renderStaffTrainingList();
@@ -6396,95 +6443,140 @@
       renderFyCalendar();
     }
 
-    async function autoFillAnnualCommittees() {
+    function buildAnnualCommitteePlanPreview(targetFy) {
       var staffNames = STAFF.map(function (s) { return s.name; }).join('、');
-      var fyCommittees = getFyCommittees(_calFY);
+      var fyCommittees = getFyCommittees(targetFy);
       var plan = [
         {
           month: '4月',
           category: '虐待防止委員会',
-          title: '令和' + (_calFY - 2018) + '年度 第1回 虐待防止委員会',
+          title: '令和' + (targetFy - 2018) + '年度 第1回 虐待防止委員会',
           agenda: '1. 虐待防止マニュアル・指針の年度点検\n2. 障害者虐待防止研修の年間計画確認\n3. 日常支援における声かけ・権利擁護の振り返り',
           decisions: '・全職員で「利用者の尊厳を守る声かけ」を徹底し、迷う事例は速やかに管理者へ相談する。'
         },
         {
           month: '6月',
           category: '感染症対策委員会',
-          title: '令和' + (_calFY - 2018) + '年度 第1回 感染症・食中毒対策委員会（夏期）',
+          title: '令和' + (targetFy - 2018) + '年度 第1回 感染症・食中毒対策委員会（夏期）',
           agenda: '1. 梅雨〜夏期の食中毒・感染症予防策の確認\n2. 手洗い・消毒設備と衛生用品の在庫点検\n3. 施設内換気と清掃ルールの確認',
           decisions: '・作業前後の手洗い・アルコール消毒および作業台の衛生チェックを毎日実施する。'
         },
         {
           month: '8月',
           category: '身体拘束適正化委員会',
-          title: '令和' + (_calFY - 2018) + '年度 第1回 身体拘束適正化委員会',
+          title: '令和' + (targetFy - 2018) + '年度 第1回 身体拘束適正化委員会',
           agenda: '1. 身体拘束ゼロの継続確認と指針の点検\n2. 現場でのスピーチロック（言葉の拘束）防止の振り返り\n3. 緊急やむを得ない3要件の記録ルールの確認',
           decisions: '・「ちょっと待って」ではなく具体的な見通しを伝える声かけを全職員で実践する。'
         },
         {
           month: '9月',
           category: '感染症対策委員会',
-          title: '令和' + (_calFY - 2018) + '年度 第2回 感染症・食中毒対策委員会（秋期）',
+          title: '令和' + (targetFy - 2018) + '年度 第2回 感染症・食中毒対策委員会（秋期）',
           agenda: '1. 秋期以降の感染症流行に向けた予防体制の確認\n2. 嘔吐物処理セット（次亜塩素酸・PPE）の点検\n3. 利用者・職員の体調管理ルールの確認',
           decisions: '・感染対策物品の補充を完了し、体調不良時の早め報告・連絡体制を再確認した。'
         },
         {
           month: '12月',
           category: '感染症対策委員会',
-          title: '令和' + (_calFY - 2018) + '年度 第3回 感染症対策委員会（冬期）',
+          title: '令和' + (targetFy - 2018) + '年度 第3回 感染症対策委員会（冬期）',
           agenda: '1. インフルエンザ・コロナ・ノロウイルス対策の強化\n2. 防護具（PPE）の正しい着脱手順の確認\n3. 事業所内の消毒・換気頻度の見直し',
           decisions: '・冬期感染対策研修の内容を現場で実践し、朝の健康観察を徹底する。'
         },
         {
           month: '1月',
           category: 'BCP（業務継続計画）委員会',
-          title: '令和' + (_calFY - 2018) + '年度 BCP（業務継続計画）見直し・総括委員会',
+          title: '令和' + (targetFy - 2018) + '年度 BCP（業務継続計画）見直し・総括委員会',
           agenda: '1. 自然災害・感染症BCPの内容点検と連絡網更新\n2. 避難訓練・安否確認訓練の結果検証\n3. 備蓄品・非常用電源等の点検',
           decisions: '・訓練で出た課題をBCPに反映し、最新版の連絡網と役割分担を全職員へ周知する。'
         },
         {
           month: '2月',
           category: '身体拘束適正化委員会',
-          title: '令和' + (_calFY - 2018) + '年度 第2回 身体拘束適正化委員会',
+          title: '令和' + (targetFy - 2018) + '年度 第2回 身体拘束適正化委員会',
           agenda: '1. 年間のヒヤリハット・不適切ケア防止の振り返り\n2. 個別支援計画と環境調整の改善事例共有\n3. 次年度に向けた支援方針の確認',
           decisions: '・利用者が安心して作業に集中できる環境調整を継続し、チームでの情報共有を強化する。'
         },
         {
           month: '3月',
           category: '感染症対策委員会',
-          title: '令和' + (_calFY - 2018) + '年度 第4回 感染症対策委員会（年度総括）',
+          title: '令和' + (targetFy - 2018) + '年度 第4回 感染症対策委員会（年度総括）',
           agenda: '1. 今年度の感染症発生状況と対策の総括\n2. 衛生チェック体制・マニュアルの改定検討\n3. 次年度の感染対策年間計画の確認',
           decisions: '・今年度の取り組みを総括し、次年度も年4回以上の委員会と定期研修を継続する。'
         }
       ];
-
-      var added = 0;
-      plan.forEach(function (p, idx) {
+      return plan.map(function (p, idx) {
         var exists = fyCommittees.some(function (cm) {
           return getCommitteeMonthLabel(cm) === p.month && cm.category === p.category;
         });
-        if (!exists) {
-          var mNum = parseInt(p.month.replace('月', ''), 10);
-          var yr = (mNum >= 4) ? _calFY : (_calFY + 1);
-          var dateStr = yr + '-' + String(mNum).padStart(2, '0') + '-20';
-          var item = {
-            id: 'cm_auto_' + _calFY + '_' + idx + '_' + Date.now(),
-            fy: _calFY,
-            category: p.category,
-            date: dateStr,
-            title: p.title,
-            attendees: staffNames,
-            agenda: p.agenda,
-            decisions: p.decisions,
-            createdAt: new Date().toISOString()
-          };
-          _committeeMinutes.push(item);
-          fyCommittees.push(item);
+        var mNum = parseInt(p.month.replace('月', ''), 10);
+        var yr = (mNum >= 4) ? targetFy : (targetFy + 1);
+        var dateStr = yr + '-' + String(mNum).padStart(2, '0') + '-20';
+        var item = {
+          id: 'cm_auto_' + targetFy + '_' + idx + '_' + Date.now(),
+          fy: targetFy,
+          category: p.category,
+          date: dateStr,
+          title: p.title,
+          attendees: staffNames,
+          agenda: p.agenda,
+          decisions: p.decisions,
+          createdAt: new Date().toISOString()
+        };
+        return { month: p.month, exists: exists, item: item };
+      });
+    }
+
+    function previewAutoFillAnnualCommittees() {
+      var entries = buildAnnualCommitteePlanPreview(_calFY);
+      var newCount = entries.filter(function (e) { return !e.exists; }).length;
+      var titleEl = el('month-assign-modal-title');
+      if (titleEl) titleEl.textContent = '🏛️ 令和' + (_calFY - 2018) + '年度 委員会の年間予定一括配置（内容確認）';
+      var body = el('month-assign-modal-body');
+      if (!body) return;
+
+      var h = '<div style="font-size:13px;color:var(--sub);margin-bottom:12px;">以下の内容で法定必須委員会の予定を一括配置します。すでに登録済みの委員会は重複追加されません。</div>';
+      h += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">';
+      entries.forEach(function (e) {
+        if (e.exists) {
+          h += '<div style="display:flex;align-items:center;gap:10px;background:#f7f7f7;border:1px solid #e0e0e0;border-radius:10px;padding:9px 12px;opacity:0.75;">';
+          h += '  <span style="min-width:46px;font-weight:700;color:#666;">' + esc(e.month) + '</span>';
+          h += '  <span style="font-size:11px;font-weight:700;background:#eeeeee;color:#616161;padding:2px 8px;border-radius:6px;white-space:nowrap;">登録済・スキップ</span>';
+          h += '  <span style="font-size:12.5px;color:#555;flex:1;">' + esc(e.item.title) + '</span>';
+          h += '</div>';
+        } else {
+          h += '<div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #a5d6a7;border-radius:10px;padding:9px 12px;flex-wrap:wrap;">';
+          h += '  <span style="min-width:46px;font-weight:700;color:#1b5e20;">' + esc(e.month) + '</span>';
+          h += '  <span style="font-size:11px;font-weight:700;background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:6px;white-space:nowrap;">新規：' + esc(e.item.category) + '</span>';
+          h += '  <span style="font-size:13px;font-weight:700;color:#1b5e20;flex:1;min-width:200px;">' + esc(e.item.title) + '</span>';
+          h += '</div>';
+        }
+      });
+      h += '</div>';
+      h += '<div style="display:flex;justify-content:flex-end;gap:10px;padding-top:10px;border-top:1px solid var(--bdr);">';
+      h += '  <button type="button" class="btn-print" style="background:#fff;color:var(--sub);border:1.5px solid var(--bdr);" onclick="closeMonthAssignModal()">キャンセル</button>';
+      if (newCount > 0) {
+        h += '  <button type="button" class="btn-print" style="background:#2e7d32;" onclick="autoFillAnnualCommittees()">🏛️ この内容で一括配置する（新規 ' + newCount + '件）</button>';
+      } else {
+        h += '  <span style="font-size:12.5px;font-weight:700;color:var(--grn);align-self:center;">✓ 法定委員会の年間予定はすべて登録済みです</span>';
+      }
+      h += '</div>';
+
+      body.innerHTML = h;
+      el('month-assign-modal-overlay').classList.add('active');
+    }
+
+    async function autoFillAnnualCommittees() {
+      var entries = buildAnnualCommitteePlanPreview(_calFY);
+      var added = 0;
+      entries.forEach(function (e) {
+        if (!e.exists && e.item) {
+          _committeeMinutes.push(e.item);
           added++;
         }
       });
 
       await saveStorageData('porte_committee_minutes', _committeeMinutes);
+      closeMonthAssignModal();
       renderFyCalendar();
       renderCommitteeList();
       renderPublishedCoursesList();
