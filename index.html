@@ -8383,6 +8383,7 @@ async function initWageSimulator(ym, forceReset){
     closedDays = await cachedGas('getClosedDays', ym) || [];
   } catch(e){}
   var dowCounts = getMonthDowCounts(ym, closedDays);
+  var calendarDowCounts = getMonthDowCounts(ym, []);
   var activeUsers = S.users.filter(function(u){ return isUserActive(u, ym); });
   var masterAllowances = (typeof getAllowances === 'function') ? getAllowances().filter(function(a){ return a.enabled !== false; }) : [];
 
@@ -8473,6 +8474,7 @@ async function initWageSimulator(ym, forceReset){
     mode: 'auto',
     closedDays: closedDays,
     dowCounts: dowCounts,
+    calendarDowCounts: calendarDowCounts,
     users: usersData
   };
 
@@ -8679,10 +8681,10 @@ function renderSimCardsHTML(){
 
 function renderSimTableHTML(){
   var st = _simState;
-  var dows = ['月','火','水','木','金','土'];
+  var dows = ['月','火','水','木','金','土','日'];
   var h = '<table style="width:100%;font-size:13px"><thead><tr>' +
     '  <th style="min-width:130px">氏名</th>' +
-    '  <th style="min-width:180px;text-align:center">通所曜日 (タップでON/OFF)</th>' +
+    '  <th style="min-width:210px;text-align:center">通所曜日 (タップでON/OFF)</th>' +
     '  <th style="width:75px;text-align:center">日数</th>' +
     '  <th style="width:110px;text-align:center">1日時間</th>' +
     '  <th style="width:90px;text-align:center">総時間</th>' +
@@ -8972,20 +8974,34 @@ function saveSimAllowanceModal(uid){
 function toggleSimDow(uid, dow){
   var u = _simState.users.find(function(x){ return String(x.userId) === String(uid); });
   if(!u) return;
+  u.includeClosedDows = u.includeClosedDows || {};
   var idx = u.days.indexOf(dow);
   if(idx >= 0){
     u.days.splice(idx, 1);
+    delete u.includeClosedDows[dow];
   } else {
     u.days.push(dow);
+    if(!(_simState.dowCounts[dow] > 0) && _simState.calendarDowCounts && _simState.calendarDowCounts[dow] > 0){
+      u.includeClosedDows[dow] = true;
+      if(typeof toast === 'function'){
+        toast('📅 ' + dow + '曜日は今月休所設定のため、試算としてカレンダー上の ' + _simState.calendarDowCounts[dow] + '日分を加算しました');
+      }
+    }
   }
-  u.workDays = u.days.reduce(function(sum, d){ return sum + (_simState.dowCounts[d] || 0); }, 0);
+  u.workDays = u.days.reduce(function(sum, d){
+    var cnt = _simState.dowCounts[d] || 0;
+    if(cnt === 0 && u.includeClosedDows && u.includeClosedDows[d] && _simState.calendarDowCounts){
+      cnt = _simState.calendarDowCounts[d] || 0;
+    }
+    return sum + cnt;
+  }, 0);
   var daysInput = document.getElementById('sim-days-' + uid);
   if(daysInput) daysInput.value = u.workDays;
 
   var row = document.getElementById('sim-row-' + uid);
   if(row){
     var btns = row.querySelectorAll('.sim-dow-btn');
-    var dows = ['月','火','水','木','金','土'];
+    var dows = ['月','火','水','木','金','土','日'];
     btns.forEach(function(btn, i){
       var d = dows[i];
       if(u.days.indexOf(d) >= 0){
