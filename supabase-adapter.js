@@ -241,7 +241,7 @@ function _padTimes(row){
     if(!row.in && row.startTime) row.in = row.startTime;
     if(!row.out && row.endTime) row.out = row.endTime;
 
-    // 出欠レコードの工賃調整メタデータ（actualHours, dailyBonus, transportationAllowance, mealRate）をnotesから復元
+    // 出欠レコードの工賃調整・加算メタデータ（actualHours, dailyBonus, transportationAllowance, mealRate, absenceAddition, offsiteSupport）をnotesから復元
     if(row.notes && typeof row.notes === 'string' && row.notes.indexOf('<!--ADJ:') >= 0){
       var adjMatch = row.notes.match(/<!--ADJ:(.*?)-->/);
       if(adjMatch){
@@ -251,6 +251,8 @@ function _padTimes(row){
           if(adjObj.b !== undefined) row.dailyBonus = adjObj.b;
           if(adjObj.t !== undefined) row.transportationAllowance = adjObj.t;
           if(adjObj.mr !== undefined) row.mealRate = adjObj.mr;
+          if(adjObj.aa !== undefined) row.absenceAddition = !!adjObj.aa;
+          if(adjObj.os !== undefined) row.offsiteSupport = !!adjObj.os;
         }catch(e){}
         row.notes = row.notes.replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
       }
@@ -279,13 +281,15 @@ function _padTimes(row){
   return row;
 }
 
-// 出欠レコードの工賃調整メタデータ（actualHours, dailyBonus, transportationAllowance, mealRate）をnotes末尾にエンコード
+// 出欠レコードの工賃調整・加算メタデータをnotes末尾にエンコード
 function _encodeAttendanceAdj(obj){
   if(!obj) return;
   var hasAdj = (obj.actualHours !== undefined && obj.actualHours !== null && obj.actualHours !== '') ||
                (obj.dailyBonus !== undefined && obj.dailyBonus !== null && Number(obj.dailyBonus) !== 0) ||
                (obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0) ||
-               (obj.mealRate !== undefined && obj.mealRate !== null && obj.mealRate !== '');
+               (obj.mealRate !== undefined && obj.mealRate !== null && obj.mealRate !== '') ||
+               !!obj.absenceAddition ||
+               !!obj.offsiteSupport;
   var rawNotes = String(obj.notes || '').replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
   if(hasAdj){
     var adjData = {};
@@ -293,6 +297,8 @@ function _encodeAttendanceAdj(obj){
     if(obj.dailyBonus !== undefined && obj.dailyBonus !== null && Number(obj.dailyBonus) !== 0) adjData.b = Number(obj.dailyBonus);
     if(obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0) adjData.t = Number(obj.transportationAllowance);
     if(obj.mealRate !== undefined && obj.mealRate !== null && obj.mealRate !== '') adjData.mr = obj.mealRate;
+    if(obj.absenceAddition) adjData.aa = 1;
+    if(obj.offsiteSupport) adjData.os = 1;
     obj.notes = (rawNotes ? rawNotes + ' ' : '') + '<!--ADJ:' + JSON.stringify(adjData) + '-->';
   } else {
     obj.notes = rawNotes;
@@ -1273,13 +1279,13 @@ async function _calcServiceRecordData(srYm){
   srUsers.forEach(function(user){
     if((user.enrollDate && user.enrollDate > srYm + '-31') || (user.endDate && user.endDate < srYm + '-01')) return;
     var recs=srAtt.filter(function(a){return String(a.userId)===String(user.id);});
-    var attendRecs=recs.filter(function(a){return _isAttend(a);});
-    if(attendRecs.length===0)return;
-    var days=[],totalDays=0,pickupCount=0,dropoffCount=0,mealCount=0;
+    var hasTarget=recs.some(function(a){return _isAttend(a) || (['欠席','体調不良','通院'].indexOf(a.status)>=0 && a.absenceAddition);});
+    if(!hasTarget)return;
+    var days=[],totalDays=0,pickupCount=0,dropoffCount=0,mealCount=0,offsiteCount=0;
     for(var d=1;d<=srDays;d++){
       var ds=srYm+'-'+String(d).padStart(2,'0');var dow=srDow[new Date(srY,srM-1,d).getDay()];
       var rec=null;for(var ri=0;ri<recs.length;ri++){if(String(recs[ri].date)===ds){rec=recs[ri];break;}}
-      var dd={day:d,dow:dow,status:'',startTime:'',endTime:'',pickup:false,dropoff:false,meal:false,notes:'',signUrl:''};
+      var dd={day:d,dow:dow,status:'',startTime:'',endTime:'',pickup:false,dropoff:false,meal:false,absenceAddition:false,offsiteSupport:false,notes:'',signUrl:''};
       if(rec&&_isAttend(rec)){
         totalDays++;dd.status='1';
         var effU = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, ds)) : user;
@@ -1294,11 +1300,19 @@ async function _calcServiceRecordData(srYm){
           mealCount++;
           dd.mealRate=rec.mealRate||'10割';
         }
+        if(rec.offsiteSupport){
+          dd.offsiteSupport=true;
+          offsiteCount++;
+        }
         dd.notes=rec.notes||'';dd.signUrl=rec.signature||'';
+      } else if(rec&&['欠席','体調不良','通院'].indexOf(rec.status)>=0&&rec.absenceAddition){
+        dd.status='欠席';
+        dd.absenceAddition=true;
+        dd.notes=rec.notes||'';
       }
       days.push(dd);
     }
-    srResult.push({id:user.id,name:user.name,recipientNumber:user.recipientNumber||'',contractDays:user.supportDays||'',startDate:user.enrollDate||user.supportStartDate||'',serviceType:user.serviceType||'Ｂ型',days:days,totalDays:totalDays,pickupCount:pickupCount,dropoffCount:dropoffCount,mealCount:mealCount});
+    srResult.push({id:user.id,name:user.name,recipientNumber:user.recipientNumber||'',contractDays:user.supportDays||'',startDate:user.enrollDate||user.supportStartDate||'',serviceType:user.serviceType||'Ｂ型',days:days,totalDays:totalDays,pickupCount:pickupCount,dropoffCount:dropoffCount,mealCount:mealCount,offsiteCount:offsiteCount});
   });
   return{ym:srYm,reiwa:srReiwa,facilityName:srFn,facilityNumber:srFNum,users:srResult,daysInMonth:srDays};
 }
