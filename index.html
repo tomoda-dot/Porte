@@ -12427,7 +12427,7 @@ function renderServiceRecord(sr,fn){
   selHtml+='</select>';
   selHtml+='<button class="bp" onclick="printSR(false)" style="font-size:11px;padding:3px 10px">🖨 この利用者を印刷</button>';
   selHtml+='<button class="bg" onclick="printSR(true)" style="font-size:11px;padding:3px 10px">🖨 全員分を印刷</button>';
-  selHtml+='<button class="bg" onclick="downloadPadV2Csv()" style="font-size:11px;padding:3px 10px;border-color:#2d5a3a;color:#2d5a3a;font-weight:700" title="Power Automate for Desktop で簡易入力V2へ自動入力するためのCSV（1日〜末日の全行）を出力します">🤖 PAD用CSV (V2自動入力)</button>';
+  selHtml+='<button class="bg" onclick="downloadPadV2Csv()" style="font-size:11px;padding:3px 10px;border-color:#2d5a3a;color:#2d5a3a;font-weight:700" title="Power Automate for Desktop で簡易入力V2へ自動入力するための個人別CSVを全員分ZIPで出力します">🤖 PAD用CSV (全員分ZIP)</button>';
   selHtml+='</div>';
 
   var content='';
@@ -12439,6 +12439,83 @@ function renderServiceRecord(sr,fn){
     content=renderServiceRecordOneUser(sr.users[selIdx], sr);
   }
   document.getElementById('e-c').innerHTML=selHtml+content;
+}
+
+function _buildZipBlob(files){
+  var enc=new TextEncoder();
+  var crcTable=(function(){
+    var t=new Uint32Array(256);
+    for(var n=0;n<256;n++){
+      var c=n;
+      for(var k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);
+      t[n]=c>>>0;
+    }
+    return t;
+  })();
+  var crc32=function(u8){
+    var c=0xFFFFFFFF;
+    for(var i=0;i<u8.length;i++) c=crcTable[(c^u8[i])&0xFF]^(c>>>8);
+    return (c^0xFFFFFFFF)>>>0;
+  };
+  var now=new Date();
+  var dosTime=((now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1))&0xFFFF;
+  var dosDate=(((Math.max(1980,now.getFullYear())-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate())&0xFFFF;
+  var localParts=[],centralParts=[],offset=0;
+  files.forEach(function(f){
+    var nameBytes=enc.encode(f.name);
+    var dataBytes=(f.data instanceof Uint8Array)?f.data:enc.encode(String(f.data));
+    var crc=crc32(dataBytes);
+    var lh=new Uint8Array(30+nameBytes.length);
+    var lv=new DataView(lh.buffer);
+    lv.setUint32(0,0x04034B50,true);
+    lv.setUint16(4,20,true);
+    lv.setUint16(6,0x0800,true);
+    lv.setUint16(8,0,true);
+    lv.setUint16(10,dosTime,true);
+    lv.setUint16(12,dosDate,true);
+    lv.setUint32(14,crc,true);
+    lv.setUint32(18,dataBytes.length,true);
+    lv.setUint32(22,dataBytes.length,true);
+    lv.setUint16(26,nameBytes.length,true);
+    lv.setUint16(28,0,true);
+    lh.set(nameBytes,30);
+    localParts.push(lh,dataBytes);
+
+    var ch=new Uint8Array(46+nameBytes.length);
+    var cv=new DataView(ch.buffer);
+    cv.setUint32(0,0x02014B50,true);
+    cv.setUint16(4,20,true);
+    cv.setUint16(6,20,true);
+    cv.setUint16(8,0x0800,true);
+    cv.setUint16(10,0,true);
+    cv.setUint16(12,dosTime,true);
+    cv.setUint16(14,dosDate,true);
+    cv.setUint32(16,crc,true);
+    cv.setUint32(20,dataBytes.length,true);
+    cv.setUint32(24,dataBytes.length,true);
+    cv.setUint16(28,nameBytes.length,true);
+    cv.setUint16(30,0,true);
+    cv.setUint16(32,0,true);
+    cv.setUint16(34,0,true);
+    cv.setUint16(36,0,true);
+    cv.setUint32(38,0,true);
+    cv.setUint32(42,offset,true);
+    ch.set(nameBytes,46);
+    centralParts.push(ch);
+    offset+=lh.length+dataBytes.length;
+  });
+  var centralSize=centralParts.reduce(function(s,p){return s+p.length;},0);
+  var eocd=new Uint8Array(22);
+  var ev=new DataView(eocd.buffer);
+  ev.setUint32(0,0x06054B50,true);
+  ev.setUint16(4,0,true);
+  ev.setUint16(6,0,true);
+  ev.setUint16(8,files.length,true);
+  ev.setUint16(10,files.length,true);
+  ev.setUint32(12,centralSize,true);
+  ev.setUint32(16,offset,true);
+  ev.setUint16(20,0,true);
+  return new Blob(localParts.concat(centralParts,[eocd]),{type:'application/zip'});
 }
 
 function downloadPadV2Csv(){
@@ -12457,10 +12534,14 @@ function downloadPadV2Csv(){
     if(/[",]/.test(s)) return '"'+s.replace(/"/g,'""')+'"';
     return s;
   };
-  var lines=['受給者証番号,氏名,日,提供状況,開始時間,終了時間,送迎往,送迎復,食事,施設外支援,備考'];
+  var folderName='PAD用_V2実績_'+sr.ym;
+  var header='受給者証番号,氏名,日,提供状況,開始時間,終了時間,送迎往,送迎復,食事,施設外支援,備考';
+  var zipFiles=[];
+  var usedNames={};
   sr.users.forEach(function(u){
     var rNum=String(u.recipientNumber||'').trim();
     if(/^\d{1,10}$/.test(rNum)) rNum=rNum.padStart(10,'0');
+    var lines=[header];
     u.days.forEach(function(d){
       var isAttend=(d.status==='1');
       var isAbsAdd=!!d.absenceAddition;
@@ -12486,16 +12567,26 @@ function downloadPadV2Csv(){
         escCsv(notesCol)
       ].join(','));
     });
+    var safeNum=(rNum||'番号未設定').replace(/[\\\/:*?"<>|]/g,'');
+    var safeName=String(u.name||'氏名未設定').trim().replace(/[\\\/:*?"<>|]/g,'');
+    var baseName=safeNum+'_'+safeName;
+    if(usedNames[baseName]){
+      usedNames[baseName]++;
+      baseName+='_'+usedNames[baseName];
+    } else {
+      usedNames[baseName]=1;
+    }
+    var csv='\uFEFF'+lines.join('\r\n')+'\r\n';
+    zipFiles.push({name:folderName+'/'+baseName+'.csv',data:csv});
   });
-  var csv='\uFEFF'+lines.join('\r\n')+'\r\n';
-  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var blob=_buildZipBlob(zipFiles);
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
   a.href=url;
-  a.download='PAD用_V2実績_'+sr.ym+'.csv';
+  a.download=folderName+'.zip';
   a.click();
   URL.revokeObjectURL(url);
-  toast('🤖 PAD用CSVをダウンロードしました');
+  toast('🤖 PAD用CSV（'+zipFiles.length+'名分）をZIPでダウンロードしました');
 }
 
 function printSR(all){
