@@ -12447,6 +12447,11 @@ function downloadPadV2Csv(){
     cAlert('出力するデータがありません');
     return;
   }
+  var toFullWidth=function(str){
+    return String(str||'').replace(/[!-~]/g,function(ch){
+      return String.fromCharCode(ch.charCodeAt(0)+0xFEE0);
+    }).replace(/ /g,'　');
+  };
   var escCsv=function(v){
     var s=String(v===undefined||v===null?'':v).replace(/\r\n|\r|\n/g,' ').trim();
     if(/[",]/.test(s)) return '"'+s.replace(/"/g,'""')+'"';
@@ -12466,7 +12471,7 @@ function downloadPadV2Csv(){
       var dropoffCol=(isAttend&&d.dropoff)?'1':'';
       var mealCol=(isAttend&&d.meal)?'1':'';
       var offsiteCol=(isAttend&&d.offsiteSupport)?'1':'';
-      var notesCol=(isAttend||isAbsAdd)?cleanNotesText(d.notes||''):'';
+      var notesCol=(isAttend||isAbsAdd)?toFullWidth(cleanNotesText(d.notes||'')):'';
       lines.push([
         escCsv(rNum),
         escCsv(u.name),
