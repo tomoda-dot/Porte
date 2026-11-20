@@ -32,6 +32,7 @@ button:hover{opacity:.85}
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--bdr);font-size:12px}
 th{background:var(--card);font-weight:600;position:sticky;top:0;z-index:1;white-space:nowrap}
+tr[style*="background:"] th{background:inherit;color:inherit}
 tr:hover td{background:var(--hov)}
 .bp{background:var(--pri);color:#fff}.ba{background:var(--acc);color:#fff}.br{background:var(--red);color:#fff}
 .bg{background:transparent;color:var(--pri);border:1.5px solid var(--bdr)}
@@ -9833,7 +9834,8 @@ async function renderHaccpDailyTab(container){
   } else {
     // 日付昇順でソート
     var sorted = list.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
-    sorted.forEach(function(r){
+    sorted.forEach(function(rawR){
+      var r = _normHaccpDaily(rawR);
       var isDefect = (r.healthCheck==='不良'||r.handWash==='不良'||r.tableClean==='不良'||r.pestForeign==='不良'||r.areaSeparation==='不良'||r.fireSafety==='不良');
       h += '<tr style="' + (isDefect ? 'background:#ffebee' : '') + '">';
       h += '  <td style="text-align:center;font-weight:700">' + esc(r.date.slice(5)) + '</td>';
@@ -10090,9 +10092,31 @@ async function saveHaccpMonthlyRecordForm(){
 }
 
 // ─── モーダル編集（日常衛生 / 焙煎ロット / 異常是正） ─────────
+function _normHaccpDaily(r){
+  if(!r) return r;
+  var ans = r.answers || {};
+  var v = function(flat, q){
+    var val = flat || q || '';
+    if(val === 'ok') return '良';
+    if(val === 'ng') return '不良';
+    return val;
+  };
+  return Object.assign({}, r, {
+    healthCheck: v(r.healthCheck, ans.q_health),
+    handWash: v(r.handWash, ans.q_wash),
+    tableClean: v(r.tableClean, ans.q_table),
+    pestForeign: v(r.pestForeign, ans.q_foreign),
+    areaSeparation: v(r.areaSeparation, ans.q_other),
+    fireSafety: v(r.fireSafety, ans.q_fire),
+    afterClean: v(r.afterClean, ans.q_clean),
+    staffName: r.staffName || r.verifierName || ''
+  });
+}
+
 async function openHaccpDailyModal(editId){
   var list = await getHaccpJson('haccp_hygiene_' + _haccpMonth, []);
-  var r = editId ? list.find(function(x){ return x.id === editId; }) : null;
+  var rawR = editId ? list.find(function(x){ return x.id === editId; }) : null;
+  var r = rawR ? _normHaccpDaily(rawR) : null;
 
   var dateVal = r ? r.date : today();
   var workerVal = r ? r.workerName : '';
@@ -10396,7 +10420,7 @@ async function printHaccpDailyReport(ym){
   var rowsHtml = '';
   var rowCount = Math.max(sorted.length, 12);
   for(var i = 0; i < rowCount; i++){
-    var r = sorted[i] || {};
+    var r = sorted[i] ? _normHaccpDaily(sorted[i]) : {};
     rowsHtml += '<tr>' +
       '<td style="text-align:center;padding:3px">' + (r.date ? r.date.slice(5) : '') + '</td>' +
       '<td style="padding:3px 6px">' + esc(r.workerName || '') + '</td>' +
@@ -10550,6 +10574,7 @@ async function printHaccpRoastReport(){
     '  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 8pt; white-space: nowrap; }' +
     '  th, td { border: 1px solid #333; }' +
     '  th { background: #efebe9; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+    '  tr[style*="background:"] th { background: inherit; color: inherit; }' +
     '</style></head><body>' +
     '<h1>【ひとつぎ珈琲】HACCP 焙煎・出荷台帳（生豆受入 〜 焙煎製造 〜 包装出荷 ロット管理）</h1>' +
     '<table>' +
@@ -10593,7 +10618,8 @@ async function exportHaccpDailyCsv(ym){
   var list = await getHaccpJson('haccp_hygiene_' + ym, []);
   var headers = ['作業日','作業者','健康確認','手洗い消毒','専用台器具清掃','害虫異物有無','他作業区分','設備火気安全','作業後清掃片付','特記事項','確認職員'];
   var lines = [headers.join(',')];
-  list.forEach(function(r){
+  list.forEach(function(rawR){
+    var r = _normHaccpDaily(rawR);
     lines.push([
       r.date||'',
       '"'+(r.workerName||'').replace(/"/g,'""')+'"',
