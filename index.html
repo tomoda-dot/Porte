@@ -2110,7 +2110,6 @@ async function openAttDailyM(uid, ds){
       '    </div>'+
       '    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:4px">'+
       '      <label id="adm-aa-wrap" style="display:none;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#c62828;cursor:pointer"><input type="checkbox" id="adm-aa"'+(att.absenceAddition?' checked':'')+'> 欠席時対応加算（算定対象）</label>'+
-      '      <label id="adm-os-wrap" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--pri);cursor:pointer"><input type="checkbox" id="adm-os"'+(att.offsiteSupport?' checked':'')+'> 施設外支援</label>'+
       '    </div>'+
       '    <div class="field" style="margin-top:14px">'+
       '      <label>出欠備考 (予定変更や欠席理由など)</label>'+
@@ -2175,6 +2174,9 @@ async function openAttDailyM(uid, ds){
       '    </div>'+
       '    <div class="field" style="display:none">'+
       '      <textarea id="adm-dn" rows="1" style="width:100%">'+esc(rep.notes||'')+'</textarea>'+
+      '    </div>'+
+      '    <div style="margin-top:6px">'+
+      '      <label id="adm-os-wrap" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--pri);cursor:pointer"><input type="checkbox" id="adm-os"'+(att.offsiteSupport?' checked':'')+'> 施設外支援（施設外就労）</label>'+
       '    </div>'+
       '  </div>'+
       '</div>'+
