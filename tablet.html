@@ -475,8 +475,8 @@
     }
 
     #sidebar {
-      width: 240px;
-      min-width: 200px;
+      width: 260px;
+      min-width: 240px;
       background: #fff;
       border-right: 1px solid var(--bdr);
       display: flex;
@@ -501,7 +501,7 @@
     #sidebar-header input[type=date] {
       flex: 1;
       width: 100%;
-      padding: 6px 8px;
+      padding: 6px 28px 6px 8px;
       border: 1.5px solid var(--bdr);
       border-radius: 6px;
       font-size: 13px;
@@ -514,6 +514,10 @@
       align-items: center;
       flex: 1;
       width: 100%;
+      min-width: 0;
+    }
+    input[type="date"].jp-date-enhanced {
+      padding-right: 28px !important;
     }
     input[type="date"].jp-date-enhanced::-webkit-datetime-edit,
     input[type="date"].jp-date-enhanced::-webkit-datetime-edit-fields-wrapper,
@@ -527,13 +531,16 @@
     .jp-date-overlay {
       position: absolute;
       left: 10px;
+      right: 26px;
       top: 50%;
       transform: translateY(-50%);
       pointer-events: none;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       user-select: none;
-      font-size: 15px;
-      font-weight: 500;
+      font-size: 14px;
+      font-weight: 600;
       color: #333;
     }
 
