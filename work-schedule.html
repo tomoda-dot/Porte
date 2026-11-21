@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>利用者 作業スケジュール作成システム</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --pri: #2e5c40;
+      --pri-light: #e8f5e9;
+      --acc: #d97706;
+      --txt: #1e293b;
+      --sub: #64748b;
+      --bdr: #e2e8f0;
+      --break-bg: #fffbeb;
+      --break-bdr: #fcd34d;
+      --absent-bg: #fef2f2;
+      --off-bg: #f1f5f9;
+      --shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--txt);
+      font-size: 14px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    button, input, select, textarea {
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    /* Header */
+    .app-header {
+      background: linear-gradient(135deg, #244a33 0%, #2e5c40 60%, #1e3f2b 100%);
+      color: #fff;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .app-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+    .readonly-badge {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: #e2f8ea;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      background: rgba(0,0,0,0.2);
+      padding: 4px;
+      border-radius: 12px;
+    }
+    .nav-tab {
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,0.8);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .nav-tab:hover {
+      color: #fff;
+      background: rgba(255,255,255,0.1);
+    }
+    .nav-tab.active {
+      background: #fff;
+      color: var(--pri);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    /* Main Container */
+    .main-container {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 18px 20px 40px;
+      flex: 1;
+    }
+
+    /* Control Bar */
+    .control-bar {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 18px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      border: 1px solid var(--bdr);
+    }
+    .date-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: 1.5px solid var(--bdr);
+      background: #fff;
+      color: var(--txt);
+      padding: 8px 14px;
+      border-radius: 9px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .btn:active { transform: scale(0.98); }
+    .btn-pri {
+      background: var(--pri);
+      color: #fff;
+      border-color: var(--pri);
+      box-shadow: 0 2px 8px rgba(46, 92, 64, 0.25);
+    }
+    .btn-pri:hover { background: #244a33; border-color: #244a33; }
+    .btn-acc {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      border: none;
+      box-shadow: 0 3px 10px rgba(217, 119, 6, 0.3);
+    }
+    .btn-acc:hover { opacity: 0.94; }
+    .btn-danger {
+      background: #fef2f2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .btn-danger:hover { background: #fee2e2; }
+
+    /* Custom Japanese Date Input Wrapper */
+    .jp-date-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      min-width: 185px;
+    }
+    input[type="date"].jp-date-enhanced {
+      width: 100%;
+      padding: 8px 30px 8px 12px;
+      border: 2px solid var(--pri);
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 700;
+      background: #fff;
+      cursor: pointer;
+    }
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit,
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit-fields-wrapper,
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit-text,
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit-year-field,
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit-month-field,
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit-day-field {
+      color: transparent !important;
+      opacity: 0 !important;
+    }
+    .jp-date-overlay {
+      position: absolute;
+      left: 12px;
+      right: 28px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      white-space: nowrap;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--txt);
+    }
+
+    /* Summary Chips */
+    .summary-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .summary-chip {
+      background: var(--card);
+      border: 1px solid var(--bdr);
+      border-radius: 10px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    }
+    .summary-chip .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    /* Schedule Table */
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--bdr);
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--bdr);
+    }
+    .sched-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+    .sched-table th, .sched-table td {
+      border: 1px solid var(--bdr);
+      padding: 8px 6px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .sched-table thead th {
+      background: #f8fafc;
+      color: var(--txt);
+      font-weight: 800;
+      font-size: 12.5px;
+      padding: 10px 6px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .sched-table thead th.break-col {
+      background: var(--break-bg);
+      color: #b45309;
+    }
+    .sched-table tbody tr:hover td {
+      background-color: rgba(241, 245, 249, 0.5);
+    }
+    .user-cell {
+      text-align: left !important;
+      padding: 8px 12px !important;
+      min-width: 170px;
+      background: #fff;
+      position: sticky;
+      left: 0;
+      z-index: 1;
+    }
+    .user-name-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .user-name {
+      font-weight: 800;
+      font-size: 14px;
+      color: var(--txt);
+    }
+    .user-time-badge {
+      font-size: 11px;
+      color: var(--sub);
+      background: #f1f5f9;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin-top: 3px;
+    }
+    .user-status-tag {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 5px;
+    }
+
+    /* Slot Cells */
+    .slot-cell {
+      min-width: 105px;
+      height: 58px;
+      padding: 4px !important;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      position: relative;
+      user-select: none;
+    }
+    .slot-cell:hover {
+      box-shadow: inset 0 0 0 2px var(--pri);
+    }
+    .slot-cell.slot-off {
+      background: repeating-linear-gradient(
+        -45deg,
+        #f1f5f9,
+        #f1f5f9 6px,
+        #e2e8f0 6px,
+        #e2e8f0 12px
+      );
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .slot-cell.slot-break {
+      background: var(--break-bg);
+      color: #b45309;
+      font-weight: 800;
+      font-size: 12px;
+    }
+    .slot-task-box {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      padding: 5px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-weight: 800;
+      font-size: 12.5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1.5px solid rgba(0,0,0,0.08);
+    }
+    .slot-task-name {
+      line-height: 1.2;
+      word-break: keep-all;
+    }
+    .slot-task-sub {
+      font-size: 10px;
+      opacity: 0.85;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .slot-empty-box {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      border: 1.5px dashed #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* Task Cards & Settings */
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 900px) {
+      .grid-2col { grid-template-columns: 1fr; }
+    }
+    .section-hd {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--pri);
+      margin: 0 0 14px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--bdr);
+    }
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border: 1.5px solid var(--bdr);
+      border-radius: 12px;
+      background: #fff;
+      flex-wrap: wrap;
+    }
+    .task-color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.15);
+    }
+    .task-info {
+      flex: 1;
+      min-width: 150px;
+    }
+    .task-title {
+      font-weight: 800;
+      font-size: 14.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .task-meta {
+      font-size: 12px;
+      color: var(--sub);
+      margin-top: 2px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    /* Proficiency Matrix */
+    .prof-table th, .prof-table td {
+      border: 1px solid var(--bdr);
+      padding: 8px 10px;
+      text-align: center;
+    }
+    .prof-table thead th {
+      background: #f8fafc;
+      font-weight: 800;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .prof-btn {
+      width: 100%;
+      min-width: 92px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      border: 1.5px solid var(--bdr);
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .prof-lv-3 { background: #fef3c7; border-color: #f59e0b; color: #b45309; }
+    .prof-lv-2 { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+    .prof-lv-1 { background: #e0f2fe; border-color: #38bdf8; color: #0369a1; }
+    .prof-lv-0 { background: #f1f5f9; border-color: #cbd5e1; color: #94a3b8; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 22px 24px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    }
+    .modal-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1.5px solid var(--bdr);
+    }
+    .modal-hd h3 { margin: 0; font-size: 16px; font-weight: 800; }
+    .form-field { margin-bottom: 14px; }
+    .form-field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--sub);
+      margin-bottom: 5px;
+    }
+    .form-input, .form-select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--bdr);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      outline: none;
+    }
+    .form-input:focus, .form-select:focus { border-color: var(--pri); }
+
+    /* Toast */
+    .toast-msg {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 13.5px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .toast-msg.show { opacity: 1; }
+
+    /* Print */
+    @media print {
+      .no-print, .app-header, .control-bar, .slot-hint { display: none !important; }
+      body, .main-container, .card {
+        background: #fff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      .print-header {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 6px;
+        border-bottom: 2px solid #000;
+      }
+      .table-wrap { overflow: visible !important; border: none !important; }
+      .sched-table { min-width: 100% !important; font-size: 11px !important; }
+      .sched-table th, .sched-table td { padding: 4px !important; border: 1px solid #666 !important; }
+      .slot-cell { height: 42px !important; min-width: auto !important; }
+      .slot-task-box { box-shadow: none !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .slot-cell.slot-break, .slot-cell.slot-off { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      @page { size: A4 landscape; margin: 8mm; }
+    }
+    .print-header { display: none; }
+  </style>
+  <!-- Porteのデータ読み取り専用（Porteへの書き込みは一切行いません） -->
+  <script src="supabase-lib.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-adapter.js"></script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header no-print">
+    <div class="header-left">
+      <h1 class="app-title">🗓️ 利用者 作業スケジュール作成</h1>
+      <span class="readonly-badge" title="Porteから利用者・出欠時間を読み取るのみで、Porte側には一切書き込みません">🔒 Porte非干渉（読み取り専用連携）</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tab-btn-schedule" onclick="switchView('schedule')">📅 スケジュール表</button>
+      <button class="nav-tab" id="tab-btn-prof" onclick="switchView('prof')">⭐ 利用者の熟練度設定</button>
+      <button class="nav-tab" id="tab-btn-tasks" onclick="switchView('tasks')">⚙️ 作業種別・時間枠設定</button>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- ==================== VIEW 1: スケジュール表 ==================== -->
+    <section id="view-schedule">
+      <!-- Print Header -->
+      <div class="print-header">
+        <div style="font-size:18px;font-weight:800;" id="print-title-date">作業スケジュール表</div>
+        <div style="font-size:12px;color:#444;" id="print-title-sub">ひとつぎ豊中小曽根</div>
+      </div>
+
+      <!-- Control Bar -->
+      <div class="control-bar no-print">
+        <div class="date-ctrl">
+          <button class="btn" onclick="shiftDate(-1)">◀ 前日</button>
+          <input type="date" id="sched-date" onchange="onDateChange()">
+          <button class="btn" onclick="shiftDate(1)">翌日 ▶</button>
+          <button class="btn" onclick="setToday()">本日</button>
+          <button class="btn" onclick="reloadPorteData()" title="Porteから最新の出欠・利用時間データを再取得します">🔄 Porteデータ再読込</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--sub);cursor:pointer;margin-right:4px;">
+            <input type="checkbox" id="chk-show-all-users" onchange="renderScheduleView()" style="width:16px;height:16px;accent-color:var(--pri);">
+            <span>予定外の利用者も表示</span>
+          </label>
+          <button class="btn btn-acc" onclick="autoGenerateSchedule()">✨ 熟練度優先で自動割り当て</button>
+          <button class="btn btn-danger" onclick="clearDaySchedule()">🗑 クリア</button>
+          <button class="btn btn-pri" onclick="window.print()">🖨️ A4横で印刷</button>
+        </div>
+      </div>
+
+      <!-- Task Summary Bar -->
+      <div class="summary-bar" id="task-summary-bar"></div>
+
+      <!-- Schedule Matrix Card -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;" class="no-print">
+          <div style="font-weight:800;font-size:15px;color:var(--pri);" id="sched-sub-heading">タイムテーブル（1時間単位）</div>
+          <div class="slot-hint" style="font-size:12px;color:var(--sub);font-weight:600;">
+            💡 各コマをクリックすると手動で作業変更・休憩・通所時間外の切り替えができます（2時間連続作業にも対応）
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="sched-table" id="sched-table">
+            <thead id="sched-thead"></thead>
+            <tbody id="sched-tbody">
+              <tr><td colspan="8" style="padding:40px;color:var(--sub);font-weight:700;">Porteから利用者・時間データを読み込み中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: 熟練度設定 ==================== -->
+    <section id="view-prof" style="display:none;">
+      <div class="card">
+        <div class="section-hd">
+          <span>⭐ 利用者ごとの作業熟練度マトリクス</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="text" id="prof-search" class="form-input" placeholder="🔍 利用者名で検索..." oninput="renderProficiencyTable()" style="width:200px;padding:6px 10px;font-size:13px;">
+            <button class="btn" onclick="setAllProficiency(2)">全員「〇 標準」にリセット</button>
+          </div>
+        </div>
+        <div style="font-size:12.5px;color:var(--sub);margin-bottom:14px;line-height:1.6;">
+          セルをクリックすると熟練度が切り替わります：
+          <span class="badge-pill prof-lv-3" style="margin:0 3px;">◎ 得意・優先 (Lv.3)</span> →
+          <span class="badge-pill prof-lv-2" style="margin:0 3px;">〇 標準・可能 (Lv.2)</span> →
+          <span class="badge-pill prof-lv-1" style="margin:0 3px;">△ 練習中・補助要 (Lv.1)</span> →
+          <span class="badge-pill prof-lv-0" style="margin:0 3px;">✕ 不可・対象外 (Lv.0)</span>
+          <br>※自動割り当てでは <strong>◎ 得意（Lv.3）＞ 〇 標準（Lv.2）＞ △ 練習中（Lv.1）</strong> の順に優先してスケジュールを組みます（✕ 不可の作業は割り当てられません）。
+        </div>
+        <div class="table-wrap" style="max-height:70vh;overflow-y:auto;">
+          <table class="sched-table prof-table">
+            <thead id="prof-thead"></thead>
+            <tbody id="prof-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: 作業種別・時間枠設定 ==================== -->
+    <section id="view-tasks" style="display:none;">
+      <div class="grid-2col">
+        <!-- 左：作業マスタ -->
+        <div class="card">
+          <div class="section-hd">
+            <span>🛠️ 作業種別の登録・設定</span>
+            <button class="btn btn-pri" onclick="openTaskModal()">＋ 新しい作業を追加</button>
+          </div>
+          <div style="font-size:12.5px;color:var(--sub);margin-bottom:14px;">
+            1時間単位の作業や、<strong>2時間連続で行う作業（2時間枠）</strong>、各コマの必要人数・上限人数を設定できます。
+          </div>
+          <div class="task-list" id="task-master-list"></div>
+        </div>
+
+        <!-- 右：時間枠・休憩設定 -->
+        <div class="card">
+          <div class="section-hd">
+            <span>⏰ 時間枠・休憩時間の設定</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--sub);margin-bottom:16px;">
+            1時間ごとのスケジュール枠と休憩時間（初期設定：12:00〜13:00）を自由に変更できます。
+          </div>
+
+          <div class="form-field">
+            <label>作業開始時刻（最初の1時間枠の開始）</label>
+            <select id="cfg-day-start" class="form-select" onchange="saveTimeConfig()">
+              <option value="8">08:00</option>
+              <option value="9">09:00</option>
+              <option value="10">10:00</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label>作業終了時刻（最後の1時間枠の終了）</label>
+            <select id="cfg-day-end" class="form-select" onchange="saveTimeConfig()">
+              <option value="15">15:00</option>
+              <option value="16">16:00</option>
+              <option value="17">17:00</option>
+              <option value="18">18:00</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label>🍱 昼休憩の時間帯（設定変更可能）</label>
+            <select id="cfg-break-hour" class="form-select" onchange="saveTimeConfig()">
+              <option value="11">11:00 〜 12:00（1時間）</option>
+              <option value="12">12:00 〜 13:00（1時間・標準）</option>
+              <option value="13">13:00 〜 14:00（1時間）</option>
+              <option value="-1">休憩枠なし（全枠を作業枠にする）</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label>🔄 自動割り当て時のルール</label>
+            <div style="background:#f8fafc;border:1px solid var(--bdr);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--txt);cursor:pointer;margin:0;">
+                <input type="checkbox" id="cfg-prefer-2h" onchange="saveTimeConfig()" style="width:16px;height:16px;accent-color:var(--pri);">
+                <span>「2時間連続作業」のタスクを優先的に2コマ連続で確保する</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--txt);cursor:pointer;margin:0;">
+                <input type="checkbox" id="cfg-rotate-tasks" onchange="saveTimeConfig()" style="width:16px;height:16px;accent-color:var(--pri);">
+                <span>1時間作業は同じ人がずっと同じ作業にならないよう適度にローテーションする</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="margin-top:18px;padding:12px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:12px;color:#166534;line-height:1.6;">
+            <strong>🔒 Porte非干渉設計について</strong><br>
+            ・Porteからは「利用者名」「通所予定曜日」「当日の出欠・開始終了時刻」のみを読み取ります。<br>
+            ・ここで設定した作業種別・熟練度・作成したスケジュールは独立して保存され、Porteの日報や出欠データには一切影響しません。
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: コマ手動編集 ==================== -->
+  <div class="modal-overlay" id="slot-modal">
+    <div class="modal-box">
+      <div class="modal-hd">
+        <h3 id="slot-modal-title">コマの作業変更</h3>
+        <button class="btn" onclick="closeSlotModal()" style="padding:4px 10px;">✕</button>
+      </div>
+      <div id="slot-modal-info" style="font-size:13px;color:var(--sub);font-weight:700;margin-bottom:12px;"></div>
+      <div id="slot-modal-options" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: 作業追加・編集 ==================== -->
+  <div class="modal-overlay" id="task-modal">
+    <div class="modal-box">
+      <div class="modal-hd">
+        <h3 id="task-modal-title">作業種別の設定</h3>
+        <button class="btn" onclick="closeTaskModal()" style="padding:4px 10px;">✕</button>
+      </div>
+      <input type="hidden" id="tm-id">
+      <div class="form-field">
+        <label>作業名（例：珈琲ハンドピック、袋詰め、箱折り、清掃など）</label>
+        <input type="text" id="tm-name" class="form-input" placeholder="作業名を入力">
+      </div>
+      <div class="grid-2col" style="gap:10px;">
+        <div class="form-field">
+          <label>アイコン絵文字</label>
+          <input type="text" id="tm-icon" class="form-input" value="📦" placeholder="☕ / 📦 / 🧹">
+        </div>
+        <div class="form-field">
+          <label>ラベル背景カラー</label>
+          <input type="color" id="tm-color" class="form-input" value="#dcfce7" style="height:40px;padding:4px;cursor:pointer;">
+        </div>
+      </div>
+      <div class="form-field">
+        <label>⏱️ 作業時間の単位（1時間 / 2時間連続）</label>
+        <select id="tm-duration" class="form-select">
+          <option value="1">1時間単位（1コマから割り当て可能）</option>
+          <option value="2">2時間連続優先（2コマ連続を優先して割り当て）</option>
+          <option value="2_strict">2時間連続のみ（2コマ連続取れる人のみ割り当て）</option>
+        </select>
+      </div>
+      <div class="grid-2col" style="gap:10px;">
+        <div class="form-field">
+          <label>1コマあたりの目標（必要）人数</label>
+          <input type="number" id="tm-min" class="form-input" min="0" max="50" value="2">
+        </div>
+        <div class="form-field">
+          <label>1コマあたりの最大（上限）人数</label>
+          <input type="number" id="tm-max" class="form-input" min="1" max="50" value="6">
+        </div>
+      </div>
+      <div class="form-field">
+        <label>対象時間帯の制限</label>
+        <select id="tm-period" class="form-select">
+          <option value="all">終日（午前・午後どちらでも可）</option>
+          <option value="am">午前のみ（昼休憩前のみ）</option>
+          <option value="pm">午後のみ（昼休憩後のみ）</option>
+        </select>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
+        <button class="btn" onclick="closeTaskModal()">キャンセル</button>
+        <button class="btn btn-pri" onclick="saveTaskModal()">💾 保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-msg" id="toast-msg"></div>
+
+  <script>
+    // =========================================================================
+    // 独立ストレージキー（Porte本体には一切干渉しない専用名前空間）
+    // =========================================================================
+    var STORAGE_KEYS = {
+      TASKS: 'work_sched_independent_tasks_v1',
+      PROF:  'work_sched_independent_prof_v1',
+      CFG:   'work_sched_independent_cfg_v1',
+      DAYS:  'work_sched_independent_days_v1'
+    };
+
+    // デフォルト作業マスタ（1時間作業・2時間連続作業の両方を含む）
+    var DEFAULT_TASKS = [
+      { id: 't_coffee_pick', name: '珈琲豆ハンドピック', icon: '☕', color: '#fef3c7', durationMode: '2', minPeople: 3, maxPeople: 8, period: 'all' },
+      { id: 't_roast_pack',  name: '珈琲ドリップ包装・計量', icon: '⚖️', color: '#ffedd5', durationMode: '2', minPeople: 2, maxPeople: 5, period: 'all' },
+      { id: 't_dagashi',     name: '駄菓子値付け・品出し', icon: '🍬', color: '#fce7f3', durationMode: '1', minPeople: 2, maxPeople: 5, period: 'all' },
+      { id: 't_lightwork',   name: '内職・軽作業（箱折り・封入）', icon: '📦', color: '#e0f2fe', durationMode: '2', minPeople: 3, maxPeople: 10, period: 'all' },
+      { id: 't_bento_prep',  name: 'お弁当盛付・配膳補助', icon: '🍱', color: '#dcfce7', durationMode: '1', minPeople: 1, maxPeople: 4, period: 'am' },
+      { id: 't_clean',       name: '清掃・片付け・消毒', icon: '🧹', color: '#ede9fe', durationMode: '1', minPeople: 1, maxPeople: 6, period: 'pm' }
+    ];
+
+    var DEFAULT_CFG = {
+      dayStart: 9,      // 9:00
+      dayEnd: 16,       // 16:00
+      breakHour: 12,    // 12:00 - 13:00
+      prefer2h: true,
+      rotateTasks: true
+    };
+
+    // 状態変数
+    var PORTE_USERS = [];
+    var PORTE_ATT_BY_DATE = {};
+    var PORTE_TEMP_BY_DATE = {};
+
+    var TASKS = loadLocal(STORAGE_KEYS.TASKS, DEFAULT_TASKS);
+    var PROFICIENCY = loadLocal(STORAGE_KEYS.PROF, {}); // { [userId]: { [taskId]: 0|1|2|3 } }
+    var TIME_CFG = Object.assign({}, DEFAULT_CFG, loadLocal(STORAGE_KEYS.CFG, DEFAULT_CFG));
+    var SAVED_SCHEDULES = loadLocal(STORAGE_KEYS.DAYS, {}); // { [dateStr]: { [userId]: { [hour]: { taskId, spanInfo, manualStatus } } } }
+
+    function loadLocal(key, fallback) {
+      try {
+        var raw = localStorage.getItem(key);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return JSON.parse(JSON.stringify(fallback));
+    }
+    function saveLocal(key, val) {
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+    }
+
+    function showToast(msg) {
+      var el = document.getElementById('toast-msg');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2400);
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function getTodayStr() {
+      var d = new Date();
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    }
+    function formatJpDateWithDow(val) {
+      if (!val) return '----年--月--日(-)';
+      var p = String(val).split('-');
+      if (p.length !== 3) return val;
+      var y = parseInt(p[0], 10), m = parseInt(p[1], 10), d = parseInt(p[2], 10);
+      var dt = new Date(y, m - 1, d);
+      var dow = ['日', '月', '火', '水', '木', '金', '土'][dt.getDay()];
+      return y + '年' + pad(m) + '月' + pad(d) + '日(' + dow + ')';
+    }
+
+    // Windowsの空カッコ () を防ぎ曜日を表示する日付ラッパー
+    function initJapaneseDateInputs() {
+      var protoDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+      document.querySelectorAll('input[type="date"]').forEach(function (inp) {
+        if (inp.classList.contains('jp-date-enhanced')) return;
+        inp.classList.add('jp-date-enhanced');
+
+        var wrap = document.createElement('div');
+        wrap.className = 'jp-date-wrap';
+        inp.parentNode.insertBefore(wrap, inp);
+        wrap.appendChild(inp);
+
+        var overlay = document.createElement('span');
+        overlay.className = 'jp-date-overlay';
+        wrap.appendChild(overlay);
+
+        var syncOverlay = function () {
+          var curVal = protoDesc ? protoDesc.get.call(inp) : inp.getAttribute('value');
+          overlay.textContent = formatJpDateWithDow(curVal);
+        };
+
+        if (protoDesc && protoDesc.get && protoDesc.set) {
+          Object.defineProperty(inp, 'value', {
+            configurable: true,
+            enumerable: true,
+            get: function () { return protoDesc.get.call(this); },
+            set: function (v) { protoDesc.set.call(this, v); syncOverlay(); }
+          });
+        }
+
+        inp.addEventListener('input', syncOverlay);
+        inp.addEventListener('change', syncOverlay);
+        inp.addEventListener('click', function () {
+          if (this.showPicker) { try { this.showPicker(); } catch (e) {} }
+        });
+        syncOverlay();
+      });
+    }
+
+    // =========================================================================
+    // 時間枠ヘルパー
+    // =========================================================================
+    function getHourList() {
+      var start = Number(TIME_CFG.dayStart) || 9;
+      var end = Number(TIME_CFG.dayEnd) || 16;
+      if (end <= start) end = start + 1;
+      var hours = [];
+      for (var h = start; h < end; h++) {
+        hours.push(h);
+      }
+      return hours;
+    }
+
+    function parseTimeToMinutes(tStr, fallbackMin) {
+      if (!tStr || typeof tStr !== 'string') return fallbackMin;
+      var m = tStr.trim().match(/^(\d{1,2}):(\d{2})/);
+      if (!m) return fallbackMin;
+      return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+    }
+
+    // 利用者がその日の指定1時間枠（h:00 〜 h+1:00）に在籍しているか判定
+    function isUserPresentInHour(userInfo, h) {
+      if (userInfo.isAbsent) return false;
+      var slotStart = h * 60;
+      var slotEnd = (h + 1) * 60;
+      // 枠のうち30分以上在籍していれば作業枠対象とする（例 9:10出勤なら9時台は50分在籍なので対象、15:30退勤なら15時台は30分在籍なので対象）
+      var overlapStart = Math.max(slotStart, userInfo.startMin);
+      var overlapEnd = Math.min(slotEnd, userInfo.endMin);
+      return (overlapEnd - overlapStart) >= 25;
+    }
+
+    // =========================================================================
+    // Porteからの読み取り専用データ取得
+    // =========================================================================
+    async function initApp() {
+      initJapaneseDateInputs();
+      var dateInput = document.getElementById('sched-date');
+      dateInput.value = getTodayStr();
+
+      // 時間設定セレクト初期値反映
+      document.getElementById('cfg-day-start').value = String(TIME_CFG.dayStart);
+      document.getElementById('cfg-day-end').value = String(TIME_CFG.dayEnd);
+      document.getElementById('cfg-break-hour').value = String(TIME_CFG.breakHour);
+      document.getElementById('cfg-prefer-2h').checked = !!TIME_CFG.prefer2h;
+      document.getElementById('cfg-rotate-tasks').checked = !!TIME_CFG.rotateTasks;
+
+      await reloadPorteData();
+    }
+
+    async function reloadPorteData() {
+      var dateStr = document.getElementById('sched-date').value || getTodayStr();
+      try {
+        var res = await Promise.all([
+          gas('getUsers'),
+          gas('getAttendanceByDate', dateStr),
+          gas('getTempByDate', dateStr)
+        ]);
+        PORTE_USERS = (res[0] || []).filter(function(u) {
+          return u && u.userStatus !== '利用終了';
+        });
+        var attMap = {};
+        (res[1] || []).forEach(function(a) {
+          if (a && a.userId) attMap[String(a.userId).trim()] = a;
+        });
+        PORTE_ATT_BY_DATE[dateStr] = attMap;
+
+        var tmpMap = {};
+        (res[2] || []).forEach(function(t) {
+          if (t && t.userId) tmpMap[String(t.userId).trim()] = t;
+        });
+        PORTE_TEMP_BY_DATE[dateStr] = tmpMap;
+
+        renderScheduleView();
+        renderProficiencyTable();
+        renderTaskMasterList();
+      } catch (e) {
+        console.error('Porte read error:', e);
+        showToast('⚠️ Porteデータの取得に失敗しました');
+      }
+    }
+
+    async function ensureDateLoaded(dateStr) {
+      if (!PORTE_ATT_BY_DATE[dateStr]) {
+        try {
+          var res = await Promise.all([
+            gas('getAttendanceByDate', dateStr),
+            gas('getTempByDate', dateStr)
+          ]);
+          var attMap = {};
+          (res[0] || []).forEach(function(a) {
+            if (a && a.userId) attMap[String(a.userId).trim()] = a;
+          });
+          PORTE_ATT_BY_DATE[dateStr] = attMap;
+
+          var tmpMap = {};
+          (res[1] || []).forEach(function(t) {
+            if (t && t.userId) tmpMap[String(t.userId).trim()] = t;
+          });
+          PORTE_TEMP_BY_DATE[dateStr] = tmpMap;
+        } catch (e) {}
+      }
+    }
+
+    // 指定日の利用者リストと通所時間をPorteデータから算出
+    function getUsersForDate(dateStr) {
+      var attMap = PORTE_ATT_BY_DATE[dateStr] || {};
+      var tmpMap = PORTE_TEMP_BY_DATE[dateStr] || {};
+      var showAll = document.getElementById('chk-show-all-users') && document.getElementById('chk-show-all-users').checked;
+      var p = dateStr.split('-');
+      var dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+      var dow = ['日', '月', '火', '水', '木', '金', '土'][dt.getDay()];
+
+      var result = [];
+      PORTE_USERS.forEach(function(u) {
+        if (u.enrollDate && u.enrollDate > dateStr) return;
+        if (u.endDate && u.endDate < dateStr) return;
+
+        var uid = String(u.id).trim();
+        var att = attMap[uid];
+        var tmp = tmpMap[uid];
+        var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, dateStr) : u;
+        var days = String(sc.scheduleDays || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+        var isRegDay = days.indexOf(dow) >= 0;
+
+        var status = att ? (att.status || '出席') : (tmp ? '臨時' : (isRegDay ? '予定' : '予定外'));
+        var isAbsent = ['欠席', '体調不良', '通院', '調整休'].indexOf(status) >= 0;
+        var isScheduled = !isAbsent && (isRegDay || !!tmp || (att && ['出席', '遅刻', '早退', '予定'].indexOf(att.status) >= 0));
+
+        if (!isScheduled && !showAll) return;
+
+        // 開始・終了時刻の決定（当日出欠レコード ＞ 利用者スケジュール設定 ＞ 契約時間 ＞ デフォルト10:00-15:00）
+        var rawStart = (att && att.startTime) || sc.scheduleStart || sc.contractStart || '10:00';
+        var rawEnd   = (att && att.endTime)   || sc.scheduleEnd   || sc.contractEnd   || '15:00';
+
+        var startMin = parseTimeToMinutes(rawStart, 10 * 60);
+        var endMin   = parseTimeToMinutes(rawEnd, 15 * 60);
+
+        result.push({
+          id: uid,
+          name: u.name || '名称未設定',
+          kana: u.furigana || u.kana || '',
+          status: status,
+          isAbsent: isAbsent,
+          isScheduled: isScheduled,
+          startTime: rawStart,
+          endTime: rawEnd,
+          startMin: startMin,
+          endMin: endMin
+        });
+      });
+
+      return result;
+    }
+
+    // =========================================================================
+    // 熟練度ヘルパー (3:◎得意, 2:〇標準, 1:△練習中, 0:✕不可)
+    // =========================================================================
+    function getProfLevel(userId, taskId) {
+      if (PROFICIENCY[userId] && PROFICIENCY[userId][taskId] !== undefined) {
+        return Number(PROFICIENCY[userId][taskId]);
+      }
+      return 2; // デフォルトは「〇 標準 (Lv.2)」
+    }
+
+    function setProfLevel(userId, taskId, lv) {
+      if (!PROFICIENCY[userId]) PROFICIENCY[userId] = {};
+      PROFICIENCY[userId][taskId] = lv;
+      saveLocal(STORAGE_KEYS.PROF, PROFICIENCY);
+    }
+
+    function profBadgeText(lv) {
+      if (lv === 3) return '◎ 得意';
+      if (lv === 2) return '〇 標準';
+      if (lv === 1) return '△ 練習中';
+      return '✕ 不可';
+    }
+    function profSymbol(lv) {
+      if (lv === 3) return '◎';
+      if (lv === 2) return '〇';
+      if (lv === 1) return '△';
+      return '✕';
+    }
+
+    // =========================================================================
+    // 自動割り当てエンジン（熟練度優先・2時間連続作業＆1時間作業対応）
+    // =========================================================================
+    function autoGenerateSchedule() {
+      var dateStr = document.getElementById('sched-date').value || getTodayStr();
+      var users = getUsersForDate(dateStr);
+      if (users.length === 0) {
+        showToast('対象となる利用者がいません');
+        return;
+      }
+      if (TASKS.length === 0) {
+        showToast('作業種別が登録されていません');
+        return;
+      }
+
+      var hours = getHourList();
+      var breakH = Number(TIME_CFG.breakHour);
+      var daySched = {};
+
+      // 各利用者の時間枠を初期化
+      users.forEach(function(u) {
+        daySched[u.id] = {};
+        hours.forEach(function(h) {
+          if (h === breakH) {
+            daySched[u.id][h] = { type: 'break' };
+          } else if (!u.isScheduled || u.isAbsent || !isUserPresentInHour(u, h)) {
+            daySched[u.id][h] = { type: 'off' };
+          } else {
+            daySched[u.id][h] = { type: 'empty', taskId: null };
+          }
+        });
+      });
+
+      // 時間帯（AM/PM）チェック
+      function isTaskAllowedInHour(task, h) {
+        if (task.period === 'am' && breakH > 0 && h >= breakH) return false;
+        if (task.period === 'pm' && breakH > 0 && h < breakH) return false;
+        return true;
+      }
+
+      // そのコマでのタスク割当人数カウント
+      function countTaskInHour(taskId, h) {
+        var c = 0;
+        Object.keys(daySched).forEach(function(uid) {
+          var cell = daySched[uid][h];
+          if (cell && cell.type === 'task' && cell.taskId === taskId) c++;
+        });
+        return c;
+      }
+
+      // その利用者がその日に何回そのタスクに入ったか
+      function countUserTaskToday(uid, taskId) {
+        var c = 0;
+        hours.forEach(function(h) {
+          var cell = daySched[uid][h];
+          if (cell && cell.type === 'task' && cell.taskId === taskId) c++;
+        });
+        return c;
+      }
+
+      // ──────────────────────────────────────────────────
+      // STEP 1: 2時間連続作業（durationMode === '2' または '2_strict'）の優先割り当て
+      // ──────────────────────────────────────────────────
+      if (TIME_CFG.prefer2h) {
+        // 連続する2時間ペア（休憩を跨がないペア: 例 [9,10], [10,11], [13,14], [14,15]）を抽出
+        var twoHourTasks = TASKS.filter(function(t) {
+          return t.durationMode === '2' || t.durationMode === '2_strict';
+        });
+
+        for (var i = 0; i < hours.length - 1; i++) {
+          var h1 = hours[i];
+          var h2 = hours[i + 1];
+          if (h2 !== h1 + 1) continue;
+          if (h1 === breakH || h2 === breakH) continue;
+
+          twoHourTasks.forEach(function(task) {
+            if (!isTaskAllowedInHour(task, h1) || !isTaskAllowedInHour(task, h2)) return;
+            var targetMin = Number(task.minPeople) || 1;
+            var curAssigned = countTaskInHour(task.id, h1);
+            var needed = Math.max(0, targetMin - curAssigned);
+            if (needed === 0) return;
+
+            // h1, h2両方とも空いている利用者を熟練度順にソート
+            var candidates = users.filter(function(u) {
+              var c1 = daySched[u.id][h1];
+              var c2 = daySched[u.id][h2];
+              if (!c1 || !c2 || c1.type !== 'empty' || c2.type !== 'empty') return false;
+              return getProfLevel(u.id, task.id) > 0;
+            });
+
+            candidates.sort(function(a, b) {
+              var pa = getProfLevel(a.id, task.id);
+              var pb = getProfLevel(b.id, task.id);
+              if (pb !== pa) return pb - pa; // 熟練度が高い順
+              // 同点なら今日そのタスクにまだ入っていない人優先
+              var ua = countUserTaskToday(a.id, task.id);
+              var ub = countUserTaskToday(b.id, task.id);
+              return ua - ub;
+            });
+
+            for (var k = 0; k < Math.min(needed, candidates.length); k++) {
+              var uid = candidates[k].id;
+              daySched[uid][h1] = { type: 'task', taskId: task.id, spanTag: '2h-1' };
+              daySched[uid][h2] = { type: 'task', taskId: task.id, spanTag: '2h-2' };
+            }
+          });
+        }
+      }
+
+      // ──────────────────────────────────────────────────
+      // STEP 2: 各1時間枠で「最小必要人数（minPeople）」を満たすように熟練度優先で割り当て
+      // ──────────────────────────────────────────────────
+      hours.forEach(function(h) {
+        if (h === breakH) return;
+
+        TASKS.forEach(function(task) {
+          if (task.durationMode === '2_strict') return; // 2時間連続厳守タスクは1時間単発では入れない
+          if (!isTaskAllowedInHour(task, h)) return;
+
+          var minP = Number(task.minPeople) || 0;
+          var curP = countTaskInHour(task.id, h);
+          var need = Math.max(0, minP - curP);
+          if (need === 0) return;
+
+          var candidates = users.filter(function(u) {
+            var cell = daySched[u.id][h];
+            return cell && cell.type === 'empty' && getProfLevel(u.id, task.id) > 0;
+          });
+
+          candidates.sort(function(a, b) {
+            var pa = getProfLevel(a.id, task.id);
+            var pb = getProfLevel(b.id, task.id);
+            if (pb !== pa) return pb - pa;
+            var ua = countUserTaskToday(a.id, task.id);
+            var ub = countUserTaskToday(b.id, task.id);
+            return ua - ub;
+          });
+
+          for (var k = 0; k < Math.min(need, candidates.length); k++) {
+            var uid = candidates[k].id;
+            daySched[uid][h] = { type: 'task', taskId: task.id, spanTag: '1h' };
+          }
+        });
+      });
+
+      // ──────────────────────────────────────────────────
+      // STEP 3: まだ空いているコマがある利用者に、熟練度＆上限人数（maxPeople）を考慮して割り当て
+      // ──────────────────────────────────────────────────
+      hours.forEach(function(h, hIdx) {
+        if (h === breakH) return;
+        var nextH = (hIdx + 1 < hours.length) ? hours[hIdx + 1] : null;
+
+        users.forEach(function(u) {
+          var cell = daySched[u.id][h];
+          if (!cell || cell.type !== 'empty') return;
+
+          // もし次のコマも空いていて、2時間作業で得意なものがあれば2時間連続で入れる
+          if (TIME_CFG.prefer2h && nextH === h + 1 && nextH !== breakH && daySched[u.id][nextH] && daySched[u.id][nextH].type === 'empty') {
+            var avail2h = TASKS.filter(function(t) {
+              if (t.durationMode !== '2' && t.durationMode !== '2_strict') return false;
+              if (!isTaskAllowedInHour(t, h) || !isTaskAllowedInHour(t, nextH)) return false;
+              if (getProfLevel(u.id, t.id) <= 0) return false;
+              var maxP = Number(t.maxPeople) || 99;
+              return countTaskInHour(t.id, h) < maxP && countTaskInHour(t.id, nextH) < maxP;
+            });
+
+            if (avail2h.length > 0) {
+              avail2h.sort(function(t1, t2) {
+                var p1 = getProfLevel(u.id, t1.id);
+                var p2 = getProfLevel(u.id, t2.id);
+                if (p2 !== p1) return p2 - p1;
+                return countUserTaskToday(u.id, t1.id) - countUserTaskToday(u.id, t2.id);
+              });
+              var chosen2h = avail2h[0];
+              if (getProfLevel(u.id, chosen2h.id) >= 2) {
+                daySched[u.id][h] = { type: 'task', taskId: chosen2h.id, spanTag: '2h-1' };
+                daySched[u.id][nextH] = { type: 'task', taskId: chosen2h.id, spanTag: '2h-2' };
+                return;
+              }
+            }
+          }
+
+          // 1時間枠として最適なタスクを選択
+          var avail1h = TASKS.filter(function(t) {
+            if (t.durationMode === '2_strict') return false;
+            if (!isTaskAllowedInHour(t, h)) return false;
+            if (getProfLevel(u.id, t.id) <= 0) return false;
+            var maxP = Number(t.maxPeople) || 99;
+            return countTaskInHour(t.id, h) < maxP;
+          });
+
+          if (avail1h.length > 0) {
+            avail1h.sort(function(t1, t2) {
+              var p1 = getProfLevel(u.id, t1.id);
+              var p2 = getProfLevel(u.id, t2.id);
+              if (p2 !== p1) return p2 - p1;
+              if (TIME_CFG.rotateTasks) {
+                var u1 = countUserTaskToday(u.id, t1.id);
+                var u2 = countUserTaskToday(u.id, t2.id);
+                if (u1 !== u2) return u1 - u2;
+              }
+              return countTaskInHour(t1.id, h) - countTaskInHour(t2.id, h);
+            });
+            daySched[u.id][h] = { type: 'task', taskId: avail1h[0].id, spanTag: '1h' };
+          }
+        });
+      });
+
+      // 連続する同じタスクのラベル整備（2時間連続表示用）
+      users.forEach(function(u) {
+        for (var i = 0; i < hours.length; i++) {
+          var h = hours[i];
+          var cur = daySched[u.id][h];
+          if (!cur || cur.type !== 'task') continue;
+          var prevH = i > 0 ? hours[i - 1] : null;
+          var nextH = i + 1 < hours.length ? hours[i + 1] : null;
+          var prev = prevH !== null ? daySched[u.id][prevH] : null;
+          var next = nextH !== null ? daySched[u.id][nextH] : null;
+
+          if (next && next.type === 'task' && next.taskId === cur.taskId && nextH === h + 1) {
+            cur.spanTag = '2h-1';
+            next.spanTag = '2h-2';
+          } else if (!(prev && prev.type === 'task' && prev.taskId === cur.taskId && prevH === h - 1)) {
+            cur.spanTag = '1h';
+          }
+        }
+      });
+
+      SAVED_SCHEDULES[dateStr] = daySched;
+      saveLocal(STORAGE_KEYS.DAYS, SAVED_SCHEDULES);
+      renderScheduleView();
+      showToast('✨ 熟練度を優先して作業スケジュールを自動作成しました');
+    }
+
+    function clearDaySchedule() {
+      var dateStr = document.getElementById('sched-date').value || getTodayStr();
+      if (!confirm(formatJpDateWithDow(dateStr) + ' のスケジュール割り当てをクリアしますか？')) return;
+      delete SAVED_SCHEDULES[dateStr];
+      saveLocal(STORAGE_KEYS.DAYS, SAVED_SCHEDULES);
+      renderScheduleView();
+      showToast('スケジュールをクリアしました');
+    }
+
+    // =========================================================================
+    // スケジュール画面の描画
+    // =========================================================================
+    function renderScheduleView() {
+      var dateStr = document.getElementById('sched-date').value || getTodayStr();
+      var hours = getHourList();
+      var breakH = Number(TIME_CFG.breakHour);
+      var users = getUsersForDate(dateStr);
+      var daySched = SAVED_SCHEDULES[dateStr] || {};
+
+      document.getElementById('print-title-date').textContent = '🗓️ 作業スケジュール表 — ' + formatJpDateWithDow(dateStr);
+      document.getElementById('sched-sub-heading').textContent = formatJpDateWithDow(dateStr) + ' の作業スケジュール（対象: ' + users.length + '名）';
+
+      // Thead
+      var theadHtml = '<tr><th style="min-width:170px;text-align:left;padding-left:12px;">利用者名 / 通所時間</th>';
+      hours.forEach(function(h) {
+        var isBrk = (h === breakH);
+        var label = h + ':00 〜 ' + (h + 1) + ':00';
+        theadHtml += '<th class="' + (isBrk ? 'break-col' : '') + '">' + label + (isBrk ? '<br><span style="font-size:10.5px;">🍱 休憩時間</span>' : '') + '</th>';
+      });
+      theadHtml += '</tr>';
+      document.getElementById('sched-thead').innerHTML = theadHtml;
+
+      // Tbody
+      var tbodyEl = document.getElementById('sched-tbody');
+      if (users.length === 0) {
+        tbodyEl.innerHTML = '<tr><td colspan="' + (hours.length + 1) + '" style="padding:36px;color:var(--sub);font-weight:700;">この日に通所予定の利用者がいません（「予定外の利用者も表示」にチェックを入れると全員表示できます）</td></tr>';
+        renderSummaryBar(daySched, hours);
+        return;
+      }
+
+      var rowsHtml = '';
+      users.forEach(function(u) {
+        var uSched = daySched[u.id] || {};
+        var statusColor = u.isAbsent ? 'background:#fee2e2;color:#dc2626;' : (u.status === '出席' ? 'background:#dcfce7;color:#15803d;' : 'background:#e0f2fe;color:#0369a1;');
+
+        rowsHtml += '<tr>';
+        rowsHtml += '<td class="user-cell">' +
+          '<div class="user-name-row">' +
+            '<span class="user-name">' + esc(u.name) + '</span>' +
+            '<span class="user-status-tag" style="' + statusColor + '">' + esc(u.status) + '</span>' +
+          '</div>' +
+          '<div class="user-time-badge">🕒 ' + esc(u.startTime) + ' 〜 ' + esc(u.endTime) + '</div>' +
+        '</td>';
+
+        hours.forEach(function(h) {
+          var cell = uSched[h];
+          if (!cell) {
+            if (h === breakH) cell = { type: 'break' };
+            else if (!u.isScheduled || u.isAbsent || !isUserPresentInHour(u, h)) cell = { type: 'off' };
+            else cell = { type: 'empty' };
+          }
+
+          if (cell.type === 'break') {
+            rowsHtml += '<td class="slot-cell slot-break" onclick="openSlotModal(\'' + u.id + '\',' + h + ')">🍱 休憩</td>';
+          } else if (cell.type === 'off') {
+            rowsHtml += '<td class="slot-cell slot-off" onclick="openSlotModal(\'' + u.id + '\',' + h + ')">時間外</td>';
+          } else if (cell.type === 'task' && cell.taskId) {
+            var task = TASKS.find(function(t){ return t.id === cell.taskId; });
+            if (task) {
+              var lv = getProfLevel(u.id, task.id);
+              var durBadge = (cell.spanTag === '2h-1') ? '【2時間①】' : (cell.spanTag === '2h-2') ? '【2時間②】' : '';
+              rowsHtml += '<td class="slot-cell" onclick="openSlotModal(\'' + u.id + '\',' + h + ')">' +
+                '<div class="slot-task-box" style="background:' + esc(task.color || '#e0f2fe') + ';">' +
+                  '<div class="slot-task-name">' + esc(task.icon || '') + ' ' + esc(task.name) + '</div>' +
+                  '<div class="slot-task-sub">' +
+                    '<span>熟練:' + profSymbol(lv) + '</span>' +
+                    (durBadge ? '<span>' + durBadge + '</span>' : '') +
+                  '</div>' +
+                '</div>' +
+              '</td>';
+            } else {
+              rowsHtml += '<td class="slot-cell" onclick="openSlotModal(\'' + u.id + '\',' + h + ')"><div class="slot-empty-box">未割当</div></td>';
+            }
+          } else {
+            rowsHtml += '<td class="slot-cell" onclick="openSlotModal(\'' + u.id + '\',' + h + ')"><div class="slot-empty-box">＋ 割当</div></td>';
+          }
+        });
+
+        rowsHtml += '</tr>';
+      });
+
+      // 最下部に時間帯ごとの合計稼働人数行を追加
+      rowsHtml += '<tr style="background:#f8fafc;font-weight:800;font-size:12px;">';
+      rowsHtml += '<td class="user-cell" style="background:#f8fafc;color:var(--sub);">📊 時間帯別 稼働人数</td>';
+      hours.forEach(function(h) {
+        if (h === breakH) {
+          rowsHtml += '<td style="color:#b45309;background:var(--break-bg);">休憩</td>';
+        } else {
+          var activeCount = 0;
+          users.forEach(function(u) {
+            var c = (daySched[u.id] && daySched[u.id][h]) ? daySched[u.id][h] : null;
+            if (c && c.type === 'task' && c.taskId) activeCount++;
+          });
+          rowsHtml += '<td style="color:var(--pri);">' + activeCount + ' 名</td>';
+        }
+      });
+      rowsHtml += '</tr>';
+
+      tbodyEl.innerHTML = rowsHtml;
+      renderSummaryBar(daySched, hours);
+    }
+
+    function renderSummaryBar(daySched, hours) {
+      var bar = document.getElementById('task-summary-bar');
+      if (!bar) return;
+      var counts = {};
+      TASKS.forEach(function(t){ counts[t.id] = 0; });
+      Object.keys(daySched).forEach(function(uid) {
+        hours.forEach(function(h) {
+          var c = daySched[uid][h];
+          if (c && c.type === 'task' && c.taskId && counts[c.taskId] !== undefined) {
+            counts[c.taskId]++;
+          }
+        });
+      });
+
+      bar.innerHTML = TASKS.map(function(t) {
+        var durText = (t.durationMode === '2' || t.durationMode === '2_strict') ? '2時間枠' : '1時間枠';
+        return '<div class="summary-chip">' +
+          '<span class="dot" style="background:' + esc(t.color) + ';border:1px solid rgba(0,0,0,0.2);"></span>' +
+          '<span>' + esc(t.icon) + ' ' + esc(t.name) + ' <small style="color:var(--sub);">(' + durText + ')</small></span>' +
+          '<span style="color:var(--pri);background:var(--pri-light);padding:2px 8px;border-radius:999px;">計 ' + counts[t.id] + ' コマ</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    // =========================================================================
+    // コマの手動クリック変更モーダル
+    // =========================================================================
+    var _editingSlot = null;
+
+    function openSlotModal(userId, hour) {
+      var dateStr = document.getElementById('sched-date').value || getTodayStr();
+      var users = getUsersForDate(dateStr);
+      var user = users.find(function(u){ return u.id === userId; });
+      if (!user) return;
+
+      _editingSlot = { dateStr: dateStr, userId: userId, hour: hour };
+      document.getElementById('slot-modal-title').textContent = user.name + ' さんの作業割当';
+      document.getElementById('slot-modal-info').textContent =
+        formatJpDateWithDow(dateStr) + ' 【' + hour + ':00 〜 ' + (hour + 1) + ':00】';
+
+      var optsEl = document.getElementById('slot-modal-options');
+      var html = '';
+
+      // 登録タスク一覧（熟練度順に表示）
+      var sortedTasks = TASKS.slice().sort(function(a, b) {
+        return getProfLevel(userId, b.id) - getProfLevel(userId, a.id);
+      });
+
+      sortedTasks.forEach(function(t) {
+        var lv = getProfLevel(userId, t.id);
+        var nextHour = hour + 1;
+        var can2h = (nextHour < Number(TIME_CFG.dayEnd) && nextHour !== Number(TIME_CFG.breakHour));
+
+        html += '<div style="display:flex;gap:6px;align-items:center;">' +
+          '<button class="btn" style="flex:1;justify-content:space-between;background:' + esc(t.color) + ';border-color:rgba(0,0,0,0.15);" onclick="applySlotChoice(\'task\', \'' + t.id + '\', 1)">' +
+            '<span>' + esc(t.icon) + ' ' + esc(t.name) + ' <small>(1時間)</small></span>' +
+            '<span class="badge-pill prof-lv-' + lv + '">' + profBadgeText(lv) + '</span>' +
+          '</button>' +
+          (can2h ? '<button class="btn" style="background:' + esc(t.color) + ';border-color:rgba(0,0,0,0.2);font-size:12px;" onclick="applySlotChoice(\'task\', \'' + t.id + '\', 2)" title="このコマと次のコマの2時間連続で割り当てます">2時間連続</button>' : '') +
+        '</div>';
+      });
+
+      html += '<hr style="border:none;border-top:1px solid var(--bdr);margin:6px 0;">';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">' +
+        '<button class="btn" style="justify-content:center;background:var(--break-bg);color:#b45309;border-color:var(--break-bdr);" onclick="applySlotChoice(\'break\', null, 1)">🍱 休憩にする</button>' +
+        '<button class="btn" style="justify-content:center;background:#f1f5f9;color:#64748b;" onclick="applySlotChoice(\'off\', null, 1)">時間外にする</button>' +
+        '<button class="btn btn-danger" style="justify-content:center;" onclick="applySlotChoice(\'empty\', null, 1)">未割当に戻す</button>' +
+      '</div>';
+
+      optsEl.innerHTML = html;
+      document.getElementById('slot-modal').classList.add('show');
+    }
+
+    function closeSlotModal() {
+      document.getElementById('slot-modal').classList.remove('show');
+      _editingSlot = null;
+    }
+
+    function applySlotChoice(type, taskId, spanHours) {
+      if (!_editingSlot) return;
+      var d = _editingSlot.dateStr;
+      var uid = _editingSlot.userId;
+      var h = _editingSlot.hour;
+
+      if (!SAVED_SCHEDULES[d]) SAVED_SCHEDULES[d] = {};
+      if (!SAVED_SCHEDULES[d][uid]) SAVED_SCHEDULES[d][uid] = {};
+
+      if (type === 'task' && spanHours === 2) {
+        SAVED_SCHEDULES[d][uid][h] = { type: 'task', taskId: taskId, spanTag: '2h-1' };
+        SAVED_SCHEDULES[d][uid][h + 1] = { type: 'task', taskId: taskId, spanTag: '2h-2' };
+      } else if (type === 'task') {
+        SAVED_SCHEDULES[d][uid][h] = { type: 'task', taskId: taskId, spanTag: '1h' };
+      } else {
+        SAVED_SCHEDULES[d][uid][h] = { type: type, taskId: null };
+      }
+
+      saveLocal(STORAGE_KEYS.DAYS, SAVED_SCHEDULES);
+      closeSlotModal();
+      renderScheduleView();
+    }
+
+    // =========================================================================
+    // 熟練度設定マトリクスの描画
+    // =========================================================================
+    function renderProficiencyTable() {
+      var kw = (document.getElementById('prof-search') ? document.getElementById('prof-search').value : '').trim();
+      var thead = document.getElementById('prof-thead');
+      var tbody = document.getElementById('prof-tbody');
+      if (!thead || !tbody) return;
+
+      var hHtml = '<tr><th style="min-width:160px;text-align:left;padding-left:12px;">利用者名</th>';
+      TASKS.forEach(function(t) {
+        var durLabel = (t.durationMode === '2' || t.durationMode === '2_strict') ? '2時間' : '1時間';
+        hHtml += '<th>' + esc(t.icon) + ' ' + esc(t.name) + '<br><span style="font-size:10.5px;color:var(--sub);font-weight:600;">(' + durLabel + ')</span></th>';
+      });
+      hHtml += '</tr>';
+      thead.innerHTML = hHtml;
+
+      var filteredUsers = PORTE_USERS.filter(function(u) {
+        if (!kw) return true;
+        return (u.name || '').indexOf(kw) >= 0 || (u.furigana || '').indexOf(kw) >= 0 || (u.kana || '').indexOf(kw) >= 0;
+      });
+
+      if (filteredUsers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="' + (TASKS.length + 1) + '" style="padding:30px;color:var(--sub);">該当する利用者がいません</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filteredUsers.map(function(u) {
+        var uid = String(u.id).trim();
+        var row = '<tr><td style="text-align:left;padding-left:12px;font-weight:800;">' + esc(u.name) + '</td>';
+        TASKS.forEach(function(t) {
+          var lv = getProfLevel(uid, t.id);
+          row += '<td><button class="prof-btn prof-lv-' + lv + '" onclick="cycleProficiency(\'' + uid + '\',\'' + t.id + '\')">' + profBadgeText(lv) + '</button></td>';
+        });
+        row += '</tr>';
+        return row;
+      }).join('');
+    }
+
+    function cycleProficiency(userId, taskId) {
+      var cur = getProfLevel(userId, taskId);
+      // 3(◎) -> 2(〇) -> 1(△) -> 0(✕) -> 3(◎)
+      var next = (cur === 3) ? 2 : (cur === 2) ? 1 : (cur === 1) ? 0 : 3;
+      setProfLevel(userId, taskId, next);
+      renderProficiencyTable();
+    }
+
+    function setAllProficiency(lv) {
+      if (!confirm('全員の熟練度を「' + profBadgeText(lv) + '」に一括設定しますか？')) return;
+      PORTE_USERS.forEach(function(u) {
+        var uid = String(u.id).trim();
+        if (!PROFICIENCY[uid]) PROFICIENCY[uid] = {};
+        TASKS.forEach(function(t) {
+          PROFICIENCY[uid][t.id] = lv;
+        });
+      });
+      saveLocal(STORAGE_KEYS.PROF, PROFICIENCY);
+      renderProficiencyTable();
+      showToast('全員の熟練度を更新しました');
+    }
+
+    // =========================================================================
+    // 作業種別マスタ設定・時間枠設定
+    // =========================================================================
+    function renderTaskMasterList() {
+      var listEl = document.getElementById('task-master-list');
+      if (!listEl) return;
+
+      if (TASKS.length === 0) {
+        listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--sub);">作業種別がありません。「＋ 新しい作業を追加」から登録してください。</div>';
+        return;
+      }
+
+      listEl.innerHTML = TASKS.map(function(t) {
+        var durLabel = t.durationMode === '2_strict' ? '⏱️ 2時間連続のみ' : (t.durationMode === '2' ? '⏱️ 2時間連続優先' : '⏱️ 1時間単位');
+        var perLabel = t.period === 'am' ? '🌅 午前のみ' : (t.period === 'pm' ? '🌇 午後のみ' : '☀️ 終日');
+        return '<div class="task-item">' +
+          '<div class="task-color-swatch" style="background:' + esc(t.color) + ';"></div>' +
+          '<div class="task-info">' +
+            '<div class="task-title"><span>' + esc(t.icon) + '</span><span>' + esc(t.name) + '</span></div>' +
+            '<div class="task-meta">' +
+              '<span class="badge-pill">' + durLabel + '</span>' +
+              '<span class="badge-pill">👥 目標 ' + (t.minPeople || 0) + '名 / 上限 ' + (t.maxPeople || 10) + '名</span>' +
+              '<span class="badge-pill">' + perLabel + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<button class="btn" onclick="openTaskModal(\'' + t.id + '\')" style="padding:6px 10px;">✏️ 編集</button>' +
+            '<button class="btn btn-danger" onclick="deleteTaskMaster(\'' + t.id + '\')" style="padding:6px 10px;">🗑</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function openTaskModal(taskId) {
+      var t = taskId ? TASKS.find(function(x){ return x.id === taskId; }) : null;
+      document.getElementById('task-modal-title').textContent = t ? '作業種別の編集' : '新しい作業種別を追加';
+      document.getElementById('tm-id').value = t ? t.id : '';
+      document.getElementById('tm-name').value = t ? t.name : '';
+      document.getElementById('tm-icon').value = t ? (t.icon || '📦') : '📦';
+      document.getElementById('tm-color').value = t ? (t.color || '#dcfce7') : '#dcfce7';
+      document.getElementById('tm-duration').value = t ? (t.durationMode || '1') : '1';
+      document.getElementById('tm-min').value = t ? (t.minPeople != null ? t.minPeople : 2) : 2;
+      document.getElementById('tm-max').value = t ? (t.maxPeople != null ? t.maxPeople : 6) : 6;
+      document.getElementById('tm-period').value = t ? (t.period || 'all') : 'all';
+      document.getElementById('task-modal').classList.add('show');
+    }
+
+    function closeTaskModal() {
+      document.getElementById('task-modal').classList.remove('show');
+    }
+
+    function saveTaskModal() {
+      var id = document.getElementById('tm-id').value;
+      var name = document.getElementById('tm-name').value.trim();
+      var icon = document.getElementById('tm-icon').value.trim() || '📦';
+      var color = document.getElementById('tm-color').value || '#dcfce7';
+      var durationMode = document.getElementById('tm-duration').value;
+      var minPeople = Math.max(0, parseInt(document.getElementById('tm-min').value, 10) || 0);
+      var maxPeople = Math.max(1, parseInt(document.getElementById('tm-max').value, 10) || 6);
+      var period = document.getElementById('tm-period').value;
+
+      if (!name) {
+        alert('作業名を入力してください');
+        return;
+      }
+
+      if (id) {
+        var idx = TASKS.findIndex(function(x){ return x.id === id; });
+        if (idx >= 0) {
+          TASKS[idx] = { id: id, name: name, icon: icon, color: color, durationMode: durationMode, minPeople: minPeople, maxPeople: maxPeople, period: period };
+        }
+      } else {
+        var newId = 't_' + Date.now();
+        TASKS.push({ id: newId, name: name, icon: icon, color: color, durationMode: durationMode, minPeople: minPeople, maxPeople: maxPeople, period: period });
+      }
+
+      saveLocal(STORAGE_KEYS.TASKS, TASKS);
+      closeTaskModal();
+      renderTaskMasterList();
+      renderProficiencyTable();
+      renderScheduleView();
+      showToast('作業種別を保存しました');
+    }
+
+    function deleteTaskMaster(taskId) {
+      var t = TASKS.find(function(x){ return x.id === taskId; });
+      if (!t) return;
+      if (!confirm('作業「' + t.name + '」を削除しますか？')) return;
+      TASKS = TASKS.filter(function(x){ return x.id !== taskId; });
+      saveLocal(STORAGE_KEYS.TASKS, TASKS);
+      renderTaskMasterList();
+      renderProficiencyTable();
+      renderScheduleView();
+      showToast('作業種別を削除しました');
+    }
+
+    function saveTimeConfig() {
+      TIME_CFG.dayStart = parseInt(document.getElementById('cfg-day-start').value, 10) || 9;
+      TIME_CFG.dayEnd = parseInt(document.getElementById('cfg-day-end').value, 10) || 16;
+      TIME_CFG.breakHour = parseInt(document.getElementById('cfg-break-hour').value, 10);
+      TIME_CFG.prefer2h = document.getElementById('cfg-prefer-2h').checked;
+      TIME_CFG.rotateTasks = document.getElementById('cfg-rotate-tasks').checked;
+
+      if (TIME_CFG.dayEnd <= TIME_CFG.dayStart) {
+        TIME_CFG.dayEnd = TIME_CFG.dayStart + 1;
+        document.getElementById('cfg-day-end').value = String(TIME_CFG.dayEnd);
+      }
+
+      saveLocal(STORAGE_KEYS.CFG, TIME_CFG);
+      renderScheduleView();
+      showToast('⏰ 時間枠・休憩時間の設定を反映しました');
+    }
+
+    // =========================================================================
+    // ナビゲーション・日付切り替え
+    // =========================================================================
+    function switchView(viewName) {
+      ['schedule', 'prof', 'tasks'].forEach(function(v) {
+        document.getElementById('view-' + v).style.display = (v === viewName) ? 'block' : 'none';
+        var btn = document.getElementById('tab-btn-' + v);
+        if (btn) {
+          if (v === viewName) btn.classList.add('active');
+          else btn.classList.remove('active');
+        }
+      });
+      if (viewName === 'prof') renderProficiencyTable();
+      if (viewName === 'tasks') renderTaskMasterList();
+      if (viewName === 'schedule') renderScheduleView();
+    }
+
+    async function onDateChange() {
+      var dateStr = document.getElementById('sched-date').value || getTodayStr();
+      await ensureDateLoaded(dateStr);
+      renderScheduleView();
+    }
+
+    function shiftDate(delta) {
+      var inp = document.getElementById('sched-date');
+      var cur = inp.value || getTodayStr();
+      var p = cur.split('-');
+      var dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+      dt.setDate(dt.getDate() + delta);
+      inp.value = dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate());
+      onDateChange();
+    }
+
+    function setToday() {
+      document.getElementById('sched-date').value = getTodayStr();
+      onDateChange();
+    }
+
+    // 起動
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
