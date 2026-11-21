@@ -500,10 +500,41 @@
 
     #sidebar-header input[type=date] {
       flex: 1;
+      width: 100%;
       padding: 6px 8px;
       border: 1.5px solid var(--bdr);
       border-radius: 6px;
       font-size: 13px;
+    }
+
+    /* Windowsの日付形式による空カッコ () を防ぎ曜日を正しく表示するカスタム日付ラッパー */
+    .jp-date-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      flex: 1;
+      width: 100%;
+    }
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit,
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit-fields-wrapper,
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit-text,
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit-year-field,
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit-month-field,
+    input[type="date"].jp-date-enhanced::-webkit-datetime-edit-day-field {
+      color: transparent !important;
+      opacity: 0 !important;
+    }
+    .jp-date-overlay {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      white-space: nowrap;
+      user-select: none;
+      font-size: 15px;
+      font-weight: 500;
+      color: #333;
     }
 
     #sidebar-header .search-box {
@@ -1391,6 +1422,63 @@
       var dow = ['日', '月', '火', '水', '木', '金', '土'][new Date(s).getDay()];
       return p[0] + '年' + parseInt(p[1]) + '月' + parseInt(p[2]) + '日（' + dow + '）';
     }
+    function formatJpDateWithDow(val) {
+      if (!val) return '----年--月--日(-)';
+      var parts = String(val).split('-');
+      if (parts.length !== 3) return val;
+      var y = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      var d = parseInt(parts[2], 10);
+      if (!y || !m || !d) return val;
+      var dt = new Date(y, m - 1, d);
+      var dows = ['日', '月', '火', '水', '木', '金', '土'];
+      return y + '年' + pad(m) + '月' + pad(d) + '日(' + dows[dt.getDay()] + ')';
+    }
+    function initJapaneseDateInputs() {
+      var protoDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+      document.querySelectorAll('input[type="date"]').forEach(function (inp) {
+        if (inp.classList.contains('jp-date-enhanced')) return;
+        inp.classList.add('jp-date-enhanced');
+
+        var wrap = document.createElement('div');
+        wrap.className = 'jp-date-wrap';
+        inp.parentNode.insertBefore(wrap, inp);
+        wrap.appendChild(inp);
+
+        var overlay = document.createElement('span');
+        overlay.className = 'jp-date-overlay';
+        wrap.appendChild(overlay);
+
+        var syncOverlay = function () {
+          var curVal = protoDesc ? protoDesc.get.call(inp) : inp.getAttribute('value');
+          overlay.textContent = formatJpDateWithDow(curVal);
+        };
+
+        if (protoDesc && protoDesc.get && protoDesc.set) {
+          Object.defineProperty(inp, 'value', {
+            configurable: true,
+            enumerable: true,
+            get: function () {
+              return protoDesc.get.call(this);
+            },
+            set: function (v) {
+              protoDesc.set.call(this, v);
+              syncOverlay();
+            }
+          });
+        }
+
+        inp.addEventListener('input', syncOverlay);
+        inp.addEventListener('change', syncOverlay);
+        inp.addEventListener('click', function () {
+          if (this.showPicker) {
+            try { this.showPicker(); } catch (e) { }
+          }
+        });
+        syncOverlay();
+      });
+    }
+    initJapaneseDateInputs();
     function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
     function el(id) { return document.getElementById(id); }
     function show(id) { var e = el(id); if (e) e.style.display = 'block'; }
@@ -1759,6 +1847,7 @@
         buildUserSelect();
         buildWorkTypeSelect();
         buildTemplateSelect();
+        initJapaneseDateInputs();
         el('sel-date').value = today();
         el('sel-date').max = today();
 
@@ -3389,6 +3478,7 @@
       h += '</div>';
 
       c.innerHTML = h;
+      initJapaneseDateInputs();
     }
 
     // ─── 3. 本日の衛生記録一覧 ──────────────────────────────
@@ -3469,6 +3559,7 @@
       h += '</div>';
 
       c.innerHTML = h;
+      initJapaneseDateInputs();
     }
 
     async function deleteHaccpRecord(id, date) {
