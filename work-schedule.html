@@ -931,6 +931,54 @@
       try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
     }
 
+    async function syncScheduleDayToSupabase(dateStr, isDelete) {
+      try {
+        var sb = (typeof _getSupabase === 'function') ? _getSupabase() : null;
+        if (!sb || !dateStr) return;
+        if (isDelete) {
+          await sb.from('作業スケジュール').delete().eq('date', dateStr);
+        } else {
+          await sb.from('作業スケジュール').upsert({
+            date: dateStr,
+            slots: SAVED_SCHEDULES[dateStr] || {},
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'date' });
+        }
+      } catch (e) {
+        console.warn('syncScheduleDayToSupabase:', e);
+      }
+    }
+
+    async function loadSchedulesFromSupabase() {
+      try {
+        var sb = (typeof _getSupabase === 'function') ? _getSupabase() : null;
+        if (!sb) return;
+        var res = await sb.from('作業スケジュール').select('date, slots');
+        if (res.error) return;
+        var rows = res.data || [];
+        var sbDates = {};
+        rows.forEach(function (r) {
+          if (r && r.date && r.slots) {
+            SAVED_SCHEDULES[r.date] = r.slots;
+            sbDates[r.date] = true;
+          }
+        });
+        // ローカルにのみあるスケジュールも新テーブルへ自動同期
+        var localKeys = Object.keys(SAVED_SCHEDULES);
+        for (var i = 0; i < localKeys.length; i++) {
+          var k = localKeys[i];
+          if (!sbDates[k] && SAVED_SCHEDULES[k] && Object.keys(SAVED_SCHEDULES[k]).length > 0) {
+            await syncScheduleDayToSupabase(k, false);
+          }
+        }
+        saveLocal(STORAGE_KEYS.DAYS, SAVED_SCHEDULES);
+        if (typeof renderScheduleView === 'function') renderScheduleView();
+      } catch (e) {
+        console.warn('loadSchedulesFromSupabase:', e);
+      }
+    }
+    setTimeout(loadSchedulesFromSupabase, 600);
+
     function showToast(msg) {
       var el = document.getElementById('toast-msg');
       if (!el) return;
@@ -1625,6 +1673,7 @@
 
       SAVED_SCHEDULES[dateStr] = daySched;
       saveLocal(STORAGE_KEYS.DAYS, SAVED_SCHEDULES);
+      syncScheduleDayToSupabase(dateStr, false);
       renderScheduleView();
       showToast('✨ 午前・午後で得意作業をバランスよく自動割り当てしました');
     }
@@ -1634,6 +1683,7 @@
       if (!confirm(formatJpDateWithDow(dateStr) + ' のスケジュール割り当てをクリアしますか？')) return;
       delete SAVED_SCHEDULES[dateStr];
       saveLocal(STORAGE_KEYS.DAYS, SAVED_SCHEDULES);
+      syncScheduleDayToSupabase(dateStr, true);
       renderScheduleView();
       showToast('スケジュールをクリアしました');
     }
@@ -1857,6 +1907,7 @@
       }
 
       saveLocal(STORAGE_KEYS.DAYS, SAVED_SCHEDULES);
+      syncScheduleDayToSupabase(d, false);
       closeSlotModal();
       renderScheduleView();
     }
