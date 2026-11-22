@@ -84,6 +84,19 @@
     try { localStorage.removeItem('porte_session'); } catch (e) { }
   }
 
+  async function ensureAuth(sbClient) {
+    if (!sbClient || !sbClient.auth) return null;
+    try {
+      var res = await sbClient.auth.getSession();
+      if (res && res.data && res.data.session) return res.data.session;
+      var anon = await sbClient.auth.signInAnonymously();
+      return (anon && anon.data) ? anon.data.session : null;
+    } catch (e) {
+      console.warn('PorteAuth.ensureAuth:', e);
+      return null;
+    }
+  }
+
   global.PorteAuth = {
     ROLE_ORDER: ROLE_ORDER,
     isStaffActive: isStaffActive,
@@ -91,7 +104,8 @@
     filterLoginStaff: filterLoginStaff,
     savePorteSession: savePorteSession,
     loadPorteSession: loadPorteSession,
-    clearPorteSession: clearPorteSession
+    clearPorteSession: clearPorteSession,
+    ensureAuth: ensureAuth
   };
 
   if (typeof global.isStaffActive !== 'function') global.isStaffActive = isStaffActive;
