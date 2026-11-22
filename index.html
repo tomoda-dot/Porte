@@ -274,7 +274,6 @@ function _modalBase(msg,type){
       btnRow.appendChild(oBtn);
     }
     box.appendChild(btnRow);ov.appendChild(box);document.body.appendChild(ov);
-    ov.addEventListener('click',function(e){if(e.target===ov){ov.remove();resolve(type==='confirm'?false:true);}});
     (oBtn||cBtn).focus();
   });
 }
@@ -829,7 +828,7 @@ function openLogoutModal(){
   var el=document.getElementById('logout-modal');
   if(!el){el=document.createElement('div');el.id='logout-modal';document.body.appendChild(el);}
   el.innerHTML=
-    '<div style="position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn .15s" onclick="if(event.target===this){document.getElementById(\'logout-modal\').innerHTML=\'\'}">' +
+    '<div style="position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn .15s">' +
     '<div style="background:#fff;border-radius:14px;padding:28px 32px;width:360px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,.18);animation:scaleIn .15s" onclick="event.stopPropagation()">' +
     '<div style="text-align:center;margin-bottom:20px">' +
     '<div style="width:54px;height:54px;background:var(--pri);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;margin:0 auto 10px">' + esc(name?name.charAt(0):'?') + '</div>' +
@@ -3874,7 +3873,7 @@ async function sendDeliverEmail(userId,planId){
   if(!subject){await cAlert('件名を入力してください');return;}
 
   // プレビューモーダル
-  var h='<div id="mail-preview-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;justify-content:center;align-items:center" onclick="if(event.target===this)this.remove()">';
+  var h='<div id="mail-preview-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;justify-content:center;align-items:center">';
   h+='<div style="background:#fff;border-radius:12px;width:640px;max-width:92vw;max-height:85vh;overflow:auto">';
   h+='<div style="background:var(--pri);color:#fff;padding:14px 20px;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center">📧 メール送信プレビュー<button onclick="document.getElementById(\'mail-preview-modal\').remove()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button></div>';
   h+='<div style="padding:20px">';
@@ -4193,7 +4192,7 @@ function collectMtPr(){
 function openStaffModalRow(rowIdx){
   var ex=document.getElementById('staff-modal');if(ex)ex.remove();
   var facility=S.settings.facilityName||'';
-  var h='<div id="staff-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;justify-content:center;align-items:center" onclick="if(event.target===this)this.remove()">';
+  var h='<div id="staff-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;justify-content:center;align-items:center">';
   h+='<div style="background:#fff;border-radius:12px;width:500px;max-width:90vw;max-height:80vh;overflow:auto;padding:20px">';
   h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
   h+='<h3 style="margin:0">🔍 スタッフ検索</h3>';
@@ -4221,7 +4220,7 @@ function selStaffRow(rowIdx,name,role,facility){
 }
 function openStaffModalSimple(targetId){
   var ex=document.getElementById('staff-modal');if(ex)ex.remove();
-  var h='<div id="staff-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;justify-content:center;align-items:center" onclick="if(event.target===this)this.remove()">';
+  var h='<div id="staff-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;justify-content:center;align-items:center">';
   h+='<div style="background:#fff;border-radius:12px;width:500px;max-width:90vw;max-height:80vh;overflow:auto;padding:20px">';
   h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
   h+='<h3 style="margin:0">🔍 スタッフ検索</h3>';
@@ -4604,7 +4603,7 @@ function openScheduleTaskModal(userId,yearMonth){
   });
 
   var ex=document.getElementById('sch-task-modal');if(ex)ex.remove();
-  var h='<div id="sch-task-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;justify-content:center;align-items:center" onclick="if(event.target===this)this.remove()">';
+  var h='<div id="sch-task-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;justify-content:center;align-items:center">';
   h+='<div style="background:#fff;border-radius:12px;width:600px;max-width:90vw;max-height:80vh;overflow:auto">';
   h+='<div style="background:var(--pri);color:#fff;padding:14px 20px;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center">タスク　'+dispMonth+'（'+esc(u.id)+':'+esc(u.name)+'）<button onclick="document.getElementById(\'sch-task-modal\').remove()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button></div>';
   h+='<div style="padding:20px">';
@@ -4932,7 +4931,7 @@ async function openGlobalScheduleTask(userId,yearMonth){
   });
 
   var ex=document.getElementById('sch-task-modal');if(ex)ex.remove();
-  var h='<div id="sch-task-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;justify-content:center;align-items:center" onclick="if(event.target===this)this.remove()">';
+  var h='<div id="sch-task-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;justify-content:center;align-items:center">';
   h+='<div style="background:#fff;border-radius:12px;width:600px;max-width:90vw;max-height:80vh;overflow:auto">';
   h+='<div style="background:var(--pri);color:#fff;padding:14px 20px;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center">タスク　'+dispMonth+'（'+esc(u.id)+':'+esc(u.name)+'）<button onclick="document.getElementById(\'sch-task-modal\').remove()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button></div>';
   h+='<div style="padding:20px">';
@@ -7805,7 +7804,7 @@ async function saveWorkTypeRate(wtId){
 }
 
 function openWorkTypeModal(){
-  var h = '<div class="modal-bg" onclick="if(event.target===this)closeModal(\'common-modal\')"><div class="modal-box"><div class="modal-hd">新しい作業種別を追加<button onclick="closeModal(\'common-modal\')" class="modal-x">&times;</button></div>' +
+  var h = '<div class="modal-bg"><div class="modal-box"><div class="modal-hd">新しい作業種別を追加<button onclick="closeModal(\'common-modal\')" class="modal-x">&times;</button></div>' +
     '<div class="field"><label>作業種別名 *</label><input id="wt-new-name" placeholder="例: 施設外作業, 電子解体等" style="width:100%"></div>' +
     '<div class="field"><label>工賃単価（時給/円）*</label><input type="number" id="wt-new-rate" value="200" style="width:100%"></div>' +
     '<div class="btns"><button class="bg" onclick="closeModal(\'common-modal\')">キャンセル</button><button class="bp" onclick="saveNewWorkType()">追加保存</button></div></div></div>';
@@ -8894,7 +8893,7 @@ function openSimAllowanceModal(uid){
   if(!u) return;
   window._simModalTargetUid = uid;
 
-  var h = '<div class="modal-bg" onclick="if(event.target===this)closeModal(\'common-modal\')">' +
+  var h = '<div class="modal-bg">' +
     '<div class="modal-box" style="width:500px;max-width:95vw">' +
     '<div class="modal-hd"><div style="font-weight:700;font-size:15px">🎁 手当シミュレーション設定 - ' + esc(u.name) + ' 様</div>' +
     '<button onclick="closeModal(\'common-modal\')" class="modal-x">&times;</button></div>' +
@@ -9545,7 +9544,6 @@ function openSimNoticeModal(targetUserId){
   var modal = document.createElement('div');
   modal.id = 'sim-notice-modal';
   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:9999;display:flex;justify-content:center;align-items:center;padding:16px;box-sizing:border-box';
-  modal.onclick = function(e){ if(e.target === modal) closeSimNoticeModal(); };
 
   document.body.appendChild(modal);
   renderSimNoticeModalContent();
@@ -14349,7 +14347,7 @@ function openAllowanceModal(idx){
   var als=getAllowances();
   var a=idx!==undefined?als[idx]:{name:'',amount:0,condition:'kaikin',conditionValue:'',enabled:true};
   var isEdit=idx!==undefined;
-  var h='<div class="modal-bg" onclick="if(event.target===this)closeModal(\'al-modal\')"><div class="modal-box"><div class="modal-hd">'+(isEdit?'手当を編集':'新しい手当を追加')+'<button onclick="closeModal(\'al-modal\')" class="modal-x">&times;</button></div>';
+  var h='<div class="modal-bg"><div class="modal-box"><div class="modal-hd">'+(isEdit?'手当を編集':'新しい手当を追加')+'<button onclick="closeModal(\'al-modal\')" class="modal-x">&times;</button></div>';
   h+='<div class="field"><label>手当名 *</label><input id="al-name" value="'+esc(a.name)+'" placeholder="例: 皆勤手当" style="width:100%"></div>';
   h+='<div class="field"><label>金額（円）*</label><input type="number" id="al-amount" value="'+(a.amount||0)+'" style="width:200px"></div>';
   h+='<div class="field"><label>条件 *</label><select id="al-condition" onchange="document.getElementById(\'al-cv-wrap\').style.display=this.value===\'days_over\'||this.value===\'custom\'?\'block\':\'none\'" style="width:100%">';
