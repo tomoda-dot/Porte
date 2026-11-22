@@ -278,6 +278,8 @@
       '.hu-modal-btn { padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 800; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; }',
       '.hu-modal-btn.yes { background: #dc2626; border-color: #dc2626; color: #fff; }',
       '.hu-modal-btn:hover { opacity: 0.9; }',
+      '.hu-staff-pill { font-size: 13px !important; font-weight: 600 !important; color: rgba(255,255,255,0.95) !important; background: rgba(255,255,255,0.15) !important; padding: 5px 12px !important; border-radius: 20px !important; display: inline-flex !important; align-items: center !important; gap: 4px !important; cursor: pointer !important; white-space: nowrap !important; border: none !important; line-height: 1.3 !important; }',
+      '.hu-staff-pill:hover { background: rgba(255,255,255,0.24) !important; }',
       '@media print { .hu-header, .hu-subbar, .hu-popover, .hu-modal-ov { display: none !important; } }'
     ].join('\n');
     document.head.appendChild(style);
@@ -500,7 +502,7 @@
         if (_opts.logoutTriggerSelector) {
           var lt = header.querySelector(_opts.logoutTriggerSelector);
           if (lt) {
-            lt.style.cursor = 'pointer';
+            lt.classList.add('hu-staff-pill');
             lt.title = 'タップしてログアウト';
             lt.addEventListener('click', function () {
               confirmLogout(_opts.onLogout);
