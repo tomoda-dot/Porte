@@ -1200,6 +1200,27 @@
       transform: translateY(-2px);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
     }
+    .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    @media (max-width: 760px) {
+      .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid3 { grid-template-columns: 1fr; }
+    }
+    #form-area .card { padding: 14px 16px; margin-bottom: 12px; }
+    #form-area .card-title { margin-bottom: 10px; }
+    #form-area .field { margin-bottom: 10px; }
+    #form-area .field label { font-size: 11.5px; margin-bottom: 4px; }
+    #form-area .field input,
+    #form-area .field select { padding: 7px 10px; font-size: 13.5px; border-radius: 8px; }
+    #form-area .field textarea { padding: 8px 10px; font-size: 13.5px; border-radius: 8px; }
+    #form-area .tb-chk-pill {
+      display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 10px;
+      background: #f8f6f2; border: 1.5px solid var(--bdr); border-radius: 8px;
+      font-size: 12.5px; font-weight: 700; color: var(--pri); cursor: pointer; user-select: none;
+    }
+    #form-area .tb-chk-pill input { width: 16px; height: 16px; accent-color: var(--pri); cursor: pointer; margin: 0; }
+    #form-area .tb-chk-pill.absent-kasan { color: #c62828; border-color: #f3c6c6; background: #fff7f7; }
+    #form-area .tb-chk-pill.absent-kasan input { accent-color: #c62828; }
   </style>
   <link rel="stylesheet" href="porte-login-unified.css">
   <!-- HITOTSUGI_UNIFIED_HEADER_START -->
@@ -2267,6 +2288,9 @@
         if (el('f-content')) el('f-content').value = rep ? cleanNotesText(rep.content || '') : '';
         if (el('f-content-author')) el('f-content-author').innerHTML = renderAuthorBadgeHTML(window._tbCurContentMeta);
         if (el('f-condition')) el('f-condition').value = rep ? (rep.condition || rep.mood || '普通') : '普通';
+        if (el('f-offsite')) el('f-offsite').checked = !!(att && att.offsiteSupport);
+        if (el('f-absence-addition')) el('f-absence-addition').checked = !!(att && att.absenceAddition);
+        updateTabletOptionVisibility();
 
         var labelEl = el('user-date-label');
         if (labelEl) labelEl.textContent = esc(user.name) + ' — ' + fmtDateJP(date);
@@ -2291,13 +2315,13 @@
         + '<button class="status-opt other" data-val="早退" onclick="setStatus(this)">早退</button>'
         + '<button class="status-opt other" data-val="遅刻" onclick="setStatus(this)">遅刻</button>'
         + '</div></div>'
-        + '<div class="grid2"><div class="field"><label>出勤時間</label><input type="time" id="f-start"></div>'
-        + '<div class="field"><label>退勤時間</label><input type="time" id="f-end"></div></div>'
-        + '<div class="grid2">'
+        + '<div class="grid4">'
+        + '<div class="field"><label>出勤時間</label><input type="time" id="f-start"></div>'
+        + '<div class="field"><label>退勤時間</label><input type="time" id="f-end"></div>'
         + '<div class="field"><label>休憩時間</label><select id="f-break"><option value="0">なし</option><option value="30">30分</option><option value="60" selected>60分（標準）</option><option value="90">90分</option></select></div>'
         + '<div class="field"><label>送迎</label><select id="f-transport"><option value="なし">なし</option><option value="往復">往復</option><option value="往路">往路のみ</option><option value="復路">復路のみ</option></select></div>'
         + '</div>'
-        + '<div class="grid2">'
+        + '<div class="grid3">'
         + '<div class="field"><label>お弁当</label><select id="f-bento" onchange="onBentoChangeTablet()"><option value="なし">なし</option><option value="1食">1食</option><option value="2食">2食</option><option value="3食">3食</option></select></div>'
         + '<div class="field"><label>🍚 摂食率（食べた量）</label><select id="f-meal-rate">'
         + '<option value="10割">10割 (完食)</option>'
@@ -2310,23 +2334,26 @@
         + '<option value="0割">0割 (未食・欠食)</option>'
         + '<option value="-">- (弁当なし)</option>'
         + '</select></div>'
-        + '</div>'
-        + '<div class="grid2">'
-        + '<div class="field"><label>作業(AM)</label><select id="f-work-am">' + wtOpts + '</select></div>'
-        + '<div class="field"><label>作業(PM)</label><select id="f-work-pm">' + wtOpts + '</select></div>'
-        + '</div>'
-        + '<div class="field"><label>作業内容</label>'
-        + '<div style="display:flex;gap:8px;margin-bottom:6px">'
-        + '<select id="f-template" style="flex:1;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;font-size:13px">' + tplOpts + '</select>'
-        + '<button onclick="applyTemplate()" style="padding:8px 14px;background:var(--bg);border:1.5px solid var(--bdr);border-radius:8px;font-size:13px;cursor:pointer">適用</button>'
-        + '</div>'
-        + '<textarea id="f-content" placeholder="本日の作業実績や様子を記入..." style="min-height:120px"></textarea>'
-        + '<div id="f-content-author"></div>'
-        + '</div>'
         + '<div class="field"><label>体調</label><select id="f-condition"><option value="普通">普通</option><option value="良好">良好</option><option value="不良">不良</option><option value="要観察">要観察</option></select></div>'
         + '</div>'
-        + '<div class="card"><div class="card-title"><span>📋 欠席事項</span></div>'
-        + '<div class="field" style="margin-bottom:0"><label>出欠備考</label><textarea id="f-att-notes" placeholder="欠席理由や連絡事項..."></textarea>'
+        + '<div class="grid3">'
+        + '<div class="field"><label>作業(AM)</label><select id="f-work-am">' + wtOpts + '</select></div>'
+        + '<div class="field"><label>作業(PM)</label><select id="f-work-pm">' + wtOpts + '</select></div>'
+        + '<div class="field"><label>支援区分</label><label class="tb-chk-pill"><input type="checkbox" id="f-offsite"><span>施設外支援（施設外就労）</span></label></div>'
+        + '</div>'
+        + '<div class="field" style="margin-bottom:0"><label>作業内容</label>'
+        + '<div style="display:flex;gap:8px;margin-bottom:6px">'
+        + '<select id="f-template" style="flex:1">' + tplOpts + '</select>'
+        + '<button onclick="applyTemplate()" style="padding:6px 14px;background:var(--bg);border:1.5px solid var(--bdr);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">適用</button>'
+        + '</div>'
+        + '<textarea id="f-content" placeholder="本日の作業実績や様子を記入..." style="min-height:84px"></textarea>'
+        + '<div id="f-content-author"></div>'
+        + '</div>'
+        + '</div>'
+        + '<div class="card"><div class="card-title" style="justify-content:space-between"><span>📋 欠席・連絡事項</span>'
+        + '<label id="f-absence-addition-wrap" class="tb-chk-pill absent-kasan" style="height:30px;font-size:12px;display:none"><input type="checkbox" id="f-absence-addition"><span>欠席時対応加算（算定対象）</span></label>'
+        + '</div>'
+        + '<div class="field" style="margin-bottom:0"><label>出欠備考</label><textarea id="f-att-notes" placeholder="欠席理由や連絡事項..." style="min-height:58px"></textarea>'
         + '<div id="f-notes-author"></div></div>'
         + '</div>'
         + '<div class="save-bar">'
@@ -2370,6 +2397,15 @@
       } else if (['出席', '遅刻', '早退'].indexOf(CURRENT_STATUS) >= 0) {
         onBentoChangeTablet();
       }
+      updateTabletOptionVisibility();
+    }
+
+    function updateTabletOptionVisibility() {
+      var isAbsent = ['欠席', '体調不良', '通院'].indexOf(CURRENT_STATUS) >= 0;
+      var absWrap = el('f-absence-addition-wrap');
+      if (absWrap) absWrap.style.display = isAbsent ? 'inline-flex' : 'none';
+      if (isAbsent && el('f-offsite')) el('f-offsite').checked = false;
+      if (!isAbsent && el('f-absence-addition')) el('f-absence-addition').checked = false;
     }
 
     // ─── テンプレート適用 ──────────────────
@@ -2433,6 +2469,8 @@
           mealRate: (['出席', '遅刻', '早退'].indexOf(CURRENT_STATUS) >= 0 && el('f-bento') && el('f-bento').value !== 'なし') ? (el('f-meal-rate') ? el('f-meal-rate').value : '10割') : '-',
           bentoPaymentMethod: userObj ? (userObj.bentoPaymentMethod || '工賃払い') : '工賃払い',
           pickup: transport,
+          offsiteSupport: (['出席', '遅刻', '早退'].indexOf(CURRENT_STATUS) >= 0 && el('f-offsite')) ? !!el('f-offsite').checked : false,
+          absenceAddition: (['欠席', '体調不良', '通院'].indexOf(CURRENT_STATUS) >= 0 && el('f-absence-addition')) ? !!el('f-absence-addition').checked : false,
           notes: finalNotes || null
         };
 
