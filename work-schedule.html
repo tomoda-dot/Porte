@@ -183,13 +183,15 @@
     }
     input[type="date"].jp-date-enhanced {
       width: 100%;
-      padding: 8px 34px 8px 12px;
+      padding: 8px 36px 8px 12px;
       border: 2px solid var(--pri);
       border-radius: 9px;
       font-size: 14px;
       font-weight: 700;
       background: #fff;
       cursor: pointer;
+      color: transparent !important;
+      position: relative;
     }
     input[type="date"].jp-date-enhanced::-webkit-calendar-picker-indicator {
       position: absolute;
@@ -199,6 +201,7 @@
       margin: 0;
       padding: 0;
       cursor: pointer;
+      opacity: 0.75;
     }
     input[type="date"].jp-date-enhanced::-webkit-datetime-edit,
     input[type="date"].jp-date-enhanced::-webkit-datetime-edit-fields-wrapper,
@@ -208,11 +211,13 @@
     input[type="date"].jp-date-enhanced::-webkit-datetime-edit-day-field {
       color: transparent !important;
       opacity: 0 !important;
+      width: 0 !important;
+      padding: 0 !important;
     }
     .jp-date-overlay {
       position: absolute;
       left: 12px;
-      right: 34px;
+      right: 36px;
       top: 50%;
       transform: translateY(-50%);
       pointer-events: none;
@@ -876,6 +881,7 @@
     var PORTE_USERS = [];
     var PORTE_ATT_BY_DATE = {};
     var PORTE_TEMP_BY_DATE = {};
+    var PORTE_CLOSED_DAYS_BY_YM = {};
 
     var TASKS = loadLocal(STORAGE_KEYS.TASKS, DEFAULT_TASKS);
     var PROFICIENCY = loadLocal(STORAGE_KEYS.PROF, {}); // { [userId]: { [taskId]: 0|1|2|3 } }
@@ -1012,11 +1018,13 @@
 
     async function reloadPorteData() {
       var dateStr = document.getElementById('sched-date').value || getTodayStr();
+      var ym = dateStr.slice(0, 7);
       try {
         var res = await Promise.all([
           gas('getUsers'),
           gas('getAttendanceByDate', dateStr),
-          gas('getTempByDate', dateStr)
+          gas('getTempByDate', dateStr),
+          gas('getClosedDays', ym).catch(function(){ return []; })
         ]);
         PORTE_USERS = (res[0] || []).filter(function(u) {
           return u && u.userStatus !== '利用終了';
@@ -1032,6 +1040,7 @@
           if (t && t.userId) tmpMap[String(t.userId).trim()] = t;
         });
         PORTE_TEMP_BY_DATE[dateStr] = tmpMap;
+        PORTE_CLOSED_DAYS_BY_YM[ym] = Array.isArray(res[3]) ? res[3] : [];
 
         renderScheduleView();
         renderProficiencyTable();
@@ -1043,11 +1052,13 @@
     }
 
     async function ensureDateLoaded(dateStr) {
-      if (!PORTE_ATT_BY_DATE[dateStr]) {
+      var ym = dateStr.slice(0, 7);
+      if (!PORTE_ATT_BY_DATE[dateStr] || !PORTE_CLOSED_DAYS_BY_YM[ym]) {
         try {
           var res = await Promise.all([
             gas('getAttendanceByDate', dateStr),
-            gas('getTempByDate', dateStr)
+            gas('getTempByDate', dateStr),
+            PORTE_CLOSED_DAYS_BY_YM[ym] ? Promise.resolve(PORTE_CLOSED_DAYS_BY_YM[ym]) : gas('getClosedDays', ym).catch(function(){ return []; })
           ]);
           var attMap = {};
           (res[0] || []).forEach(function(a) {
@@ -1060,18 +1071,31 @@
             if (t && t.userId) tmpMap[String(t.userId).trim()] = t;
           });
           PORTE_TEMP_BY_DATE[dateStr] = tmpMap;
+          PORTE_CLOSED_DAYS_BY_YM[ym] = Array.isArray(res[2]) ? res[2] : [];
         } catch (e) {}
       }
     }
 
+    function isFacilityClosedDate(dateStr) {
+      var ym = dateStr.slice(0, 7);
+      var closedList = PORTE_CLOSED_DAYS_BY_YM[ym] || [];
+      return closedList.indexOf(dateStr) >= 0;
+    }
+
     // 指定日の利用者リストと通所時間をPorteデータから算出
     function getUsersForDate(dateStr) {
+      var isClosedDay = isFacilityClosedDate(dateStr);
       var attMap = PORTE_ATT_BY_DATE[dateStr] || {};
       var tmpMap = PORTE_TEMP_BY_DATE[dateStr] || {};
       var showAll = document.getElementById('chk-show-all-users') && document.getElementById('chk-show-all-users').checked;
       var p = dateStr.split('-');
       var dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
       var dow = ['日', '月', '火', '水', '木', '金', '土'][dt.getDay()];
+
+      // 休所日の場合は「予定外の利用者も表示」にチェックが入っていない限り空リストを返す
+      if (isClosedDay && !showAll) {
+        return [];
+      }
 
       var result = [];
       PORTE_USERS.forEach(function(u) {
@@ -1083,17 +1107,18 @@
         var tmp = tmpMap[uid];
         var sc = (typeof getUserScheduleForDate === 'function') ? getUserScheduleForDate(u, dateStr) : u;
         var days = String(sc.scheduleDays || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-        var isRegDay = days.indexOf(dow) >= 0;
+        var isRegDay = !isClosedDay && (days.indexOf(dow) >= 0);
 
-        var status = att ? (att.status || '出席') : (tmp ? '臨時' : (isRegDay ? '予定' : '予定外'));
-        var isAbsent = ['欠席', '体調不良', '通院', '調整休'].indexOf(status) >= 0;
-        var isScheduled = !isAbsent && (isRegDay || !!tmp || (att && ['出席', '遅刻', '早退', '予定'].indexOf(att.status) >= 0));
+        var status = isClosedDay ? '休所日' : (att ? (att.status || '出席') : (tmp ? '臨時' : (isRegDay ? '予定' : '予定外')));
+        var isAbsent = isClosedDay || ['欠席', '体調不良', '通院', '調整休'].indexOf(status) >= 0;
+        var isScheduled = !isClosedDay && !isAbsent && (isRegDay || !!tmp || (att && ['出席', '遅刻', '早退', '予定'].indexOf(att.status) >= 0));
 
         if (!isScheduled && !showAll) return;
 
-        // 開始・終了時刻の決定（当日出欠レコード ＞ 利用者スケジュール設定 ＞ 契約時間 ＞ デフォルト10:00-15:00）
-        var rawStart = (att && att.startTime) || sc.scheduleStart || sc.contractStart || '10:00';
-        var rawEnd   = (att && att.endTime)   || sc.scheduleEnd   || sc.contractEnd   || '15:00';
+        // 開始・終了時刻の決定（当日出欠レコード ＞ 利用者スケジュール設定 ＞ デフォルト10:00-15:00）
+        // ※contractStart(09:10)/contractEnd(16:30)はPorteの送迎計算用なので除外し、実際の利用時間(scheduleStart/scheduleEnd)を使用する
+        var rawStart = (att && att.startTime) || sc.scheduleStart || '10:00';
+        var rawEnd   = (att && att.endTime)   || sc.scheduleEnd   || '15:00';
 
         var startMin = parseTimeToMinutes(rawStart, 10 * 60);
         var endMin   = parseTimeToMinutes(rawEnd, 15 * 60);
@@ -1392,13 +1417,15 @@
     // =========================================================================
     function renderScheduleView() {
       var dateStr = document.getElementById('sched-date').value || getTodayStr();
+      var isClosedDay = isFacilityClosedDate(dateStr);
       var hours = getHourList();
       var breakH = Number(TIME_CFG.breakHour);
       var users = getUsersForDate(dateStr);
       var daySched = SAVED_SCHEDULES[dateStr] || {};
 
-      document.getElementById('print-title-date').textContent = '🗓️ 作業スケジュール表 — ' + formatJpDateWithDow(dateStr);
-      document.getElementById('sched-sub-heading').textContent = formatJpDateWithDow(dateStr) + ' の作業スケジュール（対象: ' + users.length + '名）';
+      document.getElementById('print-title-date').textContent = '🗓️ 作業スケジュール表 — ' + formatJpDateWithDow(dateStr) + (isClosedDay ? ' 【休所日】' : '');
+      document.getElementById('sched-sub-heading').innerHTML = formatJpDateWithDow(dateStr) + ' の作業スケジュール（対象: ' + users.length + '名）' +
+        (isClosedDay ? ' <span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:999px;font-size:12.5px;margin-left:8px;">☕ 休所日（Porteカレンダー設定）</span>' : '');
 
       // Thead
       var theadHtml = '<tr><th style="min-width:170px;text-align:left;padding-left:12px;">利用者名 / 通所時間</th>';
@@ -1412,6 +1439,11 @@
 
       // Tbody
       var tbodyEl = document.getElementById('sched-tbody');
+      if (isClosedDay && users.length === 0) {
+        tbodyEl.innerHTML = '<tr><td colspan="' + (hours.length + 1) + '" style="padding:44px;color:#b91c1c;background:#fef2f2;font-weight:800;font-size:15px;">☕ ' + formatJpDateWithDow(dateStr) + ' は Porte で「休所日」に設定されているため、通所予定はありません。</td></tr>';
+        renderSummaryBar({}, hours);
+        return;
+      }
       if (users.length === 0) {
         tbodyEl.innerHTML = '<tr><td colspan="' + (hours.length + 1) + '" style="padding:36px;color:var(--sub);font-weight:700;">この日に通所予定の利用者がいません（「予定外の利用者も表示」にチェックを入れると全員表示できます）</td></tr>';
         renderSummaryBar(daySched, hours);
