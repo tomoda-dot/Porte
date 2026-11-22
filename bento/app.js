@@ -3991,14 +3991,7 @@ function parsePorteCsvFile(file) {
     });
   }
 
-  // 暗転背景タップ時およびEscapeキー押下でモーダルを閉じる共通安全ガード
-  document.querySelectorAll('.modal-overlay').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.classList.remove('active');
-      }
-    });
-  });
+  // Escapeキー押下でモーダルを閉じる（誤タップ防止のため背景クリックでは閉じない）
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
