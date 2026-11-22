@@ -713,8 +713,8 @@ async function boot(){
     MY_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
     
     // 画面設定
-    el('hd-name').textContent='👤 '+(ME.name||'');
-    el('hd-role').textContent=ME.role||'';
+    if(el('hd-name'))el('hd-name').textContent='👤 '+(ME.name||'');
+    if(el('hd-role'))el('hd-role').textContent=ME.role||'';
     SHIFT_YM=nowYM(); ATT_YM=nowYM();
     hide('pg-loading'); show('pg-main');
     await loadTC();
