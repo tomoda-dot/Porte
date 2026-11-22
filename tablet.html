@@ -1210,7 +1210,15 @@
       titleSelector: '#tb-main-title',
       noSubbar: true,
       noGap: true,
-      moveSelectors: ['#hd-staff', '#btn-logout']
+      moveSelectors: ['#hd-staff'],
+      logoutTriggerSelector: '#hd-staff',
+      onLogout: function () {
+        clearPorteSession();
+        ME = null;
+        showTbCardView();
+        hide('pg-main');
+        el('pg-login').style.display = 'flex';
+      }
     });
   </script>
   <!-- HITOTSUGI_UNIFIED_HEADER_END -->
