@@ -1335,43 +1335,16 @@
       }
     }
   </style>
-  <script src="hitotsugi-launcher.js"></script>
-  <script>
-    HitotsugiLauncher.init({
-      appId: 'haccp',
-      replaceSelector: 'header .logo-icon',
-      quickBack: true,
-      onBack: function () {
-        var ov = document.getElementById('haccp-modal-overlay');
-        if (ov && ov.classList.contains('active')) {
-          if (typeof closeHaccpModal === 'function') closeHaccpModal();
-          else ov.classList.remove('active');
-          return true;
-        }
-        var adminTab = document.getElementById('tab-btn-admin');
-        if (adminTab && adminTab.classList.contains('active')) {
-          if (typeof switchMainTab === 'function') switchMainTab('field');
-          return true;
-        }
-        var taskMenu = document.getElementById('sec-task-menu');
-        if (taskMenu && taskMenu.style.display !== 'none') {
-          if (typeof resetWorkerSelection === 'function') resetWorkerSelection();
-          return true;
-        }
-        return false;
-      }
-    });
-  </script>
 </head>
 
 <body>
 
   <!-- ☕ ヘッダー -->
   <header>
-    <div class="hd-brand">
+    <a href="#" class="hd-brand" onclick="switchMainTab('field'); return false;">
       <span class="logo-icon">☕</span>
-      <h1 class="hd-title" onclick="switchMainTab('field')" style="cursor:pointer;">ひとつぎ珈琲HACCP</h1>
-    </div>
+      <h1 class="hd-title">ひとつぎ珈琲HACCP</h1>
+    </a>
 
     <!-- 中央ナビゲーション（選ぶ項目：珈琲HACCP と 日報記録） -->
     <div class="haccp-nav-pills">
