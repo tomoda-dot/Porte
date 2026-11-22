@@ -131,6 +131,9 @@
       '  border-bottom: 1px solid rgba(0,0,0,0.1) !important;',
       '  box-shadow: none !important;',
       '}',
+      '.hu-header.hu-no-subbar {',
+      '  margin-bottom: 14px !important;',
+      '}',
       '.hu-header.hu-fullbleed {',
       '  width: 100vw !important;',
       '  max-width: 100vw !important;',
@@ -418,6 +421,7 @@
       header.appendChild(titleSpan);
 
       if (_opts.noSubbar) {
+        header.classList.add('hu-no-subbar');
         if (movedNodes.length > 0) {
           var hdrRight = document.createElement('div');
           hdrRight.style.cssText = 'margin-left:auto;display:inline-flex;align-items:center;gap:10px;flex-shrink:0;';
