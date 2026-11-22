@@ -1,0 +1,108 @@
+/* porte-login-unified.css
+ * Porte / 日報入力 / 研修アカデミー / マイページ 共通ログイン画面スタイル
+ * 基準デザイン: Porte/index.html（クリーム背景 #f7f4f0 + 濃緑 #3d5a3e + くまロゴ）
+ */
+#pg-login {
+  --pri: #3d5a3e;
+  --pri-dark: #2e452f;
+  --bg: #f7f4f0;
+  --bdr: #e0d6cf;
+  --sub: #8a7a6a;
+  background: #f7f4f0 !important;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+}
+
+#pg-login .login-box {
+  background: #ffffff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.12) !important;
+  width: 480px !important;
+  max-width: 94vw !important;
+  padding: 32px 24px !important;
+  border: none !important;
+}
+
+/* PIN入力画面・従来ログイン画面時はコンパクトな360px幅に統一 */
+#pg-login .login-box:has(#tb-pin-view[style*="block"]),
+#pg-login .login-box:has(#tr-login-pin-view[style*="block"]),
+#pg-login .login-box:has(#mp-pin-view[style*="block"]),
+#pg-login .login-box:has(#tb-trad-view[style*="block"]),
+#pg-login .login-box:has(#tr-login-trad-view[style*="block"]),
+#pg-login .login-box:has(#mp-trad-view[style*="block"]) {
+  width: 360px !important;
+  max-width: 92vw !important;
+  padding: 24px 20px !important;
+}
+
+#pg-login .login-logo {
+  text-align: center;
+  margin-bottom: 18px !important;
+}
+
+#pg-login .login-logo h1 {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: #3d5a3e !important;
+  margin: 0 !important;
+}
+
+/* スタッフカード一覧の統一 */
+#pg-login #tb-staff-card-grid,
+#pg-login #tr-login-staff-grid,
+#pg-login #mp-staff-card-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+@media (max-width: 460px) {
+  #pg-login #tb-staff-card-grid,
+  #pg-login #tr-login-staff-grid,
+  #pg-login #mp-staff-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+#pg-login .staff-login-card,
+#pg-login .tr-staff-card,
+#pg-login .mp-staff-card {
+  background: #f8f6f2 !important;
+  border: 1.5px solid #e0d6cf !important;
+  border-radius: 12px !important;
+  padding: 16px 10px !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition: border-color 0.18s ease, transform 0.18s ease !important;
+}
+
+#pg-login .staff-login-card:hover,
+#pg-login .tr-staff-card:hover,
+#pg-login .mp-staff-card:hover {
+  border-color: #3d5a3e !important;
+  transform: translateY(-2px) !important;
+}
+
+/* 研修アカデミーのPINドット・キーパッド色も #3d5a3e に統一 */
+#pg-login .tr-pin-dot.filled {
+  background: #3d5a3e !important;
+  border-color: #3d5a3e !important;
+}
+
+#pg-login .tr-pin-key,
+#pg-login .tb-pin-key,
+#pg-login .mp-pin-key {
+  border-color: #e0d6cf !important;
+  color: #1e293b !important;
+}
+
+#pg-login .tr-pin-key.fn,
+#pg-login .tb-pin-key.fn,
+#pg-login .mp-pin-key.fn {
+  background: #f3efe9 !important;
+  color: #3d5a3e !important;
+}
