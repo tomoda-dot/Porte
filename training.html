@@ -2221,6 +2221,43 @@
       }
     }
 
+    async function upsertTrainingRecordsToTable(sb, arr) {
+      if (!sb || !Array.isArray(arr) || arr.length === 0) return;
+      var rows = arr.map(function (r) {
+        var rid = r.id || (String(r.trainingId || 'tr') + '__' + String(r.staffId || r.staffName || 'unknown'));
+        return {
+          id: String(rid),
+          staffId: String(r.staffId || ''),
+          staffName: String(r.staffName || ''),
+          courseId: String(r.trainingId || r.courseId || ''),
+          courseTitle: String(r.courseTitle || r.title || ''),
+          targetMonth: String(r.targetMonth || r.month || ''),
+          status: String(r.status || 'completed'),
+          score: (typeof r.score === 'number') ? r.score : null,
+          completedAt: r.completedAt || new Date().toISOString(),
+          data: r,
+          updated_at: new Date().toISOString()
+        };
+      });
+      await sb.from('研修受講記録').upsert(rows, { onConflict: 'id' });
+    }
+
+    async function upsertCommitteeMinutesToTable(sb, arr) {
+      if (!sb || !Array.isArray(arr) || arr.length === 0) return;
+      var rows = arr.map(function (m, idx) {
+        var mid = m.id || ('cm_' + String(m.date || '') + '_' + idx);
+        return {
+          id: String(mid),
+          meetingDate: String(m.date || m.meetingDate || ''),
+          committeeType: String(m.type || m.committeeType || ''),
+          title: String(m.title || m.agenda || ''),
+          data: m,
+          updated_at: new Date().toISOString()
+        };
+      });
+      await sb.from('委員会議事録').upsert(rows, { onConflict: 'id' });
+    }
+
     async function getStorageData(key, defVal) {
       var locVal = null;
       try {
@@ -2232,10 +2269,33 @@
         var sb = (typeof _getSupabase === 'function') ? _getSupabase() : (typeof supabase !== 'undefined' ? supabase : null);
         if (!sb) return locVal !== null ? locVal : defVal;
 
+        if (key === 'porte_training_records') {
+          var trRes = await sb.from('研修受講記録').select('data');
+          if (!trRes.error && trRes.data && trRes.data.length > 0) {
+            var list = trRes.data.map(function (row) { return row.data; }).filter(Boolean);
+            if (Array.isArray(locVal) && locVal.length > 0) {
+              var mergedTr = mergeRecordsArrays(list, locVal);
+              if (mergedTr.length > list.length) await upsertTrainingRecordsToTable(sb, mergedTr);
+              list = mergedTr;
+            }
+            localStorage.setItem(key, JSON.stringify(list));
+            return list;
+          }
+        } else if (key === 'porte_committee_minutes') {
+          var cmRes = await sb.from('委員会議事録').select('data');
+          if (!cmRes.error && cmRes.data && cmRes.data.length > 0) {
+            var cmList = cmRes.data.map(function (row) { return row.data; }).filter(Boolean);
+            localStorage.setItem(key, JSON.stringify(cmList));
+            return cmList;
+          }
+        }
+
         var res = await sb.from('設定').select('value').eq('key', key).limit(1);
         if (res.error || !res.data || res.data.length === 0) {
           if (locVal !== null) {
-            await upsertSettingSafe(sb, key, locVal);
+            if (key === 'porte_training_records') await upsertTrainingRecordsToTable(sb, locVal);
+            else if (key === 'porte_committee_minutes') await upsertCommitteeMinutesToTable(sb, locVal);
+            else await upsertSettingSafe(sb, key, locVal);
             return locVal;
           }
           return defVal;
@@ -2243,13 +2303,14 @@
         var rawVal = res.data[0].value;
         var sbVal = typeof rawVal === 'string' ? JSON.parse(rawVal) : rawVal;
 
-        if (key === 'porte_training_records' && Array.isArray(locVal) && locVal.length > 0) {
-          var merged = mergeRecordsArrays(sbVal, locVal);
-          if (merged.length > (Array.isArray(sbVal) ? sbVal.length : 0)) {
-            await upsertSettingSafe(sb, key, merged);
-          }
-          localStorage.setItem(key, JSON.stringify(merged));
-          return merged;
+        if (key === 'porte_training_records') {
+          var migrated = (Array.isArray(locVal) && locVal.length > 0) ? mergeRecordsArrays(sbVal, locVal) : (Array.isArray(sbVal) ? sbVal : []);
+          if (migrated.length > 0) await upsertTrainingRecordsToTable(sb, migrated);
+          localStorage.setItem(key, JSON.stringify(migrated));
+          return migrated;
+        }
+        if (key === 'porte_committee_minutes' && Array.isArray(sbVal) && sbVal.length > 0) {
+          await upsertCommitteeMinutesToTable(sb, sbVal);
         }
         localStorage.setItem(key, JSON.stringify(sbVal));
         return sbVal;
@@ -2262,20 +2323,15 @@
       try {
         var toSave = val;
         var sb = (typeof _getSupabase === 'function') ? _getSupabase() : (typeof supabase !== 'undefined' ? supabase : null);
-        if (sb && key === 'porte_training_records' && Array.isArray(val)) {
-          var res = await sb.from('設定').select('value').eq('key', key).limit(1);
-          if (!res.error && res.data && res.data.length > 0) {
-            var rawVal = res.data[0].value;
-            var sbArr = typeof rawVal === 'string' ? JSON.parse(rawVal) : rawVal;
-            if (Array.isArray(sbArr)) {
-              toSave = mergeRecordsArrays(sbArr, val);
-              _trainingRecords = toSave;
-            }
-          }
-        }
         localStorage.setItem(key, JSON.stringify(toSave));
         if (sb) {
-          await upsertSettingSafe(sb, key, toSave);
+          if (key === 'porte_training_records' && Array.isArray(toSave)) {
+            await upsertTrainingRecordsToTable(sb, toSave);
+          } else if (key === 'porte_committee_minutes' && Array.isArray(toSave)) {
+            await upsertCommitteeMinutesToTable(sb, toSave);
+          } else {
+            await upsertSettingSafe(sb, key, toSave);
+          }
         }
       } catch (e) {
         console.warn('saveStorageData error:', e);
