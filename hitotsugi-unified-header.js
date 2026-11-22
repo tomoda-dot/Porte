@@ -271,7 +271,14 @@
       '.hu-app-item:hover { background: #f8fafc; border-color: #cbd5e1; }',
       '.hu-app-item.current { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }',
       '.hu-app-ico { font-size: 18px; line-height: 1; }',
-      '@media print { .hu-header, .hu-subbar, .hu-popover { display: none !important; } }'
+      '.hu-modal-ov { position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 100000; display: flex; align-items: center; justify-content: center; padding: 16px; }',
+      '.hu-modal-box { background: #fff; color: #1e293b; border-radius: 16px; padding: 22px 24px; width: 300px; max-width: 100%; text-align: center; box-shadow: 0 20px 50px rgba(15,23,42,0.3); font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif; }',
+      '.hu-modal-msg { font-size: 16px; font-weight: 800; margin-bottom: 18px; }',
+      '.hu-modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }',
+      '.hu-modal-btn { padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 800; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; }',
+      '.hu-modal-btn.yes { background: #dc2626; border-color: #dc2626; color: #fff; }',
+      '.hu-modal-btn:hover { opacity: 0.9; }',
+      '@media print { .hu-header, .hu-subbar, .hu-popover, .hu-modal-ov { display: none !important; } }'
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -364,6 +371,31 @@
     }
     if (_isOpen) closeMenu();
     else openMenu();
+  }
+
+  function confirmLogout(onConfirm) {
+    var old = document.getElementById('hu-logout-modal');
+    if (old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'hu-logout-modal';
+    ov.className = 'hu-modal-ov';
+    ov.innerHTML =
+      '<div class="hu-modal-box">' +
+        '<div class="hu-modal-msg">ログアウトしますか？</div>' +
+        '<div class="hu-modal-btns">' +
+          '<button type="button" class="hu-modal-btn no" id="hu-lm-no">いいえ</button>' +
+          '<button type="button" class="hu-modal-btn yes" id="hu-lm-yes">はい</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    var close = function () { ov.remove(); };
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+    ov.querySelector('#hu-lm-no').addEventListener('click', close);
+    ov.querySelector('#hu-lm-yes').addEventListener('click', function () {
+      close();
+      if (typeof onConfirm === 'function') onConfirm();
+      else clearSessionAndGoLogin();
+    });
   }
 
   function init(options) {
@@ -465,6 +497,16 @@
           movedNodes.forEach(function (n) { hdrRight.appendChild(n); });
           header.appendChild(hdrRight);
         }
+        if (_opts.logoutTriggerSelector) {
+          var lt = header.querySelector(_opts.logoutTriggerSelector);
+          if (lt) {
+            lt.style.cursor = 'pointer';
+            lt.title = 'タップしてログアウト';
+            lt.addEventListener('click', function () {
+              confirmLogout(_opts.onLogout);
+            });
+          }
+        }
         return;
       }
 
@@ -511,6 +553,7 @@
     init: init,
     goBack: goBack,
     open: openMenu,
-    close: closeMenu
+    close: closeMenu,
+    confirmLogout: confirmLogout
   };
 })(window);
