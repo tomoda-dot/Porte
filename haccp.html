@@ -1335,6 +1335,27 @@
       }
     }
   </style>
+  <!-- HITOTSUGI_UNIFIED_HEADER_START -->
+  <script src="hitotsugi-unified-header.js"></script>
+  <script>
+    HitotsugiUnifiedHeader.init({
+      appId: 'haccp',
+      headerSelector: 'header',
+      titleSelector: '.hd-title',
+      moveSelectors: ['.haccp-nav-pills'],
+      onTitleClick: function () { if (typeof switchMainTab === 'function') switchMainTab('field'); },
+      onBack: function () {
+        var ov = document.getElementById('haccp-modal-overlay');
+        if (ov && ov.classList.contains('active')) { if (typeof closeHaccpModal === 'function') closeHaccpModal(); else ov.classList.remove('active'); return true; }
+        var adm = document.getElementById('tab-btn-admin');
+        if (adm && adm.classList.contains('active')) { if (typeof switchMainTab === 'function') switchMainTab('field'); return true; }
+        var tm = document.getElementById('sec-task-menu');
+        if (tm && tm.style.display !== 'none') { if (typeof resetWorkerSelection === 'function') resetWorkerSelection(); return true; }
+        return false;
+      }
+    });
+  </script>
+  <!-- HITOTSUGI_UNIFIED_HEADER_END -->
 </head>
 
 <body>
