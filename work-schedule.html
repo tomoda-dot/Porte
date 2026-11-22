@@ -1170,7 +1170,7 @@
     }
 
     // =========================================================================
-    // 自動割り当てエンジン（熟練度優先・2時間連続作業＆1時間作業対応）
+    // 自動割り当てエンジン（熟練度優先・午前/午後で異なる得意作業へバランス振り分け）
     // =========================================================================
     function autoGenerateSchedule() {
       var dateStr = document.getElementById('sched-date').value || getTodayStr();
@@ -1209,6 +1209,12 @@
         return true;
       }
 
+      function isTaskAllowedInBlock(task, blockHours, isAmBlock) {
+        if (task.period === 'am' && !isAmBlock) return false;
+        if (task.period === 'pm' && isAmBlock) return false;
+        return blockHours.some(function(h){ return isTaskAllowedInHour(task, h); });
+      }
+
       // そのコマでのタスク割当人数カウント
       function countTaskInHour(taskId, h) {
         var c = 0;
@@ -1229,153 +1235,220 @@
         return c;
       }
 
-      // ──────────────────────────────────────────────────
-      // STEP 1: 2時間連続作業（durationMode === '2' または '2_strict'）の優先割り当て
-      // ──────────────────────────────────────────────────
-      if (TIME_CFG.prefer2h) {
-        // 連続する2時間ペア（休憩を跨がないペア: 例 [9,10], [10,11], [13,14], [14,15]）を抽出
-        var twoHourTasks = TASKS.filter(function(t) {
-          return t.durationMode === '2' || t.durationMode === '2_strict';
+      // その利用者がすでにその日（または午前中）に入ったタスク一覧を取得
+      function getUserAssignedTaskIds(uid) {
+        var map = {};
+        hours.forEach(function(h) {
+          var cell = daySched[uid][h];
+          if (cell && cell.type === 'task' && cell.taskId) map[cell.taskId] = (map[cell.taskId] || 0) + 1;
         });
-
-        for (var i = 0; i < hours.length - 1; i++) {
-          var h1 = hours[i];
-          var h2 = hours[i + 1];
-          if (h2 !== h1 + 1) continue;
-          if (h1 === breakH || h2 === breakH) continue;
-
-          twoHourTasks.forEach(function(task) {
-            if (!isTaskAllowedInHour(task, h1) || !isTaskAllowedInHour(task, h2)) return;
-            var targetMin = Number(task.minPeople) || 1;
-            var curAssigned = countTaskInHour(task.id, h1);
-            var needed = Math.max(0, targetMin - curAssigned);
-            if (needed === 0) return;
-
-            // h1, h2両方とも空いている利用者を熟練度順にソート
-            var candidates = users.filter(function(u) {
-              var c1 = daySched[u.id][h1];
-              var c2 = daySched[u.id][h2];
-              if (!c1 || !c2 || c1.type !== 'empty' || c2.type !== 'empty') return false;
-              return getProfLevel(u.id, task.id) > 0;
-            });
-
-            candidates.sort(function(a, b) {
-              var pa = getProfLevel(a.id, task.id);
-              var pb = getProfLevel(b.id, task.id);
-              if (pb !== pa) return pb - pa; // 熟練度が高い順
-              // 同点なら今日そのタスクにまだ入っていない人優先
-              var ua = countUserTaskToday(a.id, task.id);
-              var ub = countUserTaskToday(b.id, task.id);
-              return ua - ub;
-            });
-
-            for (var k = 0; k < Math.min(needed, candidates.length); k++) {
-              var uid = candidates[k].id;
-              daySched[uid][h1] = { type: 'task', taskId: task.id, spanTag: '2h-1' };
-              daySched[uid][h2] = { type: 'task', taskId: task.id, spanTag: '2h-2' };
-            }
-          });
-        }
+        return map;
       }
 
-      // ──────────────────────────────────────────────────
-      // STEP 2: 各1時間枠で「最小必要人数（minPeople）」を満たすように熟練度優先で割り当て
-      // ──────────────────────────────────────────────────
-      hours.forEach(function(h) {
-        if (h === breakH) return;
-
-        TASKS.forEach(function(task) {
-          if (task.durationMode === '2_strict') return; // 2時間連続厳守タスクは1時間単発では入れない
-          if (!isTaskAllowedInHour(task, h)) return;
-
-          var minP = Number(task.minPeople) || 0;
-          var curP = countTaskInHour(task.id, h);
-          var need = Math.max(0, minP - curP);
-          if (need === 0) return;
-
-          var candidates = users.filter(function(u) {
-            var cell = daySched[u.id][h];
-            return cell && cell.type === 'empty' && getProfLevel(u.id, task.id) > 0;
-          });
-
-          candidates.sort(function(a, b) {
-            var pa = getProfLevel(a.id, task.id);
-            var pb = getProfLevel(b.id, task.id);
-            if (pb !== pa) return pb - pa;
-            var ua = countUserTaskToday(a.id, task.id);
-            var ub = countUserTaskToday(b.id, task.id);
-            return ua - ub;
-          });
-
-          for (var k = 0; k < Math.min(need, candidates.length); k++) {
-            var uid = candidates[k].id;
-            daySched[uid][h] = { type: 'task', taskId: task.id, spanTag: '1h' };
-          }
+      // 午前枠と午後枠に分割（休憩時間を境界にする。休憩なしの場合は前半・後半で分割）
+      var amHours = [];
+      var pmHours = [];
+      if (breakH > 0) {
+        hours.forEach(function(h) {
+          if (h < breakH) amHours.push(h);
+          else if (h > breakH) pmHours.push(h);
         });
-      });
+      } else {
+        var mid = Math.ceil(hours.length / 2);
+        amHours = hours.slice(0, mid);
+        pmHours = hours.slice(mid);
+      }
 
-      // ──────────────────────────────────────────────────
-      // STEP 3: まだ空いているコマがある利用者に、熟練度＆上限人数（maxPeople）を考慮して割り当て
-      // ──────────────────────────────────────────────────
-      hours.forEach(function(h, hIdx) {
-        if (h === breakH) return;
-        var nextH = (hIdx + 1 < hours.length) ? hours[hIdx + 1] : null;
+      // ブロック（午前 または 午後）単位でのバランス割り当て関数
+      function assignHalfDayBlock(blockHours, isAmBlock) {
+        if (blockHours.length === 0) return;
 
-        users.forEach(function(u) {
-          var cell = daySched[u.id][h];
-          if (!cell || cell.type !== 'empty') return;
+        // 1. この時間帯ブロック内での「2時間連続ペア」を抽出（例: AMの[10,11] や PMの[13,14]）
+        var pairs = [];
+        for (var i = 0; i < blockHours.length - 1; i++) {
+          if (blockHours[i + 1] === blockHours[i] + 1) {
+            pairs.push([blockHours[i], blockHours[i + 1]]);
+          }
+        }
 
-          // もし次のコマも空いていて、2時間作業で得意なものがあれば2時間連続で入れる
-          if (TIME_CFG.prefer2h && nextH === h + 1 && nextH !== breakH && daySched[u.id][nextH] && daySched[u.id][nextH].type === 'empty') {
-            var avail2h = TASKS.filter(function(t) {
-              if (t.durationMode !== '2' && t.durationMode !== '2_strict') return false;
-              if (!isTaskAllowedInHour(t, h) || !isTaskAllowedInHour(t, nextH)) return false;
-              if (getProfLevel(u.id, t.id) <= 0) return false;
-              var maxP = Number(t.maxPeople) || 99;
-              return countTaskInHour(t.id, h) < maxP && countTaskInHour(t.id, nextH) < maxP;
-            });
+        // 利用者ごとに「この時間帯ブロック（午前or午後）で優先すべき得意タスク」を選定して割り当てる
+        // まず2時間連続で入れる人を処理し、次に1時間単位のコマを埋める
+        // 複数の得意タスク（例：軽作業[2h]と駄菓子[1h]が両方◎）がある場合：
+        // ・午前に2時間タスク（軽作業）をやった人は、午後はまだやっていないもう一方の得意タスク（駄菓子等）を最優先にする！
+        // ・さらに同じ得意タスクを持つ人が複数いる場合も、全員が午前同じ作業にならないよう人ごとに午前・午後の順序を分散する
 
-            if (avail2h.length > 0) {
-              avail2h.sort(function(t1, t2) {
-                var p1 = getProfLevel(u.id, t1.id);
-                var p2 = getProfLevel(u.id, t2.id);
-                if (p2 !== p1) return p2 - p1;
-                return countUserTaskToday(u.id, t1.id) - countUserTaskToday(u.id, t2.id);
-              });
-              var chosen2h = avail2h[0];
-              if (getProfLevel(u.id, chosen2h.id) >= 2) {
-                daySched[u.id][h] = { type: 'task', taskId: chosen2h.id, spanTag: '2h-1' };
-                daySched[u.id][nextH] = { type: 'task', taskId: chosen2h.id, spanTag: '2h-2' };
-                return;
-              }
+        // Step A: 各利用者のこのブロックでの空いている連続2時間ペアまたは1時間枠を確認
+        users.forEach(function(u, uIdx) {
+          // このブロックで空いている時間を取得
+          var emptyInBlock = blockHours.filter(function(h) {
+            return daySched[u.id][h] && daySched[u.id][h].type === 'empty';
+          });
+          if (emptyInBlock.length === 0) return;
+
+          // この利用者がすでに今日割り当てられたタスク（主に午前中にやったタスク）
+          var alreadyDoneMap = getUserAssignedTaskIds(u.id);
+
+          // このブロックで可能な全タスクをスコア付けしてソート
+          // スコア基準：
+          // 1. 熟練度 (Lv.3 ◎ > Lv.2 〇 > Lv.1 △) ※ただし「今日まだやっていない同レベルの得意作業」を最優先！
+          // 2. 今日まだ入っていない作業（午前と午後で違う得意作業に振り分ける）
+          // 3. その時間帯で目標人数(minPeople)に対してまだ人数が足りない作業
+          // 4. 利用者番号(uIdx)と午前/午後で2時間作業と1時間作業のどちらを先にするかバランス分散
+
+          var candidateTasks = TASKS.filter(function(t) {
+            if (getProfLevel(u.id, t.id) <= 0) return false;
+            if (!isTaskAllowedInBlock(t, emptyInBlock, isAmBlock)) return false;
+            if (t.durationMode === '2_strict' && emptyInBlock.length < 2) return false;
+            return true;
+          });
+
+          if (candidateTasks.length === 0) return;
+
+          // この利用者の最高熟練度（例：◎が複数あるかチェック）
+          var maxProf = 0;
+          candidateTasks.forEach(function(t) {
+            var lv = getProfLevel(u.id, t.id);
+            if (lv > maxProf) maxProf = lv;
+          });
+
+          // 最高熟練度（例：◎）のタスクのうち、今日まだやっていないタスクがあるか？
+          var hasUntriedTopTask = candidateTasks.some(function(t) {
+            return getProfLevel(u.id, t.id) === maxProf && !alreadyDoneMap[t.id];
+          });
+
+          // このブロック内で連続2時間空いているペアを探す
+          var availPair = null;
+          for (var pi = 0; pi < pairs.length; pi++) {
+            var p1 = pairs[pi][0], p2 = pairs[pi][1];
+            if (daySched[u.id][p1].type === 'empty' && daySched[u.id][p2].type === 'empty') {
+              availPair = [p1, p2];
+              break;
             }
           }
 
-          // 1時間枠として最適なタスクを選択
-          var avail1h = TASKS.filter(function(t) {
-            if (t.durationMode === '2_strict') return false;
-            if (!isTaskAllowedInHour(t, h)) return false;
-            if (getProfLevel(u.id, t.id) <= 0) return false;
-            var maxP = Number(t.maxPeople) || 99;
-            return countTaskInHour(t.id, h) < maxP;
-          });
+          // タスクの優先度ソート関数（特定コマhまたはペア用）
+          function rankTasksForUser(targetHours, allow2hOnly) {
+            return candidateTasks.filter(function(t) {
+              if (allow2hOnly && t.durationMode !== '2' && t.durationMode !== '2_strict') return false;
+              if (!allow2hOnly && t.durationMode === '2_strict' && targetHours.length < 2) return false;
+              var maxP = Number(t.maxPeople) || 99;
+              return targetHours.every(function(h) {
+                return isTaskAllowedInHour(t, h) && countTaskInHour(t.id, h) < maxP;
+              });
+            }).sort(function(t1, t2) {
+              var lv1 = getProfLevel(u.id, t1.id);
+              var lv2 = getProfLevel(u.id, t2.id);
 
-          if (avail1h.length > 0) {
-            avail1h.sort(function(t1, t2) {
-              var p1 = getProfLevel(u.id, t1.id);
-              var p2 = getProfLevel(u.id, t2.id);
-              if (p2 !== p1) return p2 - p1;
-              if (TIME_CFG.rotateTasks) {
-                var u1 = countUserTaskToday(u.id, t1.id);
-                var u2 = countUserTaskToday(u.id, t2.id);
-                if (u1 !== u2) return u1 - u2;
+              // 1. 熟練度が高い方を優先
+              if (lv2 !== lv1) return lv2 - lv1;
+
+              // 2. 同じ熟練度（例：軽作業も駄菓子も両方◎）の場合：
+              // 午前中にすでにやった作業(done>0)より、まだ今日やっていない作業(done===0)を圧倒的に優先！
+              var done1 = alreadyDoneMap[t1.id] ? 1 : 0;
+              var done2 = alreadyDoneMap[t2.id] ? 1 : 0;
+              if (done1 !== done2) return done1 - done2;
+
+              // 3. どちらもまだやっていない（午前中など）場合：
+              // 目標人数（minPeople）に対する不足度合いと、利用者ごとの午前/午後ローテーションで決める
+              var h0 = targetHours[0];
+              var cur1 = countTaskInHour(t1.id, h0), min1 = Number(t1.minPeople) || 1;
+              var cur2 = countTaskInHour(t2.id, h0), min2 = Number(t2.minPeople) || 1;
+              var need1 = (cur1 < min1) ? 1 : 0;
+              var need2 = (cur2 < min2) ? 1 : 0;
+              if (need2 !== need1) return need2 - need1;
+
+              // 4. 2時間作業と1時間作業が両方◎で並んだ場合、午前と午後・利用者ごとに交互に優先して偏りを防ぐ
+              var is2h_1 = (t1.durationMode === '2' || t1.durationMode === '2_strict') ? 1 : 0;
+              var is2h_2 = (t2.durationMode === '2' || t2.durationMode === '2_strict') ? 1 : 0;
+              if (is2h_1 !== is2h_2 && TIME_CFG.prefer2h) {
+                // 偶数番目の利用者は午前2h→午後1h、奇数番目の利用者は午前1h→午後2hのように分散（ただし1名しかいない場合は午前2h→午後1h）
+                var prefer2hNow = isAmBlock ? (uIdx % 2 === 0) : (uIdx % 2 === 1);
+                if (users.length === 1) prefer2hNow = isAmBlock;
+                return prefer2hNow ? (is2h_2 - is2h_1) : (is2h_1 - is2h_2);
               }
-              return countTaskInHour(t1.id, h) - countTaskInHour(t2.id, h);
+
+              // 5. その日の累計回数が少ない方
+              var cnt1 = countUserTaskToday(u.id, t1.id);
+              var cnt2 = countUserTaskToday(u.id, t2.id);
+              if (cnt1 !== cnt2) return cnt1 - cnt2;
+
+              return cur1 - cur2;
             });
-            daySched[u.id][h] = { type: 'task', taskId: avail1h[0].id, spanTag: '1h' };
+          }
+
+          // まずこのブロックで一番優先すべきタスクを決定
+          var topRankedForBlock = rankTasksForUser(availPair || [emptyInBlock[0]], false);
+          if (topRankedForBlock.length > 0 && availPair) {
+            var bestTask = topRankedForBlock[0];
+            // もし最優先タスクが「2時間作業」なら、2コマ連続で割り当てる
+            if (TIME_CFG.prefer2h && (bestTask.durationMode === '2' || bestTask.durationMode === '2_strict')) {
+              daySched[u.id][availPair[0]] = { type: 'task', taskId: bestTask.id, spanTag: '2h-1' };
+              daySched[u.id][availPair[1]] = { type: 'task', taskId: bestTask.id, spanTag: '2h-2' };
+            }
           }
         });
-      });
+
+        // Step B: このブロック内の残りの空きコマ（1時間作業や端数のコマ）を1時間ずつ順番に埋める
+        blockHours.forEach(function(h) {
+          users.forEach(function(u, uIdx) {
+            var cell = daySched[u.id][h];
+            if (!cell || cell.type !== 'empty') return;
+
+            // 午前中にやったタスクMap（午後ブロックでは午前と違う作業を優先するため、別ブロックの履歴を参照）
+            var otherBlockDoneMap = {};
+            var otherHours = isAmBlock ? pmHours : amHours;
+            otherHours.forEach(function(oh) {
+              var oc = daySched[u.id][oh];
+              if (oc && oc.type === 'task' && oc.taskId) {
+                otherBlockDoneMap[oc.taskId] = (otherBlockDoneMap[oc.taskId] || 0) + 1;
+              }
+            });
+
+            var avail1h = TASKS.filter(function(t) {
+              if (t.durationMode === '2_strict') return false;
+              if (!isTaskAllowedInHour(t, h)) return false;
+              if (getProfLevel(u.id, t.id) <= 0) return false;
+              var maxP = Number(t.maxPeople) || 99;
+              return countTaskInHour(t.id, h) < maxP;
+            });
+
+            if (avail1h.length > 0) {
+              avail1h.sort(function(t1, t2) {
+                var lv1 = getProfLevel(u.id, t1.id);
+                var lv2 = getProfLevel(u.id, t2.id);
+                if (lv2 !== lv1) return lv2 - lv1;
+
+                // 午前（別ブロック）でやった得意作業とは違う得意作業を最優先！
+                var inOther1 = otherBlockDoneMap[t1.id] ? 1 : 0;
+                var inOther2 = otherBlockDoneMap[t2.id] ? 1 : 0;
+                if (inOther1 !== inOther2) return inOther1 - inOther2;
+
+                // 同じブロック内でも、ローテーション設定がONなら今日回数が少ない作業を優先
+                if (TIME_CFG.rotateTasks) {
+                  var u1 = countUserTaskToday(u.id, t1.id);
+                  var u2 = countUserTaskToday(u.id, t2.id);
+                  if (u1 !== u2) return u1 - u2;
+                }
+
+                // 目標人数（minPeople）に満たない作業を優先
+                var cur1 = countTaskInHour(t1.id, h), min1 = Number(t1.minPeople) || 1;
+                var cur2 = countTaskInHour(t2.id, h), min2 = Number(t2.minPeople) || 1;
+                var need1 = (cur1 < min1) ? 1 : 0;
+                var need2 = (cur2 < min2) ? 1 : 0;
+                if (need2 !== need1) return need2 - need1;
+
+                return cur1 - cur2;
+              });
+
+              daySched[u.id][h] = { type: 'task', taskId: avail1h[0].id, spanTag: '1h' };
+            }
+          });
+        });
+      }
+
+      // 午前ブロックを割り当て → 続いて午後ブロックを（午前と異なる得意作業が優先されるように）割り当て
+      assignHalfDayBlock(amHours, true);
+      assignHalfDayBlock(pmHours, false);
 
       // 連続する同じタスクのラベル整備（2時間連続表示用）
       users.forEach(function(u) {
@@ -1400,7 +1473,7 @@
       SAVED_SCHEDULES[dateStr] = daySched;
       saveLocal(STORAGE_KEYS.DAYS, SAVED_SCHEDULES);
       renderScheduleView();
-      showToast('✨ 熟練度を優先して作業スケジュールを自動作成しました');
+      showToast('✨ 午前・午後で得意作業をバランスよく自動割り当てしました');
     }
 
     function clearDaySchedule() {
