@@ -8,6 +8,7 @@
 <link rel="icon" type="image/jpeg" href="favicon-kuma.jpg">
 <link rel="apple-touch-icon" href="favicon-kuma.jpg">
 <link rel="stylesheet" href="porte-login-unified.css">
+<script src="hitotsugi-unified-header.js"></script>
 <script>
 (function() {
   try {
@@ -913,6 +914,7 @@ function render(){
       '<div style="padding:4px 8px;font-size:8px;color:rgba(255,255,255,.3);text-align:center">v3.1</div>'+
       '</div><div class="main" id="content"></div><div id="common-modal"></div>';
     _shellRendered=true;
+    if(window.HitotsugiUnifiedHeader){HitotsugiUnifiedHeader.bindTrigger('.side-hd img',{appId:'porte'});}
   }
   updateNav();
   renderTab();
