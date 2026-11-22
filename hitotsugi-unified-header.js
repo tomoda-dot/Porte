@@ -421,7 +421,7 @@
       header.appendChild(titleSpan);
 
       if (_opts.noSubbar) {
-        header.classList.add('hu-no-subbar');
+        if (!_opts.noGap) header.classList.add('hu-no-subbar');
         if (movedNodes.length > 0) {
           var hdrRight = document.createElement('div');
           hdrRight.style.cssText = 'margin-left:auto;display:inline-flex;align-items:center;gap:10px;flex-shrink:0;';
