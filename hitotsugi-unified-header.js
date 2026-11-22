@@ -15,6 +15,27 @@
 
   var PORTE_BASE = 'https://tomoda-dot.github.io/Porte/';
   var DAGASHI_BASE = 'https://tomoda-dot.github.io/DagashiShop/';
+  (function () {
+    var host = location.hostname || '';
+    var path = location.pathname.replace(/\\/g, '/');
+    var isLocal = (location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1' || /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(host));
+    if (!isLocal) return;
+    if (location.protocol === 'file:') {
+      if (path.indexOf('/Porte/bento/') !== -1) {
+        PORTE_BASE = '../';
+        DAGASHI_BASE = '../../DagashiShop/';
+      } else if (path.indexOf('/Porte/') !== -1) {
+        PORTE_BASE = './';
+        DAGASHI_BASE = '../DagashiShop/';
+      } else if (path.indexOf('/DagashiShop/') !== -1) {
+        PORTE_BASE = '../Porte/';
+        DAGASHI_BASE = './';
+      }
+    } else if (path.indexOf('/Porte/') !== -1 || path.indexOf('/DagashiShop/') !== -1) {
+      PORTE_BASE = location.origin + '/Porte/';
+      DAGASHI_BASE = location.origin + '/DagashiShop/';
+    }
+  })();
 
   var APPS = [
     { id: 'regi',          label: 'レジシステム',       icon: '🍬', url: DAGASHI_BASE + 'regi.html' },
