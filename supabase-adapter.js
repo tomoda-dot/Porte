@@ -6,39 +6,39 @@
 
 var supabase = (typeof window !== 'undefined' && window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-function _getSupabase(){
-  if(!supabase && typeof window !== 'undefined' && window.supabase && window.supabase.createClient){
+function _getSupabase() {
+  if (!supabase && typeof window !== 'undefined' && window.supabase && window.supabase.createClient) {
     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   }
-  if(!supabase){
+  if (!supabase) {
     throw new Error('Supabaseライブラリの読み込みに失敗しました。ネットワーク接続をご確認いただくか、ページを再読み込みしてください。');
   }
   return supabase;
 }
 
 // ID生成（GASと同じ形式）
-function _genId(prefix){return prefix+new Date().getTime()+Math.random().toString(36).substr(2,5);}
+function _genId(prefix) { return prefix + new Date().getTime() + Math.random().toString(36).substr(2, 5); }
 
 // エラーメッセージの日本語翻訳・親切ガイド変換
-function _humanizeError(err){
-  if(!err) return '不明なエラーが発生しました。';
+function _humanizeError(err) {
+  if (!err) return '不明なエラーが発生しました。';
   var msg = (typeof err === 'string') ? err : (err.message || err.hint || err.details || JSON.stringify(err));
 
   // 1. bigint / 数値型エラー（ハイフンや文字列の混入）
   var mBigint = msg.match(/invalid input syntax for type (?:bigint|integer|numeric|smallint):\s*"([^"]*)"/i);
-  if(mBigint){
+  if (mBigint) {
     return '【入力エラー】数値のみを入力する項目に、文字や記号（「' + mBigint[1] + '」）が含まれています。\n数字のみで入力してください。';
   }
 
   // 2. 日付・時刻エラー
   var mDate = msg.match(/invalid input syntax for type (?:date|timestamp|time)[^:]*:\s*"([^"]*)"/i);
-  if(mDate){
+  if (mDate) {
     return '【日付・時刻エラー】日付または時刻の形式が正しくありません（入力値: 「' + mDate[1] + '」）。\n「年/月/日」または「時:分」の形式で入力されているかご確認ください。';
   }
 
   // 3. 必須項目（NOT NULL制約）エラー
   var mNotNull = msg.match(/null value in column "([^"]+)"/i);
-  if(mNotNull){
+  if (mNotNull) {
     var colMap = {
       'name': '氏名', 'furigana': 'フリガナ', 'date': '日付', 'userId': '利用者',
       'staffId': '担当スタッフ', 'status': '出欠状況', 'loginId': 'ログインID',
@@ -50,8 +50,8 @@ function _humanizeError(err){
   }
 
   // 4. 重複登録（UNIQUE制約）エラー
-  if(msg.indexOf('duplicate key value violates unique constraint') >= 0 || msg.indexOf('23505') >= 0){
-    if(msg.indexOf('loginId') >= 0 || msg.indexOf('ログイン') >= 0){
+  if (msg.indexOf('duplicate key value violates unique constraint') >= 0 || msg.indexOf('23505') >= 0) {
+    if (msg.indexOf('loginId') >= 0 || msg.indexOf('ログイン') >= 0) {
       return '【重複エラー】このログインIDはすでに別のスタッフに使用されています。別のIDを指定してください。';
     }
     return '【重複エラー】すでに同じデータが登録されています。重複しない値に変更してください。';
@@ -59,31 +59,31 @@ function _humanizeError(err){
 
   // 5. 文字数オーバー
   var mLen = msg.match(/value too long for type character varying\((\d+)\)/i);
-  if(mLen){
+  if (mLen) {
     return '【文字数エラー】入力文字数が上限（' + mLen[1] + '文字）を超えています。少し短くして入力してください。';
   }
 
   // 6. ネットワーク通信エラー
-  if(msg.indexOf('Failed to fetch') >= 0 || msg.indexOf('NetworkError') >= 0 || msg.indexOf('timeout') >= 0 || msg.indexOf('net::ERR') >= 0){
+  if (msg.indexOf('Failed to fetch') >= 0 || msg.indexOf('NetworkError') >= 0 || msg.indexOf('timeout') >= 0 || msg.indexOf('net::ERR') >= 0) {
     return '【通信エラー】インターネット接続が不安定か、一時的に切断されています。\nWi-Fiや電波状況をご確認のうえ、もう一度お試しください。';
   }
 
   // 7. 権限・セッションエラー
-  if(msg.indexOf('row-level security') >= 0 || msg.indexOf('permission denied') >= 0 || msg.indexOf('JWT') >= 0){
+  if (msg.indexOf('row-level security') >= 0 || msg.indexOf('permission denied') >= 0 || msg.indexOf('JWT') >= 0) {
     return '【権限・認証エラー】ログインの有効期限が切れた可能性があります。\n一度ブラウザを再読み込み（リロード）して再度ログインしてください。';
   }
 
   // 8. 外部キー制約エラー
-  if(msg.indexOf('foreign key constraint') >= 0){
+  if (msg.indexOf('foreign key constraint') >= 0) {
     return '【データ関連エラー】選択された利用者やスタッフのデータが見つかりません。最新のデータに更新して再度お試しください。';
   }
 
   return msg.replace(/^Error:\s*/i, '');
 }
-if(typeof window !== 'undefined') window._humanizeError = _humanizeError;
+if (typeof window !== 'undefined') window._humanizeError = _humanizeError;
 
 // エラーを文字列に変換（親切な日本語案内付き）
-function _throwErr(e){
+function _throwErr(e) {
   var humanMsg = _humanizeError(e);
   var err = new Error(humanMsg);
   err.original = e;
@@ -91,40 +91,40 @@ function _throwErr(e){
 }
 
 // テーブルのカラム名キャッシュ
-var _colCache={};
-async function _getCols(table){
-  if(_colCache[table])return _colCache[table];
-  var r=await supabase.from(table).select('*').limit(0);
+var _colCache = {};
+async function _getCols(table) {
+  if (_colCache[table]) return _colCache[table];
+  var r = await supabase.from(table).select('*').limit(0);
   // レスポンスヘッダーからカラムを取得できないので、1件取得して判断
-  var r2=await supabase.from(table).select('*').limit(1);
-  if(r2.data&&r2.data.length>0){
-    _colCache[table]=Object.keys(r2.data[0]);
-  }else{
+  var r2 = await supabase.from(table).select('*').limit(1);
+  if (r2.data && r2.data.length > 0) {
+    _colCache[table] = Object.keys(r2.data[0]);
+  } else {
     // テーブルが空の場合、全カラムを通す（フィルタしない）
-    _colCache[table]=null;
+    _colCache[table] = null;
   }
   return _colCache[table];
 }
 
 // オブジェクトからテーブルに存在するカラムだけ抽出 + 空文字→null変換 + bigintカラム安全サニタイズ
-async function _filterCols(table,obj){
-  var cols=await _getCols(table);
-  var filtered={};
-  var keys=cols||Object.keys(obj);
-  for(var i=0;i<keys.length;i++){
-    var k=keys[i];
-    if(obj[k]!==undefined){
-      filtered[k]=obj[k]===''?null:obj[k];
+async function _filterCols(table, obj) {
+  var cols = await _getCols(table);
+  var filtered = {};
+  var keys = cols || Object.keys(obj);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    if (obj[k] !== undefined) {
+      filtered[k] = obj[k] === '' ? null : obj[k];
     }
   }
   // 利用者テーブルのbigint型カラム（電話番号・受給者証番号等）のハイフン除去・数値変換
-  if(table==='利用者'){
-    var bigintCols=['contact','contact2','contact3','emergencyPhone','recipientNumber'];
-    for(var b=0;b<bigintCols.length;b++){
-      var bk=bigintCols[b];
-      if(filtered[bk]!==undefined && filtered[bk]!==null && filtered[bk]!==''){
-        var digits=String(filtered[bk]).replace(/\D/g, '');
-        filtered[bk]=digits ? Number(digits) : null;
+  if (table === '利用者') {
+    var bigintCols = ['contact', 'contact2', 'contact3', 'emergencyPhone', 'recipientNumber'];
+    for (var b = 0; b < bigintCols.length; b++) {
+      var bk = bigintCols[b];
+      if (filtered[bk] !== undefined && filtered[bk] !== null && filtered[bk] !== '') {
+        var digits = String(filtered[bk]).replace(/\D/g, '');
+        filtered[bk] = digits ? Number(digits) : null;
       }
     }
   }
@@ -132,17 +132,17 @@ async function _filterCols(table,obj){
 }
 
 // ネットワーク通信エラー（Failed to fetch等）の自動リトライ処理
-async function _retryOp(fn){
+async function _retryOp(fn) {
   var lastErr;
-  for(var attempt = 1; attempt <= 4; attempt++){
+  for (var attempt = 1; attempt <= 4; attempt++) {
     try {
       return await fn();
-    } catch(e) {
+    } catch (e) {
       lastErr = e;
       var errStr = String(e || '');
-      if(errStr.indexOf('Failed to fetch') >= 0 || errStr.indexOf('NetworkError') >= 0 || errStr.indexOf('timeout') >= 0 || errStr.indexOf('fetch') >= 0){
+      if (errStr.indexOf('Failed to fetch') >= 0 || errStr.indexOf('NetworkError') >= 0 || errStr.indexOf('timeout') >= 0 || errStr.indexOf('fetch') >= 0) {
         console.warn('📡 ネットワーク再接続中 (' + attempt + '/4回目):', e);
-        await new Promise(function(r){ setTimeout(r, attempt * 400); });
+        await new Promise(function (r) { setTimeout(r, attempt * 400); });
         continue;
       }
       throw e;
@@ -152,77 +152,77 @@ async function _retryOp(fn){
 }
 
 // テーブルから全件取得（時刻パディング付き・id順）
-async function _getAll(table){
-  return _retryOp(async function(){
-    var r=await supabase.from(table).select('*').order('id');
-    if(r.error&&r.error.message&&r.error.message.indexOf('id')>=0){
-      r=await supabase.from(table).select('*');
+async function _getAll(table) {
+  return _retryOp(async function () {
+    var r = await supabase.from(table).select('*').order('id');
+    if (r.error && r.error.message && r.error.message.indexOf('id') >= 0) {
+      r = await supabase.from(table).select('*');
     }
-    if(r.error)_throwErr(r.error);
-    var data=(r.data||[]).map(_padTimes);
-    if(table==='出欠') data=_dedupAttendanceRows(data);
+    if (r.error) _throwErr(r.error);
+    var data = (r.data || []).map(_padTimes);
+    if (table === '出欠') data = _dedupAttendanceRows(data);
     return data;
   });
 }
 
 // テーブルからフィルタ取得
-async function _getFiltered(table,col,val){
-  return _retryOp(async function(){
-    var r=await supabase.from(table).select('*').eq(col,val);
-    if(r.error)_throwErr(r.error);
-    var data=(r.data||[]).map(_padTimes);
-    if(table==='出欠') data=_dedupAttendanceRows(data);
+async function _getFiltered(table, col, val) {
+  return _retryOp(async function () {
+    var r = await supabase.from(table).select('*').eq(col, val);
+    if (r.error) _throwErr(r.error);
+    var data = (r.data || []).map(_padTimes);
+    if (table === '出欠') data = _dedupAttendanceRows(data);
     return data;
   });
 }
 
 // 前方一致フィルタ（日付のym検索用）
-async function _getLike(table,col,prefix){
-  return _retryOp(async function(){
-    var r=await supabase.from(table).select('*').like(col,prefix+'%');
-    if(r.error)_throwErr(r.error);
-    var data=(r.data||[]).map(_padTimes);
-    if(table==='出欠') data=_dedupAttendanceRows(data);
+async function _getLike(table, col, prefix) {
+  return _retryOp(async function () {
+    var r = await supabase.from(table).select('*').like(col, prefix + '%');
+    if (r.error) _throwErr(r.error);
+    var data = (r.data || []).map(_padTimes);
+    if (table === '出欠') data = _dedupAttendanceRows(data);
     return data;
   });
 }
 
 // 以上フィルタ
-async function _getGte(table,col,val){
-  return _retryOp(async function(){
-    var r=await supabase.from(table).select('*').gte(col,val).order(col);
-    if(r.error)_throwErr(r.error);
-    var data=(r.data||[]).map(_padTimes);
-    if(table==='出欠') data=_dedupAttendanceRows(data);
+async function _getGte(table, col, val) {
+  return _retryOp(async function () {
+    var r = await supabase.from(table).select('*').gte(col, val).order(col);
+    if (r.error) _throwErr(r.error);
+    var data = (r.data || []).map(_padTimes);
+    if (table === '出欠') data = _dedupAttendanceRows(data);
     return data;
   });
 }
 
 // 出欠レコードの重複解消・非空フィールド統合
-function _dedupAttendanceRows(rows){
-  if(!rows || rows.length <= 1) return rows;
+function _dedupAttendanceRows(rows) {
+  if (!rows || rows.length <= 1) return rows;
   var map = {};
   var result = [];
-  for(var i=0; i<rows.length; i++){
+  for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
     var key = String(r.userId) + '_' + String(r.date);
-    if(!map[key]){
+    if (!map[key]) {
       map[key] = Object.assign({}, r);
       result.push(map[key]);
     } else {
       var merged = map[key];
       var keys = Object.keys(r);
-      for(var k=0; k<keys.length; k++){
+      for (var k = 0; k < keys.length; k++) {
         var keyName = keys[k];
         var val = r[keyName];
-        if(val !== null && val !== undefined && val !== '' && val !== '-'){
-          if(merged[keyName] === null || merged[keyName] === undefined || merged[keyName] === '' || merged[keyName] === '-'){
+        if (val !== null && val !== undefined && val !== '' && val !== '-') {
+          if (merged[keyName] === null || merged[keyName] === undefined || merged[keyName] === '' || merged[keyName] === '-') {
             merged[keyName] = val;
-          } else if(keyName === 'status'){
-            var statusOrder = ['出席','遅刻','早退','欠席','体調不良','通院','予定','調整休'];
+          } else if (keyName === 'status') {
+            var statusOrder = ['出席', '遅刻', '早退', '欠席', '体調不良', '通院', '予定', '調整休'];
             var curIdx = statusOrder.indexOf(merged.status);
             var newIdx = statusOrder.indexOf(val);
-            if(newIdx >= 0 && (curIdx < 0 || newIdx < curIdx)){
+            if (newIdx >= 0 && (curIdx < 0 || newIdx < curIdx)) {
               merged.status = val;
             }
           }
@@ -234,71 +234,71 @@ function _dedupAttendanceRows(rows){
 }
 
 // 時刻フィールドをHH:mm形式にパディング＆時刻フィールド相互補完＆出欠調整メタデータ復元
-function _padTimes(row){
-  if(row){
-    if(!row.startTime && (row.in || row.clockIn)) row.startTime = row.in || row.clockIn;
-    if(!row.endTime && (row.out || row.clockOut)) row.endTime = row.out || row.clockOut;
-    if(!row.in && row.startTime) row.in = row.startTime;
-    if(!row.out && row.endTime) row.out = row.endTime;
+function _padTimes(row) {
+  if (row) {
+    if (!row.startTime && (row.in || row.clockIn)) row.startTime = row.in || row.clockIn;
+    if (!row.endTime && (row.out || row.clockOut)) row.endTime = row.out || row.clockOut;
+    if (!row.in && row.startTime) row.in = row.startTime;
+    if (!row.out && row.endTime) row.out = row.endTime;
 
     // 出欠レコードの工賃調整・加算メタデータ（actualHours, dailyBonus, transportationAllowance, mealRate, absenceAddition, offsiteSupport）をnotesから復元
-    if(row.notes && typeof row.notes === 'string' && row.notes.indexOf('<!--ADJ:') >= 0){
+    if (row.notes && typeof row.notes === 'string' && row.notes.indexOf('<!--ADJ:') >= 0) {
       var adjMatch = row.notes.match(/<!--ADJ:(.*?)-->/);
-      if(adjMatch){
-        try{
+      if (adjMatch) {
+        try {
           var adjObj = JSON.parse(adjMatch[1]);
-          if(adjObj.ah !== undefined) row.actualHours = adjObj.ah;
-          if(adjObj.b !== undefined) row.dailyBonus = adjObj.b;
-          if(adjObj.t !== undefined) row.transportationAllowance = adjObj.t;
-          if(adjObj.mr !== undefined) row.mealRate = adjObj.mr;
-          if(adjObj.aa !== undefined) row.absenceAddition = !!adjObj.aa;
-          if(adjObj.os !== undefined) row.offsiteSupport = !!adjObj.os;
-        }catch(e){}
+          if (adjObj.ah !== undefined) row.actualHours = adjObj.ah;
+          if (adjObj.b !== undefined) row.dailyBonus = adjObj.b;
+          if (adjObj.t !== undefined) row.transportationAllowance = adjObj.t;
+          if (adjObj.mr !== undefined) row.mealRate = adjObj.mr;
+          if (adjObj.aa !== undefined) row.absenceAddition = !!adjObj.aa;
+          if (adjObj.os !== undefined) row.offsiteSupport = !!adjObj.os;
+        } catch (e) { }
         row.notes = row.notes.replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
       }
     }
   }
-  var timeFields=['startTime','endTime','scheduleStart','scheduleEnd','contractStart','contractEnd','departTime','arriveTime','in','out'];
-  for(var i=0;i<timeFields.length;i++){
-    var k=timeFields[i];
-    if(row[k]&&typeof row[k]==='string'&&row[k].match(/^\d{1,2}:\d{2}$/)){
-      var p=row[k].split(':');row[k]=p[0].padStart(2,'0')+':'+p[1];
+  var timeFields = ['startTime', 'endTime', 'scheduleStart', 'scheduleEnd', 'contractStart', 'contractEnd', 'departTime', 'arriveTime', 'in', 'out'];
+  for (var i = 0; i < timeFields.length; i++) {
+    var k = timeFields[i];
+    if (row[k] && typeof row[k] === 'string' && row[k].match(/^\d{1,2}:\d{2}$/)) {
+      var p = row[k].split(':'); row[k] = p[0].padStart(2, '0') + ':' + p[1];
     }
   }
-  var phoneFields=['contact','contact2','contact3','emergencyPhone'];
-  for(var j=0;j<phoneFields.length;j++){
-    var pk=phoneFields[j];
-    if(row[pk]!==undefined&&row[pk]!==null&&row[pk]!==''){
-      var s=String(row[pk]).trim();
-      if(/^\d{9,10}$/.test(s)&&s.charAt(0)!=='0') row[pk]='0'+s;
-      else row[pk]=s;
+  var phoneFields = ['contact', 'contact2', 'contact3', 'emergencyPhone'];
+  for (var j = 0; j < phoneFields.length; j++) {
+    var pk = phoneFields[j];
+    if (row[pk] !== undefined && row[pk] !== null && row[pk] !== '') {
+      var s = String(row[pk]).trim();
+      if (/^\d{9,10}$/.test(s) && s.charAt(0) !== '0') row[pk] = '0' + s;
+      else row[pk] = s;
     }
   }
-  if(row.recipientNumber!==undefined&&row.recipientNumber!==null&&row.recipientNumber!==''){
-    var rs=String(row.recipientNumber).trim();
-    if(/^\d{1,10}$/.test(rs)) row.recipientNumber=rs.padStart(10,'0');
+  if (row.recipientNumber !== undefined && row.recipientNumber !== null && row.recipientNumber !== '') {
+    var rs = String(row.recipientNumber).trim();
+    if (/^\d{1,10}$/.test(rs)) row.recipientNumber = rs.padStart(10, '0');
   }
   return row;
 }
 
 // 出欠レコードの工賃調整・加算メタデータをnotes末尾にエンコード
-function _encodeAttendanceAdj(obj){
-  if(!obj) return;
+function _encodeAttendanceAdj(obj) {
+  if (!obj) return;
   var hasAdj = (obj.actualHours !== undefined && obj.actualHours !== null && obj.actualHours !== '') ||
-               (obj.dailyBonus !== undefined && obj.dailyBonus !== null && Number(obj.dailyBonus) !== 0) ||
-               (obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0) ||
-               (obj.mealRate !== undefined && obj.mealRate !== null && obj.mealRate !== '') ||
-               !!obj.absenceAddition ||
-               !!obj.offsiteSupport;
+    (obj.dailyBonus !== undefined && obj.dailyBonus !== null && Number(obj.dailyBonus) !== 0) ||
+    (obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0) ||
+    (obj.mealRate !== undefined && obj.mealRate !== null && obj.mealRate !== '') ||
+    !!obj.absenceAddition ||
+    !!obj.offsiteSupport;
   var rawNotes = String(obj.notes || '').replace(/\s*<!--ADJ:.*?-->\s*/g, '').trim();
-  if(hasAdj){
+  if (hasAdj) {
     var adjData = {};
-    if(obj.actualHours !== undefined && obj.actualHours !== null && obj.actualHours !== '') adjData.ah = Number(obj.actualHours);
-    if(obj.dailyBonus !== undefined && obj.dailyBonus !== null && Number(obj.dailyBonus) !== 0) adjData.b = Number(obj.dailyBonus);
-    if(obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0) adjData.t = Number(obj.transportationAllowance);
-    if(obj.mealRate !== undefined && obj.mealRate !== null && obj.mealRate !== '') adjData.mr = obj.mealRate;
-    if(obj.absenceAddition) adjData.aa = 1;
-    if(obj.offsiteSupport) adjData.os = 1;
+    if (obj.actualHours !== undefined && obj.actualHours !== null && obj.actualHours !== '') adjData.ah = Number(obj.actualHours);
+    if (obj.dailyBonus !== undefined && obj.dailyBonus !== null && Number(obj.dailyBonus) !== 0) adjData.b = Number(obj.dailyBonus);
+    if (obj.transportationAllowance !== undefined && obj.transportationAllowance !== null && Number(obj.transportationAllowance) !== 0) adjData.t = Number(obj.transportationAllowance);
+    if (obj.mealRate !== undefined && obj.mealRate !== null && obj.mealRate !== '') adjData.mr = obj.mealRate;
+    if (obj.absenceAddition) adjData.aa = 1;
+    if (obj.offsiteSupport) adjData.os = 1;
     obj.notes = (rawNotes ? rawNotes + ' ' : '') + '<!--ADJ:' + JSON.stringify(adjData) + '-->';
   } else {
     obj.notes = rawNotes;
@@ -306,15 +306,15 @@ function _encodeAttendanceAdj(obj){
 }
 
 // 追加（不明カラム自動除去リトライ付き）
-async function _add(table,obj){
-  if(table==='出欠') _encodeAttendanceAdj(obj);
-  var safe=await _filterCols(table,obj);
-  for(var retry=0;retry<10;retry++){
-    var r=await supabase.from(table).insert([safe]).select();
-    if(!r.error)return(r.data&&r.data[0])||obj;
-    if(r.error.message&&r.error.message.indexOf('Could not find the')>=0){
-      var m=r.error.message.match(/find the '([^']+)'/);
-      if(m){console.warn('カラム除去:',table+'.'+m[1]);delete safe[m[1]];continue;}
+async function _add(table, obj) {
+  if (table === '出欠') _encodeAttendanceAdj(obj);
+  var safe = await _filterCols(table, obj);
+  for (var retry = 0; retry < 10; retry++) {
+    var r = await supabase.from(table).insert([safe]).select();
+    if (!r.error) return (r.data && r.data[0]) || obj;
+    if (r.error.message && r.error.message.indexOf('Could not find the') >= 0) {
+      var m = r.error.message.match(/find the '([^']+)'/);
+      if (m) { console.warn('カラム除去:', table + '.' + m[1]); delete safe[m[1]]; continue; }
     }
     _throwErr(r.error);
   }
@@ -322,15 +322,15 @@ async function _add(table,obj){
 }
 
 // 更新（不明カラム自動除去リトライ付き）
-async function _update(table,obj){
-  if(table==='出欠') _encodeAttendanceAdj(obj);
-  var id=obj.id;var safe=await _filterCols(table,obj);
-  for(var retry=0;retry<10;retry++){
-    var r=await supabase.from(table).update(safe).eq('id',id).select();
-    if(!r.error)return(r.data&&r.data[0])||obj;
-    if(r.error.message&&r.error.message.indexOf('Could not find the')>=0){
-      var m=r.error.message.match(/find the '([^']+)'/);
-      if(m){console.warn('カラム除去:',table+'.'+m[1]);delete safe[m[1]];continue;}
+async function _update(table, obj) {
+  if (table === '出欠') _encodeAttendanceAdj(obj);
+  var id = obj.id; var safe = await _filterCols(table, obj);
+  for (var retry = 0; retry < 10; retry++) {
+    var r = await supabase.from(table).update(safe).eq('id', id).select();
+    if (!r.error) return (r.data && r.data[0]) || obj;
+    if (r.error.message && r.error.message.indexOf('Could not find the') >= 0) {
+      var m = r.error.message.match(/find the '([^']+)'/);
+      if (m) { console.warn('カラム除去:', table + '.' + m[1]); delete safe[m[1]]; continue; }
     }
     _throwErr(r.error);
   }
@@ -338,327 +338,346 @@ async function _update(table,obj){
 }
 
 // 削除
-async function _del(table,id){var r=await supabase.from(table).delete().eq('id',id);if(r.error)_throwErr(r.error);return true;}
+async function _del(table, id) { var r = await supabase.from(table).delete().eq('id', id); if (r.error) _throwErr(r.error); return true; }
 
 // Upsert（userId+dateで既存チェック＆出欠は重複排除・既存時刻情報非上書き統合）
-async function _upsertByUserDate(table,obj,idPrefix){
-  var r=await supabase.from(table).select('*').eq('userId',obj.userId).eq('date',obj.date);
-  if(table==='出欠'){
+async function _upsertByUserDate(table, obj, idPrefix) {
+  var r = await supabase.from(table).select('*').eq('userId', obj.userId).eq('date', obj.date);
+  if (table === '出欠') {
     _encodeAttendanceAdj(obj);
   }
-  if(r.data&&r.data.length>0){
-    var validId=null;
-    for(var vi=0;vi<r.data.length;vi++){if(r.data[vi].id){validId=r.data[vi].id;break;}}
-    obj.id=validId||_genId(idPrefix);
-    if(table==='出欠'){
-      for(var i=0;i<r.data.length;i++){
-        var existingRow=r.data[i];
-        var keys=Object.keys(existingRow);
-        for(var k=0;k<keys.length;k++){
-          var keyName=keys[k];
-          var exVal=existingRow[keyName];
-          if(exVal!==null&&exVal!==undefined&&exVal!==''&&exVal!=='-'){
+  if (r.data && r.data.length > 0) {
+    var validId = null;
+    for (var vi = 0; vi < r.data.length; vi++) { if (r.data[vi].id) { validId = r.data[vi].id; break; } }
+    obj.id = validId || _genId(idPrefix);
+    if (table === '出欠') {
+      for (var i = 0; i < r.data.length; i++) {
+        var existingRow = r.data[i];
+        var keys = Object.keys(existingRow);
+        for (var k = 0; k < keys.length; k++) {
+          var keyName = keys[k];
+          var exVal = existingRow[keyName];
+          if (exVal !== null && exVal !== undefined && exVal !== '' && exVal !== '-') {
             // objにキー自体が渡されていない場合のみ既存値で補完（明示的にnullや空文字で更新する場合は保持）
-            if(obj[keyName]===undefined){
-              obj[keyName]=exVal;
+            if (obj[keyName] === undefined) {
+              obj[keyName] = exVal;
             }
           }
         }
       }
-      if(r.data.length>1||!validId){
-        await supabase.from(table).delete().eq('userId',obj.userId).eq('date',obj.date).catch(function(){});
-        return _add(table,obj);
+      if (r.data.length > 1 || !validId) {
+        await supabase.from(table).delete().eq('userId', obj.userId).eq('date', obj.date).catch(function () { });
+        return _add(table, obj);
       }
     }
-    return _update(table,obj);
+    return _update(table, obj);
   }
-  else{obj.id=_genId(idPrefix);return _add(table,obj);}
+  else { obj.id = _genId(idPrefix); return _add(table, obj); }
 }
 
 // 日付+ユーザー指定削除
-async function _delByUserDate(table,userId,date){
-  var r=await supabase.from(table).delete().eq('userId',userId).eq('date',date);
-  if(r.error)_throwErr(r.error);
+async function _delByUserDate(table, userId, date) {
+  var r = await supabase.from(table).delete().eq('userId', userId).eq('date', date);
+  if (r.error) _throwErr(r.error);
   return true;
 }
 
 // ═══ 設定（key-value形式）═══
-async function _getSettings(){
-  var r=await supabase.from('設定').select('key,value')
-    .not('key','like','porte_training_%')
-    .not('key','like','porte_committee_%')
-    .not('key','like','work_schedule_%')
-    .not('key','like','haccp_%');
-  if(r.error)_throwErr(r.error);
-  var rows=r.data||[];
-  var obj={};for(var i=0;i<rows.length;i++)obj[rows[i].key]=rows[i].value;
+async function _getSettings() {
+  var r = await supabase.from('設定').select('key,value')
+    .not('key', 'like', 'porte_training_%')
+    .not('key', 'like', 'porte_committee_%')
+    .not('key', 'like', 'work_schedule_%')
+    .not('key', 'like', 'haccp_%');
+  if (r.error) _throwErr(r.error);
+  var rows = r.data || [];
+  var obj = {}; for (var i = 0; i < rows.length; i++)obj[rows[i].key] = rows[i].value;
   return obj;
 }
-async function _updateSetting(key,value){
-  var r=await supabase.from('設定').select('key').eq('key',key).limit(1);
-  if(r.error)_throwErr(r.error);
-  if(r.data&&r.data.length>0){
-    var ur=await supabase.from('設定').update({value:value}).eq('key',key);
-    if(ur.error)_throwErr(ur.error);
-  }else{
-    var obj={key:key,value:value};
-    for(var retry=0;retry<5;retry++){
-      var r2=await supabase.from('設定').insert([obj]);
-      if(!r2.error)break;
-      if(r2.error.message&&r2.error.message.indexOf('Could not find the')>=0){
-        var m=r2.error.message.match(/find the '([^']+)'/);if(m){delete obj[m[1]];continue;}
+async function _updateSetting(key, value) {
+  var r = await supabase.from('設定').select('key').eq('key', key).limit(1);
+  if (r.error) _throwErr(r.error);
+  if (r.data && r.data.length > 0) {
+    var ur = await supabase.from('設定').update({ value: value }).eq('key', key);
+    if (ur.error) _throwErr(ur.error);
+  } else {
+    var obj = { key: key, value: value };
+    for (var retry = 0; retry < 5; retry++) {
+      var r2 = await supabase.from('設定').insert([obj]);
+      if (!r2.error) break;
+      if (r2.error.message && r2.error.message.indexOf('Could not find the') >= 0) {
+        var m = r2.error.message.match(/find the '([^']+)'/); if (m) { delete obj[m[1]]; continue; }
       }
       _throwErr(r2.error);
     }
   }
-  return{success:true};
+  return { success: true };
 }
 
 // ═══ gas() 互換関数 ═══
-async function gas(fn){
-  _getSupabase();
-  var args=Array.prototype.slice.call(arguments,1);
-  var a1=args[0],a2=args[1],a3=args[2];
+var _authReadyPromise = null;
+async function _ensureAuthSession() {
+  var sb = _getSupabase();
+  if (!sb || !sb.auth) return;
+  try {
+    var res = await sb.auth.getSession();
+    if (res && res.data && res.data.session) return;
+    if (!_authReadyPromise) {
+      _authReadyPromise = sb.auth.signInAnonymously()
+        .catch(function (e) { console.warn('signInAnonymously:', e); })
+        .finally(function () { _authReadyPromise = null; });
+    }
+    await _authReadyPromise;
+  } catch (e) {
+    console.warn('_ensureAuthSession:', e);
+  }
+}
 
-  switch(fn){
+async function gas(fn) {
+  _getSupabase();
+  await _ensureAuthSession();
+  var args = Array.prototype.slice.call(arguments, 1);
+  var a1 = args[0], a2 = args[1], a3 = args[2];
+
+  switch (fn) {
     // ── 利用者 ──
     case 'getUsers':
-      var _uList=await _getAll('利用者');
+      var _uList = await _getAll('利用者');
       // デフォルト値の補完のみ行う（設定テーブルへのフォールバックは廃止）
-      return _uList.map(function(u){
-        if(!u.bentoPaymentMethod) u.bentoPaymentMethod='工賃払い';
-        if(u.contractStart===undefined||u.contractStart===null||u.contractStart==='') u.contractStart='09:10';
-        if(u.contractEnd===undefined||u.contractEnd===null||u.contractEnd==='') u.contractEnd='16:30';
-        if(u.breakMin===undefined||u.breakMin===null||u.breakMin==='') u.breakMin='60';
+      return _uList.map(function (u) {
+        if (!u.bentoPaymentMethod) u.bentoPaymentMethod = '工賃払い';
+        if (u.contractStart === undefined || u.contractStart === null || u.contractStart === '') u.contractStart = '09:10';
+        if (u.contractEnd === undefined || u.contractEnd === null || u.contractEnd === '') u.contractEnd = '16:30';
+        if (u.breakMin === undefined || u.breakMin === null || u.breakMin === '') u.breakMin = '60';
         return u;
       });
     case 'addUser':
-      a1.id=_genId('u');
+      a1.id = _genId('u');
       // JSONカラムは文字列→オブジェクト変換
-      if(typeof a1.contacts==='string'){try{a1.contacts=JSON.parse(a1.contacts);}catch(e){}}
-      if(typeof a1.addresses==='string'){try{a1.addresses=JSON.parse(a1.addresses);}catch(e){}}
-      if(typeof a1.relatedOrgs==='string'){try{a1.relatedOrgs=JSON.parse(a1.relatedOrgs);}catch(e){}}
-      if(typeof a1.scheduleHistory==='string'){try{a1.scheduleHistory=JSON.parse(a1.scheduleHistory);}catch(e){}}
-      return _add('利用者',a1);
+      if (typeof a1.contacts === 'string') { try { a1.contacts = JSON.parse(a1.contacts); } catch (e) { } }
+      if (typeof a1.addresses === 'string') { try { a1.addresses = JSON.parse(a1.addresses); } catch (e) { } }
+      if (typeof a1.relatedOrgs === 'string') { try { a1.relatedOrgs = JSON.parse(a1.relatedOrgs); } catch (e) { } }
+      if (typeof a1.scheduleHistory === 'string') { try { a1.scheduleHistory = JSON.parse(a1.scheduleHistory); } catch (e) { } }
+      return _add('利用者', a1);
     case 'updateUser':
       // JSONカラムは文字列→オブジェクト変換
-      if(typeof a1.contacts==='string'){try{a1.contacts=JSON.parse(a1.contacts);}catch(e){}}
-      if(typeof a1.addresses==='string'){try{a1.addresses=JSON.parse(a1.addresses);}catch(e){}}
-      if(typeof a1.relatedOrgs==='string'){try{a1.relatedOrgs=JSON.parse(a1.relatedOrgs);}catch(e){}}
-      if(typeof a1.scheduleHistory==='string'){try{a1.scheduleHistory=JSON.parse(a1.scheduleHistory);}catch(e){}}
-      return _update('利用者',a1);
-    case 'deleteUser': return _del('利用者',a1);
+      if (typeof a1.contacts === 'string') { try { a1.contacts = JSON.parse(a1.contacts); } catch (e) { } }
+      if (typeof a1.addresses === 'string') { try { a1.addresses = JSON.parse(a1.addresses); } catch (e) { } }
+      if (typeof a1.relatedOrgs === 'string') { try { a1.relatedOrgs = JSON.parse(a1.relatedOrgs); } catch (e) { } }
+      if (typeof a1.scheduleHistory === 'string') { try { a1.scheduleHistory = JSON.parse(a1.scheduleHistory); } catch (e) { } }
+      return _update('利用者', a1);
+    case 'deleteUser': return _del('利用者', a1);
 
     // ── スタッフ ──
     case 'getStaff':
-      var _st=await _getAll('スタッフ');
-      var _roleOrder={'サービス管理責任者':1,'生活支援員':2,'職業指導員':3};
-      _st.sort(function(a,b){return(_roleOrder[a.role]||99)-(_roleOrder[b.role]||99);});
+      var _st = await _getAll('スタッフ');
+      var _roleOrder = { 'サービス管理責任者': 1, '生活支援員': 2, '職業指導員': 3 };
+      _st.sort(function (a, b) { return (_roleOrder[a.role] || 99) - (_roleOrder[b.role] || 99); });
       return _st;
     case 'addStaff':
-      a1.id=_genId('s');
-      if(!a1.loginId){
-        var _existingSt=await _getAll('スタッフ');
-        var maxNum=0;
-        (_existingSt||[]).forEach(function(st){
-          var m=String(st.loginId||'').match(/(\d+)/);
-          if(m){var n=parseInt(m[1],10);if(n>maxNum)maxNum=n;}
+      a1.id = _genId('s');
+      if (!a1.loginId) {
+        var _existingSt = await _getAll('スタッフ');
+        var maxNum = 0;
+        (_existingSt || []).forEach(function (st) {
+          var m = String(st.loginId || '').match(/(\d+)/);
+          if (m) { var n = parseInt(m[1], 10); if (n > maxNum) maxNum = n; }
         });
-        a1.loginId='temp'+String(maxNum+1).padStart(3,'0');
+        a1.loginId = 'temp' + String(maxNum + 1).padStart(3, '0');
       }
-      if(!a1.password)a1.password='0000';
-      return _add('スタッフ',a1);
-    case 'updateStaff': return _update('スタッフ',a1);
-    case 'deleteStaff': return _del('スタッフ',a1);
+      if (!a1.password) a1.password = '0000';
+      return _add('スタッフ', a1);
+    case 'updateStaff': return _update('スタッフ', a1);
+    case 'deleteStaff': return _del('スタッフ', a1);
 
     // ── 有給取得記録 ──
-    case 'getPaidLeaveUsages': return _getFiltered('有給取得記録','staffId',a1);
-    case 'addPaidLeaveUsage': a1.id=_genId('pl');return _add('有給取得記録',a1);
-    case 'deletePaidLeaveUsage': return _del('有給取得記録',a1);
+    case 'getPaidLeaveUsages': return _getFiltered('有給取得記録', 'staffId', a1);
+    case 'addPaidLeaveUsage': a1.id = _genId('pl'); return _add('有給取得記録', a1);
+    case 'deletePaidLeaveUsage': return _del('有給取得記録', a1);
 
     // ── 有給申請 ──
     case 'getPaidLeaveRequests': return _getAll('有給申請');
-    case 'getPaidLeaveRequestsByStaff': return _getFiltered('有給申請','staffId',a1);
-    case 'addPaidLeaveRequest': a1.id=_genId('plr');a1.createdAt=new Date().toISOString();a1.status='pending';return _add('有給申請',a1);
-    case 'approvePaidLeaveRequest': return _update('有給申請',{id:a1.id,status:'approved',comment:a1.comment||''});
-    case 'rejectPaidLeaveRequest': return _update('有給申請',{id:a1.id,status:'rejected',comment:a1.comment||''});
-    case 'deletePaidLeaveRequest': return _del('有給申請',a1);
+    case 'getPaidLeaveRequestsByStaff': return _getFiltered('有給申請', 'staffId', a1);
+    case 'addPaidLeaveRequest': a1.id = _genId('plr'); a1.createdAt = new Date().toISOString(); a1.status = 'pending'; return _add('有給申請', a1);
+    case 'approvePaidLeaveRequest': return _update('有給申請', { id: a1.id, status: 'approved', comment: a1.comment || '' });
+    case 'rejectPaidLeaveRequest': return _update('有給申請', { id: a1.id, status: 'rejected', comment: a1.comment || '' });
+    case 'deletePaidLeaveRequest': return _del('有給申請', a1);
 
     // ── 変更申請 ──
     case 'getChangeRequests': return _getAll('変更申請');
-    case 'getChangeRequestsByStaff': return _getFiltered('変更申請','staffId',a1);
-    case 'addChangeRequest': a1.id=_genId('cr');a1.createdAt=new Date().toISOString();a1.status='pending';return _add('変更申請',a1);
-    case 'approveChangeRequest': return _update('変更申請',{id:a1.id,status:'approved',comment:a1.comment||''});
-    case 'rejectChangeRequest': return _update('変更申請',{id:a1.id,status:'rejected',comment:a1.comment||''});
-    case 'deleteChangeRequest': return _del('変更申請',a1);
+    case 'getChangeRequestsByStaff': return _getFiltered('変更申請', 'staffId', a1);
+    case 'addChangeRequest': a1.id = _genId('cr'); a1.createdAt = new Date().toISOString(); a1.status = 'pending'; return _add('変更申請', a1);
+    case 'approveChangeRequest': return _update('変更申請', { id: a1.id, status: 'approved', comment: a1.comment || '' });
+    case 'rejectChangeRequest': return _update('変更申請', { id: a1.id, status: 'rejected', comment: a1.comment || '' });
+    case 'deleteChangeRequest': return _del('変更申請', a1);
 
     // ── 作業種別 ──
     case 'getWorkTypes': return _getAll('作業種別');
-    case 'addWorkType': a1.id=_genId('w');return _add('作業種別',a1);
-    case 'updateWorkType': return _update('作業種別',a1);
-    case 'deleteWorkType': return _del('作業種別',a1);
+    case 'addWorkType': a1.id = _genId('w'); return _add('作業種別', a1);
+    case 'updateWorkType': return _update('作業種別', a1);
+    case 'deleteWorkType': return _del('作業種別', a1);
 
     // ── 出欠 ──
-    case 'getAttendance': return a1?_getLike('出欠','date',a1):_getAll('出欠');
-    case 'getAttendanceByDate': return _getFiltered('出欠','date',a1);
-    case 'addAttendance': a1.id=_genId('a');return _add('出欠',a1);
-    case 'updateAttendance': return _update('出欠',a1);
-    case 'upsertAttendance': return _upsertByUserDate('出欠',a1,'a');
-    case 'deleteAttendance': return _delByUserDate('出欠',a1.userId,a1.date);
+    case 'getAttendance': return a1 ? _getLike('出欠', 'date', a1) : _getAll('出欠');
+    case 'getAttendanceByDate': return _getFiltered('出欠', 'date', a1);
+    case 'addAttendance': a1.id = _genId('a'); return _add('出欠', a1);
+    case 'updateAttendance': return _update('出欠', a1);
+    case 'upsertAttendance': return _upsertByUserDate('出欠', a1, 'a');
+    case 'deleteAttendance': return _delByUserDate('出欠', a1.userId, a1.date);
     case 'bulkAddAttendance':
-      var results=[];for(var i=0;i<a1.length;i++)results.push(await _upsertByUserDate('出欠',a1[i],'a'));return results;
+      var results = []; for (var i = 0; i < a1.length; i++)results.push(await _upsertByUserDate('出欠', a1[i], 'a')); return results;
 
     // ── 日報 ──
-    case 'getDaily': return a1?_getLike('日報','date',a1):_getAll('日報');
-    case 'getDailyByDate': return _getFiltered('日報','date',a1);
-    case 'upsertDailyReport': return _upsertByUserDate('日報',a1,'d');
-    case 'deleteDailyReport': return _delByUserDate('日報',a1.userId,a1.date);
+    case 'getDaily': return a1 ? _getLike('日報', 'date', a1) : _getAll('日報');
+    case 'getDailyByDate': return _getFiltered('日報', 'date', a1);
+    case 'upsertDailyReport': return _upsertByUserDate('日報', a1, 'd');
+    case 'deleteDailyReport': return _delByUserDate('日報', a1.userId, a1.date);
 
     // ── 送迎 ──
-    case 'getTransportByDate': return _getFiltered('送迎','date',a1);
-    case 'addTransport': a1.id=_genId('t');return _add('送迎',a1);
-    case 'updateTransport': return _update('送迎',a1);
+    case 'getTransportByDate': return _getFiltered('送迎', 'date', a1);
+    case 'addTransport': a1.id = _genId('t'); return _add('送迎', a1);
+    case 'updateTransport': return _update('送迎', a1);
 
     // ── 臨時利用 ──
-    case 'getTempByMonth': return a1?_getLike('臨時利用','date',a1):_getAll('臨時利用');
-    case 'getTempByDate': return _getFiltered('臨時利用','date',a1);
-    case 'addTempUser': a1.id=_genId('tmp');a1.createdAt=new Date().toISOString();return _add('臨時利用',a1);
-    case 'deleteTempUser': return _del('臨時利用',a1);
+    case 'getTempByMonth': return a1 ? _getLike('臨時利用', 'date', a1) : _getAll('臨時利用');
+    case 'getTempByDate': return _getFiltered('臨時利用', 'date', a1);
+    case 'addTempUser': a1.id = _genId('tmp'); a1.createdAt = new Date().toISOString(); return _add('臨時利用', a1);
+    case 'deleteTempUser': return _del('臨時利用', a1);
 
     // ── 見学体験 ──
     case 'getTrials': return _getAll('見学体験');
-    case 'addTrial': a1.id=_genId('tr');a1.createdAt=new Date().toISOString();return _add('見学体験',a1);
-    case 'updateTrial': return _update('見学体験',a1);
-    case 'deleteTrial': return _del('見学体験',a1);
+    case 'addTrial': a1.id = _genId('tr'); a1.createdAt = new Date().toISOString(); return _add('見学体験', a1);
+    case 'updateTrial': return _update('見学体験', a1);
+    case 'deleteTrial': return _del('見学体験', a1);
 
     // ── 車両 ──
     case 'getVehicles': return _getAll('車両');
-    case 'addVehicle': a1.id=_genId('v');return _add('車両',a1);
-    case 'updateVehicle': return _update('車両',a1);
-    case 'deleteVehicle': return _del('車両',a1);
+    case 'addVehicle': a1.id = _genId('v'); return _add('車両', a1);
+    case 'updateVehicle': return _update('車両', a1);
+    case 'deleteVehicle': return _del('車両', a1);
 
     // ── テンプレート ──
     case 'getTemplates': return _getAll('日報テンプレート');
-    case 'addTemplate': a1.id=_genId('tpl');return _add('日報テンプレート',a1);
-    case 'updateTemplate': return _update('日報テンプレート',a1);
-    case 'deleteTemplate': return _del('日報テンプレート',a1);
+    case 'addTemplate': a1.id = _genId('tpl'); return _add('日報テンプレート', a1);
+    case 'updateTemplate': return _update('日報テンプレート', a1);
+    case 'deleteTemplate': return _del('日報テンプレート', a1);
 
     // ── 設定 ──
     case 'getSettings': return _getSettings();
-    case 'updateSetting': return _updateSetting(a1,a2);
-    case 'saveSetting': return _updateSetting(a1,a2);
+    case 'updateSetting': return _updateSetting(a1, a2);
+    case 'saveSetting': return _updateSetting(a1, a2);
     case 'getClosedDays':
-      var settings=await _getSettings();
-      var val=settings['closedDays_'+a1]||'';
-      try{return JSON.parse(val);}catch(e){return[];}
-    case 'setClosedDays': return _updateSetting('closedDays_'+a1,JSON.stringify(a2));
+      var settings = await _getSettings();
+      var val = settings['closedDays_' + a1] || '';
+      try { return JSON.parse(val); } catch (e) { return []; }
+    case 'setClosedDays': return _updateSetting('closedDays_' + a1, JSON.stringify(a2));
 
     // ── 個別支援計画 ──
     case 'getSupportPlans':
-      var pList = await _getFiltered('個別支援計画','userId',a1);
-      if(!Array.isArray(pList)) pList = [];
+      var pList = await _getFiltered('個別支援計画', 'userId', a1);
+      if (!Array.isArray(pList)) pList = [];
       try {
         var uRes = await supabase.from('利用者').select('name').eq('id', a1).limit(1);
-        if(uRes.data && uRes.data.length > 0 && uRes.data[0].name){
+        if (uRes.data && uRes.data.length > 0 && uRes.data[0].name) {
           var uName = uRes.data[0].name;
           var missingUserIdPlans = await supabase.from('個別支援計画').select('*').is('userId', null).eq('userName', uName);
-          if(missingUserIdPlans.data && missingUserIdPlans.data.length > 0){
-            for(var mIdx = 0; mIdx < missingUserIdPlans.data.length; mIdx++){
+          if (missingUserIdPlans.data && missingUserIdPlans.data.length > 0) {
+            for (var mIdx = 0; mIdx < missingUserIdPlans.data.length; mIdx++) {
               var mPlan = missingUserIdPlans.data[mIdx];
-              await supabase.from('個別支援計画').update({userId: a1}).eq('id', mPlan.id);
+              await supabase.from('個別支援計画').update({ userId: a1 }).eq('id', mPlan.id);
               mPlan.userId = a1;
-              if(!pList.some(function(x){return x.id === mPlan.id;})){
+              if (!pList.some(function (x) { return x.id === mPlan.id; })) {
                 pList.push(mPlan);
               }
             }
           }
         }
-      } catch(e) {
+      } catch (e) {
         console.warn('getSupportPlans fallback/auto-repair error:', e);
       }
       return pList;
     case 'getAllSupportPlans': return _getAll('個別支援計画');
     case 'upsertSupportPlan':
       // signatureDataUrl → signatureUrl に変換（画面側はsignatureUrlで読む）
-      if(a1.signatureDataUrl!==undefined){a1.signatureUrl=a1.signatureDataUrl;delete a1.signatureDataUrl;}
-      if(a1.id){var ex=await supabase.from('個別支援計画').select('id').eq('id',a1.id).limit(1);if(ex.data&&ex.data.length>0)return _update('個別支援計画',a1);}
-      a1.id=_genId('sp');a1.createdAt=new Date().toISOString();return _add('個別支援計画',a1);
-    case 'deleteSupportPlan': return _del('個別支援計画',a1);
+      if (a1.signatureDataUrl !== undefined) { a1.signatureUrl = a1.signatureDataUrl; delete a1.signatureDataUrl; }
+      if (a1.id) { var ex = await supabase.from('個別支援計画').select('id').eq('id', a1.id).limit(1); if (ex.data && ex.data.length > 0) return _update('個別支援計画', a1); }
+      a1.id = _genId('sp'); a1.createdAt = new Date().toISOString(); return _add('個別支援計画', a1);
+    case 'deleteSupportPlan': return _del('個別支援計画', a1);
 
     // ── アセスメント ──
-    case 'getAssessment': return _getFiltered('アセスメント','userId',a1);
+    case 'getAssessment': return _getFiltered('アセスメント', 'userId', a1);
     case 'getAllAssessments': return _getAll('アセスメント');
     case 'upsertAssessment':
-      if(a1.id){var ex2=await supabase.from('アセスメント').select('id').eq('id',a1.id).limit(1);if(ex2.data&&ex2.data.length>0)return _update('アセスメント',a1);}
-      a1.id=_genId('as');a1.createdAt=new Date().toISOString();return _add('アセスメント',a1);
-    case 'deleteAssessment': return _del('アセスメント',a1);
+      if (a1.id) { var ex2 = await supabase.from('アセスメント').select('id').eq('id', a1.id).limit(1); if (ex2.data && ex2.data.length > 0) return _update('アセスメント', a1); }
+      a1.id = _genId('as'); a1.createdAt = new Date().toISOString(); return _add('アセスメント', a1);
+    case 'deleteAssessment': return _del('アセスメント', a1);
 
     // ── 会議録 ──
-    case 'getMeetings': return _getFiltered('会議録','userId',a1);
+    case 'getMeetings': return _getFiltered('会議録', 'userId', a1);
     case 'upsertMeeting':
-      if(a1.id){var ex3=await supabase.from('会議録').select('id').eq('id',a1.id).limit(1);if(ex3.data&&ex3.data.length>0)return _update('会議録',a1);}
-      a1.id=_genId('mt');a1.createdAt=new Date().toISOString();return _add('会議録',a1);
-    case 'deleteMeeting': return _del('会議録',a1);
+      if (a1.id) { var ex3 = await supabase.from('会議録').select('id').eq('id', a1.id).limit(1); if (ex3.data && ex3.data.length > 0) return _update('会議録', a1); }
+      a1.id = _genId('mt'); a1.createdAt = new Date().toISOString(); return _add('会議録', a1);
+    case 'deleteMeeting': return _del('会議録', a1);
 
     // ── 代理受領 ──
-    case 'getProxyReceipts': return a1?_getFiltered('代理受領','serviceYearMonth',a1):_getAll('代理受領');
+    case 'getProxyReceipts': return a1 ? _getFiltered('代理受領', 'serviceYearMonth', a1) : _getAll('代理受領');
     case 'saveProxyReceipt':
-      var prAll=await supabase.from('代理受領').select('id,createdAt').eq('userId',a1.userId).eq('serviceYearMonth',a1.serviceYearMonth).limit(1);
-      if(prAll.data&&prAll.data.length>0){a1.id=prAll.data[0].id;a1.createdAt=prAll.data[0].createdAt;return _update('代理受領',a1);}
-      a1.id=_genId('pr');a1.createdAt=new Date().toISOString();return _add('代理受領',a1);
+      var prAll = await supabase.from('代理受領').select('id,createdAt').eq('userId', a1.userId).eq('serviceYearMonth', a1.serviceYearMonth).limit(1);
+      if (prAll.data && prAll.data.length > 0) { a1.id = prAll.data[0].id; a1.createdAt = prAll.data[0].createdAt; return _update('代理受領', a1); }
+      a1.id = _genId('pr'); a1.createdAt = new Date().toISOString(); return _add('代理受領', a1);
 
     // ── 送迎ルート ──
-    case 'getRoutesByDate': return _getFiltered('送迎ルート','date',a1);
+    case 'getRoutesByDate': return _getFiltered('送迎ルート', 'date', a1);
 
     // ── ヒヤリハット ──
     case 'getIncidents': return _getAll('ヒヤリハット');
-    case 'addIncident': a1.id=_genId('inc');a1.createdAt=new Date().toISOString();return _add('ヒヤリハット',a1);
-    case 'updateIncident': a1.updatedAt=new Date().toISOString();return _update('ヒヤリハット',a1);
-    case 'deleteIncident': return _del('ヒヤリハット',a1);
+    case 'addIncident': a1.id = _genId('inc'); a1.createdAt = new Date().toISOString(); return _add('ヒヤリハット', a1);
+    case 'updateIncident': a1.updatedAt = new Date().toISOString(); return _update('ヒヤリハット', a1);
+    case 'deleteIncident': return _del('ヒヤリハット', a1);
 
     // ── 苦情・相談 ──
     case 'getComplaints': return _getAll('苦情相談');
-    case 'addComplaint': a1.id=_genId('cmp');a1.createdAt=new Date().toISOString();return _add('苦情相談',a1);
-    case 'updateComplaint': a1.updatedAt=new Date().toISOString();return _update('苦情相談',a1);
-    case 'deleteComplaint': return _del('苦情相談',a1);
+    case 'addComplaint': a1.id = _genId('cmp'); a1.createdAt = new Date().toISOString(); return _add('苦情相談', a1);
+    case 'updateComplaint': a1.updatedAt = new Date().toISOString(); return _update('苦情相談', a1);
+    case 'deleteComplaint': return _del('苦情相談', a1);
 
     // ── 研修・委員会 ──
     case 'getTrainings': return _getAll('研修');
-    case 'addTraining': a1.id=_genId('trn');a1.createdAt=new Date().toISOString();return _add('研修',a1);
-    case 'updateTraining': a1.updatedAt=new Date().toISOString();return _update('研修',a1);
-    case 'deleteTraining': return _del('研修',a1);
+    case 'addTraining': a1.id = _genId('trn'); a1.createdAt = new Date().toISOString(); return _add('研修', a1);
+    case 'updateTraining': a1.updatedAt = new Date().toISOString(); return _update('研修', a1);
+    case 'deleteTraining': return _del('研修', a1);
     case 'getTrainingReports': return _getAll('研修報告');
-    case 'addTrainingReport': a1.id=_genId('trr');a1.createdAt=new Date().toISOString();return _add('研修報告',a1);
-    case 'updateTrainingReport': a1.updatedAt=new Date().toISOString();return _update('研修報告',a1);
+    case 'addTrainingReport': a1.id = _genId('trr'); a1.createdAt = new Date().toISOString(); return _add('研修報告', a1);
+    case 'updateTrainingReport': a1.updatedAt = new Date().toISOString(); return _update('研修報告', a1);
 
     // ── スタッフ出欠 ──
-    case 'getStaffAttendance': return a1?_getLike('スタッフ出欠','date',a1):_getAll('スタッフ出欠');
-    case 'getStaffAttendanceByDate': return _getFiltered('スタッフ出欠','date',a1);
+    case 'getStaffAttendance': return a1 ? _getLike('スタッフ出欠', 'date', a1) : _getAll('スタッフ出欠');
+    case 'getStaffAttendanceByDate': return _getFiltered('スタッフ出欠', 'date', a1);
     case 'upsertStaffAttendance':
-      var _saEx=await supabase.from('スタッフ出欠').select('id,startTime,endTime,breakMin').eq('staffId',a1.staffId).eq('date',a1.date).limit(1);
-      if(_saEx.data&&_saEx.data.length>0){
-        a1.id=_saEx.data[0].id;
-        if(!a1.startTime && _saEx.data[0].startTime) a1.startTime = _saEx.data[0].startTime;
-        return _update('スタッフ出欠',a1);
+      var _saEx = await supabase.from('スタッフ出欠').select('id,startTime,endTime,breakMin').eq('staffId', a1.staffId).eq('date', a1.date).limit(1);
+      if (_saEx.data && _saEx.data.length > 0) {
+        a1.id = _saEx.data[0].id;
+        if (!a1.startTime && _saEx.data[0].startTime) a1.startTime = _saEx.data[0].startTime;
+        return _update('スタッフ出欠', a1);
       }
-      a1.id=_genId('sa');return _add('スタッフ出欠',a1);
-    case 'getTodayShifts': return _getFiltered('シフト','date',a1);
+      a1.id = _genId('sa'); return _add('スタッフ出欠', a1);
+    case 'getTodayShifts': return _getFiltered('シフト', 'date', a1);
 
     // ── シフト ──
-    case 'getShiftData': return a1?_getLike('シフト','date',a1):_getAll('シフト');
+    case 'getShiftData': return a1 ? _getLike('シフト', 'date', a1) : _getAll('シフト');
     case 'saveShiftCell':
-      var _shRes=await supabase.from('シフト').select('id').eq('staffId',a1.staffId).eq('date',a1.date).limit(1);
-      if(_shRes.error)_throwErr(_shRes.error);
-      var _found=(_shRes.data&&_shRes.data.length>0)?_shRes.data[0]:null;
-      if(a1.pattern===''){
-        if(_found)return _del('シフト',_found.id);
+      var _shRes = await supabase.from('シフト').select('id').eq('staffId', a1.staffId).eq('date', a1.date).limit(1);
+      if (_shRes.error) _throwErr(_shRes.error);
+      var _found = (_shRes.data && _shRes.data.length > 0) ? _shRes.data[0] : null;
+      if (a1.pattern === '') {
+        if (_found) return _del('シフト', _found.id);
         return null;
       }
-      if(_found){a1.id=_found.id;return _update('シフト',a1);}
-      a1.id=_genId('sh');return _add('シフト',a1);
-    case 'addRouteRecord': a1.id=_genId('rt');a1.createdAt=new Date().toISOString();return _add('送迎ルート',a1);
-    case 'updateRouteRecord': return _update('送迎ルート',a1);
-    case 'deleteRouteRecord': return _del('送迎ルート',a1);
+      if (_found) { a1.id = _found.id; return _update('シフト', a1); }
+      a1.id = _genId('sh'); return _add('シフト', a1);
+    case 'addRouteRecord': a1.id = _genId('rt'); a1.createdAt = new Date().toISOString(); return _add('送迎ルート', a1);
+    case 'updateRouteRecord': return _update('送迎ルート', a1);
+    case 'deleteRouteRecord': return _del('送迎ルート', a1);
 
     // ── BMI測定管理 ──
     case 'getBmiRecords': return _getBmiRecordsHelper(a1);
@@ -668,43 +687,43 @@ async function gas(fn){
     // ── サイン保存 ──
     case 'saveSignatureForDate':
       // a1=userId, a2=date, a3=signatureDataUrl
-      var sigR=await supabase.from('出欠').select('id').eq('userId',a1).eq('date',a2);
-      if(sigR.data&&sigR.data.length>0){
-        for(var sidx=0;sidx<sigR.data.length;sidx++){
-          await supabase.from('出欠').update({signature:a3}).eq('id',sigR.data[sidx].id);
+      var sigR = await supabase.from('出欠').select('id').eq('userId', a1).eq('date', a2);
+      if (sigR.data && sigR.data.length > 0) {
+        for (var sidx = 0; sidx < sigR.data.length; sidx++) {
+          await supabase.from('出欠').update({ signature: a3 }).eq('id', sigR.data[sidx].id);
         }
       }
-      return{success:true};
+      return { success: true };
 
     // ── ダッシュボード（複合クエリ）──
     case 'getDashboardData':
-      var dAtt=await _getGte('出欠','date',a1);
-      var dTemp=await _getGte('臨時利用','date',a1);
-      var todayAtt=[],upcoming=[];
-      dAtt.forEach(function(x){if(String(x.date)===a1)todayAtt.push(x);upcoming.push(x);});
-      var todayTemp=[],upcomingTemp=[];
-      dTemp.forEach(function(x){if(String(x.date)===a1)todayTemp.push(x);upcomingTemp.push(x);});
-      return{todayAtt:todayAtt,upcoming:upcoming,todayTemp:todayTemp,upcomingTemp:upcomingTemp};
+      var dAtt = await _getGte('出欠', 'date', a1);
+      var dTemp = await _getGte('臨時利用', 'date', a1);
+      var todayAtt = [], upcoming = [];
+      dAtt.forEach(function (x) { if (String(x.date) === a1) todayAtt.push(x); upcoming.push(x); });
+      var todayTemp = [], upcomingTemp = [];
+      dTemp.forEach(function (x) { if (String(x.date) === a1) todayTemp.push(x); upcomingTemp.push(x); });
+      return { todayAtt: todayAtt, upcoming: upcoming, todayTemp: todayTemp, upcomingTemp: upcomingTemp };
 
     // ── 初期データ（複合）──
     case 'getInitialData':
-      var p=await Promise.all([_getAll('利用者'),_getAll('作業種別'),_getSettings(),_getAll('スタッフ')]);
+      var p = await Promise.all([_getAll('利用者'), _getAll('作業種別'), _getSettings(), _getAll('スタッフ')]);
       // 利用者のデフォルト補完
-      var _iUsers=p[0].map(function(u){
-        if(!u.bentoPaymentMethod) u.bentoPaymentMethod='工賃払い';
-        if(u.contractStart===undefined||u.contractStart===null||u.contractStart==='') u.contractStart='09:10';
-        if(u.contractEnd===undefined||u.contractEnd===null||u.contractEnd==='') u.contractEnd='16:30';
-        if(u.breakMin===undefined||u.breakMin===null||u.breakMin==='') u.breakMin='60';
+      var _iUsers = p[0].map(function (u) {
+        if (!u.bentoPaymentMethod) u.bentoPaymentMethod = '工賃払い';
+        if (u.contractStart === undefined || u.contractStart === null || u.contractStart === '') u.contractStart = '09:10';
+        if (u.contractEnd === undefined || u.contractEnd === null || u.contractEnd === '') u.contractEnd = '16:30';
+        if (u.breakMin === undefined || u.breakMin === null || u.breakMin === '') u.breakMin = '60';
         return u;
       });
-      return{users:_iUsers,workTypes:p[1],settings:p[2],staff:p[3]};
+      return { users: _iUsers, workTypes: p[1], settings: p[2], staff: p[3] };
     case 'getDeferredData':
-      var p2=await Promise.all([
-        _getAll('車両').catch(function(){return[];}),
-        _getAll('日報テンプレート').catch(function(){return[];}),
-        _getAll('見学体験').catch(function(){return[];})
+      var p2 = await Promise.all([
+        _getAll('車両').catch(function () { return []; }),
+        _getAll('日報テンプレート').catch(function () { return []; }),
+        _getAll('見学体験').catch(function () { return []; })
       ]);
-      return{vehicles:p2[0],templates:p2[1],trials:p2[2]};
+      return { vehicles: p2[0], templates: p2[1], trials: p2[2] };
 
     // ── 帳票系（クライアント側で完全計算）──
     case 'getAttendanceList': return _calcAttendanceList(a1);
@@ -712,88 +731,88 @@ async function gas(fn){
     case 'getUtilizationData': return _calcUtilizationData(a1);
     case 'getWageDetailPerUser': return _calcWageDetailPerUser(a1);
     case 'getAnnualWageDetail': return _calcAnnualWageDetail(a1);
-    case 'getWageCSV': return a1?_getLike('出欠','date',a1):_getAll('出欠');
+    case 'getWageCSV': return a1 ? _getLike('出欠', 'date', a1) : _getAll('出欠');
     case 'getServiceRecordData': return _calcServiceRecordData(a1);
 
     // ── ルート計算（Maps API不要版：概算+Googleマップリンク）──
-    case 'calcSmartRoutes': return _calcSmartRoutes(a1,a2,a3);
-    case 'calcOptimalRoute': return _calcOptimalRoute(a1,a2,a3);
-    case 'calcFixedOrderRoute': return _calcFixedOrderRoute(a1,a2,a3);
+    case 'calcSmartRoutes': return _calcSmartRoutes(a1, a2, a3);
+    case 'calcOptimalRoute': return _calcOptimalRoute(a1, a2, a3);
+    case 'calcFixedOrderRoute': return _calcFixedOrderRoute(a1, a2, a3);
 
     // ── メール送信（クライアント側メールソフト連携/コピー対応）──
     case 'sendPlanEmail':
       return { success: true, method: 'client' };
 
     // ── 国保連レセプトCSV生成 ──
-    case 'generateKokuhoReceiptCSV': return _generateKokuhoReceiptCSV(a1,a2,a3);
+    case 'generateKokuhoReceiptCSV': return _generateKokuhoReceiptCSV(a1, a2, a3);
 
     // ── 過去食事提供実績の摂食率(10割)一括補完 ──
     case 'batchFillMealRate': return _batchFillMealRate(a1);
 
     // ── アプリURL ──
-    case 'getAppUrl': return window.location.origin+window.location.pathname;
+    case 'getAppUrl': return window.location.origin + window.location.pathname;
 
     default:
-      console.warn('未対応のgas関数:',fn,args);
-      throw new Error('Supabaseアダプター: 「'+fn+'」は未対応です');
+      console.warn('未対応のgas関数:', fn, args);
+      throw new Error('Supabaseアダプター: 「' + fn + '」は未対応です');
   }
 }
 
 console.log('✅ Supabaseアダプター読み込み完了');
 
 // ═══ ルート計算ヘルパー（Maps API不要版）═══
-function _getUserRawAddressForRoute(u, pattern){
-  if(!u) return '';
+function _getUserRawAddressForRoute(u, pattern) {
+  if (!u) return '';
   var addrs = [];
-  if(u.addresses){
-    try { addrs = typeof u.addresses === 'string' ? JSON.parse(u.addresses) : u.addresses; } catch(e){}
+  if (u.addresses) {
+    try { addrs = typeof u.addresses === 'string' ? JSON.parse(u.addresses) : u.addresses; } catch (e) { }
   }
-  if(Array.isArray(addrs) && addrs.length > 0){
+  if (Array.isArray(addrs) && addrs.length > 0) {
     var pat = pattern || 'morning';
     var isM = (pat === 'morning' || pat === '往路' || pat === '行き' || pat === 'pickup');
-    var found = addrs.find(function(a){ return isM ? a.isPickup : a.isDropoff; });
-    if(found){
+    var found = addrs.find(function (a) { return isM ? a.isPickup : a.isDropoff; });
+    if (found) {
       var full = (found.prefecture || '') + (found.city || '') + (found.address || '');
-      if(full.trim()) return full.trim();
+      if (full.trim()) return full.trim();
     }
     var first = addrs[0];
     var firstFull = (first.prefecture || '') + (first.city || '') + (first.address || '');
-    if(firstFull.trim()) return firstFull.trim();
+    if (firstFull.trim()) return firstFull.trim();
   }
   return ((u.prefecture || '') + (u.city || '') + (u.address || '')).trim();
 }
 
-function _buildMapsUrl(facilityAddr,users,pattern){
-  var fac = (facilityAddr && String(facilityAddr).trim()!=='undefined') ? facilityAddr : '大阪府豊中市小曽根1丁目10-23';
+function _buildMapsUrl(facilityAddr, users, pattern) {
+  var fac = (facilityAddr && String(facilityAddr).trim() !== 'undefined') ? facilityAddr : '大阪府豊中市小曽根1丁目10-23';
   var waypoints = [];
-  for(var i=0;i<users.length;i++){
+  for (var i = 0; i < users.length; i++) {
     var a = _getUserRawAddressForRoute(users[i], pattern);
-    if(a && String(a).trim()!=='undefined' && a.trim()!=='') waypoints.push(encodeURIComponent(a.trim()));
+    if (a && String(a).trim() !== 'undefined' && a.trim() !== '') waypoints.push(encodeURIComponent(a.trim()));
   }
   var base = 'https://www.google.com/maps/dir/?api=1';
   var origin = encodeURIComponent(String(fac).trim());
   var dest = encodeURIComponent(String(fac).trim());
   var url = base + '&origin=' + origin + '&destination=' + dest + '&travelmode=driving&avoid=tolls,highways';
-  if(waypoints.length > 0) {
+  if (waypoints.length > 0) {
     url += '&waypoints=' + waypoints.join('%7C');
   }
   return url;
 }
 
 function _estimateRouteMinutes(ordered) {
-  if(!ordered || ordered.length===0) return { totalMinutes: 60, drivingMinutes: 50, oneWayMinutes: 30 };
+  if (!ordered || ordered.length === 0) return { totalMinutes: 60, drivingMinutes: 50, oneWayMinutes: 30 };
   var maxOneWay = 10;
-  for(var i=0; i<ordered.length; i++) {
+  for (var i = 0; i < ordered.length; i++) {
     var addr = String(ordered[i].address || '');
     var m = 10;
-    if(addr.indexOf('箕面') >= 0 || addr.indexOf('池田') >= 0) {
+    if (addr.indexOf('箕面') >= 0 || addr.indexOf('池田') >= 0) {
       m = 30; // 箕面・池田エリアは片道30分
-    } else if(addr.indexOf('千里') >= 0 || addr.indexOf('少路') >= 0 || addr.indexOf('緑丘') >= 0 || addr.indexOf('東豊中') >= 0 || addr.indexOf('吹田') >= 0) {
+    } else if (addr.indexOf('千里') >= 0 || addr.indexOf('少路') >= 0 || addr.indexOf('緑丘') >= 0 || addr.indexOf('東豊中') >= 0 || addr.indexOf('吹田') >= 0) {
       m = 20; // 豊中北部・吹田エリアは片道20分
-    } else if(addr.indexOf('小曽根') >= 0 || addr.indexOf('庄内') >= 0 || addr.indexOf('服部') >= 0 || addr.indexOf('曽根') >= 0) {
+    } else if (addr.indexOf('小曽根') >= 0 || addr.indexOf('庄内') >= 0 || addr.indexOf('服部') >= 0 || addr.indexOf('曽根') >= 0) {
       m = 10; // 事業所周辺（小曽根・庄内・服部）は片道10分
     }
-    if(m > maxOneWay) maxOneWay = m;
+    if (m > maxOneWay) maxOneWay = m;
   }
   var drivingMin = (ordered.length === 1) ? (maxOneWay * 2) : (maxOneWay * 2 + (ordered.length - 1) * 5);
   var pickupMin = ordered.length * 5;
@@ -801,564 +820,568 @@ function _estimateRouteMinutes(ordered) {
   return { totalMinutes: totalMin, drivingMinutes: drivingMin, oneWayMinutes: maxOneWay };
 }
 
-async function _calcOptimalRoute(userIds,pattern,targetTime,date){
-  var allUsers=await _getAll('利用者');var settings=await _getSettings();
-  var facilityAddr=settings.facilityAddress||settings.address||'大阪府豊中市小曽根1丁目10-23';
+async function _calcOptimalRoute(userIds, pattern, targetTime, date) {
+  var allUsers = await _getAll('利用者'); var settings = await _getSettings();
+  var facilityAddr = settings.facilityAddress || settings.address || '大阪府豊中市小曽根1丁目10-23';
   var targetDate = (typeof date === 'string' && date.length >= 10) ? date.slice(0, 10) : '';
-  var ordered=[];
-  for(var i=0;i<userIds.length;i++){
-    for(var j=0;j<allUsers.length;j++){
-      if(String(allUsers[j].id)===String(userIds[i])){
-        var u=allUsers[j];
+  var ordered = [];
+  for (var i = 0; i < userIds.length; i++) {
+    for (var j = 0; j < allUsers.length; j++) {
+      if (String(allUsers[j].id) === String(userIds[i])) {
+        var u = allUsers[j];
         var effU = (targetDate && typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, targetDate)) : u;
-        var addr=_getUserRawAddressForRoute(effU, pattern);
+        var addr = _getUserRawAddressForRoute(effU, pattern);
         var cStart = effU.contractStart ? effU.contractStart : '09:10';
         var cEnd = effU.contractEnd ? effU.contractEnd : '16:30';
-        ordered.push({id:effU.id,name:effU.name,address:addr,scheduleStart:cStart,scheduleEnd:cEnd,contractStart:cStart,contractEnd:cEnd});break;
+        ordered.push({ id: effU.id, name: effU.name, address: addr, scheduleStart: cStart, scheduleEnd: cEnd, contractStart: cStart, contractEnd: cEnd }); break;
       }
     }
   }
-  var timeInfo=_estimateRouteMinutes(ordered);
-  var totalMin=timeInfo.totalMinutes, drivingMin=timeInfo.drivingMinutes, oneWay=timeInfo.oneWayMinutes;
-  var departTime='', arriveTime='';
+  var timeInfo = _estimateRouteMinutes(ordered);
+  var totalMin = timeInfo.totalMinutes, drivingMin = timeInfo.drivingMinutes, oneWay = timeInfo.oneWayMinutes;
+  var departTime = '', arriveTime = '';
 
-  if(pattern==='morning'){
+  if (pattern === 'morning') {
     // 朝：お迎え時刻（contractStart 例: 09:10）を基準に計算
-    var pickupTime = targetTime || (ordered[0]?(ordered[0].contractStart||'09:10'):'09:10');
+    var pickupTime = targetTime || (ordered[0] ? (ordered[0].contractStart || '09:10') : '09:10');
     var pp = pickupTime.split(':');
-    var pickupMin = Number(pp[0])*60 + Number(pp[1]||0);
+    var pickupMin = Number(pp[0]) * 60 + Number(pp[1] || 0);
     var depMin = Math.max(0, pickupMin - oneWay);
     var arrMin = depMin + totalMin;
 
-    departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
-    arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
-  }else{
+    departTime = String(Math.floor(depMin / 60)).padStart(2, '0') + ':' + String(depMin % 60).padStart(2, '0');
+    arriveTime = String(Math.floor(arrMin / 60)).padStart(2, '0') + ':' + String(arrMin % 60).padStart(2, '0');
+  } else {
     // 夕：契約時間終了（contractEnd 例: 16:30）をご自宅着時刻として事業所発を逆算
-    var dropTime = targetTime || (ordered[0]?(ordered[0].contractEnd||'16:30'):'16:30');
+    var dropTime = targetTime || (ordered[0] ? (ordered[0].contractEnd || '16:30') : '16:30');
     var dp = dropTime.split(':');
-    var dropMin = Number(dp[0])*60 + Number(dp[1]||0);
+    var dropMin = Number(dp[0]) * 60 + Number(dp[1] || 0);
     var depMin = Math.max(0, dropMin - oneWay);
     var arrMin = depMin + totalMin;
 
-    departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
-    arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
+    departTime = String(Math.floor(depMin / 60)).padStart(2, '0') + ':' + String(depMin % 60).padStart(2, '0');
+    arriveTime = String(Math.floor(arrMin / 60)).padStart(2, '0') + ':' + String(arrMin % 60).padStart(2, '0');
   }
 
-  return{orderedUsers:ordered,totalMinutes:totalMin,drivingMinutes:drivingMin,facilityAddress:facilityAddr,mapsUrl:_buildMapsUrl(facilityAddr,ordered,pattern),departTime:departTime,arriveTime:arriveTime};
+  return { orderedUsers: ordered, totalMinutes: totalMin, drivingMinutes: drivingMin, facilityAddress: facilityAddr, mapsUrl: _buildMapsUrl(facilityAddr, ordered, pattern), departTime: departTime, arriveTime: arriveTime };
 }
 
-async function _calcFixedOrderRoute(userIds,pattern,targetArriveTime){
-  return _calcOptimalRoute(userIds,pattern,targetArriveTime);
+async function _calcFixedOrderRoute(userIds, pattern, targetArriveTime) {
+  return _calcOptimalRoute(userIds, pattern, targetArriveTime);
 }
 
-async function _calcSmartRoutes(userIds,pattern,date){
-  var allUsers=await _getAll('利用者');var att=await _getFiltered('出欠','date',date);
-  var settings=await _getSettings();
-  var facilityAddr=settings.facilityAddress||settings.address||'大阪府豊中市小曽根1丁目10-23';
-  var candidates=[];
-  for(var i=0;i<userIds.length;i++){
-    var u=null;for(var j=0;j<allUsers.length;j++){if(String(allUsers[j].id)===String(userIds[i])){u=allUsers[j];break;}}
-    if(!u)continue;
+async function _calcSmartRoutes(userIds, pattern, date) {
+  var allUsers = await _getAll('利用者'); var att = await _getFiltered('出欠', 'date', date);
+  var settings = await _getSettings();
+  var facilityAddr = settings.facilityAddress || settings.address || '大阪府豊中市小曽根1丁目10-23';
+  var candidates = [];
+  for (var i = 0; i < userIds.length; i++) {
+    var u = null; for (var j = 0; j < allUsers.length; j++) { if (String(allUsers[j].id) === String(userIds[i])) { u = allUsers[j]; break; } }
+    if (!u) continue;
     var effU = (date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, u, getUserScheduleForDate(u, date)) : u;
-    var addr=_getUserRawAddressForRoute(effU, pattern);if(!addr||addr.length<3)continue;
-    var sTime=effU.contractStart?effU.contractStart:'09:10';
-    var eTime=effU.contractEnd?effU.contractEnd:'16:30';
-    var timeKey=pattern==='morning'?sTime:eTime;
-    var tp=timeKey.split(':');var timeMin=Number(tp[0])*60+Number(tp[1]||0);
-    candidates.push({id:u.id,name:u.name,address:addr,startTime:sTime,endTime:eTime,timeKey:timeKey,timeMin:timeMin});
+    var addr = _getUserRawAddressForRoute(effU, pattern); if (!addr || addr.length < 3) continue;
+    var sTime = effU.contractStart ? effU.contractStart : '09:10';
+    var eTime = effU.contractEnd ? effU.contractEnd : '16:30';
+    var timeKey = pattern === 'morning' ? sTime : eTime;
+    var tp = timeKey.split(':'); var timeMin = Number(tp[0]) * 60 + Number(tp[1] || 0);
+    candidates.push({ id: u.id, name: u.name, address: addr, startTime: sTime, endTime: eTime, timeKey: timeKey, timeMin: timeMin });
   }
-  candidates.sort(function(a,b){return a.timeMin-b.timeMin;});
-  if(candidates.length===0)return{trips:[],pattern:pattern};
+  candidates.sort(function (a, b) { return a.timeMin - b.timeMin; });
+  if (candidates.length === 0) return { trips: [], pattern: pattern };
   // グループ分け：到着/退勤時間が30分以内の利用者を同じ便にまとめる
-  var trips=[];var cur=[candidates[0]];
-  for(var ci=1;ci<candidates.length;ci++){
-    var diff=candidates[ci].timeMin-candidates[ci-1].timeMin;
-    if(diff<=30){cur.push(candidates[ci]);}
-    else{trips.push(cur);cur=[candidates[ci]];}
+  var trips = []; var cur = [candidates[0]];
+  for (var ci = 1; ci < candidates.length; ci++) {
+    var diff = candidates[ci].timeMin - candidates[ci - 1].timeMin;
+    if (diff <= 30) { cur.push(candidates[ci]); }
+    else { trips.push(cur); cur = [candidates[ci]]; }
   }
   trips.push(cur);
   // 各トリップの結果（常に「着時刻」を基準に出発時刻を逆算）
-  var results=[];
-  for(var ti=0;ti<trips.length;ti++){
-    var trip=trips[ti];
-    var timeInfo=_estimateRouteMinutes(trip);
-    var routeMin=timeInfo.totalMinutes;
-    var drivingMin=timeInfo.drivingMinutes;
-    var oneWay=timeInfo.oneWayMinutes;
-    var departTime='', arriveTime='';
-    if(pattern==='morning'){
+  var results = [];
+  for (var ti = 0; ti < trips.length; ti++) {
+    var trip = trips[ti];
+    var timeInfo = _estimateRouteMinutes(trip);
+    var routeMin = timeInfo.totalMinutes;
+    var drivingMin = timeInfo.drivingMinutes;
+    var oneWay = timeInfo.oneWayMinutes;
+    var departTime = '', arriveTime = '';
+    if (pattern === 'morning') {
       // 朝：ご自宅お迎え時刻基準
-      var pickupTime=trip[0].timeKey||'09:10';
-      var pMin=Number(pickupTime.split(':')[0])*60+Number(pickupTime.split(':')[1]||0);
-      var depMin=Math.max(0, pMin - oneWay);
-      var arrMin=depMin + routeMin;
-      departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
-      arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
-    }else{
+      var pickupTime = trip[0].timeKey || '09:10';
+      var pMin = Number(pickupTime.split(':')[0]) * 60 + Number(pickupTime.split(':')[1] || 0);
+      var depMin = Math.max(0, pMin - oneWay);
+      var arrMin = depMin + routeMin;
+      departTime = String(Math.floor(depMin / 60)).padStart(2, '0') + ':' + String(depMin % 60).padStart(2, '0');
+      arriveTime = String(Math.floor(arrMin / 60)).padStart(2, '0') + ':' + String(arrMin % 60).padStart(2, '0');
+    } else {
       // 夕：ご自宅送りの着時刻（例: 16:30）を基準に事業所発を逆算
-      var dropTime=trip[0].timeKey||'16:30';
-      var dMin=Number(dropTime.split(':')[0])*60+Number(dropTime.split(':')[1]||0);
-      var depMin=Math.max(0, dMin - oneWay);
-      var arrMin=depMin + routeMin;
-      departTime=String(Math.floor(depMin/60)).padStart(2,'0')+':'+String(depMin%60).padStart(2,'0');
-      arriveTime=String(Math.floor(arrMin/60)).padStart(2,'0')+':'+String(arrMin%60).padStart(2,'0');
+      var dropTime = trip[0].timeKey || '16:30';
+      var dMin = Number(dropTime.split(':')[0]) * 60 + Number(dropTime.split(':')[1] || 0);
+      var depMin = Math.max(0, dMin - oneWay);
+      var arrMin = depMin + routeMin;
+      departTime = String(Math.floor(depMin / 60)).padStart(2, '0') + ':' + String(depMin % 60).padStart(2, '0');
+      arriveTime = String(Math.floor(arrMin / 60)).padStart(2, '0') + ':' + String(arrMin % 60).padStart(2, '0');
     }
 
-    results.push({tripIndex:ti+1,users:trip,
-      userIds:trip.map(function(t){return t.id;}),
-      userNames:trip.map(function(t){return t.name;}),
-      departTime:departTime,arriveTime:arriveTime,
-      totalMinutes:routeMin,drivingMinutes:drivingMin,
-      facilityAddress:facilityAddr,
-      mapsUrl:_buildMapsUrl(facilityAddr,trip,pattern),
-      timeSlots:trip.map(function(t){return{name:t.name,time:pattern==='morning'?t.startTime:t.endTime};})
+    results.push({
+      tripIndex: ti + 1, users: trip,
+      userIds: trip.map(function (t) { return t.id; }),
+      userNames: trip.map(function (t) { return t.name; }),
+      departTime: departTime, arriveTime: arriveTime,
+      totalMinutes: routeMin, drivingMinutes: drivingMin,
+      facilityAddress: facilityAddr,
+      mapsUrl: _buildMapsUrl(facilityAddr, trip, pattern),
+      timeSlots: trip.map(function (t) { return { name: t.name, time: pattern === 'morning' ? t.startTime : t.endTime }; })
     });
   }
-  return{trips:results,pattern:pattern,facilityAddress:facilityAddr};
+  return { trips: results, pattern: pattern, facilityAddress: facilityAddr };
 }
 // ═══ 帳票計算ヘルパー ═══
-function _calcNetH(rec,user){
-  if(rec.actualHours!==undefined && rec.actualHours!==null && rec.actualHours!==''){
+function _calcNetH(rec, user) {
+  if (rec.actualHours !== undefined && rec.actualHours !== null && rec.actualHours !== '') {
     return Math.max(0, Number(rec.actualHours));
   }
-  function toMin(t){var p=String(t).split(':').map(Number);return p[0]*60+(p[1]||0);}
+  function toMin(t) { var p = String(t).split(':').map(Number); return p[0] * 60 + (p[1] || 0); }
   var effUser = user;
-  if(user && rec && rec.date && typeof getUserScheduleForDate === 'function'){
+  if (user && rec && rec.date && typeof getUserScheduleForDate === 'function') {
     var sch = getUserScheduleForDate(user, rec.date);
     effUser = Object.assign({}, user, sch);
   }
-  var sSch=(effUser&&effUser.scheduleStart)?String(effUser.scheduleStart):(rec.scheduleStart?String(rec.scheduleStart):'10:00');
-  var eSch=(effUser&&effUser.scheduleEnd)?String(effUser.scheduleEnd):(rec.scheduleEnd?String(rec.scheduleEnd):'16:00');
-  var brk=(rec.breakMin!==undefined&&rec.breakMin!==null&&rec.breakMin!=='')?Number(rec.breakMin):((effUser&&effUser.breakMin!==undefined&&effUser.breakMin!==null&&effUser.breakMin!=='')?Number(effUser.breakMin):60);
-  var rawMin=Math.max(0, toMin(eSch)-toMin(sSch)-brk);
-  var baseH=rawMin/60;
+  var sSch = (effUser && effUser.scheduleStart) ? String(effUser.scheduleStart) : (rec.scheduleStart ? String(rec.scheduleStart) : '10:00');
+  var eSch = (effUser && effUser.scheduleEnd) ? String(effUser.scheduleEnd) : (rec.scheduleEnd ? String(rec.scheduleEnd) : '16:00');
+  var brk = (rec.breakMin !== undefined && rec.breakMin !== null && rec.breakMin !== '') ? Number(rec.breakMin) : ((effUser && effUser.breakMin !== undefined && effUser.breakMin !== null && effUser.breakMin !== '') ? Number(effUser.breakMin) : 60);
+  var rawMin = Math.max(0, toMin(eSch) - toMin(sSch) - brk);
+  var baseH = rawMin / 60;
 
   var amId = rec.workTypeId || (effUser ? effUser.workTypeId : '') || '';
   var defaultPm = (effUser && effUser.workTypeIdPm !== undefined && effUser.workTypeIdPm !== null && effUser.workTypeIdPm !== '') ? effUser.workTypeIdPm : amId;
-  var pmId = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && rec.workTypeIdPm!=='') ? rec.workTypeIdPm : defaultPm;
-  var isAmNone = (!amId || amId==='none' || amId==='なし');
-  var isPmNone = (pmId==='none' || pmId==='なし');
+  var pmId = (rec.workTypeIdPm !== undefined && rec.workTypeIdPm !== null && rec.workTypeIdPm !== '') ? rec.workTypeIdPm : defaultPm;
+  var isAmNone = (!amId || amId === 'none' || amId === 'なし');
+  var isPmNone = (pmId === 'none' || pmId === 'なし');
 
-  if(isAmNone && isPmNone) return 0;
+  if (isAmNone && isPmNone) return 0;
 
   var sMin = toMin(sSch), eMin = toMin(eSch);
   var isAmOnlyUser = (eMin <= 12 * 60 + 30);
   var isPmOnlyUser = (sMin >= 12 * 60 + 30);
 
-  if(isAmOnlyUser) return isAmNone ? 0 : baseH;
-  if(isPmOnlyUser) return isPmNone ? 0 : baseH;
+  if (isAmOnlyUser) return isAmNone ? 0 : baseH;
+  if (isPmOnlyUser) return isPmNone ? 0 : baseH;
 
-  if((!isAmNone && isPmNone) || (isAmNone && !isPmNone)) return baseH / 2;
+  if ((!isAmNone && isPmNone) || (isAmNone && !isPmNone)) return baseH / 2;
   return baseH;
 }
-function _findWt(wts,amId,pmId){
-  var wtAm=null,wtPm=null;
-  var isAmNone=(!amId || amId==='none' || amId==='なし');
-  var isPmNone=(pmId==='none' || pmId==='なし');
-  if(Array.isArray(wts)){
-    for(var w=0;w<wts.length;w++){
-      if(!isAmNone && String(wts[w].id)===String(amId)) wtAm=wts[w];
-      if(!isPmNone && String(wts[w].id)===String(pmId)) wtPm=wts[w];
+function _findWt(wts, amId, pmId) {
+  var wtAm = null, wtPm = null;
+  var isAmNone = (!amId || amId === 'none' || amId === 'なし');
+  var isPmNone = (pmId === 'none' || pmId === 'なし');
+  if (Array.isArray(wts)) {
+    for (var w = 0; w < wts.length; w++) {
+      if (!isAmNone && String(wts[w].id) === String(amId)) wtAm = wts[w];
+      if (!isPmNone && String(wts[w].id) === String(pmId)) wtPm = wts[w];
     }
   }
-  if(!isAmNone && !wtAm && wts && wts.length>0) wtAm=wts[0];
-  if(!isPmNone && !wtPm && wts && wts.length>0) wtPm=wts[0];
-  return{am:wtAm,pm:wtPm,isAmNone:isAmNone,isPmNone:isPmNone};
+  if (!isAmNone && !wtAm && wts && wts.length > 0) wtAm = wts[0];
+  if (!isPmNone && !wtPm && wts && wts.length > 0) wtPm = wts[0];
+  return { am: wtAm, pm: wtPm, isAmNone: isAmNone, isPmNone: isPmNone };
 }
-function _calcRecWage(rec,wts,user){
+function _calcRecWage(rec, wts, user) {
   var effUser = user;
-  if(user && rec && rec.date && typeof getUserScheduleForDate === 'function'){
+  if (user && rec && rec.date && typeof getUserScheduleForDate === 'function') {
     var sch = getUserScheduleForDate(user, rec.date);
     effUser = Object.assign({}, user, sch);
   }
-  var netH=_calcNetH(rec,effUser);if(netH<=0)return{netH:0,wage:0};
+  var netH = _calcNetH(rec, effUser); if (netH <= 0) return { netH: 0, wage: 0 };
   var amVal = rec.workTypeId || (effUser ? effUser.workTypeId : '') || '';
   var defaultPm = (effUser && effUser.workTypeIdPm !== undefined && effUser.workTypeIdPm !== null && effUser.workTypeIdPm !== '') ? effUser.workTypeIdPm : amVal;
-  var pmVal = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && rec.workTypeIdPm!=='') ? rec.workTypeIdPm : defaultPm;
-  var wt=_findWt(wts,amVal,pmVal);
-  if(wt.isAmNone && wt.isPmNone) return {netH:netH, wage:0};
-  if(!wt.isAmNone && wt.isPmNone){
-    var rt = wt.am ? Number(wt.am.rate)||0 : 0;
-    return {netH:netH, wage:netH*rt};
+  var pmVal = (rec.workTypeIdPm !== undefined && rec.workTypeIdPm !== null && rec.workTypeIdPm !== '') ? rec.workTypeIdPm : defaultPm;
+  var wt = _findWt(wts, amVal, pmVal);
+  if (wt.isAmNone && wt.isPmNone) return { netH: netH, wage: 0 };
+  if (!wt.isAmNone && wt.isPmNone) {
+    var rt = wt.am ? Number(wt.am.rate) || 0 : 0;
+    return { netH: netH, wage: netH * rt };
   }
-  if(wt.isAmNone && !wt.isPmNone){
-    var rt = wt.pm ? Number(wt.pm.rate)||0 : 0;
-    return {netH:netH, wage:netH*rt};
+  if (wt.isAmNone && !wt.isPmNone) {
+    var rt = wt.pm ? Number(wt.pm.rate) || 0 : 0;
+    return { netH: netH, wage: netH * rt };
   }
-  if(!wt.am && !wt.pm && wts && wts.length>0){ wt.am=wts[0]; wt.pm=wts[0]; }
-  else if(!wt.am && wt.pm) wt.am=wt.pm;
-  else if(wt.am && !wt.pm) wt.pm=wt.am;
+  if (!wt.am && !wt.pm && wts && wts.length > 0) { wt.am = wts[0]; wt.pm = wts[0]; }
+  else if (!wt.am && wt.pm) wt.am = wt.pm;
+  else if (wt.am && !wt.pm) wt.pm = wt.am;
 
-  if(!wt.am||!wt.pm||String(wt.am.id)===String(wt.pm.id)){
-    var targetWt=wt.am||wt.pm;
-    return{netH:netH,wage:netH*(targetWt?Number(targetWt.rate):0)};
+  if (!wt.am || !wt.pm || String(wt.am.id) === String(wt.pm.id)) {
+    var targetWt = wt.am || wt.pm;
+    return { netH: netH, wage: netH * (targetWt ? Number(targetWt.rate) : 0) };
   }
-  var half=netH/2;return{netH:netH,wage:half*(Number(wt.am.rate)||0)+half*(Number(wt.pm.rate)||0)};
+  var half = netH / 2; return { netH: netH, wage: half * (Number(wt.am.rate) || 0) + half * (Number(wt.pm.rate) || 0) };
 }
-function _getBentoCount(rec){
-  if(!rec || !rec.bento) return 0;
+function _getBentoCount(rec) {
+  if (!rec || !rec.bento) return 0;
   var s = String(rec.bento).trim();
-  if(s==='3食' || s==='3' || s==='3個') return 3;
-  if(s==='2食' || s==='2' || s==='2個') return 2;
-  if(s==='1食' || s==='1' || s==='1個' || s==='あり' || s==='true' || s==='要' || s==='体験食(無料)' || s==='あり(無料)' || s==='無料' || s==='体験食') return 1;
+  if (s === '3食' || s === '3' || s === '3個') return 3;
+  if (s === '2食' || s === '2' || s === '2個') return 2;
+  if (s === '1食' || s === '1' || s === '1個' || s === 'あり' || s === 'true' || s === '要' || s === '体験食(無料)' || s === 'あり(無料)' || s === '無料' || s === '体験食') return 1;
   return 0;
 }
-function _isBento(rec){return _getBentoCount(rec) > 0;}
-function _isAttend(rec){return['出席','遅刻','早退'].indexOf(rec.status)>=0;}
-function _checkKaikin(user,allAtt,ym){
-  var recs=allAtt.filter(function(a){return String(a.userId)===String(user.id);});
-  var p=ym.split('-');var y=Number(p[0]),m=Number(p[1]);
-  var dim=new Date(y,m,0).getDate();
-  var ok=0,ng=0,hasExpected=false;
-  for(var d=1;d<=dim;d++){
-    var ds=ym+'-'+String(d).padStart(2,'0');
+function _isBento(rec) { return _getBentoCount(rec) > 0; }
+function _isAttend(rec) { return ['出席', '遅刻', '早退'].indexOf(rec.status) >= 0; }
+function _checkKaikin(user, allAtt, ym) {
+  var recs = allAtt.filter(function (a) { return String(a.userId) === String(user.id); });
+  var p = ym.split('-'); var y = Number(p[0]), m = Number(p[1]);
+  var dim = new Date(y, m, 0).getDate();
+  var ok = 0, ng = 0, hasExpected = false;
+  for (var d = 1; d <= dim; d++) {
+    var ds = ym + '-' + String(d).padStart(2, '0');
     var eff = user;
-    if(user && typeof getUserScheduleForDate === 'function'){
+    if (user && typeof getUserScheduleForDate === 'function') {
       eff = Object.assign({}, user, getUserScheduleForDate(user, ds));
     }
-    var sd=(eff.scheduleDays||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
-    if(sd.length===0) continue;
-    var dt=new Date(y,m-1,d);var dow=['日','月','火','水','木','金','土'][dt.getDay()];
-    if(sd.indexOf(dow)<0)continue;
-    hasExpected=true;
-    var rec=recs.find(function(r){return String(r.date)===ds;});
-    if(rec&&rec.status==='調整休')continue;
-    if(rec&&['欠席','体調不良','通院'].indexOf(rec.status)>=0){ng++;continue;}
-    if(rec&&_isAttend(rec)){ok++;}else{ng++;}
+    var sd = (eff.scheduleDays || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (sd.length === 0) continue;
+    var dt = new Date(y, m - 1, d); var dow = ['日', '月', '火', '水', '木', '金', '土'][dt.getDay()];
+    if (sd.indexOf(dow) < 0) continue;
+    hasExpected = true;
+    var rec = recs.find(function (r) { return String(r.date) === ds; });
+    if (rec && rec.status === '調整休') continue;
+    if (rec && ['欠席', '体調不良', '通院'].indexOf(rec.status) >= 0) { ng++; continue; }
+    if (rec && _isAttend(rec)) { ok++; } else { ng++; }
   }
-  if(!hasExpected) return {kaikin:false,ok:0,ng:0};
-  return{kaikin:ng===0&&ok>0,ok:ok,ng:ng};
+  if (!hasExpected) return { kaikin: false, ok: 0, ng: 0 };
+  return { kaikin: ng === 0 && ok > 0, ok: ok, ng: ng };
 }
 
-async function _calcAttendanceList(ym){
-  var us=await _getAll('利用者');var wts=await _getAll('作業種別');var att=await _getLike('出欠','date',ym);
-  var settings=await _getSettings();var bentoPrice=Number(settings.bentoPrice)||100;var KAIKIN_BONUS=3000;
-  var configuredAls=[];
-  try{configuredAls=JSON.parse(settings.allowances||'[]');}catch(e){}
-  var activeAls=configuredAls.filter(function(a){return a.enabled!==false;});
-  var result=[];
-  us.forEach(function(user){
-    if((user.enrollDate && user.enrollDate > ym + '-31') || (user.endDate && user.endDate < ym + '-01')) return;
-    var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
-    if(recs.length===0)return;
-    var tServiceMin=0,tWM=0,tBM=0,tW=0,bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
-    recs.forEach(function(rec){
+async function _calcAttendanceList(ym) {
+  var us = await _getAll('利用者'); var wts = await _getAll('作業種別'); var att = await _getLike('出欠', 'date', ym);
+  var settings = await _getSettings(); var bentoPrice = Number(settings.bentoPrice) || 100; var KAIKIN_BONUS = 3000;
+  var configuredAls = [];
+  try { configuredAls = JSON.parse(settings.allowances || '[]'); } catch (e) { }
+  var activeAls = configuredAls.filter(function (a) { return a.enabled !== false; });
+  var result = [];
+  us.forEach(function (user) {
+    if ((user.enrollDate && user.enrollDate > ym + '-31') || (user.endDate && user.endDate < ym + '-01')) return;
+    var recs = att.filter(function (a) { return String(a.userId) === String(user.id) && _isAttend(a); });
+    if (recs.length === 0) return;
+    var tServiceMin = 0, tWM = 0, tBM = 0, tW = 0, bc = 0, bcDeduct = 0, bcDaily = 0, bcNext = 0;
+    recs.forEach(function (rec) {
       var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
-      var netH=_calcNetH(rec,user);
-      var sMin=Math.round(netH*60);
+      var netH = _calcNetH(rec, user);
+      var sMin = Math.round(netH * 60);
       var sTime = rec.startTime || rec.in || rec.clockIn || rec.scheduleStart || (effU ? effU.scheduleStart : '') || '10:00';
       var eTime = rec.endTime || rec.out || rec.clockOut || rec.scheduleEnd || (effU ? effU.scheduleEnd : '') || '16:00';
-      var sp=String(sTime).split(':'),ep=String(eTime).split(':');
-      var wm=Number(ep[0])*60+Number(ep[1])-Number(sp[0])*60-Number(sp[1]);
-      var brk=(rec.breakMin!==undefined&&rec.breakMin!==null&&rec.breakMin!=='')?Number(rec.breakMin):((effU&&effU.breakMin!==undefined&&effU.breakMin!==null&&effU.breakMin!=='')?Number(effU.breakMin):0);
-      tServiceMin+=sMin;tWM+=wm;tBM+=brk;tW+=_calcRecWage(rec,wts,user).wage;
+      var sp = String(sTime).split(':'), ep = String(eTime).split(':');
+      var wm = Number(ep[0]) * 60 + Number(ep[1]) - Number(sp[0]) * 60 - Number(sp[1]);
+      var brk = (rec.breakMin !== undefined && rec.breakMin !== null && rec.breakMin !== '') ? Number(rec.breakMin) : ((effU && effU.breakMin !== undefined && effU.breakMin !== null && effU.breakMin !== '') ? Number(effU.breakMin) : 0);
+      tServiceMin += sMin; tWM += wm; tBM += brk; tW += _calcRecWage(rec, wts, user).wage;
       var bCount = _getBentoCount(rec);
-      if(bCount > 0){
+      if (bCount > 0) {
         bc += bCount;
-        var pm=rec.bentoPaymentMethod || (effU&&effU.bentoPaymentMethod) || '工賃払い';
-        var isFreeMeal = String(rec.bento||'').includes('無料') || String(rec.bento||'').includes('体験食');
-        if(isFreeMeal || pm==='無料' || pm==='対象外' || pm==='なし'){
+        var pm = rec.bentoPaymentMethod || (effU && effU.bentoPaymentMethod) || '工賃払い';
+        var isFreeMeal = String(rec.bento || '').includes('無料') || String(rec.bento || '').includes('体験食');
+        if (isFreeMeal || pm === '無料' || pm === '対象外' || pm === 'なし') {
           // 無料体験食・対象外・なし：工賃控除しない
-        } else if(pm==='当日')bcDaily += bCount;
-        else if(pm==='月末締め翌月払い'||pm==='月末締め翌月払い（振込）'||pm==='翌月払い'||pm==='翌月'||pm.indexOf('翌月')>=0||pm.indexOf('振込')>=0)bcNext += bCount;
-        else if(pm==='工賃払い')bcDeduct += bCount;
+        } else if (pm === '当日') bcDaily += bCount;
+        else if (pm === '月末締め翌月払い' || pm === '月末締め翌月払い（振込）' || pm === '翌月払い' || pm === '翌月' || pm.indexOf('翌月') >= 0 || pm.indexOf('振込') >= 0) bcNext += bCount;
+        else if (pm === '工賃払い') bcDeduct += bCount;
       }
     });
-    var tTrans=recs.reduce(function(s,r){
-      var tra=(r.transportationAllowance!==undefined&&r.transportationAllowance!==null&&r.transportationAllowance!=='')?Number(r.transportationAllowance):Number(user.transportationAllowance||0);
-      return s+tra;
-    },0);
-    var net=Math.max(0,tWM-tBM);var kk=_checkKaikin(user,att,ym);
-    var bonus=0;
-    if(activeAls.length>0){
-      activeAls.forEach(function(a){
-        var match=false;
-        if(a.condition==='kaikin'){match=kk.kaikin;}
-        else if(a.condition==='seikin'){match=!kk.kaikin&&kk.ng<=2&&kk.ok>0;}
-        else if(a.condition==='all'){match=recs.length>0;}
-        else if(a.condition==='birthday'){
-          if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
+    var tTrans = recs.reduce(function (s, r) {
+      var tra = (r.transportationAllowance !== undefined && r.transportationAllowance !== null && r.transportationAllowance !== '') ? Number(r.transportationAllowance) : Number(user.transportationAllowance || 0);
+      return s + tra;
+    }, 0);
+    var net = Math.max(0, tWM - tBM); var kk = _checkKaikin(user, att, ym);
+    var bonus = 0;
+    if (activeAls.length > 0) {
+      activeAls.forEach(function (a) {
+        var match = false;
+        if (a.condition === 'kaikin') { match = kk.kaikin; }
+        else if (a.condition === 'seikin') { match = !kk.kaikin && kk.ng <= 2 && kk.ok > 0; }
+        else if (a.condition === 'all') { match = recs.length > 0; }
+        else if (a.condition === 'birthday') {
+          if (user.birthdate) { var bd = String(user.birthdate).substring(5, 7); var cm = ym.split('-')[1]; match = bd === cm; }
         }
-        else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
-        else if(a.condition==='no_pickup'){
+        else if (a.condition === 'days_over') { var threshold = parseInt(a.conditionValue) || 0; match = recs.length >= threshold; }
+        else if (a.condition === 'no_pickup') {
           var userPickup = user.pickup;
-          if(recs.length > 0 && typeof getUserScheduleForDate === 'function'){
+          if (recs.length > 0 && typeof getUserScheduleForDate === 'function') {
             userPickup = getUserScheduleForDate(user, recs[0].date).pickup;
           }
-          match=recs.length>0&&!_isPickupUser(userPickup);
+          match = recs.length > 0 && !_isPickupUser(userPickup);
         }
-        if(match){bonus+=Number(a.amount)||0;}
+        if (match) { bonus += Number(a.amount) || 0; }
       });
-    }else{
-      if(kk.kaikin) bonus=KAIKIN_BONUS;
+    } else {
+      if (kk.kaikin) bonus = KAIKIN_BONUS;
     }
-    result.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',days:recs.length,workMin:tServiceMin,breakMin:tBM,netMin:net,avgNetMin:recs.length>0?Math.round(tServiceMin/recs.length):0,bonus:bonus,wage:Math.round(tW),transportAllowance:tTrans,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,total:Math.round(tW)+bonus-bcDeduct*bentoPrice+tTrans});
+    result.push({ id: user.id, name: user.name, serviceType: user.serviceType || 'Ｂ型', days: recs.length, workMin: tServiceMin, breakMin: tBM, netMin: net, avgNetMin: recs.length > 0 ? Math.round(tServiceMin / recs.length) : 0, bonus: bonus, wage: Math.round(tW), transportAllowance: tTrans, bentoCount: bc, bentoDeductCount: bcDeduct, bentoDailyCount: bcDaily, bentoNextCount: bcNext, bentoDed: bcDeduct * bentoPrice, total: Math.round(tW) + bonus - bcDeduct * bentoPrice + tTrans });
   });
-  return{users:result,bentoPrice:bentoPrice};
+  return { users: result, bentoPrice: bentoPrice };
 }
 
-function _isPickupUser(val){
-  if(!val)return false;
-  var s=String(val).trim();
-  return s!==''&&s!=='なし'&&s!=='0'&&s!=='false'&&s!=='自力'&&s!=='不要';
+function _isPickupUser(val) {
+  if (!val) return false;
+  var s = String(val).trim();
+  return s !== '' && s !== 'なし' && s !== '0' && s !== 'false' && s !== '自力' && s !== '不要';
 }
 
-async function _calcWageDetailPerUser(ym){
-  var us=await _getAll('利用者');var wts=await _getAll('作業種別');var att=await _getLike('出欠','date',ym);
-  var settings=await _getSettings();var bentoPrice=Number(settings.bentoPrice)||100;var KAIKIN_BONUS=3000;
-  var companyName=settings.companyName||settings.facilityName||'事業所';
-  var payDay=settings.payDay||'翌月23日';
-  var yy=Number(ym.split('-')[0]),mm=Number(ym.split('-')[1]);
-  var pM=mm+1,pY=yy;if(pM>12){pM=1;pY++;}
-  var pD=23;try{pD=Number(payDay.replace(/[^0-9]/g,''))||23;}catch(e){}
-  var payDateStr=pY+'年'+pM+'月'+pD+'日';
+async function _calcWageDetailPerUser(ym) {
+  var us = await _getAll('利用者'); var wts = await _getAll('作業種別'); var att = await _getLike('出欠', 'date', ym);
+  var settings = await _getSettings(); var bentoPrice = Number(settings.bentoPrice) || 100; var KAIKIN_BONUS = 3000;
+  var companyName = settings.companyName || settings.facilityName || '事業所';
+  var payDay = settings.payDay || '翌月23日';
+  var yy = Number(ym.split('-')[0]), mm = Number(ym.split('-')[1]);
+  var pM = mm + 1, pY = yy; if (pM > 12) { pM = 1; pY++; }
+  var pD = 23; try { pD = Number(payDay.replace(/[^0-9]/g, '')) || 23; } catch (e) { }
+  var payDateStr = pY + '年' + pM + '月' + pD + '日';
 
-  var configuredAls=[];
-  try{configuredAls=JSON.parse(settings.allowances||'[]');}catch(e){}
-  var activeAls=configuredAls.filter(function(a){return a.enabled!==false;});
+  var configuredAls = [];
+  try { configuredAls = JSON.parse(settings.allowances || '[]'); } catch (e) { }
+  var activeAls = configuredAls.filter(function (a) { return a.enabled !== false; });
 
-  var result=[];
-  us.forEach(function(user){
-    if((user.enrollDate && user.enrollDate > ym + '-31') || (user.endDate && user.endDate < ym + '-01')) return;
-    var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
-    if(recs.length===0)return;
-    var byWt={},bc=0,bcDeduct=0,bcDaily=0,bcNext=0;
-    var tTrans=recs.reduce(function(s,r){
-      var tra=(r.transportationAllowance!==undefined&&r.transportationAllowance!==null&&r.transportationAllowance!=='')?Number(r.transportationAllowance):Number(user.transportationAllowance||0);
-      return s+tra;
-    },0);
-    recs.forEach(function(rec){
-      var netH=_calcNetH(rec,user);if(netH<=0)return;
+  var result = [];
+  us.forEach(function (user) {
+    if ((user.enrollDate && user.enrollDate > ym + '-31') || (user.endDate && user.endDate < ym + '-01')) return;
+    var recs = att.filter(function (a) { return String(a.userId) === String(user.id) && _isAttend(a); });
+    if (recs.length === 0) return;
+    var byWt = {}, bc = 0, bcDeduct = 0, bcDaily = 0, bcNext = 0;
+    var tTrans = recs.reduce(function (s, r) {
+      var tra = (r.transportationAllowance !== undefined && r.transportationAllowance !== null && r.transportationAllowance !== '') ? Number(r.transportationAllowance) : Number(user.transportationAllowance || 0);
+      return s + tra;
+    }, 0);
+    recs.forEach(function (rec) {
+      var netH = _calcNetH(rec, user); if (netH <= 0) return;
       var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
       var amK = rec.workTypeId || (effU ? effU.workTypeId : '') || '';
       var pmDef = (effU && effU.workTypeIdPm !== undefined && effU.workTypeIdPm !== null && effU.workTypeIdPm !== '') ? effU.workTypeIdPm : amK;
-      var pmK = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && String(rec.workTypeIdPm)!=='') ? rec.workTypeIdPm : pmDef;
-      var wt=_findWt(wts,amK,pmK);
-      if(!wt.am || !wt.pm || String(wt.am.id)===String(wt.pm.id)){
-        var targetWt=wt.am||wt.pm;
-        var nm=targetWt?targetWt.name:'未設定';var rt=targetWt?Number(targetWt.rate):0;
-        if(!byWt[nm])byWt[nm]={hours:0,rate:rt,wage:0};byWt[nm].hours+=netH;byWt[nm].wage+=netH*rt;
-      }else{var hh=netH/2;
-        var amName=wt.am?wt.am.name:'未設定';var amRate=wt.am?Number(wt.am.rate)||0:0;
-        var pmName=wt.pm?wt.pm.name:'未設定';var pmRate=wt.pm?Number(wt.pm.rate)||0:0;
-        if(!byWt[amName])byWt[amName]={hours:0,rate:amRate,wage:0};byWt[amName].hours+=hh;byWt[amName].wage+=hh*amRate;
-        if(!byWt[pmName])byWt[pmName]={hours:0,rate:pmRate,wage:0};byWt[pmName].hours+=hh;byWt[pmName].wage+=hh*pmRate;
+      var pmK = (rec.workTypeIdPm !== undefined && rec.workTypeIdPm !== null && String(rec.workTypeIdPm) !== '') ? rec.workTypeIdPm : pmDef;
+      var wt = _findWt(wts, amK, pmK);
+      if (!wt.am || !wt.pm || String(wt.am.id) === String(wt.pm.id)) {
+        var targetWt = wt.am || wt.pm;
+        var nm = targetWt ? targetWt.name : '未設定'; var rt = targetWt ? Number(targetWt.rate) : 0;
+        if (!byWt[nm]) byWt[nm] = { hours: 0, rate: rt, wage: 0 }; byWt[nm].hours += netH; byWt[nm].wage += netH * rt;
+      } else {
+        var hh = netH / 2;
+        var amName = wt.am ? wt.am.name : '未設定'; var amRate = wt.am ? Number(wt.am.rate) || 0 : 0;
+        var pmName = wt.pm ? wt.pm.name : '未設定'; var pmRate = wt.pm ? Number(wt.pm.rate) || 0 : 0;
+        if (!byWt[amName]) byWt[amName] = { hours: 0, rate: amRate, wage: 0 }; byWt[amName].hours += hh; byWt[amName].wage += hh * amRate;
+        if (!byWt[pmName]) byWt[pmName] = { hours: 0, rate: pmRate, wage: 0 }; byWt[pmName].hours += hh; byWt[pmName].wage += hh * pmRate;
       }
       var bCount = _getBentoCount(rec);
-      if(bCount > 0){
+      if (bCount > 0) {
         bc += bCount;
         var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
-        var pm=rec.bentoPaymentMethod || (effU&&effU.bentoPaymentMethod) || '工賃払い';
-        var isFreeMeal = String(rec.bento||'').includes('無料') || String(rec.bento||'').includes('体験食');
-        if(isFreeMeal || pm==='無料' || pm==='対象外' || pm==='なし'){
+        var pm = rec.bentoPaymentMethod || (effU && effU.bentoPaymentMethod) || '工賃払い';
+        var isFreeMeal = String(rec.bento || '').includes('無料') || String(rec.bento || '').includes('体験食');
+        if (isFreeMeal || pm === '無料' || pm === '対象外' || pm === 'なし') {
           // 無料体験食・対象外・なし：工賃控除しない
-        } else if(pm==='当日')bcDaily += bCount;
-        else if(pm==='月末締め翌月払い'||pm==='月末締め翌月払い（振込）'||pm==='翌月払い'||pm==='翌月'||pm.indexOf('翌月')>=0||pm.indexOf('振込')>=0)bcNext += bCount;
-        else if(pm==='工賃払い')bcDeduct += bCount;
+        } else if (pm === '当日') bcDaily += bCount;
+        else if (pm === '月末締め翌月払い' || pm === '月末締め翌月払い（振込）' || pm === '翌月払い' || pm === '翌月' || pm.indexOf('翌月') >= 0 || pm.indexOf('振込') >= 0) bcNext += bCount;
+        else if (pm === '工賃払い') bcDeduct += bCount;
       }
     });
-    var items=[],wSub=0;Object.keys(byWt).forEach(function(k){var w=byWt[k];var rw=Math.round(w.wage);items.push({name:k,hours:Math.round(w.hours*100)/100,rate:w.rate,wage:rw});wSub+=rw;});
-    
-    var userOverrideMap = {};
-    try { userOverrideMap = JSON.parse(settings.userAllowanceMap || '{}'); } catch(e){}
+    var items = [], wSub = 0; Object.keys(byWt).forEach(function (k) { var w = byWt[k]; var rw = Math.round(w.wage); items.push({ name: k, hours: Math.round(w.hours * 100) / 100, rate: w.rate, wage: rw }); wSub += rw; });
 
-    var kk=_checkKaikin(user,att,ym);
-    var userAllowances=[];
-    var bonus=0;
-    if(activeAls.length>0){
-      activeAls.forEach(function(a){
+    var userOverrideMap = {};
+    try { userOverrideMap = JSON.parse(settings.userAllowanceMap || '{}'); } catch (e) { }
+
+    var kk = _checkKaikin(user, att, ym);
+    var userAllowances = [];
+    var bonus = 0;
+    if (activeAls.length > 0) {
+      activeAls.forEach(function (a) {
         var key = ym + '_' + user.id + '_' + a.name;
         var overrideVal = userOverrideMap[key];
-        var match=false;
+        var match = false;
 
-        if(overrideVal === true){
+        if (overrideVal === true) {
           match = true;
-        } else if(overrideVal === false){
+        } else if (overrideVal === false) {
           match = false;
         } else {
-          if(a.condition==='kaikin'){match=kk.kaikin;}
-          else if(a.condition==='seikin'){match=!kk.kaikin&&kk.ng<=2&&kk.ok>0;}
-          else if(a.condition==='all'){match=recs.length>0;}
-          else if(a.condition==='birthday'){
-            if(user.birthdate){var bd=String(user.birthdate).substring(5,7);var cm=ym.split('-')[1];match=bd===cm;}
+          if (a.condition === 'kaikin') { match = kk.kaikin; }
+          else if (a.condition === 'seikin') { match = !kk.kaikin && kk.ng <= 2 && kk.ok > 0; }
+          else if (a.condition === 'all') { match = recs.length > 0; }
+          else if (a.condition === 'birthday') {
+            if (user.birthdate) { var bd = String(user.birthdate).substring(5, 7); var cm = ym.split('-')[1]; match = bd === cm; }
           }
-          else if(a.condition==='days_over'){var threshold=parseInt(a.conditionValue)||0;match=recs.length>=threshold;}
-          else if(a.condition==='no_pickup'){
+          else if (a.condition === 'days_over') { var threshold = parseInt(a.conditionValue) || 0; match = recs.length >= threshold; }
+          else if (a.condition === 'no_pickup') {
             var userPickup = user.pickup;
-            if(recs.length > 0 && typeof getUserScheduleForDate === 'function'){
+            if (recs.length > 0 && typeof getUserScheduleForDate === 'function') {
               userPickup = getUserScheduleForDate(user, recs[0].date).pickup;
             }
-            match=recs.length>0&&!_isPickupUser(userPickup);
+            match = recs.length > 0 && !_isPickupUser(userPickup);
           }
         }
-        if(match){
-          var amt=Number(a.amount)||0;
-          bonus+=amt;
-          userAllowances.push({name:a.name,amount:amt});
+        if (match) {
+          var amt = Number(a.amount) || 0;
+          bonus += amt;
+          userAllowances.push({ name: a.name, amount: amt });
         }
       });
-    }else{
-      if(kk.kaikin){
-        bonus=KAIKIN_BONUS;
-        userAllowances.push({name:'皆勤手当',amount:KAIKIN_BONUS});
+    } else {
+      if (kk.kaikin) {
+        bonus = KAIKIN_BONUS;
+        userAllowances.push({ name: '皆勤手当', amount: KAIKIN_BONUS });
       }
     }
 
-    var pmRaw = (recs.find(function(r){return r.bentoPaymentMethod;}) || {}).bentoPaymentMethod;
-    if(!pmRaw && recs.length > 0 && typeof getUserScheduleForDate === 'function'){
+    var pmRaw = (recs.find(function (r) { return r.bentoPaymentMethod; }) || {}).bentoPaymentMethod;
+    if (!pmRaw && recs.length > 0 && typeof getUserScheduleForDate === 'function') {
       pmRaw = getUserScheduleForDate(user, recs[0].date).bentoPaymentMethod;
     }
-    if(!pmRaw) pmRaw = user.bentoPaymentMethod || '工賃払い';
+    if (!pmRaw) pmRaw = user.bentoPaymentMethod || '工賃払い';
 
     var copayLimit = parseInt(String(user.copayAmount || '0').replace(/[,円]/g, '')) || 0;
     var copayDed = (copayLimit > 0 && recs.length > 0) ? Math.min(copayLimit, Math.floor(recs.length * 604 * 10.54 * 0.1)) : 0;
 
-    result.push({id:user.id,name:user.name,bentoPaymentMethod:pmRaw,days:recs.length,items:items,workSubtotal:wSub,kaikin:kk.kaikin,allowances:userAllowances,bonus:bonus,transportAllowance:tTrans,bentoCount:bc,bentoDeductCount:bcDeduct,bentoDailyCount:bcDaily,bentoNextCount:bcNext,bentoDed:bcDeduct*bentoPrice,bentoPrice:bentoPrice,copayLimit:copayLimit,copayDed:copayDed,total:wSub+bonus-bcDeduct*bentoPrice-copayDed+tTrans});
+    result.push({ id: user.id, name: user.name, bentoPaymentMethod: pmRaw, days: recs.length, items: items, workSubtotal: wSub, kaikin: kk.kaikin, allowances: userAllowances, bonus: bonus, transportAllowance: tTrans, bentoCount: bc, bentoDeductCount: bcDeduct, bentoDailyCount: bcDaily, bentoNextCount: bcNext, bentoDed: bcDeduct * bentoPrice, bentoPrice: bentoPrice, copayLimit: copayLimit, copayDed: copayDed, total: wSub + bonus - bcDeduct * bentoPrice - copayDed + tTrans });
   });
-  return{ym:ym,companyName:companyName,payDate:payDateStr,users:result,bentoPrice:bentoPrice};
+  return { ym: ym, companyName: companyName, payDate: payDateStr, users: result, bentoPrice: bentoPrice };
 }
 
-async function _calcWorkTypeSummary(ym){
-  var us=await _getAll('利用者');var wts=await _getAll('作業種別');var att=await _getLike('出欠','date',ym);
-  var p=ym.split('-');var year=Number(p[0]),month=Number(p[1]);
-  var dim=new Date(year,month,0).getDate();
-  var dowNames=['日','月','火','水','木','金','土'];
-  var dayDows=[];for(var d=1;d<=dim;d++)dayDows.push(dowNames[new Date(year,month-1,d).getDay()]);
-  var users=[],gWD=new Array(dim).fill(0),gHD=new Array(dim).fill(0),gWT=0,gHT=0,gWC=0;
-  us.forEach(function(user){
-    if((user.enrollDate && user.enrollDate > ym + '-31') || (user.endDate && user.endDate < ym + '-01')) return;
-    var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
-    if(recs.length===0)return;
-    var byWt={},uWD=new Array(dim).fill(0),uHD=new Array(dim).fill(0),uWT=0,uHT=0,uWC=0;
-    recs.forEach(function(rec){
-      var day=Number(String(rec.date).split('-')[2]);if(day<1||day>dim)return;
-      var netH=_calcNetH(rec,user);if(netH<=0)return;
+async function _calcWorkTypeSummary(ym) {
+  var us = await _getAll('利用者'); var wts = await _getAll('作業種別'); var att = await _getLike('出欠', 'date', ym);
+  var p = ym.split('-'); var year = Number(p[0]), month = Number(p[1]);
+  var dim = new Date(year, month, 0).getDate();
+  var dowNames = ['日', '月', '火', '水', '木', '金', '土'];
+  var dayDows = []; for (var d = 1; d <= dim; d++)dayDows.push(dowNames[new Date(year, month - 1, d).getDay()]);
+  var users = [], gWD = new Array(dim).fill(0), gHD = new Array(dim).fill(0), gWT = 0, gHT = 0, gWC = 0;
+  us.forEach(function (user) {
+    if ((user.enrollDate && user.enrollDate > ym + '-31') || (user.endDate && user.endDate < ym + '-01')) return;
+    var recs = att.filter(function (a) { return String(a.userId) === String(user.id) && _isAttend(a); });
+    if (recs.length === 0) return;
+    var byWt = {}, uWD = new Array(dim).fill(0), uHD = new Array(dim).fill(0), uWT = 0, uHT = 0, uWC = 0;
+    recs.forEach(function (rec) {
+      var day = Number(String(rec.date).split('-')[2]); if (day < 1 || day > dim) return;
+      var netH = _calcNetH(rec, user); if (netH <= 0) return;
       var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
       var amK = rec.workTypeId || (effU ? effU.workTypeId : '') || '';
       var pmDef = (effU && effU.workTypeIdPm !== undefined && effU.workTypeIdPm !== null && effU.workTypeIdPm !== '') ? effU.workTypeIdPm : amK;
-      var pmK = (rec.workTypeIdPm!==undefined && rec.workTypeIdPm!==null && String(rec.workTypeIdPm)!=='') ? rec.workTypeIdPm : pmDef;
-      var wt=_findWt(wts,amK,pmK);
-      if(!wt.am || !wt.pm || String(wt.am.id)===String(wt.pm.id)){
-        var targetWt=wt.am||wt.pm;
-        var nm=targetWt?targetWt.name:'未設定';var rt=targetWt?Number(targetWt.rate):0;
-        if(!byWt[nm])byWt[nm]={wageByDay:new Array(dim).fill(0),hoursByDay:new Array(dim).fill(0),wageTotal:0,hoursTotal:0,count:0};
-        byWt[nm].wageByDay[day-1]+=netH*rt;byWt[nm].hoursByDay[day-1]+=netH;byWt[nm].wageTotal+=netH*rt;byWt[nm].hoursTotal+=netH;byWt[nm].count++;
-      }else{var hh=netH/2;
-        [wt.am,wt.pm].forEach(function(w){var n=w?w.name:'未設定';var r=w?Number(w.rate):0;
-          if(!byWt[n])byWt[n]={wageByDay:new Array(dim).fill(0),hoursByDay:new Array(dim).fill(0),wageTotal:0,hoursTotal:0,count:0};
-          byWt[n].wageByDay[day-1]+=hh*r;byWt[n].hoursByDay[day-1]+=hh;byWt[n].wageTotal+=hh*r;byWt[n].hoursTotal+=hh;byWt[n].count++;
+      var pmK = (rec.workTypeIdPm !== undefined && rec.workTypeIdPm !== null && String(rec.workTypeIdPm) !== '') ? rec.workTypeIdPm : pmDef;
+      var wt = _findWt(wts, amK, pmK);
+      if (!wt.am || !wt.pm || String(wt.am.id) === String(wt.pm.id)) {
+        var targetWt = wt.am || wt.pm;
+        var nm = targetWt ? targetWt.name : '未設定'; var rt = targetWt ? Number(targetWt.rate) : 0;
+        if (!byWt[nm]) byWt[nm] = { wageByDay: new Array(dim).fill(0), hoursByDay: new Array(dim).fill(0), wageTotal: 0, hoursTotal: 0, count: 0 };
+        byWt[nm].wageByDay[day - 1] += netH * rt; byWt[nm].hoursByDay[day - 1] += netH; byWt[nm].wageTotal += netH * rt; byWt[nm].hoursTotal += netH; byWt[nm].count++;
+      } else {
+        var hh = netH / 2;
+        [wt.am, wt.pm].forEach(function (w) {
+          var n = w ? w.name : '未設定'; var r = w ? Number(w.rate) : 0;
+          if (!byWt[n]) byWt[n] = { wageByDay: new Array(dim).fill(0), hoursByDay: new Array(dim).fill(0), wageTotal: 0, hoursTotal: 0, count: 0 };
+          byWt[n].wageByDay[day - 1] += hh * r; byWt[n].hoursByDay[day - 1] += hh; byWt[n].wageTotal += hh * r; byWt[n].hoursTotal += hh; byWt[n].count++;
         });
       }
-      var wage=_calcRecWage(rec,wts,user).wage;
-      uWD[day-1]+=wage;uHD[day-1]+=netH;uWT+=wage;uHT+=netH;uWC++;
-      gWD[day-1]+=wage;gHD[day-1]+=netH;gWT+=wage;gHT+=netH;gWC++;
+      var wage = _calcRecWage(rec, wts, user).wage;
+      uWD[day - 1] += wage; uHD[day - 1] += netH; uWT += wage; uHT += netH; uWC++;
+      gWD[day - 1] += wage; gHD[day - 1] += netH; gWT += wage; gHT += netH; gWC++;
     });
-    users.push({id:user.id,name:user.name,serviceType:user.serviceType||'Ｂ型',byWt:byWt,wageByDay:uWD,hoursByDay:uHD,wageTotal:Math.round(uWT),hoursTotal:Math.round(uHT*100)/100,workCount:uWC});
+    users.push({ id: user.id, name: user.name, serviceType: user.serviceType || 'Ｂ型', byWt: byWt, wageByDay: uWD, hoursByDay: uHD, wageTotal: Math.round(uWT), hoursTotal: Math.round(uHT * 100) / 100, workCount: uWC });
   });
-  return{ym:ym,daysInMonth:dim,dayDows:dayDows,users:users,grandWageByDay:gWD,grandHoursByDay:gHD,grandWageTotal:Math.round(gWT),grandHoursTotal:Math.round(gHT*100)/100,grandWorkCount:gWC};
+  return { ym: ym, daysInMonth: dim, dayDows: dayDows, users: users, grandWageByDay: gWD, grandHoursByDay: gHD, grandWageTotal: Math.round(gWT), grandHoursTotal: Math.round(gHT * 100) / 100, grandWorkCount: gWC };
 }
 
-async function _calcUtilizationData(ym){
-  var settings=await _getSettings();var capacity=Number(settings.capacity)||20;
-  var p=ym.split('-');var curY=Number(p[0]),curM=Number(p[1]);
-  var months=[];for(var mi=14;mi>=0;mi--){var tm=curM-mi,ty=curY;while(tm<1){tm+=12;ty--;}while(tm>12){tm-=12;ty++;}months.push(ty+'-'+String(tm).padStart(2,'0'));}
-  var result=[];
-  for(var i=0;i<months.length;i++){
-    var mym=months[i];var mp=mym.split('-');var myr=Number(mp[0]),mmo=Number(mp[1]);
-    var dim2=new Date(myr,mmo,0).getDate();
-    var closed=[];try{var cs=settings['closedDays_'+mym];if(cs)closed=JSON.parse(cs);}catch(e){}
-    var openDays=dim2-closed.length;
-    var mAtt=[];try{mAtt=await _getLike('出欠','date',mym);}catch(e){}
-    var totalAttend=0;mAtt.forEach(function(a){if(_isAttend(a))totalAttend++;});
-    var maxCap=capacity*openDays;var rate=maxCap>0?Math.round(totalAttend/maxCap*1000)/10:0;
-    result.push({ym:mym,label:mym.replace('-','/'),capacity:capacity,openDays:openDays,totalAttend:totalAttend,rate:rate});
+async function _calcUtilizationData(ym) {
+  var settings = await _getSettings(); var capacity = Number(settings.capacity) || 20;
+  var p = ym.split('-'); var curY = Number(p[0]), curM = Number(p[1]);
+  var months = []; for (var mi = 14; mi >= 0; mi--) { var tm = curM - mi, ty = curY; while (tm < 1) { tm += 12; ty--; } while (tm > 12) { tm -= 12; ty++; } months.push(ty + '-' + String(tm).padStart(2, '0')); }
+  var result = [];
+  for (var i = 0; i < months.length; i++) {
+    var mym = months[i]; var mp = mym.split('-'); var myr = Number(mp[0]), mmo = Number(mp[1]);
+    var dim2 = new Date(myr, mmo, 0).getDate();
+    var closed = []; try { var cs = settings['closedDays_' + mym]; if (cs) closed = JSON.parse(cs); } catch (e) { }
+    var openDays = dim2 - closed.length;
+    var mAtt = []; try { mAtt = await _getLike('出欠', 'date', mym); } catch (e) { }
+    var totalAttend = 0; mAtt.forEach(function (a) { if (_isAttend(a)) totalAttend++; });
+    var maxCap = capacity * openDays; var rate = maxCap > 0 ? Math.round(totalAttend / maxCap * 1000) / 10 : 0;
+    result.push({ ym: mym, label: mym.replace('-', '/'), capacity: capacity, openDays: openDays, totalAttend: totalAttend, rate: rate });
   }
-  for(var ri=0;ri<result.length;ri++){result[ri].avg3=ri>=2?Math.round((result[ri].rate+result[ri-1].rate+result[ri-2].rate)/3*10)/10:null;}
-  return{months:result,facilityName:settings.facilityName||'',facilityType:settings.facilityType||'就労継続支援B型'};
+  for (var ri = 0; ri < result.length; ri++) { result[ri].avg3 = ri >= 2 ? Math.round((result[ri].rate + result[ri - 1].rate + result[ri - 2].rate) / 3 * 10) / 10 : null; }
+  return { months: result, facilityName: settings.facilityName || '', facilityType: settings.facilityType || '就労継続支援B型' };
 }
 
-async function _calcServiceRecordData(srYm){
-  var srAtt=await _getLike('出欠','date',srYm);var srUsers=await _getAll('利用者');var srSettings=await _getSettings();
-  var srFn=srSettings.facilityName||'';var srFNum=srSettings.facilityNumber||'';
-  var srParts=srYm.split('-');var srY=Number(srParts[0]);var srM=Number(srParts[1]);
-  var srDays=new Date(srY,srM,0).getDate();var srDow=['日','月','火','水','木','金','土'];
-  var srReiwa='令和'+(srY-2018)+'年'+srM+'月分';var srResult=[];
-  srUsers.forEach(function(user){
-    if((user.enrollDate && user.enrollDate > srYm + '-31') || (user.endDate && user.endDate < srYm + '-01')) return;
-    var recs=srAtt.filter(function(a){return String(a.userId)===String(user.id);});
-    var hasTarget=recs.some(function(a){return _isAttend(a) || (['欠席','体調不良','通院'].indexOf(a.status)>=0 && a.absenceAddition);});
-    if(!hasTarget)return;
-    var days=[],totalDays=0,pickupCount=0,dropoffCount=0,mealCount=0,offsiteCount=0;
-    for(var d=1;d<=srDays;d++){
-      var ds=srYm+'-'+String(d).padStart(2,'0');var dow=srDow[new Date(srY,srM-1,d).getDay()];
-      var rec=null;for(var ri=0;ri<recs.length;ri++){if(String(recs[ri].date)===ds){rec=recs[ri];break;}}
-      var dd={day:d,dow:dow,status:'',startTime:'',endTime:'',pickup:false,dropoff:false,meal:false,absenceAddition:false,offsiteSupport:false,notes:'',signUrl:''};
-      if(rec&&_isAttend(rec)){
-        totalDays++;dd.status='1';
+async function _calcServiceRecordData(srYm) {
+  var srAtt = await _getLike('出欠', 'date', srYm); var srUsers = await _getAll('利用者'); var srSettings = await _getSettings();
+  var srFn = srSettings.facilityName || ''; var srFNum = srSettings.facilityNumber || '';
+  var srParts = srYm.split('-'); var srY = Number(srParts[0]); var srM = Number(srParts[1]);
+  var srDays = new Date(srY, srM, 0).getDate(); var srDow = ['日', '月', '火', '水', '木', '金', '土'];
+  var srReiwa = '令和' + (srY - 2018) + '年' + srM + '月分'; var srResult = [];
+  srUsers.forEach(function (user) {
+    if ((user.enrollDate && user.enrollDate > srYm + '-31') || (user.endDate && user.endDate < srYm + '-01')) return;
+    var recs = srAtt.filter(function (a) { return String(a.userId) === String(user.id); });
+    var hasTarget = recs.some(function (a) { return _isAttend(a) || (['欠席', '体調不良', '通院'].indexOf(a.status) >= 0 && a.absenceAddition); });
+    if (!hasTarget) return;
+    var days = [], totalDays = 0, pickupCount = 0, dropoffCount = 0, mealCount = 0, offsiteCount = 0;
+    for (var d = 1; d <= srDays; d++) {
+      var ds = srYm + '-' + String(d).padStart(2, '0'); var dow = srDow[new Date(srY, srM - 1, d).getDay()];
+      var rec = null; for (var ri = 0; ri < recs.length; ri++) { if (String(recs[ri].date) === ds) { rec = recs[ri]; break; } }
+      var dd = { day: d, dow: dow, status: '', startTime: '', endTime: '', pickup: false, dropoff: false, meal: false, absenceAddition: false, offsiteSupport: false, notes: '', signUrl: '' };
+      if (rec && _isAttend(rec)) {
+        totalDays++; dd.status = '1';
         var effU = (typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, ds)) : user;
-        dd.startTime=rec.startTime||rec.in||rec.clockIn||rec.scheduleStart||effU.scheduleStart||effU.contractStart||'10:00';
-        dd.endTime=rec.endTime||rec.out||rec.clockOut||rec.scheduleEnd||effU.scheduleEnd||effU.contractEnd||'15:30';
-        var pu=(rec.pickup!==undefined&&rec.pickup!==null&&String(rec.pickup).trim()!=='')?String(rec.pickup):String(effU.pickup||'');
-        if(pu.indexOf('往')>=0||pu.indexOf('迎')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.pickup=true;pickupCount++;}
-        if(pu.indexOf('復')>=0||pu.indexOf('送')>=0||pu==='往復'||pu==='あり'||pu==='送迎あり'){dd.dropoff=true;dropoffCount++;}
-        var curBento=(rec.bento!==undefined&&rec.bento!==null&&String(rec.bento).trim()!=='')?rec.bento:effU.bento;
-        if(_isBento({bento:curBento})){
-          dd.meal=true;
+        dd.startTime = rec.startTime || rec.in || rec.clockIn || rec.scheduleStart || effU.scheduleStart || effU.contractStart || '10:00';
+        dd.endTime = rec.endTime || rec.out || rec.clockOut || rec.scheduleEnd || effU.scheduleEnd || effU.contractEnd || '15:30';
+        var pu = (rec.pickup !== undefined && rec.pickup !== null && String(rec.pickup).trim() !== '') ? String(rec.pickup) : String(effU.pickup || '');
+        if (pu.indexOf('往') >= 0 || pu.indexOf('迎') >= 0 || pu === '往復' || pu === 'あり' || pu === '送迎あり') { dd.pickup = true; pickupCount++; }
+        if (pu.indexOf('復') >= 0 || pu.indexOf('送') >= 0 || pu === '往復' || pu === 'あり' || pu === '送迎あり') { dd.dropoff = true; dropoffCount++; }
+        var curBento = (rec.bento !== undefined && rec.bento !== null && String(rec.bento).trim() !== '') ? rec.bento : effU.bento;
+        if (_isBento({ bento: curBento })) {
+          dd.meal = true;
           mealCount++;
-          dd.mealRate=rec.mealRate||'10割';
+          dd.mealRate = rec.mealRate || '10割';
         }
-        if(rec.offsiteSupport){
-          dd.offsiteSupport=true;
+        if (rec.offsiteSupport) {
+          dd.offsiteSupport = true;
           offsiteCount++;
         }
-        dd.notes=rec.notes||'';dd.signUrl=rec.signature||'';
-      } else if(rec&&['欠席','体調不良','通院'].indexOf(rec.status)>=0&&rec.absenceAddition){
-        dd.status='欠席';
-        dd.absenceAddition=true;
-        dd.notes=rec.notes||'';
+        dd.notes = rec.notes || ''; dd.signUrl = rec.signature || '';
+      } else if (rec && ['欠席', '体調不良', '通院'].indexOf(rec.status) >= 0 && rec.absenceAddition) {
+        dd.status = '欠席';
+        dd.absenceAddition = true;
+        dd.notes = rec.notes || '';
       }
       days.push(dd);
     }
-    srResult.push({id:user.id,name:user.name,recipientNumber:user.recipientNumber||'',contractDays:user.supportDays||'',startDate:user.enrollDate||user.supportStartDate||'',serviceType:user.serviceType||'Ｂ型',days:days,totalDays:totalDays,pickupCount:pickupCount,dropoffCount:dropoffCount,mealCount:mealCount,offsiteCount:offsiteCount});
+    srResult.push({ id: user.id, name: user.name, recipientNumber: user.recipientNumber || '', contractDays: user.supportDays || '', startDate: user.enrollDate || user.supportStartDate || '', serviceType: user.serviceType || 'Ｂ型', days: days, totalDays: totalDays, pickupCount: pickupCount, dropoffCount: dropoffCount, mealCount: mealCount, offsiteCount: offsiteCount });
   });
-  return{ym:srYm,reiwa:srReiwa,facilityName:srFn,facilityNumber:srFNum,users:srResult,daysInMonth:srDays};
+  return { ym: srYm, reiwa: srReiwa, facilityName: srFn, facilityNumber: srFNum, users: srResult, daysInMonth: srDays };
 }
 
-async function _calcAnnualWageDetail(fiscalYear){
-  var fy=Number(fiscalYear);
-  var us=await _getAll('利用者');var wts=await _getAll('作業種別');
-  var months=[];
-  for(var m=4;m<=12;m++)months.push(fy+'-'+String(m).padStart(2,'0'));
-  for(var m2=1;m2<=3;m2++)months.push((fy+1)+'-'+String(m2).padStart(2,'0'));
+async function _calcAnnualWageDetail(fiscalYear) {
+  var fy = Number(fiscalYear);
+  var us = await _getAll('利用者'); var wts = await _getAll('作業種別');
+  var months = [];
+  for (var m = 4; m <= 12; m++)months.push(fy + '-' + String(m).padStart(2, '0'));
+  for (var m2 = 1; m2 <= 3; m2++)months.push((fy + 1) + '-' + String(m2).padStart(2, '0'));
   // 全月の出欠を一括取得
-  var allAtt=[];
-  for(var mi=0;mi<months.length;mi++){try{var ma=await _getLike('出欠','date',months[mi]);allAtt=allAtt.concat(ma);}catch(e){}}
-  var attByMonth={};months.forEach(function(ym){attByMonth[ym]=allAtt.filter(function(a){return String(a.date).indexOf(ym)===0;});});
-  var result=[];
-  us.forEach(function(user){
-    var monthData=[],yearDays=0,yearHours=0,yearWage=0;
-    months.forEach(function(ym){
-      var att=attByMonth[ym]||[];
-      var recs=att.filter(function(a){return String(a.userId)===String(user.id)&&_isAttend(a);});
-      var days=recs.length,hours=0,wage=0;
-      recs.forEach(function(rec){var cw=_calcRecWage(rec,wts,user);hours+=cw.netH;wage+=cw.wage;});
-      monthData.push({ym:ym,days:days,hours:Math.round(hours*100)/100,wage:Math.round(wage)});
-      yearDays+=days;yearHours+=hours;yearWage+=wage;
+  var allAtt = [];
+  for (var mi = 0; mi < months.length; mi++) { try { var ma = await _getLike('出欠', 'date', months[mi]); allAtt = allAtt.concat(ma); } catch (e) { } }
+  var attByMonth = {}; months.forEach(function (ym) { attByMonth[ym] = allAtt.filter(function (a) { return String(a.date).indexOf(ym) === 0; }); });
+  var result = [];
+  us.forEach(function (user) {
+    var monthData = [], yearDays = 0, yearHours = 0, yearWage = 0;
+    months.forEach(function (ym) {
+      var att = attByMonth[ym] || [];
+      var recs = att.filter(function (a) { return String(a.userId) === String(user.id) && _isAttend(a); });
+      var days = recs.length, hours = 0, wage = 0;
+      recs.forEach(function (rec) { var cw = _calcRecWage(rec, wts, user); hours += cw.netH; wage += cw.wage; });
+      monthData.push({ ym: ym, days: days, hours: Math.round(hours * 100) / 100, wage: Math.round(wage) });
+      yearDays += days; yearHours += hours; yearWage += wage;
     });
-    if(yearDays===0)return;
-    var initials='';var fn=user.furigana||'';
-    if(fn){var parts=fn.replace(/\s+/g,' ').trim().split(' ');initials=parts.map(function(p){return p.charAt(0).toUpperCase();}).join('.');}
-    result.push({name:user.name,initials:initials,months:monthData,totalDays:yearDays,totalHours:Math.round(yearHours*100)/100,totalWage:Math.round(yearWage)});
+    if (yearDays === 0) return;
+    var initials = ''; var fn = user.furigana || '';
+    if (fn) { var parts = fn.replace(/\s+/g, ' ').trim().split(' '); initials = parts.map(function (p) { return p.charAt(0).toUpperCase(); }).join('.'); }
+    result.push({ name: user.name, initials: initials, months: monthData, totalDays: yearDays, totalHours: Math.round(yearHours * 100) / 100, totalWage: Math.round(yearWage) });
   });
-  var monthTotals=[];
-  for(var mi2=0;mi2<months.length;mi2++){
-    var td=0,th=0,tw=0;
-    result.forEach(function(u){td+=u.months[mi2].days;th+=u.months[mi2].hours;tw+=u.months[mi2].wage;});
-    var mAtt=attByMonth[months[mi2]]||[];
-    var uniqueDates={};mAtt.forEach(function(a){if(_isAttend(a))uniqueDates[a.date]=1;});
-    monthTotals.push({ym:months[mi2],bizDays:Object.keys(uniqueDates).length,totalDays:td,totalHours:Math.round(th*100)/100,totalWage:Math.round(tw)});
+  var monthTotals = [];
+  for (var mi2 = 0; mi2 < months.length; mi2++) {
+    var td = 0, th = 0, tw = 0;
+    result.forEach(function (u) { td += u.months[mi2].days; th += u.months[mi2].hours; tw += u.months[mi2].wage; });
+    var mAtt = attByMonth[months[mi2]] || [];
+    var uniqueDates = {}; mAtt.forEach(function (a) { if (_isAttend(a)) uniqueDates[a.date] = 1; });
+    monthTotals.push({ ym: months[mi2], bizDays: Object.keys(uniqueDates).length, totalDays: td, totalHours: Math.round(th * 100) / 100, totalWage: Math.round(tw) });
   }
-  return{fiscalYear:fy,users:result,monthTotals:monthTotals};
+  return { fiscalYear: fy, users: result, monthTotals: monthTotals };
 }
 
 // ═══ BMI測定ヘバー（テーブル未作成時の安全な自動フォールバック対応）═══
@@ -1368,11 +1391,11 @@ async function _getBmiRecordsHelper(ymPrefix) {
     if (!r.error && r.data) {
       var data = r.data.map(_padTimes);
       if (ymPrefix) {
-        return data.filter(function(b) { return String(b.date || '').startsWith(ymPrefix); });
+        return data.filter(function (b) { return String(b.date || '').startsWith(ymPrefix); });
       }
       return data;
     }
-  } catch(e) {}
+  } catch (e) { }
 
   var list = [];
   try {
@@ -1380,19 +1403,19 @@ async function _getBmiRecordsHelper(ymPrefix) {
     if (settings['bmi_records']) {
       list = JSON.parse(settings['bmi_records']);
     }
-  } catch(e) {}
+  } catch (e) { }
 
   if (!Array.isArray(list) || list.length === 0) {
     try {
       var local = localStorage.getItem('porte_bmi_records');
       if (local) list = JSON.parse(local);
-    } catch(e) {}
+    } catch (e) { }
   }
 
   if (!Array.isArray(list)) list = [];
 
   if (ymPrefix) {
-    return list.filter(function(b) { return String(b.date || '').startsWith(ymPrefix); });
+    return list.filter(function (b) { return String(b.date || '').startsWith(ymPrefix); });
   }
   return list;
 }
@@ -1406,7 +1429,7 @@ async function _saveBmiRecordHelper(obj) {
     } else {
       var ym = (obj.date || '').slice(0, 7);
       var allBmi = await _getBmiRecordsHelper('');
-      var existing = allBmi.find(function(b) { return String(b.userId) === String(obj.userId) && String(b.date || '').startsWith(ym); });
+      var existing = allBmi.find(function (b) { return String(b.userId) === String(obj.userId) && String(b.date || '').startsWith(ym); });
       if (existing) {
         obj.id = existing.id;
         obj.updatedAt = new Date().toISOString();
@@ -1419,11 +1442,11 @@ async function _saveBmiRecordHelper(obj) {
         if (!r3.error && r3.data && r3.data.length > 0) return r3.data[0];
       }
     }
-  } catch(e) {}
+  } catch (e) { }
 
   var list = await _getBmiRecordsHelper('');
   var targetYm = (obj.date || '').slice(0, 7);
-  var idx = list.findIndex(function(b) {
+  var idx = list.findIndex(function (b) {
     return (obj.id && String(b.id) === String(obj.id)) || (String(b.userId) === String(obj.userId) && String(b.date || '').startsWith(targetYm));
   });
 
@@ -1439,10 +1462,10 @@ async function _saveBmiRecordHelper(obj) {
 
   try {
     await _updateSetting('bmi_records', JSON.stringify(list));
-  } catch(e) {}
+  } catch (e) { }
   try {
     localStorage.setItem('porte_bmi_records', JSON.stringify(list));
-  } catch(e) {}
+  } catch (e) { }
 
   return obj;
 }
@@ -1453,16 +1476,16 @@ async function _deleteBmiRecordHelper(id) {
     if (!r.error) {
       // 成功
     }
-  } catch(e) {}
+  } catch (e) { }
 
   var list = await _getBmiRecordsHelper('');
-  list = list.filter(function(b) { return String(b.id) !== String(id); });
+  list = list.filter(function (b) { return String(b.id) !== String(id); });
   try {
     await _updateSetting('bmi_records', JSON.stringify(list));
-  } catch(e) {}
+  } catch (e) { }
   try {
     localStorage.setItem('porte_bmi_records', JSON.stringify(list));
-  } catch(e) {}
+  } catch (e) { }
 
   return true;
 }
@@ -1486,19 +1509,19 @@ async function _generateKokuhoReceiptCSV(ym, dataType, kokuhoOpts) {
   var dataRows = [];
   var dt = dataType || 'J11_J21';
 
-  var validAtt = att.filter(function(a) { return _isAttend(a); });
+  var validAtt = att.filter(function (a) { return _isAttend(a); });
 
   if (dt === 'J61') {
-    validAtt.sort(function(a, b) {
+    validAtt.sort(function (a, b) {
       if (String(a.date) !== String(b.date)) {
         return String(a.date).localeCompare(String(b.date));
       }
       return String(a.userId).localeCompare(String(b.userId));
     });
-    validAtt.forEach(function(rec) {
-      var user = us.find(function(u) { return String(u.id) === String(rec.userId); }) || {};
+    validAtt.forEach(function (rec) {
+      var user = us.find(function (u) { return String(u.id) === String(rec.userId); }) || {};
       var netH = rec.actualHours != null ? Number(rec.actualHours) : _calcNetH(rec, user);
-        var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
+      var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
       var rowObj = {
         recipientNumber: user.recipientNumber || user.recipientNo || user.id || '',
         userName: user.name || '',
@@ -1508,7 +1531,7 @@ async function _generateKokuhoReceiptCSV(ym, dataType, kokuhoOpts) {
         endTime: String(rec.endTime || effU.scheduleEnd || '16:00').replace(/[^0-9]/g, ''),
         actualHours: netH,
         pickupFlag: (rec.pickup && rec.pickup !== 'なし' && rec.pickup !== 'false') || (effU.pickup && effU.pickup !== 'なし' && rec.pickup !== 'なし'),
-        mealFlag: _getBentoCount(rec) > 0 || (effU.bento && effU.bento !== 'なし' && rec.bento !== 'なし' && _getBentoCount({bento: effU.bento}) > 0),
+        mealFlag: _getBentoCount(rec) > 0 || (effU.bento && effU.bento !== 'なし' && rec.bento !== 'なし' && _getBentoCount({ bento: effU.bento }) > 0),
         remarks: rec.notes || ''
       };
       dataRows.push(generator.formatShuukouBServiceRecordRow(rowObj));
@@ -1524,8 +1547,8 @@ async function _generateKokuhoReceiptCSV(ym, dataType, kokuhoOpts) {
     var baseUnitPerDay = 604;
     var unitPrice = 10.54;
 
-    us.forEach(function(user) {
-      var userRecs = validAtt.filter(function(a) { return String(a.userId) === String(user.id); });
+    us.forEach(function (user) {
+      var userRecs = validAtt.filter(function (a) { return String(a.userId) === String(user.id); });
       if (userRecs.length === 0) return;
 
       var days = userRecs.length;
@@ -1566,7 +1589,7 @@ async function _generateKokuhoReceiptCSV(ym, dataType, kokuhoOpts) {
     }
 
     if (dt === 'J21' || dt === 'J11_J21') {
-      userStats.forEach(function(stat) {
+      userStats.forEach(function (stat) {
         dataRows.push(generator.formatShuukouBClaimDetailRow(stat));
       });
     }
@@ -1604,7 +1627,7 @@ function getUserScheduleForDate(user, dateStr) {
 
   var hist = user.scheduleHistory;
   if (typeof hist === 'string' && hist.trim()) {
-    try { hist = JSON.parse(hist); } catch(e) { hist = null; }
+    try { hist = JSON.parse(hist); } catch (e) { hist = null; }
   }
   if (!hist || !Array.isArray(hist) || hist.length === 0) {
     return def;
@@ -1612,9 +1635,9 @@ function getUserScheduleForDate(user, dateStr) {
 
   var target = (typeof dateStr === 'string' && dateStr.length >= 10) ? dateStr.slice(0, 10) : (typeof today === 'function' ? today() : new Date().toISOString().slice(0, 10));
 
-  var sorted = hist.slice().filter(function(item){
+  var sorted = hist.slice().filter(function (item) {
     return item && typeof item === 'object';
-  }).sort(function(a, b){
+  }).sort(function (a, b) {
     var da = a.startDate || a.effectiveDate || '1970-01-01';
     var db = b.startDate || b.effectiveDate || '1970-01-01';
     return db.localeCompare(da);
