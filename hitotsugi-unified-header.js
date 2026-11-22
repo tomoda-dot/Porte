@@ -140,6 +140,7 @@
       '  margin-left: calc(50% - 50vw) !important;',
       '  margin-right: calc(50% - 50vw) !important;',
       '}',
+      'html.hu-has-fullbleed, body.hu-has-fullbleed { overflow-x: clip !important; }',
       '.hu-trigger {',
       '  position: relative;',
       '  display: inline-flex;',
@@ -394,6 +395,8 @@
       header.innerHTML = '';
       header.classList.add('hu-header');
       if (_opts.fullBleed) {
+        document.documentElement.classList.add('hu-has-fullbleed');
+        document.body.classList.add('hu-has-fullbleed');
         header.classList.add('hu-fullbleed');
         if (header.parentElement && header.parentElement.id === 'pg-main') {
           header.parentElement.style.paddingTop = '0';
