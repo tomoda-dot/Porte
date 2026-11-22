@@ -1297,7 +1297,11 @@
       title: '📚 Porte 研修アカデミー',
       noSubbar: true,
       noGap: true,
-      moveSelectors: ['#btn-mode-staff', '#btn-mode-admin', '#header-staff-badge', 'button[onclick*="logoutStaffSession"]']
+      moveSelectors: ['#btn-mode-staff', '#btn-mode-admin', '#header-staff-badge'],
+      logoutTriggerSelector: '#header-staff-badge',
+      onLogout: function () {
+        if (typeof logoutStaffSession === 'function') logoutStaffSession();
+      }
     });
   </script>
   <!-- HITOTSUGI_UNIFIED_HEADER_END -->
