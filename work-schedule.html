@@ -822,6 +822,10 @@
           <option value="2_strict">2時間連続のみ（2コマ連続取れる人のみ割り当て）</option>
         </select>
       </div>
+      <div class="form-field">
+        <label>🚨 1日あたりの必須コマ数（0＝指定なし。1以上を設定すると最優先でそのコマ数を確保します）</label>
+        <input type="number" id="tm-req-daily" class="form-input" min="0" max="100" value="0" placeholder="例: 4（1日合計で最低4コマ分を最優先で確保）">
+      </div>
       <div class="grid-2col" style="gap:10px;">
         <div class="form-field">
           <label>1コマあたりの目標（必要）人数</label>
@@ -1246,6 +1250,127 @@
         return c;
       }
 
+      // その日のそのタスクの1日合計割当コマ数をカウント
+      function countTaskTotalToday(taskId) {
+        var c = 0;
+        Object.keys(daySched).forEach(function(uid) {
+          hours.forEach(function(h) {
+            var cell = daySched[uid][h];
+            if (cell && cell.type === 'task' && cell.taskId === taskId) c++;
+          });
+        });
+        return c;
+      }
+
+      // ──────────────────────────────────────────────────
+      // STEP 0: 「1日の必須コマ数 (requiredDailySlots > 0)」が設定された作業を熟練度順で最優先確保！
+      // ──────────────────────────────────────────────────
+      var reqTasks = TASKS.filter(function(t) {
+        return (Number(t.requiredDailySlots) || 0) > 0;
+      });
+      // 必須コマ数が多い順（または2時間作業優先）で処理
+      reqTasks.sort(function(a, b) {
+        var is2a = (a.durationMode === '2' || a.durationMode === '2_strict') ? 1 : 0;
+        var is2b = (b.durationMode === '2' || b.durationMode === '2_strict') ? 1 : 0;
+        if (is2b !== is2a) return is2b - is2a;
+        return (Number(b.requiredDailySlots) || 0) - (Number(a.requiredDailySlots) || 0);
+      });
+
+      reqTasks.forEach(function(task) {
+        var reqSlots = Number(task.requiredDailySlots) || 0;
+        var maxP = Number(task.maxPeople) || 99;
+        var is2hTask = (task.durationMode === '2' || task.durationMode === '2_strict');
+
+        // 2時間連続作業の場合は、まず連続2コマ取れる候補（利用者×連続時間ペア）を熟練度順で埋める
+        if (is2hTask && TIME_CFG.prefer2h) {
+          var pairCandidates = [];
+          for (var i = 0; i < hours.length - 1; i++) {
+            var h1 = hours[i], h2 = hours[i + 1];
+            if (h2 !== h1 + 1 || h1 === breakH || h2 === breakH) continue;
+            if (!isTaskAllowedInHour(task, h1) || !isTaskAllowedInHour(task, h2)) continue;
+            users.forEach(function(u) {
+              var lv = getProfLevel(u.id, task.id);
+              if (lv <= 0) return;
+              if (daySched[u.id][h1].type === 'empty' && daySched[u.id][h2].type === 'empty') {
+                pairCandidates.push({ uid: u.id, h1: h1, h2: h2, lv: lv });
+              }
+            });
+          }
+          pairCandidates.sort(function(a, b) {
+            if (b.lv !== a.lv) return b.lv - a.lv; // 熟練度(◎→〇→△)最優先
+            return a.h1 - b.h1;
+          });
+
+          for (var pi = 0; pi < pairCandidates.length; pi++) {
+            var curTotal = countTaskTotalToday(task.id);
+            if (curTotal >= reqSlots) break;
+            // 残り1コマだけ必要で strict でない場合は下の1時間ループに任せる
+            if (reqSlots - curTotal === 1 && task.durationMode !== '2_strict') break;
+
+            var cand = pairCandidates[pi];
+            if (daySched[cand.uid][cand.h1].type !== 'empty' || daySched[cand.uid][cand.h2].type !== 'empty') continue;
+            if (countTaskInHour(task.id, cand.h1) >= maxP || countTaskInHour(task.id, cand.h2) >= maxP) continue;
+
+            // 同じ人が午前も午後もこればかりにならないよう、他にまだ入っていない同熟練度の人がいればそちらを優先するためチェック
+            if (countUserTaskToday(cand.uid, task.id) >= 2) {
+              var hasFreshSameLv = pairCandidates.slice(pi + 1).some(function(other) {
+                return other.lv >= cand.lv &&
+                  countUserTaskToday(other.uid, task.id) === 0 &&
+                  daySched[other.uid][other.h1].type === 'empty' &&
+                  daySched[other.uid][other.h2].type === 'empty' &&
+                  countTaskInHour(task.id, other.h1) < maxP &&
+                  countTaskInHour(task.id, other.h2) < maxP;
+              });
+              if (hasFreshSameLv) continue;
+            }
+
+            daySched[cand.uid][cand.h1] = { type: 'task', taskId: task.id, spanTag: '2h-1' };
+            daySched[cand.uid][cand.h2] = { type: 'task', taskId: task.id, spanTag: '2h-2' };
+          }
+        }
+
+        // 1時間単位（または2時間優先タスクの残り必要コマ数）を熟練度順に埋める
+        if (task.durationMode !== '2_strict') {
+          var safety = 0;
+          while (countTaskTotalToday(task.id) < reqSlots && safety < 200) {
+            safety++;
+            var singleCandidates = [];
+            hours.forEach(function(h) {
+              if (h === breakH || !isTaskAllowedInHour(task, h)) return;
+              if (countTaskInHour(task.id, h) >= maxP) return;
+              users.forEach(function(u) {
+                var lv = getProfLevel(u.id, task.id);
+                if (lv <= 0) return;
+                if (daySched[u.id][h].type === 'empty') {
+                  singleCandidates.push({
+                    uid: u.id,
+                    h: h,
+                    lv: lv,
+                    userCount: countUserTaskToday(u.id, task.id),
+                    hourCount: countTaskInHour(task.id, h)
+                  });
+                }
+              });
+            });
+
+            if (singleCandidates.length === 0) break;
+
+            // 1. 熟練度が高い人(◎→〇→△)を最優先！
+            // 2. 同じ熟練度なら、今日そのタスクに入った回数が少ない人を優先（特定の人だけに偏らないように）
+            // 3. その時間帯で人数が少ない枠を優先
+            singleCandidates.sort(function(a, b) {
+              if (b.lv !== a.lv) return b.lv - a.lv;
+              if (a.userCount !== b.userCount) return a.userCount - b.userCount;
+              if (a.hourCount !== b.hourCount) return a.hourCount - b.hourCount;
+              return a.h - b.h;
+            });
+
+            var best = singleCandidates[0];
+            daySched[best.uid][best.h] = { type: 'task', taskId: task.id, spanTag: '1h' };
+          }
+        }
+      });
+
       // その利用者がすでにその日（または午前中）に入ったタスク一覧を取得
       function getUserAssignedTaskIds(uid) {
         var map = {};
@@ -1622,10 +1747,22 @@
 
       bar.innerHTML = TASKS.map(function(t) {
         var durText = (t.durationMode === '2' || t.durationMode === '2_strict') ? '2時間枠' : '1時間枠';
+        var req = Number(t.requiredDailySlots) || 0;
+        var cur = counts[t.id] || 0;
+        var countBadge = '';
+        if (req > 0) {
+          var isMet = cur >= req;
+          var badgeStyle = isMet
+            ? 'color:#15803d;background:#dcfce7;border:1px solid #86efac;'
+            : 'color:#dc2626;background:#fee2e2;border:1px solid #fca5a5;';
+          countBadge = '<span style="' + badgeStyle + 'padding:2px 8px;border-radius:999px;font-weight:800;">計 ' + cur + ' / 必須 ' + req + ' コマ' + (isMet ? ' ✓' : ' (不足)') + '</span>';
+        } else {
+          countBadge = '<span style="color:var(--pri);background:var(--pri-light);padding:2px 8px;border-radius:999px;">計 ' + cur + ' コマ</span>';
+        }
         return '<div class="summary-chip">' +
           '<span class="dot" style="background:' + esc(t.color) + ';border:1px solid rgba(0,0,0,0.2);"></span>' +
           '<span>' + esc(t.icon) + ' ' + esc(t.name) + ' <small style="color:var(--sub);">(' + durText + ')</small></span>' +
-          '<span style="color:var(--pri);background:var(--pri-light);padding:2px 8px;border-radius:999px;">計 ' + counts[t.id] + ' コマ</span>' +
+          countBadge +
         '</div>';
       }).join('');
     }
@@ -1783,22 +1920,41 @@
       listEl.innerHTML = TASKS.map(function(t) {
         var durLabel = t.durationMode === '2_strict' ? '⏱️ 2時間連続のみ' : (t.durationMode === '2' ? '⏱️ 2時間連続優先' : '⏱️ 1時間単位');
         var perLabel = t.period === 'am' ? '🌅 午前のみ' : (t.period === 'pm' ? '🌇 午後のみ' : '☀️ 終日');
+        var req = Number(t.requiredDailySlots) || 0;
+        var reqBadge = req > 0
+          ? '<span class="badge-pill" style="background:#fef3c7;color:#b45309;border:1px solid #f59e0b;">🚨 1日必須: ' + req + ' コマ</span>'
+          : '<span class="badge-pill">1日必須: 指定なし</span>';
         return '<div class="task-item">' +
           '<div class="task-color-swatch" style="background:' + esc(t.color) + ';"></div>' +
           '<div class="task-info">' +
             '<div class="task-title"><span>' + esc(t.icon) + '</span><span>' + esc(t.name) + '</span></div>' +
             '<div class="task-meta">' +
+              reqBadge +
               '<span class="badge-pill">' + durLabel + '</span>' +
-              '<span class="badge-pill">👥 目標 ' + (t.minPeople || 0) + '名 / 上限 ' + (t.maxPeople || 10) + '名</span>' +
+              '<span class="badge-pill">👥 1枠目標 ' + (t.minPeople || 0) + '名 / 上限 ' + (t.maxPeople || 10) + '名</span>' +
               '<span class="badge-pill">' + perLabel + '</span>' +
             '</div>' +
           '</div>' +
-          '<div style="display:flex;gap:6px;">' +
+          '<div style="display:flex;gap:6px;align-items:center;">' +
+            '<label style="font-size:11.5px;font-weight:700;color:var(--sub);display:inline-flex;align-items:center;gap:4px;background:#faf6f0;padding:4px 8px;border-radius:8px;border:1px solid var(--bdr);" title="1日に最低限確保したい合計コマ数（0で指定なし）">' +
+              '<span>必須コマ:</span>' +
+              '<input type="number" min="0" max="100" value="' + req + '" onchange="quickChangeRequiredSlots(\'' + t.id + '\', this.value)" style="width:48px;padding:3px 4px;border:1px solid var(--bdr);border-radius:5px;font-weight:800;text-align:center;">' +
+            '</label>' +
             '<button class="btn" onclick="openTaskModal(\'' + t.id + '\')" style="padding:6px 10px;">✏️ 編集</button>' +
             '<button class="btn btn-danger" onclick="deleteTaskMaster(\'' + t.id + '\')" style="padding:6px 10px;">🗑</button>' +
           '</div>' +
         '</div>';
       }).join('');
+    }
+
+    function quickChangeRequiredSlots(taskId, val) {
+      var t = TASKS.find(function(x){ return x.id === taskId; });
+      if (!t) return;
+      t.requiredDailySlots = Math.max(0, parseInt(val, 10) || 0);
+      saveLocal(STORAGE_KEYS.TASKS, TASKS);
+      renderTaskMasterList();
+      renderScheduleView();
+      showToast('「' + t.name + '」の1日必須コマ数を ' + t.requiredDailySlots + ' コマに設定しました');
     }
 
     function openTaskModal(taskId) {
@@ -1809,6 +1965,7 @@
       document.getElementById('tm-icon').value = t ? (t.icon || '📦') : '📦';
       document.getElementById('tm-color').value = t ? (t.color || '#dcfce7') : '#dcfce7';
       document.getElementById('tm-duration').value = t ? (t.durationMode || '1') : '1';
+      document.getElementById('tm-req-daily').value = t ? (t.requiredDailySlots != null ? t.requiredDailySlots : 0) : 0;
       document.getElementById('tm-min').value = t ? (t.minPeople != null ? t.minPeople : 2) : 2;
       document.getElementById('tm-max').value = t ? (t.maxPeople != null ? t.maxPeople : 6) : 6;
       document.getElementById('tm-period').value = t ? (t.period || 'all') : 'all';
@@ -1825,6 +1982,7 @@
       var icon = document.getElementById('tm-icon').value.trim() || '📦';
       var color = document.getElementById('tm-color').value || '#dcfce7';
       var durationMode = document.getElementById('tm-duration').value;
+      var requiredDailySlots = Math.max(0, parseInt(document.getElementById('tm-req-daily').value, 10) || 0);
       var minPeople = Math.max(0, parseInt(document.getElementById('tm-min').value, 10) || 0);
       var maxPeople = Math.max(1, parseInt(document.getElementById('tm-max').value, 10) || 6);
       var period = document.getElementById('tm-period').value;
@@ -1837,11 +1995,11 @@
       if (id) {
         var idx = TASKS.findIndex(function(x){ return x.id === id; });
         if (idx >= 0) {
-          TASKS[idx] = { id: id, name: name, icon: icon, color: color, durationMode: durationMode, minPeople: minPeople, maxPeople: maxPeople, period: period };
+          TASKS[idx] = { id: id, name: name, icon: icon, color: color, durationMode: durationMode, requiredDailySlots: requiredDailySlots, minPeople: minPeople, maxPeople: maxPeople, period: period };
         }
       } else {
         var newId = 't_' + Date.now();
-        TASKS.push({ id: newId, name: name, icon: icon, color: color, durationMode: durationMode, minPeople: minPeople, maxPeople: maxPeople, period: period });
+        TASKS.push({ id: newId, name: name, icon: icon, color: color, durationMode: durationMode, requiredDailySlots: requiredDailySlots, minPeople: minPeople, maxPeople: maxPeople, period: period });
       }
 
       saveLocal(STORAGE_KEYS.TASKS, TASKS);
