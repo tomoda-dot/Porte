@@ -366,36 +366,17 @@
       var header = document.querySelector(_opts.headerSelector || 'header, .app-header, .header');
       if (!header) return;
 
-      // 1. サブバーを作成（タイトル以外の既存要素を受け入れる）
-      var subbar = document.createElement('div');
-      subbar.className = 'hu-subbar' + (_opts.fullBleed ? ' hu-fullbleed' : '');
-
-      var subLeft = document.createElement('div');
-      subLeft.className = 'hu-sub-left';
-
-      var backBtn = document.createElement('button');
-      backBtn.type = 'button';
-      backBtn.className = 'hu-btn';
-      backBtn.textContent = '← 戻る';
-      backBtn.title = '1つ前の画面に戻る';
-      backBtn.addEventListener('click', goBack);
-      subLeft.appendChild(backBtn);
-
-      if (!_opts.hideTopBtn) {
-        var topLink = document.createElement('a');
-        topLink.className = 'hu-btn hu-btn-top';
-        topLink.href = getTopUrl();
-        topLink.textContent = '🏠 ストアTOP';
-        subLeft.appendChild(topLink);
+      var movedNodes = [];
+      if (Array.isArray(_opts.moveSelectors) && _opts.moveSelectors.length > 0) {
+        _opts.moveSelectors.forEach(function (sel) {
+          var nodes = header.querySelectorAll(sel);
+          for (var i = 0; i < nodes.length; i++) {
+            movedNodes.push(nodes[i]);
+          }
+        });
       }
 
-      var subRight = document.createElement('div');
-      subRight.className = 'hu-sub-right';
-
-      subbar.appendChild(subLeft);
-      subbar.appendChild(subRight);
-
-      // 2. タイトルテキストの特定
+      // タイトルテキストの特定
       var titleText = _opts.title || '';
       if (!titleText && _opts.titleSelector) {
         var tEl = header.querySelector(_opts.titleSelector);
@@ -406,17 +387,7 @@
         if (h1) titleText = h1.textContent.trim();
       }
 
-      // 3. ヘッダーから「タイトル以外の要素」をサブバーへ移動
-      if (Array.isArray(_opts.moveSelectors) && _opts.moveSelectors.length > 0) {
-        _opts.moveSelectors.forEach(function (sel) {
-          var nodes = header.querySelectorAll(sel);
-          for (var i = 0; i < nodes.length; i++) {
-            subRight.appendChild(nodes[i]);
-          }
-        });
-      }
-
-      // ヘッダー内を「クマアイコン + タイトル」のみに整理
+      // ヘッダー内を「クマアイコン + タイトル」のみに整理（noSubbar時は右側に既存要素を残す）
       header.innerHTML = '';
       header.classList.add('hu-header');
       if (_opts.fullBleed) {
@@ -446,6 +417,45 @@
       header.appendChild(trigger);
       header.appendChild(titleSpan);
 
+      if (_opts.noSubbar) {
+        if (movedNodes.length > 0) {
+          var hdrRight = document.createElement('div');
+          hdrRight.style.cssText = 'margin-left:auto;display:inline-flex;align-items:center;gap:10px;flex-shrink:0;';
+          movedNodes.forEach(function (n) { hdrRight.appendChild(n); });
+          header.appendChild(hdrRight);
+        }
+        return;
+      }
+
+      // サブバーを作成（タイトル以外の既存要素を受け入れる）
+      var subbar = document.createElement('div');
+      subbar.className = 'hu-subbar' + (_opts.fullBleed ? ' hu-fullbleed' : '');
+
+      var subLeft = document.createElement('div');
+      subLeft.className = 'hu-sub-left';
+
+      var backBtn = document.createElement('button');
+      backBtn.type = 'button';
+      backBtn.className = 'hu-btn';
+      backBtn.textContent = '← 戻る';
+      backBtn.title = '1つ前の画面に戻る';
+      backBtn.addEventListener('click', goBack);
+      subLeft.appendChild(backBtn);
+
+      if (!_opts.hideTopBtn) {
+        var topLink = document.createElement('a');
+        topLink.className = 'hu-btn hu-btn-top';
+        topLink.href = getTopUrl();
+        topLink.textContent = '🏠 ストアTOP';
+        subLeft.appendChild(topLink);
+      }
+
+      var subRight = document.createElement('div');
+      subRight.className = 'hu-sub-right';
+      movedNodes.forEach(function (n) { subRight.appendChild(n); });
+
+      subbar.appendChild(subLeft);
+      subbar.appendChild(subRight);
       header.insertAdjacentElement('afterend', subbar);
     };
 
