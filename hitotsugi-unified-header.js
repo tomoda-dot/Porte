@@ -17,17 +17,17 @@
   var DAGASHI_BASE = 'https://tomoda-dot.github.io/DagashiShop/';
 
   var APPS = [
-    { id: 'tablet',        label: '日報入力',         icon: '📝', url: PORTE_BASE + 'tablet.html' },
-    { id: 'work-schedule', label: '作業スケジュール', icon: '📅', url: PORTE_BASE + 'work-schedule.html' },
-    { id: 'haccp',         label: '珈琲HACCP',        icon: '☕', url: PORTE_BASE + 'haccp.html' },
-    { id: 'timecard',      label: 'タイムカード',     icon: '⏰', url: PORTE_BASE + 'timecard.html' },
-    { id: 'mypage',        label: 'マイページ',       icon: '👤', url: PORTE_BASE + 'mypage.html' },
-    { id: 'training',      label: '研修アカデミー',   icon: '🎓', url: PORTE_BASE + 'training.html' },
-    { id: 'bento',         label: 'お弁当メニュー',   icon: '🍱', url: PORTE_BASE + 'bento/index.html' },
-    { id: 'regi',          label: 'おかしのレジ',     icon: '🍬', url: DAGASHI_BASE + 'regi.html' },
-    { id: 'admin',         label: '売上管理',         icon: '📊', url: DAGASHI_BASE + 'admin.html' },
-    { id: 'purchase-log',  label: '仕入れ・賞味期限', icon: '📦', url: DAGASHI_BASE + 'purchase-log.html' },
-    { id: 'analytics',     label: '売上分析',         icon: '📈', url: DAGASHI_BASE + 'analytics.html' }
+    { id: 'regi',          label: 'レジシステム',       icon: '🍬', url: DAGASHI_BASE + 'regi.html' },
+    { id: 'scanner',       label: 'レジスキャナー',     icon: '📷', url: DAGASHI_BASE + 'scanner.html' },
+    { id: 'admin',         label: '売上管理',           icon: '📊', url: DAGASHI_BASE + 'admin.html' },
+    { id: 'analytics',     label: '売上分析',           icon: '📈', url: DAGASHI_BASE + 'analytics.html' },
+    { id: 'purchase-log',  label: '仕入れ・賞味期限',   icon: '📦', url: DAGASHI_BASE + 'purchase-log.html' },
+    { id: 'timecard',      label: 'タイムカード',       icon: '⏰', url: PORTE_BASE + 'timecard.html' },
+    { id: 'tablet',        label: 'タブレットの記録',   icon: '📝', url: PORTE_BASE + 'tablet.html' },
+    { id: 'haccp',         label: '珈琲HACCP',          icon: '☕', url: PORTE_BASE + 'haccp.html' },
+    { id: 'training',      label: '研修アカデミー',     icon: '🎓', url: PORTE_BASE + 'training.html' },
+    { id: 'bento',         label: 'お弁当システム',     icon: '🍱', url: PORTE_BASE + 'bento/index.html' },
+    { id: 'work-schedule', label: '作業スケジュール',   icon: '📅', url: PORTE_BASE + 'work-schedule.html' }
   ];
 
   var _opts = {};
@@ -249,18 +249,20 @@
       '',
       '/* === ポップオーバーメニュー === */',
       '.hu-popover {',
-      '  position: fixed; z-index: 99999; width: 336px; max-width: calc(100vw - 24px);',
+      '  position: fixed; z-index: 99999; width: 360px; max-width: calc(100vw - 24px);',
       '  background: #ffffff; color: #1e293b; border-radius: 16px;',
       '  box-shadow: 0 14px 40px rgba(15,23,42,0.28), 0 0 0 1px rgba(15,23,42,0.08);',
       '  padding: 12px; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif; display: none;',
       '}',
       '.hu-popover.open { display: block; animation: huPopIn 0.14s ease-out; }',
       '@keyframes huPopIn { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }',
-      '.hu-actions { display: block; margin-bottom: 10px; }',
-      '.hu-act-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; color: #1e293b; font-size: 13.5px; font-weight: 800; cursor: pointer; text-decoration: none; }',
+      '.hu-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }',
+      '.hu-act-btn { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 10px 8px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; color: #1e293b; font-size: 12.5px; font-weight: 800; cursor: pointer; text-decoration: none; white-space: nowrap; }',
       '.hu-act-btn:hover { background: #f1f5f9; }',
       '.hu-act-btn.primary { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }',
       '.hu-act-btn.primary:hover { background: #ffedd5; }',
+      '.hu-act-btn.porte { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }',
+      '.hu-act-btn.porte:hover { background: #dcfce7; }',
       '.hu-sec-title { font-size: 11.5px; font-weight: 700; color: #64748b; margin: 4px 2px 6px; }',
       '.hu-app-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }',
       '.hu-app-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 10px 4px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; color: #334155; text-decoration: none; font-size: 11.5px; font-weight: 700; text-align: center; line-height: 1.25; }',
@@ -317,7 +319,8 @@
 
     pop.innerHTML =
       '<div class="hu-actions">' +
-        '<a class="hu-act-btn primary" href="' + topUrl + '">🏠 ストアTOPへ戻る</a>' +
+        '<a class="hu-act-btn primary" href="' + topUrl + '">🏠 STORE TOPへ戻る</a>' +
+        '<a class="hu-act-btn porte" href="' + PORTE_BASE + 'index.html">📋 Porteへ移動する</a>' +
       '</div>' +
       '<div class="hu-sec-title">🔄 他のシステムへ切替</div>' +
       '<div class="hu-app-grid">' + appsHtml + '</div>';
@@ -326,7 +329,7 @@
   function positionPopover() {
     if (!_triggerEl || !_popoverEl) return;
     var rect = _triggerEl.getBoundingClientRect();
-    var left = Math.max(12, Math.min(rect.left, global.innerWidth - 348));
+    var left = Math.max(12, Math.min(rect.left, global.innerWidth - 372));
     var top = rect.bottom + 8;
     _popoverEl.style.left = left + 'px';
     _popoverEl.style.top = top + 'px';
