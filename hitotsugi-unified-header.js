@@ -18,7 +18,7 @@
 
   var APPS = [
     { id: 'regi',          label: 'レジシステム',       icon: '🍬', url: DAGASHI_BASE + 'regi.html' },
-    { id: 'scanner',       label: 'レジスキャナー',     icon: '📷', url: DAGASHI_BASE + 'scanner.html' },
+    { id: 'regi2',         label: 'レジスキャナー',     icon: '📷', url: DAGASHI_BASE + 'regi2.html' },
     { id: 'admin',         label: '売上管理',           icon: '📊', url: DAGASHI_BASE + 'admin.html' },
     { id: 'analytics',     label: '売上分析',           icon: '📈', url: DAGASHI_BASE + 'analytics.html' },
     { id: 'purchase-log',  label: '仕入れ・賞味期限',   icon: '📦', url: DAGASHI_BASE + 'purchase-log.html' },
