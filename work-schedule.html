@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>利用者 作業スケジュール作成システム</title>
+  <title>メンバーさん 作業スケジュール作成システム</title>
   <link rel="icon" type="image/jpeg" href="favicon-kuma.jpg">
   <link rel="apple-touch-icon" href="favicon-kuma.jpg">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -615,11 +615,11 @@
   <!-- Header -->
   <header class="app-header no-print">
     <div class="header-left">
-      <h1 class="app-title"><img src="favicon-kuma.jpg" alt="ひとつぎ" style="width:32px;height:32px;border-radius:50%;background:#fff;object-fit:cover;box-shadow:0 1px 4px rgba(0,0,0,0.18);"> 利用者 作業スケジュール作成</h1>
+      <h1 class="app-title"><img src="favicon-kuma.jpg" alt="ひとつぎ" style="width:32px;height:32px;border-radius:50%;background:#fff;object-fit:cover;box-shadow:0 1px 4px rgba(0,0,0,0.18);"> メンバーさん 作業スケジュール作成</h1>
     </div>
     <div class="nav-tabs">
       <button class="nav-tab active" id="tab-btn-schedule" onclick="switchView('schedule')">📅 スケジュール表</button>
-      <button class="nav-tab" id="tab-btn-prof" onclick="switchView('prof')">⭐ 利用者の熟練度設定</button>
+      <button class="nav-tab" id="tab-btn-prof" onclick="switchView('prof')">⭐ メンバーさんの熟練度設定</button>
       <button class="nav-tab" id="tab-btn-tasks" onclick="switchView('tasks')">⚙️ 作業種別・時間枠設定</button>
     </div>
   </header>
@@ -646,7 +646,7 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--sub);cursor:pointer;margin-right:4px;">
             <input type="checkbox" id="chk-show-all-users" onchange="renderScheduleView()" style="width:16px;height:16px;accent-color:var(--pri);">
-            <span>予定外の利用者も表示</span>
+            <span>予定外のメンバーさんも表示</span>
           </label>
           <button class="btn btn-acc" onclick="autoGenerateSchedule()">✨ 熟練度優先で自動割り当て</button>
           <button class="btn btn-danger" onclick="clearDaySchedule()">🗑 クリア</button>
@@ -669,7 +669,7 @@
           <table class="sched-table" id="sched-table">
             <thead id="sched-thead"></thead>
             <tbody id="sched-tbody">
-              <tr><td colspan="8" style="padding:40px;color:var(--sub);font-weight:700;">Porteから利用者・時間データを読み込み中...</td></tr>
+              <tr><td colspan="8" style="padding:40px;color:var(--sub);font-weight:700;">Porteからメンバーさん・時間データを読み込み中...</td></tr>
             </tbody>
           </table>
         </div>
@@ -680,9 +680,9 @@
     <section id="view-prof" style="display:none;">
       <div class="card">
         <div class="section-hd">
-          <span>⭐ 利用者ごとの作業熟練度マトリクス</span>
+          <span>⭐ メンバーさんごとの作業熟練度マトリクス</span>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <input type="text" id="prof-search" class="form-input" placeholder="🔍 利用者名で検索..." oninput="renderProficiencyTable()" style="width:200px;padding:6px 10px;font-size:13px;">
+            <input type="text" id="prof-search" class="form-input" placeholder="🔍 メンバーさん名で検索..." oninput="renderProficiencyTable()" style="width:200px;padding:6px 10px;font-size:13px;">
             <button class="btn" onclick="setAllProficiency(2)">全員「〇 標準」にリセット</button>
           </div>
         </div>
@@ -1186,7 +1186,7 @@
       var dateStr = document.getElementById('sched-date').value || getTodayStr();
       var users = getUsersForDate(dateStr);
       if (users.length === 0) {
-        showToast('対象となる利用者がいません');
+        showToast('対象となるメンバーさんがいません');
         return;
       }
       if (TASKS.length === 0) {
@@ -1632,7 +1632,7 @@
         (isClosedDay ? ' <span style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:999px;font-size:12.5px;margin-left:8px;">☕ 休所日（Porteカレンダー設定）</span>' : '');
 
       // Thead
-      var theadHtml = '<tr><th style="min-width:170px;text-align:left;padding-left:12px;">利用者名 / 通所時間</th>';
+      var theadHtml = '<tr><th style="min-width:170px;text-align:left;padding-left:12px;">メンバーさん名 / 通所時間</th>';
       hours.forEach(function(h) {
         var isBrk = (h === breakH);
         var label = h + ':00 〜 ' + (h + 1) + ':00';
@@ -1649,7 +1649,7 @@
         return;
       }
       if (users.length === 0) {
-        tbodyEl.innerHTML = '<tr><td colspan="' + (hours.length + 1) + '" style="padding:36px;color:var(--sub);font-weight:700;">この日に通所予定の利用者がいません（「予定外の利用者も表示」にチェックを入れると全員表示できます）</td></tr>';
+        tbodyEl.innerHTML = '<tr><td colspan="' + (hours.length + 1) + '" style="padding:36px;color:var(--sub);font-weight:700;">この日に通所予定のメンバーさんがいません（「予定外のメンバーさんも表示」にチェックを入れると全員表示できます）</td></tr>';
         renderSummaryBar(daySched, hours);
         return;
       }
@@ -1848,7 +1848,7 @@
       var tbody = document.getElementById('prof-tbody');
       if (!thead || !tbody) return;
 
-      var hHtml = '<tr><th style="min-width:160px;text-align:left;padding-left:12px;">利用者名</th>';
+      var hHtml = '<tr><th style="min-width:160px;text-align:left;padding-left:12px;">メンバーさん名</th>';
       TASKS.forEach(function(t) {
         var durLabel = (t.durationMode === '2' || t.durationMode === '2_strict') ? '2時間' : '1時間';
         hHtml += '<th>' + esc(t.icon) + ' ' + esc(t.name) + '<br><span style="font-size:10.5px;color:var(--sub);font-weight:600;">(' + durLabel + ')</span></th>';
@@ -1862,7 +1862,7 @@
       });
 
       if (filteredUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="' + (TASKS.length + 1) + '" style="padding:30px;color:var(--sub);">該当する利用者がいません</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="' + (TASKS.length + 1) + '" style="padding:30px;color:var(--sub);">該当するメンバーさんがいません</td></tr>';
         return;
       }
 
