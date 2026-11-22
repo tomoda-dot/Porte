@@ -377,6 +377,9 @@
     if (yesBtn && _opts.appId === 'training') {
       yesBtn.style.background = '#45a274';
       yesBtn.style.borderColor = '#45a274';
+    } else if (yesBtn && _opts.appId === 'mypage') {
+      yesBtn.style.background = '#2d6a64';
+      yesBtn.style.borderColor = '#2d6a64';
     }
     ov.querySelector('#hu-lm-no').addEventListener('click', close);
     yesBtn.addEventListener('click', function () {
