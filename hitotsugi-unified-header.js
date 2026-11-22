@@ -386,6 +386,17 @@
     });
   }
 
+  function bindTrigger(selectorOrEl, options) {
+    _opts = options || {};
+    injectStyles();
+    var target = typeof selectorOrEl === 'string' ? document.querySelector(selectorOrEl) : selectorOrEl;
+    if (!target) return;
+    _triggerEl = target;
+    target.style.cursor = 'pointer';
+    target.title = 'タップしてメニュー（STORE TOP・他システム切替）';
+    target.addEventListener('click', toggleMenu);
+  }
+
   function init(options) {
     _opts = options || {};
     injectStyles();
@@ -539,6 +550,7 @@
 
   global.HitotsugiUnifiedHeader = {
     init: init,
+    bindTrigger: bindTrigger,
     goBack: goBack,
     open: openMenu,
     close: closeMenu,
