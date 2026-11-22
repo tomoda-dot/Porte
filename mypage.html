@@ -93,6 +93,18 @@ header{background:var(--pri);color:#fff;padding:12px 16px;border-radius:12px;mar
 .mp-staff-card:hover{border-color:var(--pri);transform:translateY(-2px);}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px;}
 </style>
+<!-- HITOTSUGI_UNIFIED_HEADER_START -->
+<script src="hitotsugi-unified-header.js"></script>
+<script>
+  HitotsugiUnifiedHeader.init({
+    appId: 'mypage',
+    headerSelector: '#pg-main header',
+    title: 'ひとつぎ マイページ',
+    fullBleed: true,
+    moveSelectors: ['div:first-child', '#btn-chg-pw', '#btn-logout']
+  });
+</script>
+<!-- HITOTSUGI_UNIFIED_HEADER_END -->
 </head>
 <body>
 
