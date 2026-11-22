@@ -1,918 +1,526 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="google" content="notranslate">
-  <title>マイページ | ひとつぎ</title>
-  <link rel="icon" type="image/jpeg" href="favicon-kuma.jpg">
-  <link rel="apple-touch-icon" href="favicon-kuma.jpg">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="supabase-config.js"></script>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html,
-    body,
-    input,
-    select,
-    textarea,
-    button {
-      touch-action: manipulation;
-    }
-
-    input,
-    select,
-    textarea {
-      font-size: 16px !important;
-    }
-
-    :root {
-      --pri: #2d6a64;
-      --bg: #f7f4f0;
-      --card: #fff;
-      --bdr: #e0d6cf;
-      --sub: #8a7a6a;
-      --grn: #2e7d32;
-      --paid: #1565c0;
-      --paid-am: #1976d2;
-      --paid-pm: #0288d1;
-    }
-
-    body {
-      font-family: sans-serif;
-      background: var(--bg);
-      color: #333;
-      min-height: 100vh;
-      font-size: 14px;
-    }
-
-    /* ログイン */
-    #pg-login {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .login-box {
-      background: #fff;
-      border-radius: 16px;
-      padding: 32px 24px;
-      width: 100%;
-      max-width: 360px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, .1);
-    }
-
-    .login-logo {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-
-    .login-logo .ico {
-      font-size: 40px;
-      display: block;
-    }
-
-    .login-logo h1 {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--pri);
-      margin-top: 8px;
-    }
-
-    .f label {
-      display: block;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--sub);
-      margin-bottom: 4px;
-      margin-top: 12px;
-    }
-
-    .f input {
-      width: 100%;
-      padding: 11px 12px;
-      border: 1.5px solid var(--bdr);
-      border-radius: 8px;
-      font-size: 15px;
-    }
-
-    #btn-login {
-      width: 100%;
-      padding: 14px;
-      background: var(--pri);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      margin-top: 16px;
-    }
-
-    #login-err {
-      color: #c62828;
-      font-size: 12px;
-      text-align: center;
-      margin-top: 8px;
-      min-height: 16px;
-    }
-
-    /* メイン */
-    #pg-main {
-      display: none;
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 12px;
-    }
-
-    #pg-loading {
-      display: none;
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--sub);
-    }
-
-    .spin {
-      width: 28px;
-      height: 28px;
-      border: 3px solid var(--bdr);
-      border-top-color: var(--pri);
-      border-radius: 50%;
-      animation: sp .8s linear infinite;
-      margin: 0 auto 10px;
-    }
-
-    @keyframes sp {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    header {
-      background: var(--pri);
-      color: #fff;
-      padding: 12px 16px;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .hd-name {
-      font-size: 17px;
-      font-weight: 700;
-    }
-
-    .hd-role {
-      font-size: 11px;
-      opacity: .8;
-      margin-top: 2px;
-    }
-
-    #btn-logout {
-      background: rgba(255, 255, 255, .2);
-      border: none;
-      color: #fff;
-      padding: 6px 12px;
-      border-radius: 16px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-
-    /* カード */
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
-    }
-
-    .ct {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--sub);
-      margin-bottom: 10px;
-    }
-
-    /* タイムカード */
-    .tc-rec {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 10px;
-      border-radius: 8px;
-      margin-bottom: 6px;
-      font-size: 14px;
-    }
-
-    .tc-rec.in {
-      background: #e8f5e8;
-      color: var(--grn);
-    }
-
-    .tc-rec.out {
-      background: #fce8e8;
-      color: #c62828;
-    }
-
-    .tc-btn {
-      width: 100%;
-      padding: 15px;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      color: #fff;
-      margin-bottom: 6px;
-    }
-
-    .tc-btn.in {
-      background: var(--grn);
-    }
-
-    .tc-btn.out {
-      background: #c62828;
-    }
-
-    /* タブ */
-    .tabs {
-      display: flex;
-      border-bottom: 2px solid var(--bdr);
-      margin-bottom: 12px;
-    }
-
-    .tb {
-      flex: 1;
-      padding: 9px 2px;
-      border: none;
-      background: none;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      color: #aaa;
-      border-bottom: 3px solid transparent;
-      margin-bottom: -2px;
-    }
-
-    .tb.on {
-      color: var(--pri);
-      border-bottom-color: var(--pri);
-    }
-
-    /* テーブル系 */
-    .rows .row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 9px 0;
-      border-bottom: 1px solid #f0ebe5;
-      cursor: pointer;
-    }
-
-    .rows .row:last-child {
-      border-bottom: none;
-    }
-
-    .row-l {
-      color: var(--sub);
-      font-size: 12px;
-    }
-
-    .row-r {
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .arr {
-      color: #ccc;
-      font-size: 12px;
-    }
-
-    /* パターンバッジ */
-    .pat {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    /* サマリー */
-    .sum3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .sum-i {
-      background: var(--bg);
-      border-radius: 8px;
-      padding: 10px;
-      text-align: center;
-    }
-
-    .sum-i .v {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--pri);
-    }
-
-    .sum-i .l {
-      font-size: 10px;
-      color: var(--sub);
-      margin-top: 2px;
-    }
-
-    /* 有給 */
-    .pl-big {
-      text-align: center;
-      padding: 12px 0 16px;
-    }
-
-    .pl-big .n {
-      font-size: 48px;
-      font-weight: 700;
-      color: var(--paid);
-    }
-
-    .pl-big .u {
-      font-size: 16px;
-      color: var(--paid);
-    }
-
-    /* 申請 */
-    .type-btns {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 6px;
-      margin-bottom: 10px;
-    }
-
-    .type-btn {
-      padding: 9px 4px;
-      border: 2px solid var(--bdr);
-      border-radius: 8px;
-      background: #fff;
-      color: var(--sub);
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .type-btn.on {
-      border-color: var(--paid);
-      background: var(--paid);
-      color: #fff;
-    }
-
-    .sub-btn {
-      width: 100%;
-      padding: 13px;
-      background: var(--pri);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      margin-top: 8px;
-    }
-
-    .plr-i {
-      border-left: 4px solid var(--bdr);
-      padding: 10px 12px;
-      border-radius: 0 8px 8px 0;
-      margin-bottom: 8px;
-      background: #fafafa;
-    }
-
-    .plr-i.pending {
-      border-color: #e65100;
-      background: #fff8f0;
-    }
-
-    .plr-i.approved {
-      border-color: var(--grn);
-      background: #f0fff0;
-    }
-
-    .plr-i.rejected {
-      border-color: #c62828;
-      background: #fff0f0;
-    }
-
-    .badge {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 8px;
-      display: inline-block;
-    }
-
-    .badge.pending {
-      background: #fff3e0;
-      color: #e65100;
-    }
-
-    .badge.approved {
-      background: #e8f5e8;
-      color: var(--grn);
-    }
-
-    .badge.rejected {
-      background: #fce8e8;
-      color: #c62828;
-    }
-
-    /* モーダル */
-    #modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, .5);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
-
-    .modal-box {
-      background: #fff;
-      border-radius: 16px;
-      padding: 20px;
-      width: 100%;
-      max-width: 400px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-
-    .modal-hd {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-    }
-
-    .modal-hd h3 {
-      font-size: 16px;
-      font-weight: 700;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      color: #aaa;
-    }
-
-    .mf label {
-      display: block;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--sub);
-      margin-bottom: 4px;
-      margin-top: 12px;
-    }
-
-    .mf input,
-    .mf select,
-    .mf textarea {
-      width: 100%;
-      padding: 10px;
-      border: 1.5px solid var(--bdr);
-      border-radius: 8px;
-      font-size: 14px;
-    }
-
-    .mf textarea {
-      resize: none;
-    }
-
-    .grid2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .pin-dot {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      border: 2px solid #ccc;
-      background: #fff;
-      transition: all .15s ease;
-    }
-
-    .mp-staff-card {
-      background: #f8f6f2;
-      border: 1.5px solid var(--bdr);
-      border-radius: 12px;
-      padding: 14px 8px;
-      text-align: center;
-      cursor: pointer;
-      transition: .2s;
-    }
-
-    .mp-staff-card:hover {
-      border-color: var(--pri);
-      transform: translateY(-2px);
-    }
-
-    .modal-bg {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, .5);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
-  </style>
-  <link rel="stylesheet" href="porte-login-unified.css">
-  <script src="porte-auth.js"></script>
-  <!-- HITOTSUGI_UNIFIED_HEADER_START -->
-  <script src="hitotsugi-unified-header.js"></script>
-  <script>     HitotsugiUnifiedHeader.init({       appId: 'mypage',       headerSelector: '#pg-main header',       title: '👤 ひとつぎ マイページ',       fullBleed: true,       noSubbar: true,       moveSelectors: ['#btn-chg-pw', '#hd-name'],       logoutTriggerSelector: '#hd-name',       onLogout: function () {         clearPorteSession();         ME = null;         showMpCardView();         hide('pg-main');         flex('pg-login');       }     });
-  </script>
-  <!-- HITOTSUGI_UNIFIED_HEADER_END -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="google" content="notranslate">
+<title>マイページ | ひとつぎ</title>
+<link rel="icon" type="image/jpeg" href="favicon-kuma.jpg">
+<link rel="apple-touch-icon" href="favicon-kuma.jpg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-config.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html, body, input, select, textarea, button { touch-action: manipulation; }
+input, select, textarea { font-size: 16px !important; }
+:root{--pri:#2d6a64;--bg:#f7f4f0;--card:#fff;--bdr:#e0d6cf;--sub:#8a7a6a;--grn:#2e7d32;--paid:#1565c0;--paid-am:#1976d2;--paid-pm:#0288d1;}
+body{font-family:sans-serif;background:var(--bg);color:#333;min-height:100vh;font-size:14px;}
+/* ログイン */
+#pg-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:#fff;border-radius:16px;padding:32px 24px;width:100%;max-width:360px;box-shadow:0 4px 20px rgba(0,0,0,.1);}
+.login-logo{text-align:center;margin-bottom:24px;}
+.login-logo .ico{font-size:40px;display:block;}
+.login-logo h1{font-size:18px;font-weight:700;color:var(--pri);margin-top:8px;}
+.f label{display:block;font-size:11px;font-weight:700;color:var(--sub);margin-bottom:4px;margin-top:12px;}
+.f input{width:100%;padding:11px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px;}
+#btn-login{width:100%;padding:14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;}
+#login-err{color:#c62828;font-size:12px;text-align:center;margin-top:8px;min-height:16px;}
+/* メイン */
+#pg-main{display:none;max-width:680px;margin:0 auto;padding:12px;}
+#pg-loading{display:none;text-align:center;padding:60px 20px;color:var(--sub);}
+.spin{width:28px;height:28px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 10px;}
+@keyframes sp{to{transform:rotate(360deg);}}
+header{background:var(--pri);color:#fff;padding:12px 16px;border-radius:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.hd-name{font-size:17px;font-weight:700;}
+.hd-role{font-size:11px;opacity:.8;margin-top:2px;}
+#btn-logout{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:16px;font-size:12px;cursor:pointer;}
+/* カード */
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.05);}
+.ct{font-size:11px;font-weight:700;color:var(--sub);margin-bottom:10px;}
+/* タイムカード */
+.tc-rec{display:flex;justify-content:space-between;padding:8px 10px;border-radius:8px;margin-bottom:6px;font-size:14px;}
+.tc-rec.in{background:#e8f5e8;color:var(--grn);}
+.tc-rec.out{background:#fce8e8;color:#c62828;}
+.tc-btn{width:100%;padding:15px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;color:#fff;margin-bottom:6px;}
+.tc-btn.in{background:var(--grn);}
+.tc-btn.out{background:#c62828;}
+/* タブ */
+.tabs{display:flex;border-bottom:2px solid var(--bdr);margin-bottom:12px;}
+.tb{flex:1;padding:9px 2px;border:none;background:none;font-size:12px;font-weight:700;cursor:pointer;color:#aaa;border-bottom:3px solid transparent;margin-bottom:-2px;}
+.tb.on{color:var(--pri);border-bottom-color:var(--pri);}
+/* テーブル系 */
+.rows .row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f0ebe5;cursor:pointer;}
+.rows .row:last-child{border-bottom:none;}
+.row-l{color:var(--sub);font-size:12px;}
+.row-r{font-weight:600;display:flex;align-items:center;gap:4px;}
+.arr{color:#ccc;font-size:12px;}
+/* パターンバッジ */
+.pat{display:inline-block;padding:2px 8px;border-radius:8px;color:#fff;font-size:11px;font-weight:700;}
+/* サマリー */
+.sum3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+.sum-i{background:var(--bg);border-radius:8px;padding:10px;text-align:center;}
+.sum-i .v{font-size:20px;font-weight:700;color:var(--pri);}
+.sum-i .l{font-size:10px;color:var(--sub);margin-top:2px;}
+/* 有給 */
+.pl-big{text-align:center;padding:12px 0 16px;}
+.pl-big .n{font-size:48px;font-weight:700;color:var(--paid);}
+.pl-big .u{font-size:16px;color:var(--paid);}
+/* 申請 */
+.type-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;}
+.type-btn{padding:9px 4px;border:2px solid var(--bdr);border-radius:8px;background:#fff;color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;}
+.type-btn.on{border-color:var(--paid);background:var(--paid);color:#fff;}
+.sub-btn{width:100%;padding:13px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+.plr-i{border-left:4px solid var(--bdr);padding:10px 12px;border-radius:0 8px 8px 0;margin-bottom:8px;background:#fafafa;}
+.plr-i.pending{border-color:#e65100;background:#fff8f0;}
+.plr-i.approved{border-color:var(--grn);background:#f0fff0;}
+.plr-i.rejected{border-color:#c62828;background:#fff0f0;}
+.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;display:inline-block;}
+.badge.pending{background:#fff3e0;color:#e65100;}
+.badge.approved{background:#e8f5e8;color:var(--grn);}
+.badge.rejected{background:#fce8e8;color:#c62828;}
+/* モーダル */
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;padding:16px;}
+.modal-box{background:#fff;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;}
+.modal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.modal-hd h3{font-size:16px;font-weight:700;}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:#aaa;}
+.mf label{display:block;font-size:11px;font-weight:700;color:var(--sub);margin-bottom:4px;margin-top:12px;}
+.mf input,.mf select,.mf textarea{width:100%;padding:10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:14px;}
+.mf textarea{resize:none;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid #ccc;background:#fff;transition:all .15s ease;}
+.mp-staff-card{background:#f8f6f2;border:1.5px solid var(--bdr);border-radius:12px;padding:14px 8px;text-align:center;cursor:pointer;transition:.2s;}
+.mp-staff-card:hover{border-color:var(--pri);transform:translateY(-2px);}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px;}
+</style>
+<link rel="stylesheet" href="porte-login-unified.css">
+<script src="porte-auth.js"></script>
+<!-- HITOTSUGI_UNIFIED_HEADER_START -->
+<script src="hitotsugi-unified-header.js"></script>
+<script>
+  HitotsugiUnifiedHeader.init({
+    appId: 'mypage',
+    headerSelector: '#pg-main header',
+    title: '👤 ひとつぎ マイページ',
+    fullBleed: true,
+    noSubbar: true,
+    moveSelectors: ['#btn-chg-pw', '#hd-name'],
+    logoutTriggerSelector: '#hd-name',
+    onLogout: function () {
+      clearPorteSession();
+      ME = null;
+      showMpCardView();
+      hide('pg-main');
+      flex('pg-login');
+    }
+  });
+</script>
+<!-- HITOTSUGI_UNIFIED_HEADER_END -->
 </head>
-
 <body>
 
-  <div id="pg-loading">
-    <div class="spin"></div>読み込み中...
-  </div>
+<div id="pg-loading"><div class="spin"></div>読み込み中...</div>
 
-  <div id="pg-login">
-    <div class="login-box">
-      <div class="login-logo">
-        <img src="kuma.png" onerror="this.style.display='none'">
-        <h1>👤 ひとつぎ マイページ</h1>
-      </div>
+<div id="pg-login">
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="kuma.png" onerror="this.style.display='none'">
+      <h1>👤 ひとつぎ マイページ</h1>
+    </div>
 
-      <!-- スタッフカード選択画面 -->
-      <div id="mp-card-view">
-        <div style="font-size:12px;color:var(--sub);text-align:center;margin-bottom:14px;">スタッフを選択してください</div>
-        <div id="mp-staff-card-grid"
-          style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-height:48vh;overflow-y:auto;padding:4px">
-          読み込み中...
-        </div>
-        <div style="margin-top:16px;text-align:center">
-          <a href="javascript:void(0)" onclick="showMpTradLogin()"
-            style="font-size:12px;color:var(--pri);text-decoration:underline;font-weight:600">🔑 従来のID・パスワードで入力</a>
-        </div>
-        <label
-          style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;">
-          <input type="checkbox" id="chk-keep-login"
-            onchange="try{localStorage.setItem('porte_keep_login',this.checked?'1':'0')}catch(e){}"
-            style="width:16px;height:16px;accent-color:var(--pri);cursor:pointer;">
-          <span>📱 ログイン状態を保持する（個人スマホ用）</span>
-        </label>
+    <!-- スタッフカード選択画面 -->
+    <div id="mp-card-view">
+      <div style="font-size:12px;color:var(--sub);text-align:center;margin-bottom:14px;">スタッフを選択してください</div>
+      <div id="mp-staff-card-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-height:48vh;overflow-y:auto;padding:4px">
+        読み込み中...
       </div>
+      <div style="margin-top:16px;text-align:center">
+        <a href="javascript:void(0)" onclick="showMpTradLogin()" style="font-size:12px;color:var(--pri);text-decoration:underline;font-weight:600">🔑 従来のID・パスワードで入力</a>
+      </div>
+      <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;">
+        <input type="checkbox" id="chk-keep-login" onchange="try{localStorage.setItem('porte_keep_login',this.checked?'1':'0')}catch(e){}" style="width:16px;height:16px;accent-color:var(--pri);cursor:pointer;">
+        <span>📱 ログイン状態を保持する（個人スマホ用）</span>
+      </label>
+    </div>
 
-      <!-- 4桁PINテンキー画面 -->
-      <div id="mp-pin-view" style="display:none;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <button onclick="showMpCardView()"
-            style="background:none;border:1px solid var(--bdr);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--pri)">←
-            戻る</button>
-          <div style="font-size:11px;color:var(--sub)">暗証番号認証</div>
-        </div>
-        <div style="text-align:center;margin-bottom:12px">
-          <div id="mp-pin-avatar"
-            style="width:48px;height:48px;border-radius:50%;background:var(--pri);color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 4px">
-            ?</div>
-          <div id="mp-pin-name" style="font-size:16px;font-weight:800;color:var(--txt)">-</div>
-          <div id="mp-pin-role" style="font-size:11px;color:var(--sub);margin-top:1px">-</div>
-        </div>
-        <div id="mp-pin-err"
-          style="text-align:center;margin-bottom:10px;color:#c62828;font-size:12px;font-weight:700;display:none;"></div>
-        <div style="font-size:11px;color:var(--sub);text-align:center;margin-bottom:6px">4桁の暗証番号（PIN）を入力</div>
-        <div id="mp-pin-dots" style="display:flex;justify-content:center;gap:14px;margin-bottom:16px">
-          <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span
-            class="pin-dot"></span>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
-          <button onclick="pressMpPinKey('1')"
-            style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">1</button>
-          <button onclick="pressMpPinKey('2')"
-            style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">2</button>
-          <button onclick="pressMpPinKey('3')"
-            style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">3</button>
-          <button onclick="pressMpPinKey('4')"
-            style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">4</button>
-          <button onclick="pressMpPinKey('5')"
-            style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">5</button>
-          <button onclick="pressMpPinKey('6')"
-            style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">6</button>
-          <button onclick="pressMpPinKey('7')"
-            style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">7</button>
-          <button onclick="pressMpPinKey('8')"
-            style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">8</button>
-          <button onclick="pressMpPinKey('9')"
-            style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">9</button>
-          <button onclick="clearMpPinKey()"
-            style="padding:12px 0;font-size:14px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#f5f0ea;color:var(--pri);cursor:pointer">C</button>
-          <button onclick="pressMpPinKey('0')"
-            style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">0</button>
-          <button onclick="backspaceMpPinKey()"
-            style="padding:12px 0;font-size:14px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#f5f0ea;color:var(--pri);cursor:pointer">⌫</button>
-        </div>
+    <!-- 4桁PINテンキー画面 -->
+    <div id="mp-pin-view" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <button onclick="showMpCardView()" style="background:none;border:1px solid var(--bdr);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--pri)">← 戻る</button>
+        <div style="font-size:11px;color:var(--sub)">暗証番号認証</div>
       </div>
+      <div style="text-align:center;margin-bottom:12px">
+        <div id="mp-pin-avatar" style="width:48px;height:48px;border-radius:50%;background:var(--pri);color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 4px">?</div>
+        <div id="mp-pin-name" style="font-size:16px;font-weight:800;color:var(--txt)">-</div>
+        <div id="mp-pin-role" style="font-size:11px;color:var(--sub);margin-top:1px">-</div>
+      </div>
+      <div id="mp-pin-err" style="text-align:center;margin-bottom:10px;color:#c62828;font-size:12px;font-weight:700;display:none;"></div>
+      <div style="font-size:11px;color:var(--sub);text-align:center;margin-bottom:6px">4桁の暗証番号（PIN）を入力</div>
+      <div id="mp-pin-dots" style="display:flex;justify-content:center;gap:14px;margin-bottom:16px">
+        <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        <button onclick="pressMpPinKey('1')" style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">1</button>
+        <button onclick="pressMpPinKey('2')" style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">2</button>
+        <button onclick="pressMpPinKey('3')" style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">3</button>
+        <button onclick="pressMpPinKey('4')" style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">4</button>
+        <button onclick="pressMpPinKey('5')" style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">5</button>
+        <button onclick="pressMpPinKey('6')" style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">6</button>
+        <button onclick="pressMpPinKey('7')" style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">7</button>
+        <button onclick="pressMpPinKey('8')" style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">8</button>
+        <button onclick="pressMpPinKey('9')" style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">9</button>
+        <button onclick="clearMpPinKey()" style="padding:12px 0;font-size:14px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#f5f0ea;color:var(--pri);cursor:pointer">C</button>
+        <button onclick="pressMpPinKey('0')" style="padding:12px 0;font-size:20px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#fff;color:var(--txt);cursor:pointer">0</button>
+        <button onclick="backspaceMpPinKey()" style="padding:12px 0;font-size:14px;font-weight:700;border:1.5px solid var(--bdr);border-radius:10px;background:#f5f0ea;color:var(--pri);cursor:pointer">⌫</button>
+      </div>
+    </div>
 
-      <!-- 従来ログイン画面 -->
-      <div id="mp-trad-view" style="display:none;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <button onclick="showMpCardView()"
-            style="background:none;border:1px solid var(--bdr);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--pri)">←
-            スタッフ選択へ</button>
-        </div>
-        <div class="f">
-          <label>ログインID</label>
-          <input type="text" id="inp-id" autocomplete="username">
-        </div>
-        <div class="f">
-          <label>パスワード</label>
-          <input type="password" id="inp-pw" autocomplete="current-password">
-        </div>
-        <button id="btn-login">ログイン</button>
-        <div id="login-err"></div>
+    <!-- 従来ログイン画面 -->
+    <div id="mp-trad-view" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <button onclick="showMpCardView()" style="background:none;border:1px solid var(--bdr);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--pri)">← スタッフ選択へ</button>
       </div>
+      <div class="f">
+        <label>ログインID</label>
+        <input type="text" id="inp-id" autocomplete="username">
+      </div>
+      <div class="f">
+        <label>パスワード</label>
+        <input type="password" id="inp-pw" autocomplete="current-password">
+      </div>
+      <button id="btn-login">ログイン</button>
+      <div id="login-err"></div>
     </div>
   </div>
+</div>
 
-  <div id="pg-main">
-    <header>
-      <div>
-        <div class="hd-name" id="hd-name"></div>
-        <div class="hd-role" id="hd-role"></div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button id="btn-chg-pw" onclick="openChgPwModal()"
-          style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">🔑
-          PIN変更</button>
-        <button id="btn-logout">ログアウト</button>
-      </div>
-    </header>
-
-    <!-- 未退勤・打刻漏れアラートエリア -->
-    <div id="mp-alert-container"></div>
-
-    <!-- タイムカード -->
-    <div class="card" id="tc-card">
-      <div class="ct">🕐 タイムカード — <span id="tc-date"></span></div>
-      <div id="tc-body"></div>
+<div id="pg-main">
+  <header>
+    <div>
+      <div class="hd-name" id="hd-name"></div>
+      <div class="hd-role" id="hd-role"></div>
     </div>
-
-    <!-- タブ -->
-    <div class="tabs">
-      <button class="tb on" id="tb-shift" onclick="showTab('shift')">📆 シフト</button>
-      <button class="tb" id="tb-att" onclick="showTab('att')">📊 打刻</button>
-      <button class="tb" id="tb-paid" onclick="showTab('paid')">📅 有給</button>
-      <button class="tb" id="tb-reqs" style="display:none;" onclick="showTab('reqs')">📋 申請履歴</button>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button id="btn-chg-pw" onclick="openChgPwModal()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">🔑 PIN変更</button>
+      <button id="btn-logout">ログアウト</button>
     </div>
+  </header>
 
-    <div id="tab-shift">
-      <div class="card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <button onclick="shiftPrev()"
-            style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">◀</button>
-          <span id="shift-ym" style="flex:1;text-align:center;font-size:15px;font-weight:700"></span>
-          <button onclick="shiftNext()"
-            style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">▶</button>
-          <button onclick="shiftNow()"
-            style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px">今月</button>
-        </div>
-        <div id="shift-body" class="rows"></div>
+  <!-- 未退勤・打刻漏れアラートエリア -->
+  <div id="mp-alert-container"></div>
+
+  <!-- タイムカード -->
+  <div class="card" id="tc-card">
+    <div class="ct">🕐 タイムカード — <span id="tc-date"></span></div>
+    <div id="tc-body"></div>
+  </div>
+
+  <!-- タブ -->
+  <div class="tabs">
+    <button class="tb on" id="tb-shift" onclick="showTab('shift')">📆 シフト</button>
+    <button class="tb" id="tb-att" onclick="showTab('att')">📊 打刻</button>
+    <button class="tb" id="tb-paid" onclick="showTab('paid')">📅 有給</button>
+    <button class="tb" id="tb-reqs" style="display:none;" onclick="showTab('reqs')">📋 申請履歴</button>
+  </div>
+
+  <div id="tab-shift">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <button onclick="shiftPrev()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">◀</button>
+        <span id="shift-ym" style="flex:1;text-align:center;font-size:15px;font-weight:700"></span>
+        <button onclick="shiftNext()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">▶</button>
+        <button onclick="shiftNow()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px">今月</button>
       </div>
-      <div class="card" id="my-shift-reqs-card">
-        <div class="ct">📋 自分のシフト変更・勤怠修正 申請履歴</div>
-        <div id="my-shift-reqs-list"></div>
-      </div>
+      <div id="shift-body" class="rows"></div>
     </div>
-
-    <div id="tab-att" style="display:none">
-      <div class="card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <button onclick="attPrev()"
-            style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">◀</button>
-          <span id="att-ym" style="flex:1;text-align:center;font-size:15px;font-weight:700"></span>
-          <button onclick="attNext()"
-            style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">▶</button>
-          <button onclick="attNow()"
-            style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px">今月</button>
-        </div>
-        <div class="sum3" id="att-sum"></div>
-        <div id="att-body" class="rows"></div>
-      </div>
-    </div>
-
-    <div id="tab-paid" style="display:none">
-      <div class="card">
-        <div class="ct">📅 有給残日数</div>
-        <div class="pl-big"><span class="n" id="pl-num">-</span><span class="u">日</span></div>
-      </div>
-      <div class="card">
-        <div class="ct">📨 有給申請</div>
-        <div class="f"><label>取得日</label><input type="date" id="plr-date"></div>
-        <div class="f" style="margin-top:10px"><label>種別</label>
-          <div class="type-btns">
-            <button class="type-btn on" onclick="setType(this,'有給')">全日</button>
-            <button class="type-btn" onclick="setType(this,'午前半休')">午前半休</button>
-            <button class="type-btn" onclick="setType(this,'午後半休')">午後半休</button>
-          </div>
-        </div>
-        <div class="f"><label>理由（任意）</label><input type="text" id="plr-reason" placeholder="例: 私用のため"></div>
-        <button class="sub-btn" id="btn-plr">申請する</button>
-      </div>
-      <div class="card">
-        <div class="ct">📋 申請状況</div>
-        <div id="plr-list"></div>
-      </div>
-      <div class="card">
-        <div class="ct">📋 付与履歴</div>
-        <div id="pl-grants"></div>
-      </div>
-      <div class="card">
-        <div class="ct">📝 取得履歴</div>
-        <div id="pl-used"></div>
-      </div>
-    </div>
-
-    <!-- 申請履歴タブ（友田アカウント専用） -->
-    <div id="tab-reqs" style="display:none">
-      <div class="sum3" id="reqs-sum"></div>
-      <div class="card" style="padding:12px 16px;margin-bottom:10px;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <span style="font-weight:700;font-size:12px;color:var(--sub)">絞り込み:</span>
-          <select id="req-filter-staff" onchange="renderAdminReqs()"
-            style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px;">
-            <option value="">全スタッフ</option>
-          </select>
-          <select id="req-filter-type" onchange="renderAdminReqs()"
-            style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px;">
-            <option value="all">全申請種別</option>
-            <option value="shift">📆 シフト変更申請</option>
-            <option value="paid">📅 有給申請</option>
-            <option value="attendance">📊 勤怠修正申請</option>
-          </select>
-          <select id="req-filter-status" onchange="renderAdminReqs()"
-            style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px;">
-            <option value="all">全ステータス</option>
-            <option value="pending" selected>承認待ち</option>
-            <option value="approved">承認済み</option>
-            <option value="rejected">却下</option>
-          </select>
-        </div>
-      </div>
-      <div class="card">
-        <div class="ct" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>📋 全スタッフの申請一覧</span>
-          <button onclick="loadAdminReqs()"
-            style="background:none;border:1px solid var(--bdr);padding:3px 8px;border-radius:6px;font-size:11px;cursor:pointer;">🔄
-            更新</button>
-        </div>
-        <div id="admin-reqs-list"></div>
-      </div>
+    <div class="card" id="my-shift-reqs-card">
+      <div class="ct">📋 自分のシフト変更・勤怠修正 申請履歴</div>
+      <div id="my-shift-reqs-list"></div>
     </div>
   </div>
 
-  <!-- モーダル -->
-  <div id="modal">
-    <div class="modal-box">
-      <div class="modal-hd">
-        <h3 id="modal-title"></h3>
-        <button class="modal-close" id="modal-close">✕</button>
+  <div id="tab-att" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <button onclick="attPrev()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">◀</button>
+        <span id="att-ym" style="flex:1;text-align:center;font-size:15px;font-weight:700"></span>
+        <button onclick="attNext()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px">▶</button>
+        <button onclick="attNow()" style="border:1px solid var(--bdr);background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px">今月</button>
       </div>
-      <div id="modal-body" class="mf"></div>
+      <div class="sum3" id="att-sum"></div>
+      <div id="att-body" class="rows"></div>
     </div>
   </div>
 
-  <script>    
-'use strict';    
-// ─── 初期化 ─────────────────────────    
+  <div id="tab-paid" style="display:none">
+    <div class="card">
+      <div class="ct">📅 有給残日数</div>
+      <div class="pl-big"><span class="n" id="pl-num">-</span><span class="u">日</span></div>
+    </div>
+    <div class="card">
+      <div class="ct">📨 有給申請</div>
+      <div class="f"><label>取得日</label><input type="date" id="plr-date"></div>
+      <div class="f" style="margin-top:10px"><label>種別</label>
+        <div class="type-btns">
+          <button class="type-btn on" onclick="setType(this,'有給')">全日</button>
+          <button class="type-btn" onclick="setType(this,'午前半休')">午前半休</button>
+          <button class="type-btn" onclick="setType(this,'午後半休')">午後半休</button>
+        </div>
+      </div>
+      <div class="f"><label>理由（任意）</label><input type="text" id="plr-reason" placeholder="例: 私用のため"></div>
+      <button class="sub-btn" id="btn-plr">申請する</button>
+    </div>
+    <div class="card">
+      <div class="ct">📋 申請状況</div>
+      <div id="plr-list"></div>
+    </div>
+    <div class="card">
+      <div class="ct">📋 付与履歴</div>
+      <div id="pl-grants"></div>
+    </div>
+    <div class="card">
+      <div class="ct">📝 取得履歴</div>
+      <div id="pl-used"></div>
+    </div>
+  </div>
+
+  <!-- 申請履歴タブ（友田アカウント専用） -->
+  <div id="tab-reqs" style="display:none">
+    <div class="sum3" id="reqs-sum"></div>
+    <div class="card" style="padding:12px 16px;margin-bottom:10px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span style="font-weight:700;font-size:12px;color:var(--sub)">絞り込み:</span>
+        <select id="req-filter-staff" onchange="renderAdminReqs()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px;">
+          <option value="">全スタッフ</option>
+        </select>
+        <select id="req-filter-type" onchange="renderAdminReqs()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px;">
+          <option value="all">全申請種別</option>
+          <option value="shift">📆 シフト変更申請</option>
+          <option value="paid">📅 有給申請</option>
+          <option value="attendance">📊 勤怠修正申請</option>
+        </select>
+        <select id="req-filter-status" onchange="renderAdminReqs()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:12px;">
+          <option value="all">全ステータス</option>
+          <option value="pending" selected>承認待ち</option>
+          <option value="approved">承認済み</option>
+          <option value="rejected">却下</option>
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>📋 全スタッフの申請一覧</span>
+        <button onclick="loadAdminReqs()" style="background:none;border:1px solid var(--bdr);padding:3px 8px;border-radius:6px;font-size:11px;cursor:pointer;">🔄 更新</button>
+      </div>
+      <div id="admin-reqs-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル -->
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <h3 id="modal-title"></h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div id="modal-body" class="mf"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ─── 初期化 ─────────────────────────
 var SB = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-if (window.PorteAuth) PorteAuth.ensureAuth(SB);    
-var ME = null, PATS = [], PL_USAGES = [], PL_GRANTS = [], PLR_LIST = [];    
-var PLR_TYPE = '有給', SHIFT_YM = '', ATT_YM = '', TC_REC = null;    
+var ME = null, PATS = [], PL_USAGES = [], PL_GRANTS = [], PLR_LIST = [];
+var PLR_TYPE = '有給', SHIFT_YM = '', ATT_YM = '', TC_REC = null;
 var ALL_STAFF = [], ADMIN_SHIFT_REQS = [], ADMIN_PAID_REQS = [], MY_SHIFT_REQS = [];
-    
-function isTomoda(staff ){       i f(!staff) return false;       var n = String(staff.name || '');       var l = String(staff.loginId || '');       var r = String(staff.role || '');       return n.indexOf('友田') >= 0 || l.toLowerCase().indexOf('tomoda') >= 0 || r === '管理者' || r === 'サービス管理責任者' || l.toLowerCase() === 'administrator' || n.toLowerCase() === 'administrator';    
+
+function isTomoda(staff){
+  if(!staff) return false;
+  var n = String(staff.name || '');
+  var l = String(staff.loginId || '');
+  var r = String(staff.role || '');
+  return n.indexOf('友田') >= 0 || l.toLowerCase().indexOf('tomoda') >= 0 || r === '管理者' || r === 'サービス管理責任者' || l.toLowerCase() === 'administrator' || n.toLowerCase() === 'administrator';
 }
-    
-// ─── ユーティリティ ──────────────────    
-function pad(n ){ return String(n).padStart(2 ,'0'); }    
-function today( ){ var  d =new Date(); return d.getFullYear( ) +'- ' +pad(d.getMonth( ) +1 ) +'- ' +pad(d.getDate()); }    
-function nowYM( ){ var  d =new Date(); return d.getFullYear( ) +'- ' +pad(d.getMonth( ) +1); }    
-function nowTime( ){ var  d =new Date(); return pad(d.getHours() ) +': ' +pad(d.getMinutes()); }    
-function fmtD(s ){ i f(!s )retur n'-'; var  p =s.split('-'); return p[0 ] +'/ ' +p[1 ] +'/ ' +p[2]; }    
-function fmtYM(ym ){ var  p =ym.split('-'); return p[0 ] +'年 ' +parseInt(p[1] ) +'月'; }    
-function esc(s ){ return String( s| |'').replace(/&/g ,'&amp;').replace(/</g ,'&lt;').replace(/>/g ,'&gt;').replace(/"/g ,'&quot;'); }    
-function show(id ){ document.getElementById(id).style.displa y ='block'; }    
-function hide(id ){ document.getElementById(id).style.displa y ='none'; }    
-function flex(id ){ document.getElementById(id).style.displa y ='flex'; }    
-function el(id ){ return document.getElementById(id); }    
-function qsa(sel ){ return document.querySelectorAll(sel); }    
-var DOW = ['日' ,'月' ,'火' ,'水' ,'木' ,'金' ,'土'];
-    
-// テーブルが存在しない場合も空配列で返す安全クエリ    
-async function safeQuery(promise ){       tr y{ var r = await promise; return (r && r.data) ? r.data : []; }       catc h(e ){ return []; }    
+
+// ─── ユーティリティ ──────────────────
+function pad(n){ return String(n).padStart(2,'0'); }
+function today(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function nowYM(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1); }
+function nowTime(){ var d=new Date(); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+function fmtD(s){ if(!s)return'-'; var p=s.split('-'); return p[0]+'/'+p[1]+'/'+p[2]; }
+function fmtYM(ym){ var p=ym.split('-'); return p[0]+'年'+parseInt(p[1])+'月'; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function show(id){ document.getElementById(id).style.display='block'; }
+function hide(id){ document.getElementById(id).style.display='none'; }
+function flex(id){ document.getElementById(id).style.display='flex'; }
+function el(id){ return document.getElementById(id); }
+function qsa(sel){ return document.querySelectorAll(sel); }
+var DOW = ['日','月','火','水','木','金','土'];
+
+// テーブルが存在しない場合も空配列で返す安全クエリ
+async function safeQuery(promise){
+  try{ var r = await promise; return (r && r.data) ? r.data : []; }
+  catch(e){ return []; }
 }
-    
-// 不明カラム自動除外付き安全insert    
-async function safeInsert(table, obj ){       var safe = Object.assign({}, obj);       fo r(var retry = 0; retry < 10; retry++ ){         var r = await SB.from(table).insert([safe]).select();         i f(!r.error) return r;         i f(r.error.message && r.error.message.indexOf('Could not find the') >= 0 ){           var m = r.error.message.match(/find the '([^']+)'/);           i f(m ){             delete safe[m[1]];             continue;           }         }         throw r.error;       }       throw new Error('Insert failed');    
+
+// 不明カラム自動除外付き安全insert
+async function safeInsert(table, obj){
+  var safe = Object.assign({}, obj);
+  for(var retry = 0; retry < 10; retry++){
+    var r = await SB.from(table).insert([safe]).select();
+    if(!r.error) return r;
+    if(r.error.message && r.error.message.indexOf('Could not find the') >= 0){
+      var m = r.error.message.match(/find the '([^']+)'/);
+      if(m){
+        delete safe[m[1]];
+        continue;
+      }
+    }
+    throw r.error;
+  }
+  throw new Error('Insert failed');
 }
-    
-// ─── 有給計算 ────────────────────────    
-var PL_TB L =[ {m :6 ,d :1 0} , {m :18 ,d :1 1} , {m :30 ,d :1 2} , {m :42 ,d :1 4} , {m :54 ,d :1 6} , {m :66 ,d :1 8} , {m :78 ,d :2 0}];    
-var PL_P T = {4 :[7 ,8 ,9 ,10 ,12 ,13 ,15] ,3 :[5 ,6 ,6 ,8 ,9 ,10 ,11] ,2 :[3 ,4 ,4 ,5 ,6 ,6 ,7] ,1 :[1 ,2 ,2 ,2 ,3 ,3 ,3 ]};
-    
-function grantDays(i ,wd ){ var  w =Number(wd )| |0; i f( w> = 1& & w< = 4& &PL_PT[w] )return PL_PT[w][i]; return PL_TBL[i].d; }
-    
-function buildGrants(s ){       i f(! s| |!s.startDate )retur n[];       var re s =[] ,step s =[6 ,18 ,30 ,42 ,54 ,66 ,78] ,s d =new Date(s.startDate) ,t d =today();       fo r(var  i =0 ; i <steps.length ;i++ ){         var g d =new Date(sd); gd.setMonth(gd.getMonth( ) +steps[i]);         var g s =gd.getFullYear( ) +'- ' +pad(gd.getMonth( ) +1 ) +'- ' +pad(gd.getDate());         var e d =new Date(gd); ed.setFullYear(ed.getFullYear( ) +2);         var e s =ed.getFullYear( ) +'- ' +pad(ed.getMonth( ) +1 ) +'- ' +pad(ed.getDate());         res.push( {grantDate :gs ,days :grantDays(i ,s.weeklyDays) ,expDate :es ,isFuture :g s >td ,isExpired :e s <t d});         i f( i== =6 ){           fo r(var  j =1 ; j< =5 ;j++ ){             var n g =new Date(gd); ng.setFullYear(ng.getFullYear( ) +j);             var ng s =ng.getFullYear( ) +'- ' +pad(ng.getMonth( ) +1 ) +'- ' +pad(ng.getDate());             var n e =new Date(ng); ne.setFullYear(ne.getFullYear( ) +2);             res.push( {grantDate :ngs ,days :20 ,expDate :ne.getFullYear( ) +'- ' +pad(ne.getMonth( ) +1 ) +'- ' +pad(ne.getDate()) ,isFuture :ng s >td ,isExpired :fals e});           }           break;         }       }       return res;    
+
+// ─── 有給計算 ────────────────────────
+var PL_TBL=[{m:6,d:10},{m:18,d:11},{m:30,d:12},{m:42,d:14},{m:54,d:16},{m:66,d:18},{m:78,d:20}];
+var PL_PT={4:[7,8,9,10,12,13,15],3:[5,6,6,8,9,10,11],2:[3,4,4,5,6,6,7],1:[1,2,2,2,3,3,3]};
+
+function grantDays(i,wd){ var w=Number(wd)||0; if(w>=1&&w<=4&&PL_PT[w])return PL_PT[w][i]; return PL_TBL[i].d; }
+
+function buildGrants(s){
+  if(!s||!s.startDate)return[];
+  var res=[],steps=[6,18,30,42,54,66,78],sd=new Date(s.startDate),td=today();
+  for(var i=0;i<steps.length;i++){
+    var gd=new Date(sd); gd.setMonth(gd.getMonth()+steps[i]);
+    var gs=gd.getFullYear()+'-'+pad(gd.getMonth()+1)+'-'+pad(gd.getDate());
+    var ed=new Date(gd); ed.setFullYear(ed.getFullYear()+2);
+    var es=ed.getFullYear()+'-'+pad(ed.getMonth()+1)+'-'+pad(ed.getDate());
+    res.push({grantDate:gs,days:grantDays(i,s.weeklyDays),expDate:es,isFuture:gs>td,isExpired:es<td});
+    if(i===6){
+      for(var j=1;j<=5;j++){
+        var ng=new Date(gd); ng.setFullYear(ng.getFullYear()+j);
+        var ngs=ng.getFullYear()+'-'+pad(ng.getMonth()+1)+'-'+pad(ng.getDate());
+        var ne=new Date(ng); ne.setFullYear(ne.getFullYear()+2);
+        res.push({grantDate:ngs,days:20,expDate:ne.getFullYear()+'-'+pad(ne.getMonth()+1)+'-'+pad(ne.getDate()),isFuture:ngs>td,isExpired:false});
+      }
+      break;
+    }
+  }
+  return res;
 }
-    
-function calcBal(grants ,usages ){       var  b =0;       grants.forEach(functio n(g ){         i f(g.isFutur e| |g.isExpired )return;         var  u =usages.reduce(functio n(s ,x ) {return x.grantI d== =g.grantDat e ? s +(Number(x.days )| |0 ) :s ;} ,0);          b+ =Math.max(0 ,g.day s -u);       });       return b;    
+
+function calcBal(grants,usages){
+  var b=0;
+  grants.forEach(function(g){
+    if(g.isFuture||g.isExpired)return;
+    var u=usages.reduce(function(s,x){return x.grantId===g.grantDate?s+(Number(x.days)||0):s;},0);
+    b+=Math.max(0,g.days-u);
+  });
+  return b;
 }
-    
-// ─── 共通セッション管理（勤怠・タブレット・研修共通） ───    
-function savePorteSession(staffObj ){       i f(!staffObj )return;       var keepE l =el('chk-keep-login');       var kee p =keepE l ?keepEl.checke d :(localStorage.getItem('porte_keep_login' )== ='1');       tr y {localStorage.setItem('porte_keep_login' ,kee p ?'1 ' :'0') ; }catc h(e ) {}       var payloa d =JSON.stringify(staffObj);       tr y {sessionStorage.setItem('porte_session' ,payload) ;sessionStorage.setItem('mp' ,payload) ; }catc h(e ) {}       tr y {i f(keep )localStorage.setItem('porte_session' ,payload) ;else localStorage.removeItem('porte_session') ; }catc h(e ) {}    
-}    
-function loadPorteSession( ){       tr y{         var  s =sessionStorage.getItem('porte_session' )| |localStorage.getItem('porte_session' )| |sessionStorage.getItem('mp');         return  s ?JSON.parse(s ) :null;        }catc h(e ) {return null ;}    
-}    
-function clearPorteSession( ){       tr y {sessionStorage.removeItem('porte_session') ;sessionStorage.removeItem('mp') ;sessionStorage.removeItem('tb_me') ;sessionStorage.removeItem('porte_training_admin_auth') ; }catc h(e ) {}       tr y {localStorage.removeItem('porte_session') ; }catc h(e ) {}    
-}    
-(functio n( ) {var  c =el('chk-keep-login') ;i f(c )tr y {c.checke d =(localStorage.getItem('porte_keep_login' )== ='1') ; }catc h(e ) { }})();
-    
-// ─── ログイン ────────────────────────    
-el('btn-login').onclick = async functio n( ){       var i d =el('inp-id').value.trim(), p w =el('inp-pw').value;       var er r =el('login-err'), bt n =this;       err.textConten t ='';       i f(!i d| |!pw ) {err.textConten t ='IDとパスワードを入力してください' ;return ;}       btn.disable d =true; btn.textConten t ='確認中...';       tr y{         var  r =await SB.from('スタッフ').select('*').eq('loginId' ,id).eq('password' ,pw).limit(1);         i f(r.error )throw r.error;         i f(!r.dat a| |!r.data.length ) {err.textConten t ='IDまたはパスワードが違います' ;return ;}         M E =r.data[0];         i f(!isStaffActive(ME) ){           err.textConten t ='このアカウントは現在利用期間外です（入職日前または退職後）';           return;         }         savePorteSession(ME);         await boot();        }catc h(e ){         err.textConten t ='エラー:  ' +(e.messag e| |String(e));        }finall y{         btn.disable d =false; btn.textConten t ='ログイン';       }    
+
+// ─── 共通セッション管理（勤怠・タブレット・研修共通） ───
+function savePorteSession(staffObj){
+  if(!staffObj)return;
+  var keepEl=el('chk-keep-login');
+  var keep=keepEl?keepEl.checked:(localStorage.getItem('porte_keep_login')==='1');
+  try{localStorage.setItem('porte_keep_login',keep?'1':'0');}catch(e){}
+  var payload=JSON.stringify(staffObj);
+  try{sessionStorage.setItem('porte_session',payload);sessionStorage.setItem('mp',payload);}catch(e){}
+  try{if(keep)localStorage.setItem('porte_session',payload);else localStorage.removeItem('porte_session');}catch(e){}
+}
+function loadPorteSession(){
+  try{
+    var s=sessionStorage.getItem('porte_session')||localStorage.getItem('porte_session')||sessionStorage.getItem('mp');
+    return s?JSON.parse(s):null;
+  }catch(e){return null;}
+}
+function clearPorteSession(){
+  try{sessionStorage.removeItem('porte_session');sessionStorage.removeItem('mp');sessionStorage.removeItem('tb_me');sessionStorage.removeItem('porte_training_admin_auth');}catch(e){}
+  try{localStorage.removeItem('porte_session');}catch(e){}
+}
+(function(){var c=el('chk-keep-login');if(c)try{c.checked=(localStorage.getItem('porte_keep_login')==='1');}catch(e){}})();
+
+// ─── ログイン ────────────────────────
+el('btn-login').onclick = async function(){
+  var id=el('inp-id').value.trim(), pw=el('inp-pw').value;
+  var err=el('login-err'), btn=this;
+  err.textContent='';
+  if(!id||!pw){err.textContent='IDとパスワードを入力してください';return;}
+  btn.disabled=true; btn.textContent='確認中...';
+  try{
+    var r=await SB.from('スタッフ').select('*').eq('loginId',id).eq('password',pw).limit(1);
+    if(r.error)throw r.error;
+    if(!r.data||!r.data.length){err.textContent='IDまたはパスワードが違います';return;}
+    ME=r.data[0];
+    if(!isStaffActive(ME)){
+      err.textContent='このアカウントは現在利用期間外です（入職日前または退職後）';
+      return;
+    }
+    savePorteSession(ME);
+    await boot();
+  }catch(e){
+    err.textContent='エラー: '+(e.message||String(e));
+  }finally{
+    btn.disabled=false; btn.textContent='ログイン';
+  }
 };
-    
-el('inp-pw').onkeydow n =functio n(e ) {i f(e.ke y== ='Enter' )el('btn-login').onclick() ;};
-    
-el('btn-logout').onclic k =functio n( ){       clearPorteSession();       M E =null;       showMpCardView();       hide('pg-main'); flex('pg-login');    
+
+el('inp-pw').onkeydown=function(e){if(e.key==='Enter')el('btn-login').onclick();};
+
+el('btn-logout').onclick=function(){
+  clearPorteSession();
+  ME=null;
+  showMpCardView();
+  hide('pg-main'); flex('pg-login');
 };
-    
-// ─── スタッフカード＆PINログイン ────────────────────────    
-var MP_STAFF_LIST = [];    
-var _selectedMpStaff = null;    
+
+// ─── スタッフカード＆PINログイン ────────────────────────
+var MP_STAFF_LIST = [];
+var _selectedMpStaff = null;
 var _mpPinInput = '';
-    
-async function loadMpStaffCards() {
+
+async function loadMpStaffCards(){
   try {
     if (window.PorteAuth) await PorteAuth.ensureAuth(SB);
     var res = await SB.from('スタッフ').select('*');
     if (res.error) throw res.error;
     MP_STAFF_LIST = window.PorteAuth ? PorteAuth.sortStaffList(res.data || []) : (res.data || []);
     renderMpStaffCards();
-  } catch (e) {
+  } catch(e) {
     var grid = el('mp-staff-card-grid');
-    if (grid) grid.innerHTML = '<div style="color:#c62828;text-align:center;padding:10px">取得エラー: ' + esc(e.message || e) + '</div>';
+    if (grid) grid.innerHTML = '<div style="color:#c62828;text-align:center;padding:10px">取得エラー: ' + esc(e.message||e) + '</div>';
   }
 }
 
-f unctio        nderMpStaffCards(){
-  var grid = el('        taff-card-grid');
+function renderMpStaffCards(){
+  var grid = el('mp-staff-card-grid');
   if (!grid) return;
   var activeStaff = MP_STAFF_LIST.filter(function(s){
-    if (!s) retur n  false;
-    var       d     = S    tring(s.loginId || '').toLowe rC      e();
-    var name = String(s.name ||       ).toLowerCase();
-        if (lid === 'administrator' || name === 'admini str at         return false;
-    ret        isStaffActive(s);
+    if (!s) return false;
+    var lid = String(s.loginId || '').toLowerCase();
+    var name = String(s.name || '').toLowerCase();
+    if (lid === 'administrator' || name === 'administrator') return false;
+    return isStaffActive(s);
   });
-  if (activeStaff.length         0) {
-    grid.innerHTML = '<div style="text-ali        enter;color:var(--sub);padding:16px">対象のスタッフが見つかりません</div>';
-    return        }
-  grid.innerHTML = acti      Staf      map(function(s){
-    var initial        sc(s.name ? s.name.charAt(0) : '?');
+  if (activeStaff.length === 0) {
+    grid.innerHTML = '<div style="text-align:center;color:var(--sub);padding:16px">対象のスタッフが見つかりません</div>';
+    return;
+  }
+  grid.innerHTML = activeStaff.map(function(s){
+    var initial = esc(s.name ? s.name.charAt(0) : '?');
     var role = esc(s.role || 'スタッフ');
-    return '<div class="mp-s        -card" o      li      ="selectMpStaff(\'' + s.id + '\')">' +
-        '         style="width:42px;height:42px;border-radius:50%;bac        und:var(--pri);color:#fff;font-siz        px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:           6px">' + initial + '</div>' +
+    return '<div class="mp-staff-card" onclick="selectMpStaff(\'' + s.id + '\')">' +
+      '<div style="width:42px;height:42px;border-radius:50%;background:var(--pri);color:#fff;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 6px">' + initial + '</div>' +
       '<div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(s.name) + '</div>' +
-      '<div s          font-size:10px;color:var(--sub);background:#fff;padding:2px 6px;border-radius:8px;display:inline-block">' + role + '</div>' +
+      '<div style="font-size:10px;color:var(--sub);background:#fff;padding:2px 6px;border-radius:8px;display:inline-block">' + role + '</div>' +
     '</div>';
   }).join('');
 }
 
-function           CardView(){
+function showMpCardView(){
   _selectedMpStaff = null;
   _mpPinInput = '';
   hide('mp-pin-view');
@@ -920,582 +528,633 @@ function           CardView(){
   show('mp-card-view');
 }
 
-functi          howMpTradL      in(){
-  _sele    cte    dMpStaff = null;
-  _mpPin In      t = '';
-  hide('mp-card-v      w');
-  hide('mp-pi      view');
-  show('mp-tr      -view');
+function showMpTradLogin(){
+  _selectedMpStaff = null;
+  _mpPinInput = '';
+  hide('mp-card-view');
+  hide('mp-pin-view');
+  show('mp-trad-view');
 }
 
-function s      ectMpStaff(staffId){
-      va    r staff = MP_STAFF_LIST.fi nd      unction(s){ return String      .id) === String(st      fId); });
-  if (!staff      return;
-  _selectedMp      aff = staff;
-  _mpPinI    npu    t = '';
+function selectMpStaff(staffId){
+  var staff = MP_STAFF_LIST.find(function(s){ return String(s.id) === String(staffId); });
+  if (!staff) return;
+  _selectedMpStaff = staff;
+  _mpPinInput = '';
   
-  el('mp-pin-avatar' ).      xtContent = staff.name ? staff.name.cha rAt (0) : '?';
-  el('mp-pin-name').textContent = st      f.name || '';
-  el('      -pin-role').textContent =       aff.role || 'スタッフ'       l('mp-pin-err').style.display = 'none';
-  el('mp-pin-err').textContent = ''        
+  el('mp-pin-avatar').textContent = staff.name ? staff.name.charAt(0) : '?';
+  el('mp-pin-name').textContent = staff.name || '';
+  el('mp-pin-role').textContent = staff.role || 'スタッフ';
+  el('mp-pin-err').style.display = 'none';
+  el('mp-pin-err').textContent = '';
+  
   updateMpPinDots();
   hide('mp-card-view');
-        de('mp-trad-view');
+  hide('mp-trad-view');
   show('mp-pin-view');
 }
 
-function      pdateMpPinDots(){
-  var dots = qsa('#mp-p      -dots .pin-dot');
-  var len = _mpPin      t.length;
-  dots.fo      ach(function(dot, idx)          if (idx < len) {
-          dot.style.backgrou    nd     = 'var(--pri)';
-      dot. st      e.borderColor = 'var(--pri)';
-    } else             dot.style.background = '      ff';
-      dot.style. borderColo r         ccc';
+function updateMpPinDots(){
+  var dots = qsa('#mp-pin-dots .pin-dot');
+  var len = _mpPinInput.length;
+  dots.forEach(function(dot, idx){
+    if (idx < len) {
+      dot.style.background = 'var(--pri)';
+      dot.style.borderColor = 'var(--pri)';
+    } else {
+      dot.style.background = '#fff';
+      dot.style.borderColor = '#ccc';
     }
-  });          nction pressMpPinKey(num){
-  var errE          ('mp-pin-err');
-  if (errEl) errEl.sty        isplay =           ;
-  if (_mpPinInput.length >= 4          rn;
+  });
+}
+
+function pressMpPinKey(num){
+  var errEl = el('mp-pin-err');
+  if (errEl) errEl.style.display = 'none';
+  if (_mpPinInput.length >= 4) return;
   _mpPinInput += num;
-  upda        Pi      ots(    );
-      if (_mpPinInput.length == =        {
-    setTimeout(verifyMpPinI      ut, 150);
+  updateMpPinDots();
+  if (_mpPinInput.length === 4) {
+    setTimeout(verifyMpPinInput, 150);
   }
 }
 
-function backspaceMpPinK      (){
+function backspaceMpPinKey(){
   if (_mpPinInput.length > 0) {
-        _mpPinInput = _mpPi      nput.slice(0, -1);
-        updateMpPinDots();
+    _mpPinInput = _mpPinInput.slice(0, -1);
+    updateMpPinDots();
   }
 }
 
-func         clearMpPinKey(){
-  _mpPinInput = '      
-      up    dateMpPinDots();
+function clearMpPinKey(){
+  _mpPinInput = '';
+  updateMpPinDots();
 }
 
-async fu nc      on verifyMpPinInput(){
-  if (!        ectedMpStaff || _mpPinInput.length !== 4        turn;
-  var s = _se      ct    edM    pStaff;
-  var enteredPin  =      mpPinInput;
-  var       rgetPw = String(s.p    ass    word || '').trim();
-  var targetI d       String(s.loginId || '').trim();
-  var errEl = el('mp-pin-er      );
+async function verifyMpPinInput(){
+  if (!_selectedMpStaff || _mpPinInput.length !== 4) return;
+  var s = _selectedMpStaff;
+  var enteredPin = _mpPinInput;
+  var targetPw = String(s.password || '').trim();
+  var targetId = String(s.loginId || '').trim();
+  var errEl = el('mp-pin-err');
   
-  if (targetPw === e      eredPin || targetId === entere      in) {
+  if (targetPw === enteredPin || targetId === enteredPin) {
     if (!isStaffActive(s)) {
-      if (err      ) {
+      if (errEl) {
         errEl.style.display = 'block';
-            errEl.textContent = '現在利用期間外タ      です（入職日前または退職後）';
+        errEl.textContent = '現在利用期間外のスタッフです（入職日前または退職後）';
       }
       _mpPinInput = '';
-      upd        pPinDots();
-      return;          
+      updateMpPinDots();
+      return;
+    }
     ME = s;
-            PorteSession(ME);
-    await boo             else {
+    savePorteSession(ME);
+    await boot();
+  } else {
     if (errEl) {
-      errEl.style.display          oc              errEl.textCont          '暗証番号（PIN）が違います';
-              _mpPi        ut        ';
-    u        eMpPinDots();
+      errEl.style.display = 'block';
+      errEl.textContent = '暗証番号（PIN）が違います';
+    }
+    _mpPinInput = '';
+    updateMpPinDots();
   }
 }
 
-l        pStaffCards();      // ─── パス        PIN）変更 ──────          ────────────
-function openChgPw          ){
+loadMpStaffCards();
+
+// ─── パスワード（PIN）変更 ────────────────────────
+function openChgPwModal(){
   el('pw-cur').value = '';
-  el('pw        ')        ue = '';
-  el('pw-        irm').value = '';
-       l(    'pw    -mod-err').style.disp    lay = 'none';
-  el('pw-mod-err').textContent     = '';
-  flex('pw-modal'); 
-}      function closeChgPwModal(      
+  el('pw-new').value = '';
+  el('pw-confirm').value = '';
+  el('pw-mod-err').style.display = 'none';
+  el('pw-mod-err').textContent = '';
+  flex('pw-modal');
+}
+
+function closeChgPwModal(){
   hide('pw-modal');
 }
 
-a      nc function saveNewPassword()        var curPw = el('pw-cur').value.trim();
-      var newPw = el('pw-new').value.trim      ;
-  var confirmPw     = e    l('pw-confirm').value.trim ()        var errEl = el('    pw-    mod-err');
-  var btn = el('btn-s av      pw');
+async function saveNewPassword(){
+  var curPw = el('pw-cur').value.trim();
+  var newPw = el('pw-new').value.trim();
+  var confirmPw = el('pw-confirm').value.trim();
+  var errEl = el('pw-mod-err');
+  var btn = el('btn-save-pw');
 
   errEl.style.display = 'none';
-      errEl.textContent = '';
+  errEl.textContent = '';
 
-  if (!curPw |      !newPw || !confirmPw) {
-    errEl.style.display       'block';
-    errEl.textConten      = 'すべての項目を入力してください';
-    retur      
-  }
-
-  var myPw = String(ME.p      sword || '').trim();
-  va      myLid = String(ME.loginId || '').trim(         if (curPw !== myPw && curPw !=        Lid) {
-    errEl.style.display = 'block           errEl      ext      ntent = '現在の暗証番号（パスワード）が正しくありません';
-    return        }
-
-  if (newPw.length !== 4 || !/^\d{4}$/.t      t(newPw)) {
-    errEl.style.display = 'bl        ;
-    errEl.textContent = '新しい暗        4桁の半角数字で入力してください';
+  if (!curPw || !newPw || !confirmPw) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'すべての項目を入力してください';
     return;
   }
 
-  if (newPw         confirm      ) {         errEl.style.display = 'block';
-    errEl.textCont        = '新しい暗証番号と確認用入力が一致しません';
-    r        n;
+  var myPw = String(ME.password || '').trim();
+  var myLid = String(ME.loginId || '').trim();
+  if (curPw !== myPw && curPw !== myLid) {
+    errEl.style.display = 'block';
+    errEl.textContent = '現在の暗証番号（パスワード）が正しくありません';
+    return;
+  }
+
+  if (newPw.length !== 4 || !/^\d{4}$/.test(newPw)) {
+    errEl.style.display = 'block';
+    errEl.textContent = '新しい暗証番号は4桁の半角数字で入力してください';
+    return;
+  }
+
+  if (newPw !== confirmPw) {
+    errEl.style.display = 'block';
+    errEl.textContent = '新しい暗証番号と確認用入力が一致しません';
+    return;
   }
 
   btn.disabled = true;
-  btn.textContent        保存中...';        t       {
-    var res = await SB.f        'スタッフ').update({ password: newP        .eq('id', ME.id);
-    if (res.error) throw r        rror;
+  btn.textContent = '保存中...';
 
-        ME      assword = newPw;
-          vePorteSession(ME);
+  try {
+    var res = await SB.from('スタッフ').update({ password: newPw }).eq('id', ME.id);
+    if (res.error) throw res.error;
 
-    aler      '✅ 暗証番        ワード）を変更しました！');
+    ME.password = newPw;
+    savePorteSession(ME);
+
+    alert('✅ 暗証番号（パスワード）を変更しました！');
     closeChgPwModal();
   } catch(e) {
-    errEl.style.display        block';
-    errEl.textContent = '        ー: ' + (e.message ||         ng(e));
+    errEl.style.display = 'block';
+    errEl.textContent = '変更エラー: ' + (e.message || String(e));
   } finally {
-         tn.disabled = false;
-    btn.tex        tent = '変更を保存';
-  }      
+    btn.disabled = false;
+    btn.textContent = '変更を保存';
+  }
+}
 
-// ── ─ 起動 ─        ───────────────────────
-async f        ion boot(){
+// ─── 起動 ────────────────────────────
+async function boot(){
   hide('pg-login'); hide('pg-main');
-  show('p      loading');
-         {
+  show('pg-loading');
+  try{
+    if(window.PorteAuth)await PorteAuth.ensureAuth(SB);
     // 勤務パターン
-    va        =await SB.from('設定').select      va    lue    ').eq('key','shiftPatterns').limit(1);
-        try{PATS=JSON.par se      r1.data&&r1.data[0]&&r1.data[0].val      )||'[]');}catch(e){P      S=[ ];          // GPS設定         await   loadGpsSettingsInMyPage();
+    var r1=await SB.from('設定').select('value').eq('key','shiftPatterns').limit(1);
+    try{PATS=JSON.parse((r1.data&&r1.data[0]&&r1.data[0].value)||'[]');}catch(e){PATS=[];}
+    // GPS設定
+    await loadGpsSettingsInMyPage();
     // 有給取得記録
-     PL_USAGES=await safeQuery(S        om( ' 有給取得 記 録').select('*').eq( 's taffId',ME .i d));
+    PL_USAGES=await safeQuery(SB.from('有給取得記録').select('*').eq('staffId',ME.id));
     // 付与履歴
-      PL_G R ANTS= bui l dGra n ts( ME           // 有給申        分)
-    PLR_LIST=await safeQuery(S        om('有給申請')        ect('*'). e q('staffId',ME.id).order('createdAt',{ascending:false}));
-     // シフト         (自分)
-          _SHIFT_RE Q S=await safeQuery        from('変更申請').        ct('*'). e q('staffId',ME.id).order('createdAt',{ascending:false})); 
+    PL_GRANTS=buildGrants(ME);
+    // 有給申請 (自分)
+    PLR_LIST=await safeQuery(SB.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+    // シフト変更申請 (自分)
+    MY_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
     
     // 画面設定
-    if( e l('hd-name '))el ('hd-        ').textContent='        +(ME.name||'' ) ;
-    if(el('hd-role'))el('hd-role').textContent=ME.role| |'';
-    SHIFT_YM=nowYM() ;  ATT_YM=no wYM() ;
-   e        -loading        sh ow('pg-main');
-     await loadTC();
-    a w ait r e nderShif t( );
-          nd erMyShiftReqs() ;
-    var di=el('plr-date ' ); if(d i) di.v        =today() ; 
-    await chec k AndRender        ingAttendanceAlert();
+    if(el('hd-name'))el('hd-name').textContent='👤 '+(ME.name||'');
+    if(el('hd-role'))el('hd-role').textContent=ME.role||'';
+    SHIFT_YM=nowYM(); ATT_YM=nowYM();
+    hide('pg-loading'); show('pg-main');
+    await loadTC();
+    await renderShift();
+    renderMyShiftReqs();
+    var di=el('plr-date'); if(di)di.value=today();
+    await checkAndRenderMissingAttendanceAlert();
 
-    // 友田アカウント        （管理者特権）
-    if(i        oda(ME)){
-      el('t        qs').style.display='i        e-bloc k ';
-      await loa dAdm inReqs() ; 
-    }els             el('tb-reqs').style.display='none';
+    // 友田アカウントチェック（管理者特権）
+    if(isTomoda(ME)){
+      el('tb-reqs').style.display='inline-block';
+      await loadAdminReqs();
+    }else{
+      el('tb-reqs').style.display='none';
     }
-        atch(e){
-    hide('pg-        in g'); flex('pg- lo          
-    alert('読み込みエラー: '+(e.m e ssage||String(e)          }
+  }catch(e){
+    hide('pg-loading'); flex('pg-login');
+    alert('読み込みエラー: '+(e.message||String(e)));
+  }
 }
 
-// セッション復元（勤怠・タブレッ        共 通）
-( as          nction(){
+// セッション復元（勤怠・タブレット・研修共通）
+(async function(){
   try{
-    var se s s=loadPo        es      o n();
-      i        ss&&(sess.id||sess.name)){
-      if(!s        shiftPattern&&ses s .id){
-          try{
-                  var     r=await SB.from('スタッフ').s    elect('*').eq(' id ',      ss. id        mit(1);
-            if(r&&r.dat        .d ata[0 ])  sess=r. da ta[0];
-                 ch (e2){}
+    var sess=loadPorteSession();
+    if(sess&&(sess.id||sess.name)){
+      if(!sess.shiftPattern&&sess.id){
+        try{
+          var r=await SB.from('スタッフ').select('*').eq('id',sess.id).limit(1);
+          if(r&&r.data&&r.data[0]) sess=r.data[0];
+        }catch(e2){}
       }
-        ME=sess; 
-             ePo rt              E);
-        await boot();
+      ME=sess;
+      savePorteSession(ME);
+      await boot();
     }
-  }catch(e){clearP orteSession();}
-})(               タ ブ  ── ────── ── ─────────────── ─ ──
-function            ( tab){ 
-  [ ' sh          at          id ' ,'reqs          Each(function(t){
-              bEl=document.g        em      t ById( 'ta b -'+t);
-    var tbEl= do    cument.    getElementById('tb-'+t);
-    if(tabEl)     tabEl.style.display=t ==      ab?'block ':'non e';
-     if(tbEl) tbEl.className ='t b'        ==tab?' o n ':'');
-  });
-  if(tab==='att') r ende        ();
-  if ( tab==='paid'){renderPaid();re n derP        st ();}
-  if(tab==='reqs'){ren d e rAd min R eqs();} 
- }
+  }catch(e){clearPorteSession();}
+})();
 
-// ──        ムカ ード ────────────────── ─ ──
-a s yn c f unc t ion l o adTC(      
-  v       t d=to day (), dt =new Date();
-      el ('tc -da te').te x tContent=dt.g etFullYear()+'年' +(      .g etMo nth ()+1)+' 月 '+dt.getDate()+'日（ '+    DOW    [dt.getDay()]+'）';
-  var r=await SB.    from('スタッフ出欠').select(' *'      eq('st a ffId',ME.id ) .eq('date',t      .limit(1);
-  TC_REC=(r.da t a&&r.data.length ) ?r. d ata[0]:null;
-    re n der T C();
+// ─── タブ ────────────────────────────
+function showTab(tab){
+  ['shift','att','paid','reqs'].forEach(function(t){
+    var tabEl=document.getElementById('tab-'+t);
+    var tbEl=document.getElementById('tb-'+t);
+    if(tabEl) tabEl.style.display=t===tab?'block':'none';
+    if(tbEl) tbEl.className='tb'+(t===tab?' on':'');
+  });
+  if(tab==='att')renderAtt();
+  if(tab==='paid'){renderPaid();renderPLRList();}
+  if(tab==='reqs'){renderAdminReqs();}
 }
 
-func t ion  r enderTC(){
-  var   b=el(      c-bod y '); b.innerHTML='';
-  if(!TC_REC||!TC_REC.startTi me){
-    b.innerH TML='<p style=      olor:v a r(--sub ); text-align:cen t er;paddin g :8px 0      0px">未出勤</p>    ';
-        b.innerHTML+='< bu      on cl a ss="tc-btn in" id="btn-in" > 🟢 出      /b utton>'; 
-     el('btn-in').on cl        clockIn;
-   } else if(!TC_REC.endTime){
-    b.innerHTML='<div class="tc-rec in"><span>🟢 出        pan><span s ty le="font-size:18px;font-weight:700">'+esc(TC_REC.startTi        '</span></div>';
-      b.innerHT      + ='<butt on class="tc-btn  ou        d="btn-out" > 🔴 退勤</button>';
+// ─── タイムカード ─────────────────────
+async function loadTC(){
+  var td=today(), dt=new Date();
+  el('tc-date').textContent=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日（'+DOW[dt.getDay()]+'）';
+  var r=await SB.from('スタッフ出欠').select('*').eq('staffId',ME.id).eq('date',td).limit(1);
+  TC_REC=(r.data&&r.data.length)?r.data[0]:null;
+  renderTC();
+}
+
+function renderTC(){
+  var b=el('tc-body'); b.innerHTML='';
+  if(!TC_REC||!TC_REC.startTime){
+    b.innerHTML='<p style="color:var(--sub);text-align:center;padding:8px 0 10px">未出勤</p>';
+    b.innerHTML+='<button class="tc-btn in" id="btn-in">🟢 出勤</button>';
+    el('btn-in').onclick=clockIn;
+  }else if(!TC_REC.endTime){
+    b.innerHTML='<div class="tc-rec in"><span>🟢 出勤</span><span style="font-size:18px;font-weight:700">'+esc(TC_REC.startTime)+'</span></div>';
+    b.innerHTML+='<button class="tc-btn out" id="btn-out">🔴 退勤</button>';
     el('btn-out').onclick=clockOut;
   }else{
-    b.innerHTML='<div clas s ="tc-rec in"><span>🟢   出勤</span><span st        "font-size: 18 px;font-weight:700">'+esc(TC_REC.startTime)+'</span></div>           b.innerHTML+='<div   class="tc-      c  out ">        n>🔴 退勤</sp a n><span style="font-size:18px;font-weight:700">'+esc(TC_REC.endTime)+'</span></div>';
-      b.innerHTML+='<p sty l e="color:var(--su        ext-align:c en ter;font-size:12px;margin-top:6px">✅ 打刻完了</p>';
+    b.innerHTML='<div class="tc-rec in"><span>🟢 出勤</span><span style="font-size:18px;font-weight:700">'+esc(TC_REC.startTime)+'</span></div>';
+    b.innerHTML+='<div class="tc-rec out"><span>🔴 退勤</span><span style="font-size:18px;font-weight:700">'+esc(TC_REC.endTime)+'</span></div>';
+    b.innerHTML+='<p style="color:var(--sub);text-align:center;font-size:12px;margin-top:6px">✅ 打刻完了</p>';
   }
 }
 
 // GPS位置情報設定と判定ロジック
-var GPS_SETTIN G S = null;
+var GPS_SETTINGS = null;
 
-async fu n ction loadGpsSett        InMyPage(){ 
-   try {
+async function loadGpsSettingsInMyPage(){
+  try {
     var r = await SB.from('設定').select('value').eq('key','gpsSettings').limit(1);
-        i    f (    r.data && r.data.len    gth > 0) {
-      GPS_SETTI    NGS = JSON.parse(r.data[0].value || '{}' );         }
-         atch(e) {
+    if (r.data && r.data.length > 0) {
+      GPS_SETTINGS = JSON.parse(r.data[0].value || '{}');
+    }
+  } catch(e) {
     GPS_SETTINGS = null;
   }
 }
 
-function ca lcGpsDistanceMeter(lat1,         , lat2, lon2) {
+function calcGpsDistanceMeter(lat1, lon1, lat2, lon2) {
   var R = 6371000;
-          dLat = (lat2 - lat1) * Math.PI / 180;
-  var dLon = (         -      on1) *  Math.P        180;
-  var a = Math.s      (d    Lat    /2) * Math.sin(dLat/2) +
-          Math.cos(lat1 * Math.       / 180) * Math.co      lat2 * Math.PI / 180) *
-          Math.sin      Lon/2) * Math.sin(dLon/2);
-  var c = 2 * M      h.atan2(Math.sqrt(a),   Math.sqrt(1-a));
-    retur        nd(R * c);
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLon = (lon2 - lon1) * Math.PI / 180;
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return Math.round(R * c);
 }
 
 async function verifyGpsLocationForClockIn(){
-  if (        NGS || !GPS_S E TTINGS.enabled) {
-      r      urn true; // GPS制限無効時は許可
+  if (!GPS_SETTINGS || !GPS_SETTINGS.enabled) {
+    return true; // GPS制限無効時は許可
   }
 
-  var targetLat =  p arseF      at(GPS_SETTINGS.lat);
-  va    r t    argetLng = parseFloat(GPS_SETTINGS.lng);
-  v ar      llowedRadius = parseInt(GPS_SETTINGS.radius) |        0;
+  var targetLat = parseFloat(GPS_SETTINGS.lat);
+  var targetLng = parseFloat(GPS_SETTINGS.lng);
+  var allowedRadius = parseInt(GPS_SETTINGS.radius) || 200;
 
-  if (isNaN(targetLat) |      isN      (targetLng)) {
+  if (isNaN(targetLat) || isNaN(targetLng)) {
     return true; // 設定未登録時は許可
-       
+  }
 
   if (!navigator.geolocation) {
-    alert('⚠      お使いのブラウザは位置情報（GPS）機能に対応していないため、打刻できません。');
-    return false        }
+    alert('⚠️ お使いのブラウザは位置情報（GPS）機能に対応していないため、打刻できません。');
+    return false;
+  }
 
-  return new Promise(function(resolve){         function checkDist(pos){
-               ar curLat = pos.coords.latitud             var curLng = pos.coords.longitude;
-      var dis        calcGpsDistanc      ete      curLat, curLng, targetLat,  targetLng );            if (dist <= allowed Ra          {
+  return new Promise(function(resolve){
+    function checkDist(pos){
+      var curLat = pos.coords.latitude;
+      var curLng = pos.coords.longitude;
+      var dist = calcGpsDistanceMeter(curLat, curLng, targetLat, targetLng);
+
+      if (dist <= allowedRadius) {
         resolve(true);
-      } e                  alert('🚫 事業所のエリア外のため打刻できませ          【現在地】事業所から約 ' + dist + 'm 離れています。\n【許可範囲】事業所から ' + allowedRadius + 'm 以内                resolve(false);
-      }                navigator.g          tion.getC            sition(checkDist, function(err1){
-      navigator.geolocation.getCurrentPosition(checkDist, function(err2){
-             lert('⚠️ 位置情報（GP          きま        た。\        マホの位置情報サービスがONになっており、ブラウザで位置情報が許可されているかご確認ください。\n(エラー: ' + ( err2.m es          | String(err2)) + ')');
+      } else {
+        alert('🚫 事業所のエリア外のため打刻できません。\n\n【現在地】事業所から約 ' + dist + 'm 離れています。\n【許可範囲】事業所から ' + allowedRadius + 'm 以内');
         resolve(false);
-      }, { e nableH ig            y: false, timeout: 15000, maximumAge: 60000 });
+      }
+    }
+
+    navigator.geolocation.getCurrentPosition(checkDist, function(err1){
+      navigator.geolocation.getCurrentPosition(checkDist, function(err2){
+        alert('⚠️ 位置情報（GPS）を取得できませんでした。\n\nスマホの位置情報サービスがONになっており、ブラウザで位置情報が許可されているかご確認ください。\n(エラー: ' + (err2.message || String(err2)) + ')');
+        resolve(false);
+      }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
     }, { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 });
   });
 }
 
-async fun            ockIn(){
-  var b          'btn-in'); if(btn)btn.disabled=true;
-  var isGpsOk = await verifyGpsLo        onForClockIn();
-  if(!isGpsOk){ if(btn)btn.disabled=false; retur       }
+async function clockIn(){
+  var btn=el('btn-in'); if(btn)btn.disabled=true;
+  var isGpsOk = await verifyGpsLocationForClockIn();
+  if(!isGpsOk){ if(btn)btn.disabled=false; return; }
 
-      v    ar t=nowTime(), td=today ()        try{
-      if(TC_REC){
-        await SB.fro m ('スタッフ      ').update({startTime:t}).eq('id',TC_REC.id);
-            _R EC.startTi me=t ;
-     }else{
-        var id='sa'+Date.      w();
-        await SB . from('スタッ      欠') .i        t( {id:id,s ta          E.id,date:td,startTime:t});
-       TC_REC={ i d:id,staffI d:ME.id,date          artTime:t,endTim e :nu        
-      }
-          nderTC ( );
-    }catch(e){al          ラー: '+e.message);}
+  var t=nowTime(), td=today();
+  try{
+    if(TC_REC){
+      await SB.from('スタッフ出欠').update({startTime:t}).eq('id',TC_REC.id);
+      TC_REC.startTime=t;
+    }else{
+      var id='sa'+Date.now();
+      await SB.from('スタッフ出欠').insert({id:id,staffId:ME.id,date:td,startTime:t});
+      TC_REC={id:id,staffId:ME.id,date:td,startTime:t,endTime:null};
+    }
+    renderTC();
+  }catch(e){alert('エラー: '+e.message);}
 }
 
-async func tio n c lockOut( ){
-  v ar bt n=e l('btn-out ' ); i          btn.di s a ble d=t rue;
-  v ar isG psOk  = a wait verif yG psLocati onFo rCl        n(         if(!isGpsOk        if(bt n)b t n.disabled=fa l se; return;  }    
+async function clockOut(){
+  var btn=el('btn-out'); if(btn)btn.disabled=true;
+  var isGpsOk = await verifyGpsLocationForClockIn();
+  if(!isGpsOk){ if(btn)btn.disabled=false; return; }
 
-      var t=nowTime();
+  var t=nowTime();
   try{
-         await S B .from('スタッフ出欠').u pdate ({endTime:t} ) .eq('i      ,TC_REC.id);
+    await SB.from('スタッフ出欠').update({endTime:t}).eq('id',TC_REC.id);
     TC_REC.endTime=t; renderTC();
-  }c      ch (e){alert( 'エラー : '+e .message);}
- } 
+  }catch(e){alert('エラー: '+e.message);}
+}
 
-// ─── シフト ─────      ───── ─ ───────────      
-fu nc         shiftPrev(){var p=SHIFT_YM.spli t('-'),m = parseInt(p[ 1])-1,y=pars        (p[0]);if(m<1) { m=12;y--;}SHIFT      M =y+'- '+p a d(m);renderSh i ft();}
-func ti    on     shiftNext(){var p=SHIFT_YM.split('-'),    m=parseInt(p[1])+1,y = parse I nt(p[0]);if(m>12){m= 1 ; y++;}SHIFT_YM= y +' - ' +pad(m);renderS hi ft ( ); } 
- f unc tion   shiftNow ( ) { SHI F T_YM=no wYM();renderSh if    t();}
+// ─── シフト ──────────────────────────
+function shiftPrev(){var p=SHIFT_YM.split('-'),m=parseInt(p[1])-1,y=parseInt(p[0]);if(m<1){m=12;y--;}SHIFT_YM=y+'-'+pad(m);renderShift();}
+function shiftNext(){var p=SHIFT_YM.split('-'),m=parseInt(p[1])+1,y=parseInt(p[0]);if(m>12){m=1;y++;}SHIFT_YM=y+'-'+pad(m);renderShift();}
+function shiftNow(){SHIFT_YM=nowYM();renderShift();}
 
-async functio n  rend e rShift(){
-  el('shif t - ym').textConte n t= f m tYM(SHIFT_YM);
-    va r  b= e l ( 's hift - body');  b . i nne r HTML='< p style="color :v    ar(--sub);text-alig n :center; p adding:1 2px">読み込み中...< /p>    ';
-  var data=await safeQuer y(      .from('シフト').select('*').e q ('staffId',ME.id)      ike(' d ate',SHIFT_YM+'%'));
-  var ma p ={}; data.forEach(function(r){map[r.date]=r.pattern;});
-  var p=SHIFT_YM.sp      t('-'),y = parseInt(p[0]),m=parseInt(p[1]),dim=new Date(y,m,0).getD ate(),td=today(),wd ays=0,ht m l='';
-       or(var  d =1;d<=dim;d++){
-    var d s=S H IFT_YM+'-'+ p ad(d),di=n ew D      e(y,m - 1,d).getDay(),pat=ma p [ ds]||'',isToday = d s===td;
-    var  po = PATS.find(f un ction(x){retu rn   x.name== =pat; } ); 
-      var       ='' ;
-     i f( p o) {ph= '<sp an        ss="pa t " style= " bac k ground: '+ e sc(po.color ) + '" >'+esc(po.na me) + '</span >  <sp an styl e =" col or:v        -sub); f ont-size:11px">'+e sc( p o.startTime)+ '〜' +esc (po.        ime)+' < /spa        wd ays+ + ;} 
-     else if(pat==='有給'){ph='<span clas s ="pat" style= " back g round:#1565c 0 ">有給</span>';wdays++;}
-    else if(pat==='有給（午前半休）'){ph= ' <span class="pat"   sty l e="background:# 1 976d2">有給A M</span>  <         style= "col or: var(- - su b );font-size:11px">13:00〜18:00</span>';wdays++;}
-    else  if(pat== ='        後半休）'){ ph=' <sp an class="p a t"   style="background:#0288d1">有給PM</span> <span style="color:var(--sub);font-size:11px">09:00〜13:00</span>';wdays++;}
-    else  if(pat== ='        ph='<sp an s tyl e="color:#a a a" > 休み</span>';}
+async function renderShift(){
+  el('shift-ym').textContent=fmtYM(SHIFT_YM);
+  var b=el('shift-body'); b.innerHTML='<p style="color:var(--sub);text-align:center;padding:12px">読み込み中...</p>';
+  var data=await safeQuery(SB.from('シフト').select('*').eq('staffId',ME.id).like('date',SHIFT_YM+'%'));
+  var map={}; data.forEach(function(r){map[r.date]=r.pattern;});
+  var p=SHIFT_YM.split('-'),y=parseInt(p[0]),m=parseInt(p[1]),dim=new Date(y,m,0).getDate(),td=today(),wdays=0,html='';
+  for(var d=1;d<=dim;d++){
+    var ds=SHIFT_YM+'-'+pad(d),di=new Date(y,m-1,d).getDay(),pat=map[ds]||'',isToday=ds===td;
+    var po=PATS.find(function(x){return x.name===pat;});
+    var ph='';
+    if(po){ph='<span class="pat" style="background:'+esc(po.color)+'">'+esc(po.name)+'</span> <span style="color:var(--sub);font-size:11px">'+esc(po.startTime)+'〜'+esc(po.endTime)+'</span>';wdays++;}
+    else if(pat==='有給'){ph='<span class="pat" style="background:#1565c0">有給</span>';wdays++;}
+    else if(pat==='有給（午前半休）'){ph='<span class="pat" style="background:#1976d2">有給AM</span> <span style="color:var(--sub);font-size:11px">13:00〜18:00</span>';wdays++;}
+    else if(pat==='有給（午後半休）'){ph='<span class="pat" style="background:#0288d1">有給PM</span> <span style="color:var(--sub);font-size:11px">09:00〜13:00</span>';wdays++;}
+    else if(pat==='休'){ph='<span style="color:#aaa">休み</span>';}
     else{ph='<span style="color:#ddd">−</span>';}
     var bg=isToday?'background:#f0fff0;':'';
-    var dc=di=== 0?'color :#        28':di= ==6? 'co lor: # 15 6 5c0':'';
-    // シフト変更申請ボタン（onclick属性に da        接埋め込 ま ずi d で管理）
-    html+='<div class="row" sty le        bg+';d i splay:f l ex;align-items:center "  dat        te="'+ d s+ '"  d a ta-pat="'+esc(p a t) +'"   o nclick="openShi f tCR(        )">'
-      +'<span style="width:80px;font-s        12px ;' +dc+';font-weight:700">'+d + '日 （ '+DOW[di]+'）</span>'
-      +'<span style="flex: 1 ;t e xt-align:cente r ">'+ph+' < /span>'
-      +'<span class="arr"          a n></div>';
+    var dc=di===0?'color:#c62828':di===6?'color:#1565c0':'';
+    // シフト変更申請ボタン（onclick属性にdataを直接埋め込まずidで管理）
+    html+='<div class="row" style="'+bg+';display:flex;align-items:center" data-date="'+ds+'" data-pat="'+esc(pat)+'" onclick="openShiftCR(this)">'
+      +'<span style="width:80px;font-size:12px;'+dc+';font-weight:700">'+d+'日（'+DOW[di]+'）</span>'
+      +'<span style="flex:1;text-align:center">'+ph+'</span>'
+      +'<span class="arr">›</span></div>';
   }
-  b.innerHTML='<p style="f o nt - size:12px;color:var( - - s ub); m argin-b o ttom:8px">出          s trong style="color:var(--pri)">'+wdays+'日 < /s t rong></p>'          
- }
+  b.innerHTML='<p style="font-size:12px;color:var(--sub);margin-bottom:8px">出勤予定: <strong style="color:var(--pri)">'+wdays+'日</strong></p>'+html;
+}
 
-// ─── 出勤実績 ─────────────────────      ─
-      nction attP r ev(){var p=ATT_YM.split('-'),m=parseInt(p[1])-1,y=parseInt(p[0]);if(m<1){m=12;y--;}ATT_YM=y+'-'+pad(m) ; rende r Att();}
-function   attNex    t()    {var p=ATT_YM.split('-'),m=parseInt(p    [1])+1,y=parseInt( p [0]); i f(m>12){m=1;y++;}A T T _YM=y+'-'+pad( m ); r e nderAtt();}
-fun ct io n  a t t N ow( ){AT T _YM=no w Y M (); r enderAt t();}
+// ─── 出勤実績 ────────────────────────
+function attPrev(){var p=ATT_YM.split('-'),m=parseInt(p[1])-1,y=parseInt(p[0]);if(m<1){m=12;y--;}ATT_YM=y+'-'+pad(m);renderAtt();}
+function attNext(){var p=ATT_YM.split('-'),m=parseInt(p[1])+1,y=parseInt(p[0]);if(m>12){m=1;y++;}ATT_YM=y+'-'+pad(m);renderAtt();}
+function attNow(){ATT_YM=nowYM();renderAtt();}
 
-async  f    unction renderAtt( ) {
-  e l ('att-ym').textCon t e nt=fmtYM(ATT_Y M ); 
-    var data=await  s af e Que r y ( SB .fro m ('スタッフ 出 欠 ' ).s e lect('* ').eq('staff Id    ',ME.id).like('da t e',ATT _ YM+'%'). order('date' ,{a    scending:true}));
-  var re cs      ata.filter(function(r){r e turn r.startTim      });
-  va r  tmin=0;
+async function renderAtt(){
+  el('att-ym').textContent=fmtYM(ATT_YM);
+  var data=await safeQuery(SB.from('スタッフ出欠').select('*').eq('staffId',ME.id).like('date',ATT_YM+'%').order('date',{ascending:true}));
+  var recs=data.filter(function(r){return r.startTime;});
+  var tmin=0;
   recs.forEach(function(r){
-    var sp=r.startTime .split(':'),ep=(r.e ndTime | |'').split(':');
-      if(ep.le ngth <2)re      rn;
-     t min+=Math.max(0,pars eIn t (ep[0])*60+parseInt (ep[      )-parseI n t(s      0])*60-parseInt(sp[1] )-( r.        kMin!= = undefined&&r.breakMin!= =n u ll&&r.brea kM in!==''?parseInt        re akMin):60) ) ;
-   });
-          plD= PL _USAGES.fil ter(function(u) { re t urn(u.date||'') . indexOf(ATT_YM) = == 0 ;}).reduce(func t ion(s,u){re tur n s+(Numb er (u.days)|| 0); },0) ;
-   el('att- sum ') . innerHTML=
-    '<div   class=      um-i      <div cl a ss="v">'+recs.length+'</d iv> < div cl ass="l" >出 勤日数</div></div>'+
-      '< div class="sum-i"> <di v  c lass="v" > '+Math.round(tm in /60 *1 0)/1      '</div><div class="l">実 働(        div></div>'+
-    '<div class="sum-i" > <div class= " v">'+plD+'</div><div class="l">有給取得</di v>        v>';
+    var sp=r.startTime.split(':'),ep=(r.endTime||'').split(':');
+    if(ep.length<2)return;
+    tmin+=Math.max(0,parseInt(ep[0])*60+parseInt(ep[1])-parseInt(sp[0])*60-parseInt(sp[1])-(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!==''?parseInt(r.breakMin):60));
+  });
+  var plD=PL_USAGES.filter(function(u){return(u.date||'').indexOf(ATT_YM)===0;}).reduce(function(s,u){return s+(Number(u.days)||0);},0);
+  el('att-sum').innerHTML=
+    '<div class="sum-i"><div class="v">'+recs.length+'</div><div class="l">出勤日数</div></div>'+
+    '<div class="sum-i"><div class="v">'+Math.round(tmin/60*10)/10+'</div><div class="l">実働(h)</div></div>'+
+    '<div class="sum-i"><div class="v">'+plD+'</div><div class="l">有給取得</div></div>';
   var html='';
-  recs.forEach(f u nction(r){
-     v ar   di= n ew   Date(r.date).getDay();
-    var recData=J SO        ringify({date:r.date,startTime:r.sta r tTi m e,endTime:r.endTime||'',breakMin:(r.break      n!==unde f ined      r.breakMin!==null&&r. bre ak        ==''?r . breakMin:60)});
-    var shi        .shift||''; 
-     var timeDisp ='';
-     if( shift==='有 給'){
-      t imeDisp= '<span st yl e=" display:i nline-block ;ba ckground: #1 565c0;colo r:# fff; pa dding:1px  8px ;b o rder-radiu s :6p x;fo        ize:11px; f ont-wei gh t:70        給</span>';
-      }e        if (shift === '有給（午 前半                ti m eDisp='<span style="display:inline-block;background:#1976d2;color:#fff;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:700">有給AM</        > '
-         +'  <sp an style="f on          :11px;co l or:var(--sub)">13:00〜18:00</span>';
+  recs.forEach(function(r){
+    var di=new Date(r.date).getDay();
+    var recData=JSON.stringify({date:r.date,startTime:r.startTime,endTime:r.endTime||'',breakMin:(r.breakMin!==undefined&&r.breakMin!==null&&r.breakMin!==''?r.breakMin:60)});
+    var shift=r.shift||'';
+    var timeDisp='';
+    if(shift==='有給'){
+      timeDisp='<span style="display:inline-block;background:#1565c0;color:#fff;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:700">有給</span>';
+    }else if(shift==='有給（午前半休）'){
+      timeDisp='<span style="display:inline-block;background:#1976d2;color:#fff;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:700">有給AM</span>'
+        +' <span style="font-size:11px;color:var(--sub)">13:00〜18:00</span>';
     }else if(shift==='有給（午後半休）'){
-      timeDisp='<span style="display:inline-block;background:#0288d1;color            d ding:1px 8px;border-radius:6px;font-size:11px;font-weight:700">有給PM</        > '
-         +'  <sp an style="f on          :11px;co l or:var(--sub)">09:00〜13:00</span>';
+      timeDisp='<span style="display:inline-block;background:#0288d1;color:#fff;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:700">有給PM</span>'
+        +' <span style="font-size:11px;color:var(--sub)">09:00〜13:00</span>';
     }else{
       if(!r.endTime && r.date < today()){
-        timeDisp='<span style="font-weight:600">'+esc(r            m e)+'〜</span> <span style="background:#fee2e2;color:#dc2626;font-size:        ; font -w          70 0;padding:2px 6px;border-radius: 4p            :1px sol i d #fca5a5">⚠️ 退勤未打刻</span>';
-        }else{
-          timeDisp='<span style="font-weight:600">'+esc(r.startTime)+'〜'+esc(r.endTime||'')+'</span>';
+        timeDisp='<span style="font-weight:600">'+esc(r.startTime)+'〜</span> <span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;border:1px solid #fca5a5">⚠️ 退勤未打刻</span>';
+      }else{
+        timeDisp='<span style="font-weight:600">'+esc(r.startTime)+'〜'+esc(r.endTime||'')+'</span>';
       }
     }
-    html+='<div class="row" style="display:flex;align-item          e r" d at            +esc(rec D ata)+'" onclick="openAttCR(this) " >'
-      +'<span   sty l e="width:90px ;c olo r :var(--sub)          si        2p        +fmt D( r.date)+'（'+DOW[di]+'）</span>'
-      +'<span style="flex:1;text-align : center">'+ti m eDisp+'</span>'
-      +'<span c          a rr">›</span></div>';
+    html+='<div class="row" style="display:flex;align-items:center" data-rec="'+esc(recData)+'" onclick="openAttCR(this)">'
+      +'<span style="width:90px;color:var(--sub);font-size:12px">'+fmtD(r.date)+'（'+DOW[di]+'）</span>'
+      +'<span style="flex:1;text-align:center">'+timeDisp+'</span>'
+      +'<span class="arr">›</span></div>';
   });
-  el('att-body').innerHTML=html| | '<p style="c o lor : var(--s u b);text-ali          t er;padding:16px">記録がありません</p>';
+  el('att-body').innerHTML=html||'<p style="color:var(--sub);text-align:center;padding:16px">記録がありません</p>';
 }
 
-// ───   有給 ───── ─ ──────────          ─ ─────
+// ─── 有給 ────────────────────────────
 function setType(btn,type){
-        R_TY      =type;
-  qsa('.type-btn' ) .for Ea ch(function(b){b.className='type-btn';});
+  PLR_TYPE=type;
+  qsa('.type-btn').forEach(function(b){b.className='type-btn';});
   btn.className='type-btn on';
 }
-    
-fu    nction renderPaid(){
-  var bal=calcBal(    PL_GRANTS,PL_USAGES); 
-  el ('      -num').t e xtCont      t=bal;
+
+function renderPaid(){
+  var bal=calcBal(PL_GRANTS,PL_USAGES);
+  el('pl-num').textContent=bal;
   // 付与履歴
-  var gh='',acti ve= P L_GRANTS.fi l ter(functio n(g)      eturn!g.isFut u re;});
-  active    .fo    rEach(function(g){
-           r used= P L_USAGES.reduce(fu nction(s,u){      turn u.grantId===g.grant D ate?s      Number(u      ays)|| 0 ):s ;},0); 
-     var rem=Math.max(0,g. day s -used) ;
-    var st =g.i      xpired?'期限切れ':rem===0?' 消化済 ':        ;
-    va r  c=g.isExpired?'#aaa':rem === 0? ' var(--grn)':'var (-- paid)';
-      g h +='<div style=" di sp l ay :f lex;        ify-con t ent:space-b etween ; padding         0;bor d er-bottom:1 p x soli d  #f 0eb e 5 ">'
-        +'        n><b> ' +fmtD(g.gra n tDate) + '</ b>< b r ><span style = "font-size:10px        or :# aaa">期限 '+fmtD(g.expDate)+'</span></span>'
-      +'<span style="text-align:right"><b style="color:'+c+'">          + '日</b><br>< s pan style="font-s i ze:10px;color:var(--sub)">付与'+g.days+'日 '+st+'</span> < /span></div>';
-    });
-  el('pl-gra          i nnerHTML=gh||'<p style="color:var(--sub);text-ali g n : cente r ;pa d ding:12px">履歴がありません</p>';
+  var gh='',active=PL_GRANTS.filter(function(g){return!g.isFuture;});
+  active.forEach(function(g){
+    var used=PL_USAGES.reduce(function(s,u){return u.grantId===g.grantDate?s+(Number(u.days)||0):s;},0);
+    var rem=Math.max(0,g.days-used);
+    var st=g.isExpired?'期限切れ':rem===0?'消化済':'有効';
+    var c=g.isExpired?'#aaa':rem===0?'var(--grn)':'var(--paid)';
+    gh+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ebe5">'
+      +'<span><b>'+fmtD(g.grantDate)+'</b><br><span style="font-size:10px;color:#aaa">期限 '+fmtD(g.expDate)+'</span></span>'
+      +'<span style="text-align:right"><b style="color:'+c+'">残'+rem+'日</b><br><span style="font-size:10px;color:var(--sub)">付与'+g.days+'日 '+st+'</span></span></div>';
+  });
+  el('pl-grants').innerHTML=gh||'<p style="color:var(--sub);text-align:center;padding:12px">履歴がありません</p>';
   // 取得履歴
   var uh='';
-  PL_USAGE S .slice ( ).so r t( f unction(a,b){return(b.da      ||''      localeCompare(a.date||'') ; }) .f orEach(function(u){
-    uh+='<div style="display:flex;justify-content:space      etween;p      ding:8 p x 0;      rder-bottom:1px solid #f0ebe5"> '
-         +'<s pan sty le ="color:var(--sub);font- si ze:1 2px">'+fmtD(u.date) +'< br        sc (u .reason||'-')+'</span>'
-      +'<span style="font-weight:700;color:var(--paid)">'+u.days+'日</span></div>'          ; 
-  el('pl-used').innerHTML=uh||'<p style="color: v ar(--sub);te x t-alig n :center;padd in g:12 p x">取得履歴があり          > ';
+  PL_USAGES.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'');}).forEach(function(u){
+    uh+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ebe5">'
+      +'<span style="color:var(--sub);font-size:12px">'+fmtD(u.date)+'<br>'+esc(u.reason||'-')+'</span>'
+      +'<span style="font-weight:700;color:var(--paid)">'+u.days+'日</span></div>';
+  });
+  el('pl-used').innerHTML=uh||'<p style="color:var(--sub);text-align:center;padding:12px">取得履歴がありません</p>';
 }
 
 // 有給申請
-el('btn-plr').onclick=async function ( ){
-  v a r date=el('plr-dat      ).va      e, reason=el('plr-reaso n ') .v alue, btn=this;
+el('btn-plr').onclick=async function(){
+  var date=el('plr-date').value, reason=el('plr-reason').value, btn=this;
   if(!date){alert('取得日を選択してください');return;}
-  var days=PLR_TYP    E==    ='有給'?1:    0.5;
-  if(calcBal(PL_ G RANTS,PL_USAGE S) <d      s){alert ( '有給残日数が不足しています');return;}
-   v ar dup=PLR_LIST.find(functi o n(r){r      ur n r.dat e ===date&&r.status==='p ending' ;}      
-  if(du p ){alert( '同じ 日付で承 認 待 ち の申請があ      す' );return;}
-  btn.di sabled=tru e ; btn . textContent='申請中...';
-   try{
-          ar r=aw a it safeInsert('有給申請',{ id: ' plr'+Date.now (), staf fI d:ME.id, dat e:date,typ e:PL      TY PE,re a son:reason,status:'pending' ,commen t:      ,createdAt:n e w Date().toISOString( ) });
-    el      plr -d        ).val u e=today(); el('plr-reaso n '). value = '';
-    PLR _LIST=aw ait sa feQue ry(SB .from ('有給申請'). select( '*').eq ('staff Id',ME.id) .order(' cre atedAt',{a scending:false}));
-    r ende        List(); alert('✅ 申請し ま した');
-  }catch(e){alert('申請失敗:  ' +(e.        age||e)) ; }
+  var days=PLR_TYPE==='有給'?1:0.5;
+  if(calcBal(PL_GRANTS,PL_USAGES)<days){alert('有給残日数が不足しています');return;}
+  var dup=PLR_LIST.find(function(r){return r.date===date&&r.status==='pending';});
+  if(dup){alert('同じ日付で承認待ちの申請があります');return;}
+  btn.disabled=true; btn.textContent='申請中...';
+  try{
+    var r=await safeInsert('有給申請',{id:'plr'+Date.now(),staffId:ME.id,date:date,type:PLR_TYPE,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
+    el('plr-date').value=today(); el('plr-reason').value='';
+    PLR_LIST=await safeQuery(SB.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+    renderPLRList(); alert('✅ 申請しました');
+  }catch(e){alert('申請失敗: '+(e.message||e));}
   finally{btn.disabled=false;btn.textContent='申請する';}
-} ;
+};
 
-function renderPLRList ( ){
-  if(!P LR_LI ST.le        ){el('plr-list').innerHTML='<p style      c olor: var ( --sub);text-al i gn:center; pa ddin g:      px">申請履 歴 がありません</p>'; r eturn; }
+function renderPLRList(){
+  if(!PLR_LIST.length){el('plr-list').innerHTML='<p style="color:var(--sub);text-align:center;padding:12px">申請履歴がありません</p>';return;}
   var h='';
-    PLR_LIS T.    forE    ach(function(r){
-    var  s      r. status==='pending' ? '承認待ち':r.status==='appro v ed'?'承認済み':'却下';
-    var tl=r.type==='有給'?'全日':r.type==='午前半休'?'午前半休':'午後半休' ;
-    h +=      div c l ass=      lr-i '+r.status+'">'
-       + '<        style= " display: fle x;justify - conten t :space-b etw een;align- i tems:c e nter">            +' < b>'+fm tD( r.da t e)+'   '+tl+' </b ><span   class= " badge '+        a tu s+'">'+sl+'</span></ d iv>'
-        +(r          n ?'<div style="font-size:11px;color:var(--sub);margin-top:4px">'+esc(r.reason)+          > ':'') 
-       +(r.co m men t ?' < div style="font-size:11px ; color:#c 6 2828 ; ma r gin-top:2px">'+e          o mment)+'< / div>':'')
-      +(r.status==='pending'?'<div style="margin-top : 6px"><button  o nclick=" c ance          ' '+r.id+'\' ) " style="background:none;border:1px solid #ccc;border-radiu s :6px;padding:3 p x 10px;f o nt-s          p x;color:v ar( --sub);cu r sor:pointer">取り消す</button></div>':'')
+  PLR_LIST.forEach(function(r){
+    var sl=r.status==='pending'?'承認待ち':r.status==='approved'?'承認済み':'却下';
+    var tl=r.type==='有給'?'全日':r.type==='午前半休'?'午前半休':'午後半休';
+    h+='<div class="plr-i '+r.status+'">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+      +'<b>'+fmtD(r.date)+' '+tl+'</b><span class="badge '+r.status+'">'+sl+'</span></div>'
+      +(r.reason?'<div style="font-size:11px;color:var(--sub);margin-top:4px">'+esc(r.reason)+'</div>':'')
+      +(r.comment?'<div style="font-size:11px;color:#c62828;margin-top:2px">'+esc(r.comment)+'</div>':'')
+      +(r.status==='pending'?'<div style="margin-top:6px"><button onclick="cancelPLR(\''+r.id+'\')" style="background:none;border:1px solid #ccc;border-radius:6px;padding:3px 10px;font-size:11px;color:var(--sub);cursor:pointer">取り消す</button></div>':'')
       +'</div>';
-  }) ; 
-  e l ('plr-list').innerHTML=h;
+  });
+  el('plr-list').innerHTML=h;
 }
 
 async function cancelPLR(id){
   if(!confirm('申請を取り消しますか？'))return;
   try{
     await SB.from('有給申請').delete().eq('id',id);
-      PLR_          w ait safeQu      y(SB      rom('有給申請').select('*'). e q('    sta    ffId',ME.id).order('createdA t'      as cending:false}));
-    ren derPLRLi      (); 
-         tch(e){alert('失敗: '+e.message);}
+    PLR_LIST=await safeQuery(SB.from('有給申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+    renderPLRList();
+  }catch(e){alert('失敗: '+e.message);}
 }
 
-//  ─── モ        ──────── ─ ───────────────
-el('modal-close').onclick=function(){hide ('modal');};
-// モーダル外タップで は 閉じない仕様
+// ─── モーダル ────────────────────────
+el('modal-close').onclick=function(){hide('modal');};
+// モーダル外タップでは閉じない仕様
 
-fu nctio n ope        al(title,bodyHtml      
-   el( 'mo d al-title').t e xtContent=t it    le;    
-  el('modal-body').innerHTML=bodyHtm    l;
+function openModal(title,bodyHtml){
+  el('modal-title').textContent=title;
+  el('modal-body').innerHTML=bodyHtml;
   flex('modal');
 }
 
-//   シフト変更申請
- fu n ction openShif tCR    (row){
-  var date=row    .getAttribute('data-date' );
-  var  cu      row.getAttribute('data-pat')| | '';
-  v       dow=DOW[new Date(date).ge t Day()];
-        r opts='';
-  PA    TS.    forEach(fun    ction(p){opts+='<option v al      ="'+esc( p .name)+'"'+(p.name===cur?' sele      ed':'') + '>'+esc(p.name)+' ('+esc(p.s ta rtTi      )+'〜'+e s c(p.endTime)+')</option>';});
-      opts+='< o ptio      value="休"'+(cur==='休' ?'  s elec te d':'')+'>休み</opti o n>';
-  open M oda l ('シフト変更 申請' ,
-      '<p style = "fo n t-s i ze:12px;col o r:va r (--sub);margin-b o tto m :10px">'+fmtD( d ate)+'（'+dow+ '）</      '
-      +'<div style="backg r ound :#f 5f0 e a;border-ra d ius : 8px;padding:8px       px;margin-bottom:12px        t-size:13px">現在: <b>'+(cur||'未設定')+'</b></div>'
-    +'<label>希望す る シフト</label > <se l ect   id="cr-p        s tyle="margin-top:4px">'+opts+'</select>'
-    +'<label style="margin-top:10px">理由・備考</label><textarea id="cr-re a son"  r ows="3 "  placeholder=        入 力"></textarea>'
-    +'<button class="sub-btn" id="cr-submit" style= " marg i n-top:12px">        < /button>'
+// シフト変更申請
+function openShiftCR(row){
+  var date=row.getAttribute('data-date');
+  var cur=row.getAttribute('data-pat')||'';
+  var dow=DOW[new Date(date).getDay()];
+  var opts='';
+  PATS.forEach(function(p){opts+='<option value="'+esc(p.name)+'"'+(p.name===cur?' selected':'')+'>'+esc(p.name)+' ('+esc(p.startTime)+'〜'+esc(p.endTime)+')</option>';});
+  opts+='<option value="休"'+(cur==='休'?' selected':'')+'>休み</option>';
+  openModal('シフト変更申請',
+    '<p style="font-size:12px;color:var(--sub);margin-bottom:10px">'+fmtD(date)+'（'+dow+'）</p>'
+    +'<div style="background:#f5f0ea;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px">現在: <b>'+(cur||'未設定')+'</b></div>'
+    +'<label>希望するシフト</label><select id="cr-pat" style="margin-top:4px">'+opts+'</select>'
+    +'<label style="margin-top:10px">理由・備考</label><textarea id="cr-reason" rows="3" placeholder="理由を入力"></textarea>'
+    +'<button class="sub-btn" id="cr-submit" style="margin-top:12px">申請する</button>'
   );
   el('cr-submit').onclick=async function(){
-    var pat=el('cr-pat').value, reason=el('cr-reason'        l ue, btn=this;
+    var pat=el('cr-pat').value, reason=el('cr-reason').value, btn=this;
     btn.disabled=true; btn.textContent='送信中...';
     try{
-      v       re      ata = JSON.stringify({r e questedPattern :p at        ason:re a son});
-      var r=await s a feInsert('変更申請',{id:'cr'+D a te.now        taffId:ME.id , type:'shift',date:dat e ,requestDa        eqD at          on:reason,status:'pending',com ment:'',createdAt :new Date(). toISOS trin          
-        MY_SHIFT_REQS=await saf e Que ry(S B .from('変更申請 ').selec t('*') .eq(' staffId' ,ME.i d).or der('created At',{asc ending: false}) );
-       renderMy ShiftReq s() ;
-      if (isTomoda(ME)) await loa dAdm          ();
-      hid e ('modal'); alert('✅ シフト変更申請を送信しました');
-    }catch(e){alert ('送信失敗: '+(e.message||e)) ; }
-    fina lly{b tn.di          =false;btn.textConten          る' ;}
+      var reqData = JSON.stringify({requestedPattern:pat, reason:reason});
+      var r=await safeInsert('変更申請',{id:'cr'+Date.now(),staffId:ME.id,type:'shift',date:date,requestData:reqData,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
+      MY_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+      renderMyShiftReqs();
+      if(isTomoda(ME)) await loadAdminReqs();
+      hide('modal'); alert('✅ シフト変更申請を送信しました');
+    }catch(e){alert('送信失敗: '+(e.message||e));}
+    finally{btn.disabled=false;btn.textContent='申請する';}
   };
 }
 
-// ─── 打刻漏れ（未退勤）アラート ──────          ──────
-async function checkAndRenderMissin        e ndanc eAl e rt(){
-  var c= e l('mp-aler t- cont ai        );
-  if ( !c) return;
-    c.inn erHTML='';
+// ─── 打刻漏れ（未退勤）アラート ──────────────────
+async function checkAndRenderMissingAttendanceAlert(){
+  var c=el('mp-alert-container');
+  if(!c) return;
+  c.innerHTML='';
 
-  v a r td=to da      );
-      /    / 過去35日間のスタッフ出欠レコードを取得（前月〜当日の前日まで）
-  var     pastRecords=await safeQuery(
+  var td=today();
+  // 過去35日間のスタッフ出欠レコードを取得（前月〜当日の前日まで）
+  var pastRecords=await safeQuery(
     SB.from('スタッフ出欠')
-           .sel e ct('*')
-      .eq('staffId       M E.id)
-      .      ('date', td ) 
-          .order ( 'date', {      scending: false })
+      .select('*')
+      .eq('staffId', ME.id)
+      .lt('date', td)
+      .order('date', { ascending: false })
       .limit(35)
-      );
+  );
 
-  // 未退勤レコー ド （出勤はあるが退勤がない過去日）
-        r missingOutList=p          ords.filter(f          n(r){
-    return r.sta           && (!r.endTime           ing(r.endTime).trim() === '');
+  // 未退勤レコード（出勤はあるが退勤がない過去日）
+  var missingOutList=pastRecords.filter(function(r){
+    return r.startTime && (!r.endTime || String(r.endTime).trim() === '');
   });
-          missingOutL      t.le      th === 0){
+
+  if(missingOutList.length === 0){
     return;
   }
-       // 申請済みチェック（未承認また は 承認済み）
-  var unappliedList=[ ];
-           pendingList=[];
+
+  // 申請済みチェック（未承認または承認済み）
+  var unappliedList=[];
+  var pendingList=[];
 
   missingOutList.forEach(function(r){
-    var req=(MY_      IFT_R      S  || []).find(function(q){
-               rn q.typ      ===      attendance' && q.date ==      r.date && (q.stat u s ==      'pending' || q. s tatus      == 'approved');
+    var req=(MY_SHIFT_REQS || []).find(function(q){
+      return q.type === 'attendance' && q.date === r.date && (q.status === 'pending' || q.status === 'approved');
     });
-    if( req  &        q.statu s  === 'pending'){
-      pendingList. pus h(           r, req: req });
+    if(req && req.status === 'pending'){
+      pendingList.push({ rec: r, req: req });
     }else if(!req){
       unappliedList.push(r);
     }
   });
 
-  if(unappliedList.length ===        & pe        gL ist.length === 0) return;
+  if(unappliedList.length === 0 && pendingList.length === 0) return;
 
-  var  ht          iv class="card" style="background:#fff7e        r der:1.5 px sol id          16;border-radius:12px;p        ng      4px 1      x; margin-bottom:12px;box-shadow:0 3px 12px rgba(249,115,22,.15)">'
-        + '<div   style="display:flex;align-items:flex-start;gap:10px">'
+  var html='<div class="card" style="background:#fff7ed;border:1.5px solid #f97316;border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 3px 12px rgba(249,115,22,.15)">'
+    + '<div style="display:flex;align-items:flex-start;gap:10px">'
     + '  <span style="font-size:24px;line-height:1">⚠️</span>'
     + '  <div style="flex:1">'
-    + '    <div style="fo        ize:14px;font-weight:700;color:#c2410c;margin-bottom:4px">⚠️ 打刻        退勤）のお知らせ</div>'
-    + '    <div style="font-size:12px;color        2d12;line-height:1.5;margin        tom:8px">退勤打刻がされていない過去日があります。以下のボタンから退勤時刻の修正申請を行ってください。</div>';
+    + '    <div style="font-size:14px;font-weight:700;color:#c2410c;margin-bottom:4px">⚠️ 打刻漏れ（未退勤）のお知らせ</div>'
+    + '    <div style="font-size:12px;color:#7c2d12;line-height:1.5;margin-bottom:8px">退勤打刻がされていない過去日があります。以下のボタンから退勤時刻の修正申請を行ってください。</div>';
 
   // 未申請の日付
-  unappliedList.forEach(functio        {
+  unappliedList.forEach(function(r){
     var di=new Date(r.date).getDay();
     var recData=JSON.stringify({
       date: r.date,
       startTime: r.startTime,
-      endTime: '      
-      bre      Min: (r.breakMin !== undefined  &&  r        akMin  ! == null && r.breakMin !== '         r.breakMin   : 60
+      endTime: '',
+      breakMin: (r.breakMin !== undefined && r.breakMin !== null && r.breakMin !== '') ? r.breakMin : 60
     });
-              = '<div style=          n-top:6px;background:#ff          er-radius:8px          ng:9px 12px;border:1px solid #fed7aa;display:flex;justify-content:space-between;align-items:center;        -wra        ap;gap:8px">'
+    html += '<div style="margin-top:6px;background:#fff;border-radius:8px;padding:9px 12px;border:1px solid #fed7aa;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
       + '  <div>'
       + '    <span style="font-weight:700;font-size:13px;color:#333">' + fmtD(r.date) + '（' + DOW[di] + '）</span>'
-      + '    <span style="font-size:12px;color:#ea580          in-left:8px;          eight:600">出勤 ' + esc(r.startTime) + ' 〜 <span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border          s:4px;border:1px solid #fca5a5">退勤未打刻</span></span>'
+      + '    <span style="font-size:12px;color:#ea580c;margin-left:8px;font-weight:600">出勤 ' + esc(r.startTime) + ' 〜 <span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;border:1px solid #fca5a5">退勤未打刻</span></span>'
       + '  </div>'
-      + '  <button onclick=\'openAttCR(' + esc(JSON.stringify(recData)) + ')\' style="background:#ea580c;color:#fff;border:none;padding:6px 14px;border-radius:6px;font          12px;font-wei          0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15)">📝 勤怠修正を申請</button>'
+      + '  <button onclick=\'openAttCR(' + esc(JSON.stringify(recData)) + ')\' style="background:#ea580c;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15)">📝 勤怠修正を申請</button>'
       + '</div>';
   });
 
@@ -1503,261 +1162,288 @@ async function checkAndRenderMissin        e ndanc eAl e rt(){
   pendingList.forEach(function(item){
     var r=item.rec;
     var di=new Date(r.date).getDay();
-    html += '<div style="margin-top:6px;background:#f          border-radiu      8px;p      ding:9px 1      x;border:1px solid #fef08a;d isplay :f        justi f y-content:        e-betw e en;align-items:center;flex-        :wrap;gap:8px">'
+    html += '<div style="margin-top:6px;background:#fefce8;border-radius:8px;padding:9px 12px;border:1px solid #fef08a;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
       + '  <div>'
       + '    <span style="font-weight:700;font-size:13px;color:#333">' + fmtD(r.date) + '（' + DOW[di] + '）</span>'
-      + '    <span style="font-size:12px;color:#ca8a0          in-left:8px;          eight:600">出勤 ' + esc(r.startTime) + ' 〜 退勤未打刻</span>'
+      + '    <span style="font-size:12px;color:#ca8a04;margin-left:8px;font-weight:600">出勤 ' + esc(r.startTime) + ' 〜 退勤未打刻</span>'
       + '  </div>'
-      + '  <span class="badge pendi          yle="padding:4px 8px;font-size:11px">⏳ 修正申請中（承認待ち）</span>'
+      + '  <span class="badge pending" style="padding:4px 8px;font-size:11px">⏳ 修正申請中（承認待ち）</span>'
       + '</div>';
   });
 
   html += '  </div></div></div>';
-  c.inne          = html;
+  c.innerHTML = html;
 
-  //          のがある場合、起動時にダイアログで確認
+  // 未申請のものがある場合、起動時にダイアログで確認
   if(unappliedList.length > 0 && !window._missingAttAlertShown){
-    windo          singAttAlert      own =      rue;
-    var datesStr = unapplie      ist.map(function(r){
-          var di = new Date(r.date      ge tDay();
-      return fmtD(r.date) + '（' + DOW[di] + '）出勤: '  +        tartTime + '〜 (退勤未打刻)';
-    }).join('        ;
+    window._missingAttAlertShown = true;
+    var datesStr = unappliedList.map(function(r){
+      var di = new Date(r.date).getDay();
+      return fmtD(r.date) + '（' + DOW[di] + '）出勤: ' + r.startTime + '〜 (退勤未打刻)';
+    }).join('\n');
     setTimeout(function(){
-      if(con fir m(          打刻の押し忘れがあります】\n\n以下の日付の退勤打刻が完了していません           datesStr + '\n\n今すぐ勤怠修正の申請を行いますか？')){
-        var firstRec = unappliedList        
-        openAt        {
-          date: f ir st          te ,
+      if(confirm('⚠️【退勤打刻の押し忘れがあります】\n\n以下の日付の退勤打刻が完了していません：\n' + datesStr + '\n\n今すぐ勤怠修正の申請を行いますか？')){
+        var firstRec = unappliedList[0];
+        openAttCR({
+          date: firstRec.date,
           startTime: firstRec.startTime,
           endTime: '',
-          breakMin: (firstRe c.             !== undefined && firstRec.breakM            ull && first              in !== '') ? firstRec              : 60
+          breakMin: (firstRec.breakMin !== undefined && firstRec.breakMin !== null && firstRec.breakMin !== '') ? firstRec.breakMin : 60
         });
       }
-    },              
+    }, 400);
+  }
 }
 
-// 勤怠修正申請              openAttCR(target){
+// 勤怠修正申請
+function openAttCR(target){
   var rec=null;
   if(target && typeof target === 'object' && target.getAttribute){
-    try{ rec=JSON.parse(t            tAtt          ('        -rec'));       at    ch(    e){}
-  }el    se if(typeof target === 's tr      g'){
-      try{       c= JSON.parse(target); }catch(e){}
-  }else if(target && typeof t ar        ===  'obj e ct'){
+    try{ rec=JSON.parse(target.getAttribute('data-rec')); }catch(e){}
+  }else if(typeof target === 'string'){
+    try{ rec=JSON.parse(target); }catch(e){}
+  }else if(target && typeof target === 'object'){
     rec=target;
   }
-  if(!rec || !rec.da te) r etu r n;        var dow =DOW[new Date(rec.date).getD ay        
-   var c u rDisp = (rec.startTim e ||  '未出 勤 ')        '〜' + ( rec.endTime ? esc(rec.endTime) : '<spa n         e=" c olor:#dc      26      on t-weight:700">退勤未打刻</span>')        var b M in = (rec.breakMin!==undefined&&re      breakMin!==null&&rec.breakMin!=='')?rec.breakMin:60;
+  if(!rec || !rec.date) return;
+  var dow=DOW[new Date(rec.date).getDay()];
+  var curDisp = (rec.startTime || '未出勤') + '〜' + (rec.endTime ? esc(rec.endTime) : '<span style="color:#dc2626;font-weight:700">退勤未打刻</span>');
+  var bMin = (rec.breakMin!==undefined&&rec.breakMin!==null&&rec.breakMin!=='')?rec.breakMin:60;
   openModal('勤怠修正申請',
-    '<p style="font-size:12px;color:var(--sub);margin-bottom:10px">      fmtD(rec.date)+'（'+dow+' ）</ p>'
-    + '< div style="b ack grou nd :#f5f0ea;bor der -ra d ius:8px;padd i ng:8       12px;margin-bottom:        ;font-size:13px">現在: <b>'+curDisp+'</b>（休憩'+bMin+'分）</div>'
-     + '<div class="g r id2 " ><d i v><label        刻 </label><input type="time" id="cr-in" value="'+esc(rec.startTime||'')+'"></div>'
-    +'<div><label>退勤時刻</label > <input  t ype="time "  id= " cr-out" val        ' +esc(rec.endTime||'')+'"></div></div>'
-    +'<label style="margin-top:10px">休憩（分）< / label><input type =" num b er" id="cr-          value="'+bMin+'" style="width:100px">'
-    +'<label style="margi n -top:10px">修正理由 </ lab e l><textarea id="c        a son" rows="3" placeholder="例: 退勤打刻を押し忘れたため">'+(!rec.endTime ? '退勤打刻を押し忘れたため' : '')+'</ t exta r ea>'
-    +'<button class=        - btn" id="cr-submit" style="margin-top:12px">申請する</button>'
+    '<p style="font-size:12px;color:var(--sub);margin-bottom:10px">'+fmtD(rec.date)+'（'+dow+'）</p>'
+    +'<div style="background:#f5f0ea;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px">現在: <b>'+curDisp+'</b>（休憩'+bMin+'分）</div>'
+    +'<div class="grid2"><div><label>出勤時刻</label><input type="time" id="cr-in" value="'+esc(rec.startTime||'')+'"></div>'
+    +'<div><label>退勤時刻</label><input type="time" id="cr-out" value="'+esc(rec.endTime||'')+'"></div></div>'
+    +'<label style="margin-top:10px">休憩（分）</label><input type="number" id="cr-brk" value="'+bMin+'" style="width:100px">'
+    +'<label style="margin-top:10px">修正理由</label><textarea id="cr-reason" rows="3" placeholder="例: 退勤打刻を押し忘れたため">'+(!rec.endTime ? '退勤打刻を押し忘れたため' : '')+'</textarea>'
+    +'<button class="sub-btn" id="cr-submit" style="margin-top:12px">申請する</button>'
   );
   el('cr-submit').onclick=async function(){
-      var st=el('cr-in').value,et=el('cr - out').value,br        ( 'cr-brk').value,reason=el('cr-reason').value,btn=this;
-    if(!st||!et){alert('      勤時刻      力してください');return;}
-     i f(!reason){ale rt ('        を入力してく だ さい');return;}
-     bt n .disabled=true; btn .te x tContent='送信中...';
-     tr y {
-      var reqData =  JSO N .strin        ({ star tT ime: s t,endTime:et,breakMin:br k,reaso n:        on });
-        var r=await safeInsert( '変更申請', {i        r'+Date.now( ) ,staffId:ME.id,type:' a ttendance'        e:r ec          requestData:reqData,reason:rea son,status :'p ending', com ment:'',c reat edAt:ne w Date ().t          ring( ) });
-      MY_SHIFT_REQS= a wai t sa f eQuery(SB.f rom('変更申 請').se lect( '*').eq('staf fId', ME.id).or der('created At',{asc ending: false}) );
-       renderMy ShiftReq s() ;
-      aw ait checkAndRenderMissin gAtt          eAlert();
-        if(isTomoda(ME)) await loadAdminReqs();
-      hide('mod al'); alert('✅ 勤怠修正申請を送信し ま した');
-     }catc h(e){          '送信失敗: '+(e.message||              finally{btn.disabled=false;btn.textContent          '; }
+    var st=el('cr-in').value,et=el('cr-out').value,brk=el('cr-brk').value,reason=el('cr-reason').value,btn=this;
+    if(!st||!et){alert('出退勤時刻を入力してください');return;}
+    if(!reason){alert('修正理由を入力してください');return;}
+    btn.disabled=true; btn.textContent='送信中...';
+    try{
+      var reqData = JSON.stringify({startTime:st,endTime:et,breakMin:brk,reason:reason});
+      var r=await safeInsert('変更申請',{id:'cr'+Date.now(),staffId:ME.id,type:'attendance',date:rec.date,requestData:reqData,reason:reason,status:'pending',comment:'',createdAt:new Date().toISOString()});
+      MY_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
+      renderMyShiftReqs();
+      await checkAndRenderMissingAttendanceAlert();
+      if(isTomoda(ME)) await loadAdminReqs();
+      hide('modal'); alert('✅ 勤怠修正申請を送信しました');
+    }catch(e){alert('送信失敗: '+(e.message||e));}
+    finally{btn.disabled=false;btn.textContent='申請する';}
   };
 }
 
 // 退職・在籍チェック（入職日から退職日の間）
-fun          isStaffActive(s, targetDate){
-  if(!s) re          false ;
-    var lid = Stri n g(s.loginI d  || ' ')        owerCas e ();
-  var na m e = St ring(s.name ||  ' ').toLo we      ase    ();    
-  if (lid === 'administr    ator' || name === 'administrator') re tu       f alse;
+function isStaffActive(s, targetDate){
+  if(!s) return false;
+  var lid = String(s.loginId || '').toLowerCase();
+  var name = String(s.name || '').toLowerCase();
+  if (lid === 'administrator' || name === 'administrator') return false;
 
-  var st = S      ing(s.status || s.userStatus || '').trim();
-  if       '無効', '非表示', '削除'].indexOf(st) >= 0) return fal      ;
+  var st = String(s.status || s.userStatus || '').trim();
+  if (['無効', '非表示', '削除'].indexOf(st) >= 0) return false;
   if (s.isArchived === true || s.active === false) return false;
 
-  va      td = typeof today === 'function' ? today() : new Date().      ISOString().slice(0, 10);
+  var td = typeof today === 'function' ? today() : new Date().toISOString().slice(0, 10);
   var d = targetDate || td;
-        = String(d).slice(0, 10);
+  d = String(d).slice(0, 10);
 
   // 年月指定の場合（YYYY-MM）
-  if (d.length       = 7) {
+  if (d.length === 7) {
     var ymStart = d + '-01', ymEnd = d + '-31';
-    if (s.startDate && s.startDat      > ymEnd) return false;
-         f (s.endDate && s.endDate < y      tart) return false;
-        if (['退職', '退職済', '離        '利用終了', '退所'].indexOf(st) >= 0 || s.isRetire        = true) {
-      if (!s.endDate && d >= td.slice(0, 7))        urn false;
+    if (s.startDate && s.startDate > ymEnd) return false;
+    if (s.endDate && s.endDate < ymStart) return false;
+    if (['退職', '退職済', '離職', '利用終了', '退所'].indexOf(st) >= 0 || s.isRetired === true) {
+      if (!s.endDate && d >= td.slice(0, 7)) return false;
     }
     return true;
   }
 
-  // 日付指定または現        YYYY-MM-DD: 入職日から退職日の間）
+  // 日付指定または現在判定（YYYY-MM-DD: 入職日から退職日の間）
   if (s.startDate && s.startDate > d) return false;
-  if (          ate && s.endDate < d) return false;
-  if (['退職', '退職済        離職        利用終了', '退所'].      dex      (st) >= 0 || s.isRetired === true) {
-        if (!s.endDate || s.endDate <= d) return false;
-          return true;
+  if (s.endDate && s.endDate < d) return false;
+  if (['退職', '退職済', '離職', '利用終了', '退所'].indexOf(st) >= 0 || s.isRetired === true) {
+    if (!s.endDate || s.endDate <= d) return false;
+  }
+  return true;
 }
 
-// ─── 管理者・全申請履歴処理（友田専用） ───      ─────────────
+// ─── 管理者・全申請履歴処理（友田専用） ──────────────────
 async function loadAdminReqs(){
   if(!isTomoda(ME)) return;
-  var sR        wait safeQuery(SB.from('スタッフ').select('*'));
-  A      _S      FF=sRes||[];
-      v    ar sel=el('req-filter-staff');
+  var sRes=await safeQuery(SB.from('スタッフ').select('*'));
+  ALL_STAFF=sRes||[];
+  var sel=el('req-filter-staff');
   if(sel){
-        var curVal=sel.value;
-    va r       ti veStaff = ALL_STAFF.filt      (functio n (s){ return isStaffActive(s); });
-    var inac      veStaff =   ALL_ ST AFF.      lter(fu n ction(s){
-      if(!s) r      ur n fal se            var li d  = String(s        inId || '').toLowerCase();
-      var name =  St ring(s.name || '').toLowerCase(             if (lid === 'administrator' || name ===  'ad mi          to r') return false;
-           eturn !isStaffActive(s);
+    var curVal=sel.value;
+    var activeStaff = ALL_STAFF.filter(function(s){ return isStaffActive(s); });
+    var inactiveStaff = ALL_STAFF.filter(function(s){
+      if(!s) return false;
+      var lid = String(s.loginId || '').toLowerCase();
+      var name = String(s.name || '').toLowerCase();
+      if (lid === 'administrator' || name === 'administrator') return false;
+      return !isStaffActive(s);
     });
 
-    var opts =           on value="">全スタッフ（在籍中）</option>';
-    activeSta          Each(function(s){
-      opts += '<option value="'+s.id+'">'+esc(s.name)          tion>';
+    var opts = '<option value="">全スタッフ（在籍中）</option>';
+    activeStaff.forEach(function(s){
+      opts += '<option value="'+s.id+'">'+esc(s.name)+'</option>';
     });
-    if(ina        eStaf        ngth > 0){
-      opts += '<option value="" disabled        入職前・退職済 ──</option>';
-       ina ct          ff.forEach(function(s){
-            var   note = (s.s t artDate && s.        tDat        to day()) ? ' (入職前)' : ' (退職) ';             opts += '<option value="'+s.id+'">'+esc(s.name)+note+'</o          ';
+    if(inactiveStaff.length > 0){
+      opts += '<option value="" disabled>── 入職前・退職済 ──</option>';
+      inactiveStaff.forEach(function(s){
+        var note = (s.startDate && s.startDate > today()) ? ' (入職前)' : ' (退職)';
+        opts += '<option value="'+s.id+'">'+esc(s.name)+note+'</option>';
       });
     }
-    sel.inn erH TM                sel.value=curVal;
+    sel.innerHTML=opts;
+    sel.value=curVal;
   }
-  ADMIN_SHIFT_REQS=await safeQuery(SB.from('変更            ect('*').order('createdAt ' ,{as c endi n g:false})); 
-   AD M IN_PAID_REQS=          safe        y(        rom('有給申請').s e lect('        order('cr e atedAt',      sc      ding:false}));
-    renderAdminReqs();
+  ADMIN_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').order('createdAt',{ascending:false}));
+  ADMIN_PAID_REQS=await safeQuery(SB.from('有給申請').select('*').order('createdAt',{ascending:false}));
+  renderAdminReqs();
 }
 
 function staffNameById(staffId){
-  var s = ALL_STAFF. find( funct      n(x){return x.i d ===staffId;});
+  var s=ALL_STAFF.find(function(x){return x.id===staffId;});
   if(!s) return 'スタッフ('+staffId+')';
-  var note   = isStaffA ctive (s) ?      ' : ((s.startDate &    & s    .startDate > today()) ? ' (入職前) '       ' (退職 ) ');
-  return s.name + n ote ; 
+  var note = isStaffActive(s) ? '' : ((s.startDate && s.startDate > today()) ? ' (入職前)' : ' (退職)');
+  return s.name + note;
 }
 
-functio n r enderAdm inRe      () {
-  if(!isTomoda(ME ) ) retur n ;
-  v       filterStaff=el('req-filter-staff')?el('req-filter-staff').value:'';
-  var filterType=el('req-filt      -type')?el('req-filter    -ty    pe').value:'all';
-  var fi lt      St atus=el('req-filter-stat      ')?el('req-filt e r-status').value:'pend i ng';
+function renderAdminReqs(){
+  if(!isTomoda(ME)) return;
+  var filterStaff=el('req-filter-staff')?el('req-filter-staff').value:'';
+  var filterType=el('req-filter-type')?el('req-filter-type').value:'all';
+  var filterStatus=el('req-filter-status')?el('req-filter-status').value:'pending';
 
   var list=[];
 
-  if(f i lter      pe==='all'||fi l terType==='shift'||fi l terType==='attendance'){
-      ADMIN_      IFT_REQS.forEach ( function(r){
-      if(f i lterType==='shift'&&r.type!== ' shift') retu      ;
-       i f(fil      rT ype==='atte nda nce'& &r .type!=='a tte ndance' )  return;
-        list.push({
-             source: 'change_request',
-          id          ,
-         sta ffI d: r.st af fId,
-          type: r.type           if t',
-         da te: r.date,
-           req uestData: r.requestDat               reason:            n || '',
-        status: r            || 'pendin                comment: r.comme            ,
-        createdAt: r.cr            || ''
-      })            ;
-  }
-
-  if(filterType==='al            erType==='paid'){
-    AD            _REQS.forEach(function(r){
-                ush({
-        source: 'pai            t',
+  if(filterType==='all'||filterType==='shift'||filterType==='attendance'){
+    ADMIN_SHIFT_REQS.forEach(function(r){
+      if(filterType==='shift'&&r.type!=='shift') return;
+      if(filterType==='attendance'&&r.type!=='attendance') return;
+      list.push({
+        source: 'change_request',
         id: r.id,
-                 Id:         affI      
-             type: 'pa id' ,
-          paidTyp e:  r.type  ||        ',
+        staffId: r.staffId,
+        type: r.type || 'shift',
         date: r.date,
-         re as          reason || ''              status: r.status || 'p            
-        c            r.comment || '',
-               atedAt: r.crea             ''
+        requestData: r.requestData,
+        reason: r.reason || '',
+        status: r.status || 'pending',
+        comment: r.comment || '',
+        createdAt: r.createdAt || ''
       });
     });
   }
-            sort(function(            urn (b.createdAt||'').lo            are(a.createdAt||'');});
 
-  if(            aff){
-    list=list.filter            n(r){return r.staffId===filte          ;});        
-  i      fil      rStatus!=='all'){
-      l i st=list.filter(func ti on(r){return r.status===filte rS tatu s;});       } 
+  if(filterType==='all'||filterType==='paid'){
+    ADMIN_PAID_REQS.forEach(function(r){
+      list.push({
+        source: 'paid_request',
+        id: r.id,
+        staffId: r.staffId,
+        type: 'paid',
+        paidType: r.type || '有給',
+        date: r.date,
+        reason: r.reason || '',
+        status: r.status || 'pending',
+        comment: r.comment || '',
+        createdAt: r.createdAt || ''
+      });
+    });
+  }
 
-  var pendi ng        = li s t.filter(function(r) {re t urn r.status===' pen ding';}).len gth;       v       s hiftCnt = lis t.f ilter( fu        on(r ) {return r.source===' cha n ge_request';}). len gth;
-  var pa idCn      = l      t.filter(function(r){return r.source= ==' p aid_request';}) .le ngth;
+  list.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
 
-  v ar sumEl=el      reqs-sum');
+  if(filterStaff){
+    list=list.filter(function(r){return r.staffId===filterStaff;});
+  }
+  if(filterStatus!=='all'){
+    list=list.filter(function(r){return r.status===filterStatus;});
+  }
+
+  var pendingCnt = list.filter(function(r){return r.status==='pending';}).length;
+  var shiftCnt = list.filter(function(r){return r.source==='change_request';}).length;
+  var paidCnt = list.filter(function(r){return r.source==='paid_request';}).length;
+
+  var sumEl=el('reqs-sum');
   if(sumEl){
-    sumEl. inn e rHTML=
-      '< div  class="sum-i"><d iv class="v      style="color:#e65100">'+pendingCnt +'< / div><div class= "l" >承認待ち</div></di v>'+
-      '      iv class= " sum-i"><div clas      "v ">'+shi ft        '</div><div cla ss          フト/勤怠申請</div></div>'+
-      '<div class="sum-i"><div class = "v">'+paid C nt+'</div><div class="l">有給申請</div></di v>          
+    sumEl.innerHTML=
+      '<div class="sum-i"><div class="v" style="color:#e65100">'+pendingCnt+'</div><div class="l">承認待ち</div></div>'+
+      '<div class="sum-i"><div class="v">'+shiftCnt+'</div><div class="l">シフト/勤怠申請</div></div>'+
+      '<div class="sum-i"><div class="v">'+paidCnt+'</div><div class="l">有給申請</div></div>';
+  }
 
   var b=el('admin-reqs-list');
-  i f (!b) ret u rn;
+  if(!b) return;
   if(!list.length){
-    b.innerHTML='<p  s          color:var(--sub);text-align:center;p a dding:2 0 px">該当する申請履歴がありません</p>';
+    b.innerHTML='<p style="color:var(--sub);text-align:center;padding:20px">該当する申請履歴がありません</p>';
     return;
   }
-       va      html= ' ';
-  list.forEach(funct      n( r){
-    var s      me =staffNameById (r        ffId);
-     v ar sl=r.status==='pending'?'承認待ち':r.status==='approved'?'承認済み':'却下';
-    var type        e='', ty      Bad      Bg='#3d5 a 3e';         var detailText=''; 
 
-            r.source= = ='paid_request'){
-      ty        tle='� �  有給申請';
-        typeBa d geBg=' # 1565c0'; 
-       var tl = r.paid T ype===        ?'全日':r.paidT y pe==='午前半休'?'午前 半 休':'午後半休';
-          detailText=' 種 別: <b        l+ '</b>';
-      }else if(r.type ==          t'){
-        typeTitle=          ト変更申請';
-        typeBadge          07830' ; 
-      var  re qPat t ern= ' ';
-      t ry{ 
-          var  d =typeof           estData=== ' string'?J S ON . parse(r.        e stData) :r.requ est Data;
-               qPattern= d .requestedPatt          ';
-      }c a tch(e){}
-            tailText='希望シフ ト : <b          ="c ol            -pri) " >'+esc(reqPattern||' 指定あ り')+'</b > ';
+  var html='';
+  list.forEach(function(r){
+    var sName=staffNameById(r.staffId);
+    var sl=r.status==='pending'?'承認待ち':r.status==='approved'?'承認済み':'却下';
+    var typeTitle='', typeBadgeBg='#3d5a3e';
+    var detailText='';
+
+    if(r.source==='paid_request'){
+      typeTitle='📅 有給申請';
+      typeBadgeBg='#1565c0';
+      var tl=r.paidType==='有給'?'全日':r.paidType==='午前半休'?'午前半休':'午後半休';
+      detailText='種別: <b>'+tl+'</b>';
+    }else if(r.type==='shift'){
+      typeTitle='📆 シフト変更申請';
+      typeBadgeBg='#c07830';
+      var reqPattern='';
+      try{
+        var d=typeof r.requestData==='string'?JSON.parse(r.requestData):r.requestData;
+        reqPattern=d.requestedPattern||'';
+      }catch(e){}
+      detailText='希望シフト: <b style="color:var(--pri)">'+esc(reqPattern||'指定あり')+'</b>';
     }else{
-      typeT i tle='📊 勤怠修正申請'            typeBadgeB g ='#2e7d32';
-       va r st          = '',br k=' ' ;
-          try{
-          var d2=typeof r.requestData==='stri n g'?JSON.parse( r. request D ata):r.r        s tDat a;             st=d2. s tartTime||'';          .endTime||' ' ; brk=d2.br          ||'';
-          } cat ch( e ){}
-          det ai            正時間: < b >'+esc(st)+'〜'+esc(e t)+ '</b> (休 憩 '+esc(brk)+'分)';
+      typeTitle='📊 勤怠修正申請';
+      typeBadgeBg='#2e7d32';
+      var st='',et='',brk='';
+      try{
+        var d2=typeof r.requestData==='string'?JSON.parse(r.requestData):r.requestData;
+        st=d2.startTime||''; et=d2.endTime||''; brk=d2.breakMin||'';
+      }catch(e){}
+      detailText='修正時間: <b>'+esc(st)+'〜'+esc(et)+'</b> (休憩'+esc(brk)+'分)';
     }
 
-      var reqReason            so n  || '';
-     if (!reqR e ason && r. re questDa t a){
-      t ry {
-            v ar dO bj  =  t          r.requestD a ta === 'str i ng' ? J S ON. p arse(r. r equestData )  : r.req u estDat                   if(dObj && dObj.reason) reqReaso        dO bj.reason;
+    var reqReason = r.reason || '';
+    if(!reqReason && r.requestData){
+      try{
+        var dObj = typeof r.requestData === 'string' ? JSON.parse(r.requestData) : r.requestData;
+        if(dObj && dObj.reason) reqReason = dObj.reason;
       }catch(e){}
-                 va            dFmt = r.createdAt ? new Date(r.createdAt).toLocaleString('ja-JP',{month:'numeric',day:'nu            ou r:'2-digit',minute:'2-digit'}) : '';
+    }
 
-    html+            class ="p l r-        r.s        s+'" style="margin-bottom:10px;padding:12px;">'+
-      '<div style="display: f lex;ju stify-cont ent: space-betw een;a lign-items :center ;margin-b ottom:6px;        
-          '<div><span class = "pat" st y le="background:'+typeBadgeBg+';margin-right:6 px          ypeTitle+'</span><b>'+esc(sName)+'</b></div>'+
-        '<span class="badge '+r.status+'">'+sl+'< /s               '</div>'+
-      '<div style="font-size : 13px;margin : 4px 0;">対象日: <b>'+fmtD ( r.date)+' < /b> ｜ '+deta i lText+'</d i v>'+
-      ( re          '<div style="font-siz e :12px;co l or:# 3 33 ; margin-to p:          ckground :#          ;padding:6px 10px;border-radius:6px;">💬 <b>申請メッセージ: < /b> '+esc(re q Reason)+' < /div>':'') + 
-      ( r.          t?'<div st y le="font-size:12px;color:#c62828;margin-top:4px;background:rgba(0,0,0,0.03);padding:4px 8px;border-radius:4px;">コメント: '+esc(r.comm e nt)+'</div>':' ' )+
-        '<d iv          ="display: f lex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px dashed #eee;font-size:11px;co l or:#999;">'+
-          '< s pan >申          +createdFmt+'</span>'+
+    var createdFmt = r.createdAt ? new Date(r.createdAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+
+    html+='<div class="plr-i '+r.status+'" style="margin-bottom:10px;padding:12px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'+
+        '<div><span class="pat" style="background:'+typeBadgeBg+';margin-right:6px;">'+typeTitle+'</span><b>'+esc(sName)+'</b></div>'+
+        '<span class="badge '+r.status+'">'+sl+'</span>'+
+      '</div>'+
+      '<div style="font-size:13px;margin:4px 0;">対象日: <b>'+fmtD(r.date)+'</b> ｜ '+detailText+'</div>'+
+      (reqReason?'<div style="font-size:12px;color:#333;margin-top:6px;background:#f5f0ea;padding:6px 10px;border-radius:6px;">💬 <b>申請メッセージ:</b> '+esc(reqReason)+'</div>':'')+
+      (r.comment?'<div style="font-size:12px;color:#c62828;margin-top:4px;background:rgba(0,0,0,0.03);padding:4px 8px;border-radius:4px;">コメント: '+esc(r.comment)+'</div>':'')+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px dashed #eee;font-size:11px;color:#999;">'+
+        '<span>申請日時: '+createdFmt+'</span>'+
         (r.status==='pending'?
           '<div>'+
-            '<button onclick="approveAdminReq(\''+r.source+'\',\''+r.id+'\')" style="back gr          (--grn);color: # fff;border : none;bord er          6px;paddi ng: 4px 12px; fo            px;font -weight:700;cursor:pointer;margin-right:6px;">✅ 承認< / button>' + 
-                '<button onclick="rejectAdminReq(\''+r.source+'\',\''+r.id+'\')" style="background:#c62828;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-wei ght:700;cursor:pointer;">❌ 却下</button>'+
-            '</div>' : ''
-          ) + 
+            '<button onclick="approveAdminReq(\''+r.source+'\',\''+r.id+'\')" style="background:var(--grn);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-right:6px;">✅ 承認</button>'+
+            '<button onclick="rejectAdminReq(\''+r.source+'\',\''+r.id+'\')" style="background:#c62828;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">❌ 却下</button>'+
+          '</div>':''
+        )+
       '</div>'+
     '</div>';
   });
@@ -1767,132 +1453,153 @@ functio n r enderAdm inRe      () {
 
 // 承認処理
 async function approveAdminReq(source, id){
-  var comment = prompt('承認コメント（任意）:') | |             
-    if( s our          i d_          t'){
-                 req = ADM      _PAID      EQS.find(fu n ction(    x){    return x    .id===id;});
+  var comment = prompt('承認コメント（任意）:') || '';
+  try{
+    if(source==='paid_request'){
+      var req = ADMIN_PAID_REQS.find(function(x){return x.id===id;});
       if(!req) return;
-       aw      t SB.from('有給申請').update({status:'approved'      com me        om ment}). eq( 'id',id);
-       v          s = req.type==='有給'?1:0.5;
-      await  saf e Insert('有給取 得記録 ',{ id:'          te .now(), staffId          taffId, date:req.date, days:da ys, rea son:req.reason||'有給申 請承認'}); 
-      var  shift          req.type==='有給'?'有給 ':r eq.t y p e ==='午          有給（午前半休）':'有給（午後半休）';
-        va r sE x  = await SB.from('シフ ト').select('id').e q('staffId',req .staffId).eq( 'date',req .d ate).lim it(1             if(sEx.data && sEx.d ata .len g th>0 ) {
-         a wait S B .from('シフト ' ).update({pa          shiftPat}).eq('id',sEx.data[0].id);
+      await SB.from('有給申請').update({status:'approved', comment:comment}).eq('id',id);
+      var days = req.type==='有給'?1:0.5;
+      await safeInsert('有給取得記録',{id:'pl'+Date.now(), staffId:req.staffId, date:req.date, days:days, reason:req.reason||'有給申請承認'});
+      var shiftPat = req.type==='有給'?'有給':req.type==='午前半休'?'有給（午前半休）':'有給（午後半休）';
+      var sEx = await SB.from('シフト').select('id').eq('staffId',req.staffId).eq('date',req.date).limit(1);
+      if(sEx.data && sEx.data.length>0){
+        await SB.from('シフト').update({pattern:shiftPat}).eq('id',sEx.data[0].id);
       }else{
-         await safeInsert('シフト', {id:'sh'+Date.now(),          Id :req.staffId, date:req.date,   pa tt            tPat});
+        await safeInsert('シフト',{id:'sh'+Date.now(), staffId:req.staffId, date:req.date, pattern:shiftPat});
       }
     }else{
-       var  req2 = A DMIN_SHIFT_ REQS.find(functio          e turn  x            ;});
-      if(!req2) re t urn ;
-        await SB.from('変更 申請').update({statu s:'approved', comm ent:comm ent}          id        ) ;
-               eq2.type==='shift'){
-        var reqPatte rn= ' ';
-         try {
-                ar  d=typeof req2.r          Data==='string'?JSON.parse(req 2.reque stData):req2.request Data;
-           re qPatt          re questedPat ter n||'';
-                tch(e){}
-          if            ern ){               var  s Ex2 = await SB.from('シフ ト') .select( ' id').eq('staffId',req2.staff I d).eq('date',req2.              t(1);
-            if(sEx2.data  &&  sEx            e ngth> 0){ 
-                  await SB.fro m(              ate({pattern:reqPattern}).eq('id',sEx2.data[0].id);
-           }else{
-            a wait safeInsert('シフト'              Da te.now(), staffId:req2.staffId ,  d at                 pattern:reqPattern});
-           }
-         }
-       }else i f(req2.type==='att              
-                         et='', brk=60;
-          try {
-            var dObj = ty peof req2.requestDa ta==='string'?JSON. parse(req2 .req              re            st                      st = dOb j.s tartTime || ' ';               et  =  dObj. e ndTime  | | ''                 i              akMin !== undefined && dObj.breakM in  !== null   && dObj.breakMin !== '') brk   = Number(dObj.brea                   }catch(e){}
-        va              wait SB.from('スタッフ出欠').se              ta rtTime,endTime,breakMin').eq('staffId',req2.staffId).eq('date',req2.date).limit(1);
-        if(saEx.data && s            . lengt h>0 ) {
-              var upd = { endTime: et, breakMin: brk };
+      var req2 = ADMIN_SHIFT_REQS.find(function(x){return x.id===id;});
+      if(!req2) return;
+      await SB.from('変更申請').update({status:'approved', comment:comment}).eq('id',id);
+      if(req2.type==='shift'){
+        var reqPattern='';
+        try{
+          var d=typeof req2.requestData==='string'?JSON.parse(req2.requestData):req2.requestData;
+          reqPattern=d.requestedPattern||'';
+        }catch(e){}
+        if(reqPattern){
+          var sEx2 = await SB.from('シフト').select('id').eq('staffId',req2.staffId).eq('date',req2.date).limit(1);
+          if(sEx2.data && sEx2.data.length>0){
+            await SB.from('シフト').update({pattern:reqPattern}).eq('id',sEx2.data[0].id);
+          }else{
+            await safeInsert('シフト',{id:'sh'+Date.now(), staffId:req2.staffId, date:req2.date, pattern:reqPattern});
+          }
+        }
+      }else if(req2.type==='attendance'){
+        var st='', et='', brk=60;
+        try{
+          var dObj = typeof req2.requestData==='string'?JSON.parse(req2.requestData):req2.requestData;
+          st = dObj.startTime || '';
+          et = dObj.endTime || '';
+          if(dObj.breakMin !== undefined && dObj.breakMin !== null && dObj.breakMin !== '') brk = Number(dObj.breakMin);
+        }catch(e){}
+        var saEx = await SB.from('スタッフ出欠').select('id,startTime,endTime,breakMin').eq('staffId',req2.staffId).eq('date',req2.date).limit(1);
+        if(saEx.data && saEx.data.length>0){
+          var upd = { endTime: et, breakMin: brk };
           if(st) upd.startTime = st;
-           await SB.from('スタッフ出欠 ').update(upd).eq('id            at a[0].id);
+          await SB.from('スタッフ出欠').update(upd).eq('id',saEx.data[0].id);
         }else{
-                           Insert('スタッフ出欠',{
-            id: 'sa'+Dat                          staffId: req2.st                       date: req2.date,
-            startT ime: st || '09:00'                    e               || '18:00',
-            b re                           });
-                          }
-    alert('✅ 承認しました                映しました');
-    awai                eqs();
-    await renderShi                ait checkAndRenderMissin                lert();
-    aw              Att(            tc                    er        認エラー: '+(e.message||e));
+          await safeInsert('スタッフ出欠',{
+            id: 'sa'+Date.now(),
+            staffId: req2.staffId,
+            date: req2.date,
+            startTime: st || '09:00',
+            endTime: et || '18:00',
+            breakMin: brk
+          });
+        }
+      }
+    }
+    alert('✅ 承認しました。出欠・シフトデータに反映しました');
+    await loadAdminReqs();
+    await renderShift();
+    await checkAndRenderMissingAttendanceAlert();
+    await renderAtt();
+  }catch(e){
+    alert('承認エラー: '+(e.message||e));
   }
 }
 
-// 却        async function rejectAd        eq(source, id){
-  var        ment = prompt('却下理由・コメント（任意）:') || '';
+// 却下処理
+async function rejectAdminReq(source, id){
+  var comment = prompt('却下理由・コメント（任意）:') || '';
   try{
-        if(source==='paid_r      u est') {
-            wait SB.from('有 給 申請').updat e( {stat      :'    rej    ected',     comment:comment}).eq('id',id);
-    }else{ 
-          await SB.from('変更申請').update({status:'rejec      d',  c        nt :commen t}) .eq('id',id);
-               alert('❌ 却下しました');
-    await  loadAdm inReqs();
-  }catch(e ){
-     alert('却下エラ ー: '+        e ssag e|            }
+    if(source==='paid_request'){
+      await SB.from('有給申請').update({status:'rejected', comment:comment}).eq('id',id);
+    }else{
+      await SB.from('変更申請').update({status:'rejected', comment:comment}).eq('id',id);
+    }
+    alert('❌ 却下しました');
+    await loadAdminReqs();
+  }catch(e){
+    alert('却下エラー: '+(e.message||e));
+  }
 }
 
 // 自分のシフト変更申請履歴レンダー
-fun ction r enderMyShiftReqs(){
-   var b =el('my-shi ft-re        is        
+function renderMyShiftReqs(){
+  var b=el('my-shift-reqs-list');
   if(!b) return;
-         !MY_SHIFT_REQS.length){          b.i nne rH        '<p style="colo r :var(--sub ); text-      ig    n:c    enter;padding:10px;f    ont-size:12px;">申請履歴がありません</ p>      
-     r eturn;
+  if(!MY_SHIFT_REQS.length){
+    b.innerHTML='<p style="color:var(--sub);text-align:center;padding:10px;font-size:12px;">申請履歴がありません</p>';
+    return;
   }
   var html='';
-      MY _SHIFT_REQS.f      Ea ch(function(r){
-    var  s        status==='p e nding'?'承認待ち':r.status==='approved'?'承認済み':'却下';
-    var tLabel=r.type==='shift'?'シフト変更':'勤怠修            var       fo      ';
-    v a r re      eason=r.reason||'';
+  MY_SHIFT_REQS.forEach(function(r){
+    var sl=r.status==='pending'?'承認待ち':r.status==='approved'?'承認済み':'却下';
+    var tLabel=r.type==='shift'?'シフト変更':'勤怠修正';
+    var info='';
+    var reqReason=r.reason||'';
     try{
-                d=type o f r.requ est Data==='s t ring'? J SON.pars e(r .requestDa t a):r.r e questD        
-      if( r .type= ==' shift')   info='希 望 : <b>'+e        .request e dPat        ||'')+'</b>'; 
-       el se  inf        正:  <b          (d.st a rtTime||'')+'〜'+esc( d.e ndTime|| ' ')+'</b>';
-      if(!reqR e ason && d && d.          )  reqReas on  = d.reason;
-      }catch( e ){}
-    html+='<div cl as s=" p lr-i '+r          s+'" styl e ="padding : 8px 10px;margin -b ott o m:6 p x;">'+
-       '< div   style="d          :f lex;justify-content:space-between;align-items:center        + 
-           '<        ><b> '+ fmtD(r.date)+'</b> < s pan styl e ="font-size:11px;color:var(--sub);">('+tLabel+') </          /span>'+
+      var d=typeof r.requestData==='string'?JSON.parse(r.requestData):r.requestData;
+      if(r.type==='shift') info='希望: <b>'+esc(d.requestedPattern||'')+'</b>';
+      else info='修正: <b>'+esc(d.startTime||'')+'〜'+esc(d.endTime||'')+'</b>';
+      if(!reqReason && d && d.reason) reqReason = d.reason;
+    }catch(e){}
+    html+='<div class="plr-i '+r.status+'" style="padding:8px 10px;margin-bottom:6px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;">'+
+        '<span><b>'+fmtD(r.date)+'</b> <span style="font-size:11px;color:var(--sub);">('+tLabel+')</span></span>'+
         '<span class="badge '+r.status+'">'+sl+'</span>'+
-      '</di v>           '<div styl e ="font-size: 1 2px;margin-top:2px;">'+info+'</div>'+
-      (reqReason? ' <div s t yle="font-size:11 px          333;margin-top:4px;ba c kground: # f9f6 f 0; p adding:4p x           rder-rad iu          ">💬 <b>申請メッセージ:</b> '+esc(reqReason)+'</div>' : '')+ 
-       (r .c          ?'<div sty le="font-size:11px;color:#c62828;margin-top:2px;">返答: '+esc(r.comment)+'</div>':'')+
+      '</div>'+
+      '<div style="font-size:12px;margin-top:2px;">'+info+'</div>'+
+      (reqReason?'<div style="font-size:11px;color:#333;margin-top:4px;background:#f9f6f0;padding:4px 8px;border-radius:4px;">💬 <b>申請メッセージ:</b> '+esc(reqReason)+'</div>':'')+
+      (r.comment?'<div style="font-size:11px;color:#c62828;margin-top:2px;">返答: '+esc(r.comment)+'</div>':'')+
     '</div>';
   });
   b.innerHTML=html;
 }
-  </script>
+</script>
 
-  <!-- パスワード（PIN）変更モーダル -->
-  <div class="modal-bg" id="pw-modal">
-    <div class="modal-box" onclick="event.stopPropagation()" style="width:360px;">
-      <div class="modal-hd">
-        <h3>🔑 暗証番号（PIN）の変更</h3>
-        <button class="modal-close" onclick="closeChgPwModal()">✕</button>
-      </div>
-      <div style="font-size:12px;color:var(--sub);margin-bottom:12px">マイページログイン時に使用する4桁の暗証番号（パスワード）を変更します。</div>
-      <div id="pw-mod-err" style="color:#c62828;font-size:12px;font-weight:700;margin-bottom:8px;display:none;"></div>
-      <div class="mf">
-        <label>現在の暗証番号（パスワード） *</label>
-        <input type="password" id="pw-cur" placeholder="現在の4桁PINまたはPW">
-      </div>
-      <div class="mf">
-        <label>新しい暗証番号（4桁数字） *</label>
-        <input type="password" id="pw-new" maxlength="4" placeholder="例: 1234">
-      </div>
-      <div class="mf">
-        <label>新しい暗証番号（確認用） *</label>
-        <input type="password" id="pw-confirm" maxlength="4" placeholder="もう一度入力">
-      </div>
-      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
-        <button onclick="closeChgPwModal()"
-          style="padding:8px 16px;border:1.5px solid var(--bdr);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">キャンセル</button>
-        <button onclick="saveNewPassword()" id="btn-save-pw"
-          style="padding:8px 16px;border:none;border-radius:6px;background:var(--pri);color:#fff;font-weight:700;cursor:pointer;font-size:12px">変更を保存</button>
-      </div>
+<!-- パスワード（PIN）変更モーダル -->
+<div class="modal-bg" id="pw-modal">
+  <div class="modal-box" onclick="event.stopPropagation()" style="width:360px;">
+    <div class="modal-hd">
+      <h3>🔑 暗証番号（PIN）の変更</h3>
+      <button class="modal-close" onclick="closeChgPwModal()">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:12px">マイページログイン時に使用する4桁の暗証番号（パスワード）を変更します。</div>
+    <div id="pw-mod-err" style="color:#c62828;font-size:12px;font-weight:700;margin-bottom:8px;display:none;"></div>
+    <div class="mf">
+      <label>現在の暗証番号（パスワード） *</label>
+      <input type="password" id="pw-cur" placeholder="現在の4桁PINまたはPW">
+    </div>
+    <div class="mf">
+      <label>新しい暗証番号（4桁数字） *</label>
+      <input type="password" id="pw-new" maxlength="4" placeholder="例: 1234">
+    </div>
+    <div class="mf">
+      <label>新しい暗証番号（確認用） *</label>
+      <input type="password" id="pw-confirm" maxlength="4" placeholder="もう一度入力">
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeChgPwModal()" style="padding:8px 16px;border:1.5px solid var(--bdr);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">キャンセル</button>
+      <button onclick="saveNewPassword()" id="btn-save-pw" style="padding:8px 16px;border:none;border-radius:6px;background:var(--pri);color:#fff;font-weight:700;cursor:pointer;font-size:12px">変更を保存</button>
     </div>
   </div>
+</div>
 
 </body>
-
 </html>
+
+
