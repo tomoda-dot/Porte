@@ -23,6 +23,7 @@
     { id: 'timecard',      label: 'タイムカード',     icon: '⏰', url: PORTE_BASE + 'timecard.html' },
     { id: 'mypage',        label: 'マイページ',       icon: '👤', url: PORTE_BASE + 'mypage.html' },
     { id: 'training',      label: '研修アカデミー',   icon: '🎓', url: PORTE_BASE + 'training.html' },
+    { id: 'bento',         label: 'お弁当メニュー',   icon: '🍱', url: PORTE_BASE + 'bento/index.html' },
     { id: 'regi',          label: 'おかしのレジ',     icon: '🍬', url: DAGASHI_BASE + 'regi.html' },
     { id: 'admin',         label: '売上管理',         icon: '📊', url: DAGASHI_BASE + 'admin.html' },
     { id: 'purchase-log',  label: '仕入れ・賞味期限', icon: '📦', url: DAGASHI_BASE + 'purchase-log.html' },
@@ -40,6 +41,9 @@
   }
 
   function getIconSrc() {
+    if (_opts.iconSrc && location.protocol === 'file:') {
+      return _opts.iconSrc;
+    }
     if (location.protocol === 'file:') {
       return 'favicon-kuma.jpg';
     }
@@ -367,6 +371,36 @@
     injectStyles();
 
     var apply = function () {
+      if (_opts.prependBar) {
+        var bar = document.createElement('div');
+        bar.className = 'hu-header hu-no-subbar';
+        if (_opts.barStyle) bar.style.cssText = _opts.barStyle;
+        if (_opts.noGap) bar.classList.remove('hu-no-subbar');
+
+        var pTrigger = document.createElement('button');
+        pTrigger.type = 'button';
+        pTrigger.className = 'hu-trigger';
+        pTrigger.title = 'ひとつぎメニュー（TOP・戻る・切替）';
+        pTrigger.setAttribute('aria-label', 'ひとつぎメニュー');
+        pTrigger.innerHTML = '<img src="' + getIconSrc() + '" alt="ひとつぎ"><span class="hu-trigger-badge">▼</span>';
+        pTrigger.addEventListener('click', toggleMenu);
+        _triggerEl = pTrigger;
+
+        var pTitle = document.createElement('h1');
+        pTitle.className = 'hu-title';
+        pTitle.textContent = _opts.title || 'HITOTSUGI';
+
+        bar.appendChild(pTrigger);
+        bar.appendChild(pTitle);
+        document.body.insertBefore(bar, document.body.firstChild);
+
+        if (_opts.hideSelector) {
+          var hideEl = document.querySelector(_opts.hideSelector);
+          if (hideEl) hideEl.style.display = 'none';
+        }
+        return;
+      }
+
       var header = document.querySelector(_opts.headerSelector || 'header, .app-header, .header');
       if (!header) return;
 
