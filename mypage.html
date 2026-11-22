@@ -1040,7 +1040,7 @@ async function cancelPLR(id){
 
 // ─── モーダル ────────────────────────
 el('modal-close').onclick=function(){hide('modal');};
-el('modal').onclick=function(e){if(e.target===this)hide('modal');};
+// モーダル外タップでは閉じない仕様
 
 function openModal(title,bodyHtml){
   el('modal-title').textContent=title;
@@ -1560,7 +1560,7 @@ function renderMyShiftReqs(){
 </script>
 
 <!-- パスワード（PIN）変更モーダル -->
-<div class="modal-bg" id="pw-modal" onclick="closeChgPwModal()">
+<div class="modal-bg" id="pw-modal">
   <div class="modal-box" onclick="event.stopPropagation()" style="width:360px;">
     <div class="modal-hd">
       <h3>🔑 暗証番号（PIN）の変更</h3>
