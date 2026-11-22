@@ -609,6 +609,35 @@
   <script src="supabase-lib.js"></script>
   <script src="supabase-config.js"></script>
   <script src="supabase-adapter.js"></script>
+  <script src="hitotsugi-launcher.js"></script>
+  <script>
+    HitotsugiLauncher.init({
+      appId: 'work-schedule',
+      replaceSelector: '.app-title img',
+      quickBack: true,
+      onBack: function () {
+        var slotModal = document.getElementById('slot-modal');
+        if (slotModal && slotModal.classList.contains('show')) {
+          if (typeof closeSlotModal === 'function') closeSlotModal();
+          else slotModal.classList.remove('show');
+          return true;
+        }
+        var taskModal = document.getElementById('task-modal');
+        if (taskModal && taskModal.classList.contains('show')) {
+          if (typeof closeTaskModal === 'function') closeTaskModal();
+          else taskModal.classList.remove('show');
+          return true;
+        }
+        var profTab = document.getElementById('tab-btn-prof');
+        var tasksTab = document.getElementById('tab-btn-tasks');
+        if ((profTab && profTab.classList.contains('active')) || (tasksTab && tasksTab.classList.contains('active'))) {
+          if (typeof switchView === 'function') switchView('schedule');
+          return true;
+        }
+        return false;
+      }
+    });
+  </script>
 </head>
 <body>
 
