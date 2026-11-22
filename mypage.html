@@ -485,7 +485,12 @@ async function loadMpStaffCards(){
   try {
     var res = await SB.from('スタッフ').select('*');
     if (res.error) throw res.error;
-    MP_STAFF_LIST = res.data || [];
+    MP_STAFF_LIST = (res.data || []).slice().sort(function(a, b){
+      var ro = {'サービス管理責任者':1,'生活支援員':2,'職業指導員':3};
+      var diff = (ro[a.role] || 99) - (ro[b.role] || 99);
+      if (diff !== 0) return diff;
+      return String(a.id || '').localeCompare(String(b.id || ''));
+    });
     renderMpStaffCards();
   } catch(e) {
     var grid = el('mp-staff-card-grid');
