@@ -171,6 +171,7 @@
       '}',
       '.hu-title {',
       '  margin: 0 !important;',
+      '  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif !important;',
       '  font-size: 18px !important;',
       '  font-weight: 800 !important;',
       '  line-height: 1.2 !important;',
