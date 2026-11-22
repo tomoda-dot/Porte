@@ -609,6 +609,26 @@
   <script src="supabase-lib.js"></script>
   <script src="supabase-config.js"></script>
   <script src="supabase-adapter.js"></script>
+  <!-- HITOTSUGI_UNIFIED_HEADER_START -->
+  <script src="hitotsugi-unified-header.js"></script>
+  <script>
+    HitotsugiUnifiedHeader.init({
+      appId: 'work-schedule',
+      headerSelector: '.app-header',
+      titleSelector: '.app-title',
+      moveSelectors: ['.nav-tabs'],
+      onBack: function () {
+        var s = document.getElementById('slot-modal');
+        if (s && s.classList.contains('show')) { if (typeof closeSlotModal === 'function') closeSlotModal(); else s.classList.remove('show'); return true; }
+        var t = document.getElementById('task-modal');
+        if (t && t.classList.contains('show')) { if (typeof closeTaskModal === 'function') closeTaskModal(); else t.classList.remove('show'); return true; }
+        var p = document.getElementById('tab-btn-prof'), k = document.getElementById('tab-btn-tasks');
+        if ((p && p.classList.contains('active')) || (k && k.classList.contains('active'))) { if (typeof switchView === 'function') switchView('schedule'); return true; }
+        return false;
+      }
+    });
+  </script>
+  <!-- HITOTSUGI_UNIFIED_HEADER_END -->
 </head>
 <body>
 
