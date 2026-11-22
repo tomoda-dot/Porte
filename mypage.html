@@ -103,7 +103,15 @@ header{background:var(--pri);color:#fff;padding:12px 16px;border-radius:12px;mar
     title: '👤 ひとつぎ マイページ',
     fullBleed: true,
     noSubbar: true,
-    moveSelectors: ['div:first-child', '#btn-chg-pw', '#btn-logout']
+    moveSelectors: ['#btn-chg-pw', '#hd-name'],
+    logoutTriggerSelector: '#hd-name',
+    onLogout: function () {
+      clearPorteSession();
+      ME = null;
+      showMpCardView();
+      hide('pg-main');
+      flex('pg-login');
+    }
   });
 </script>
 <!-- HITOTSUGI_UNIFIED_HEADER_END -->
@@ -705,7 +713,7 @@ async function boot(){
     MY_SHIFT_REQS=await safeQuery(SB.from('変更申請').select('*').eq('staffId',ME.id).order('createdAt',{ascending:false}));
     
     // 画面設定
-    el('hd-name').textContent=ME.name||'';
+    el('hd-name').textContent='👤 '+(ME.name||'');
     el('hd-role').textContent=ME.role||'';
     SHIFT_YM=nowYM(); ATT_YM=nowYM();
     hide('pg-loading'); show('pg-main');
