@@ -384,7 +384,13 @@ async function _delByUserDate(table,userId,date){
 
 // ═══ 設定（key-value形式）═══
 async function _getSettings(){
-  var rows=await _getAll('設定');
+  var r=await supabase.from('設定').select('key,value')
+    .not('key','like','porte_training_%')
+    .not('key','like','porte_committee_%')
+    .not('key','like','work_schedule_%')
+    .not('key','like','haccp_%');
+  if(r.error)_throwErr(r.error);
+  var rows=r.data||[];
   var obj={};for(var i=0;i<rows.length;i++)obj[rows[i].key]=rows[i].value;
   return obj;
 }
@@ -641,8 +647,9 @@ async function gas(fn){
     // ── シフト ──
     case 'getShiftData': return a1?_getLike('シフト','date',a1):_getAll('シフト');
     case 'saveShiftCell':
-      var _ex=await _getAll('シフト');
-      var _found=_ex.find(function(r){return r.staffId===a1.staffId&&r.date===a1.date;});
+      var _shRes=await supabase.from('シフト').select('id').eq('staffId',a1.staffId).eq('date',a1.date).limit(1);
+      if(_shRes.error)_throwErr(_shRes.error);
+      var _found=(_shRes.data&&_shRes.data.length>0)?_shRes.data[0]:null;
       if(a1.pattern===''){
         if(_found)return _del('シフト',_found.id);
         return null;
