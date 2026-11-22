@@ -275,7 +275,7 @@
       '.hu-modal-msg { font-size: 16px; font-weight: 800; margin-bottom: 18px; }',
       '.hu-modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }',
       '.hu-modal-btn { padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 800; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; }',
-      '.hu-modal-btn.yes { background: #dc2626; border-color: #dc2626; color: #fff; }',
+      '.hu-modal-btn.yes { background: #3d5a3e; border-color: #3d5a3e; color: #fff; }',
       '.hu-modal-btn:hover { opacity: 0.9; }',
       '.hu-staff-pill { font-size: 13px !important; font-weight: 600 !important; color: rgba(255,255,255,0.95) !important; background: rgba(255,255,255,0.15) !important; padding: 5px 12px !important; border-radius: 20px !important; display: inline-flex !important; align-items: center !important; gap: 4px !important; cursor: pointer !important; white-space: nowrap !important; border: none !important; line-height: 1.3 !important; }',
       '.hu-staff-pill:hover { background: rgba(255,255,255,0.24) !important; }',
@@ -373,8 +373,13 @@
       '</div>';
     document.body.appendChild(ov);
     var close = function () { ov.remove(); };
+    var yesBtn = ov.querySelector('#hu-lm-yes');
+    if (yesBtn && _opts.appId === 'training') {
+      yesBtn.style.background = '#45a274';
+      yesBtn.style.borderColor = '#45a274';
+    }
     ov.querySelector('#hu-lm-no').addEventListener('click', close);
-    ov.querySelector('#hu-lm-yes').addEventListener('click', function () {
+    yesBtn.addEventListener('click', function () {
       close();
       if (typeof onConfirm === 'function') onConfirm();
       else clearSessionAndGoLogin();
