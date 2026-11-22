@@ -616,7 +616,6 @@
   <header class="app-header no-print">
     <div class="header-left">
       <h1 class="app-title"><img src="favicon-kuma.jpg" alt="ひとつぎ" style="width:32px;height:32px;border-radius:50%;background:#fff;object-fit:cover;box-shadow:0 1px 4px rgba(0,0,0,0.18);"> 利用者 作業スケジュール作成</h1>
-      <span class="readonly-badge" title="Porteから利用者・出欠時間を読み取るのみで、Porte側には一切書き込みません">🔒 Porte非干渉（読み取り専用連携）</span>
     </div>
     <div class="nav-tabs">
       <button class="nav-tab active" id="tab-btn-schedule" onclick="switchView('schedule')">📅 スケジュール表</button>
@@ -769,12 +768,6 @@
                 <span>1時間作業は同じ人がずっと同じ作業にならないよう適度にローテーションする</span>
               </label>
             </div>
-          </div>
-
-          <div style="margin-top:18px;padding:12px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;font-size:12px;color:#0369a1;line-height:1.6;">
-            <strong>🔒 Porte非干渉設計について</strong><br>
-            ・Porteからは「利用者名」「通所予定曜日」「当日の出欠・開始終了時刻」のみを読み取ります。<br>
-            ・ここで設定した作業種別・熟練度・作成したスケジュールは独立して保存され、Porteの日報や出欠データには一切影響しません。
           </div>
         </div>
       </div>
