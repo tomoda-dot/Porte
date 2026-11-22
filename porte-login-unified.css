@@ -44,6 +44,12 @@
   padding: 24px 20px !important;
 }
 
+#pg-login .login-box:has(#tb-pin-view[style*="block"]) .login-logo,
+#pg-login .login-box:has(#tr-login-pin-view[style*="block"]) .login-logo,
+#pg-login .login-box:has(#mp-pin-view[style*="block"]) .login-logo {
+  display: none !important;
+}
+
 #pg-login .login-logo,
 .login-wrap .login-logo {
   text-align: center !important;
