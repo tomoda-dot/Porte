@@ -178,16 +178,26 @@
       position: relative;
       display: inline-flex;
       align-items: center;
-      min-width: 185px;
+      min-width: 215px;
+      width: 215px;
     }
     input[type="date"].jp-date-enhanced {
       width: 100%;
-      padding: 8px 30px 8px 12px;
+      padding: 8px 34px 8px 12px;
       border: 2px solid var(--pri);
       border-radius: 9px;
       font-size: 14px;
       font-weight: 700;
       background: #fff;
+      cursor: pointer;
+    }
+    input[type="date"].jp-date-enhanced::-webkit-calendar-picker-indicator {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      margin: 0;
+      padding: 0;
       cursor: pointer;
     }
     input[type="date"].jp-date-enhanced::-webkit-datetime-edit,
@@ -202,7 +212,7 @@
     .jp-date-overlay {
       position: absolute;
       left: 12px;
-      right: 28px;
+      right: 34px;
       top: 50%;
       transform: translateY(-50%);
       pointer-events: none;
@@ -319,8 +329,8 @@
 
     /* Slot Cells */
     .slot-cell {
-      min-width: 105px;
-      height: 58px;
+      min-width: 110px;
+      height: 64px;
       padding: 4px !important;
       cursor: pointer;
       transition: transform 0.1s, box-shadow 0.1s;
