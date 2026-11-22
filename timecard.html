@@ -67,6 +67,18 @@ canvas{border:2px solid #ddd;border-radius:10px;width:100%;height:200px;touch-ac
 @keyframes sp{to{transform:rotate(360deg)}}
 .loading-center{display:flex;flex-direction:column;align-items:center;gap:10px;padding:40px;color:#888}
 </style>
+<!-- HITOTSUGI_UNIFIED_HEADER_START -->
+<script src="hitotsugi-unified-header.js"></script>
+<script>
+  HitotsugiUnifiedHeader.init({
+    appId: 'timecard',
+    headerSelector: '#hd-container',
+    titleSelector: '#hd-title-box h1',
+    moveSelectors: ['#hd-right-box'],
+    onTitleClick: function () { if (typeof triggerFsSafe === 'function') triggerFsSafe(); }
+  });
+</script>
+<!-- HITOTSUGI_UNIFIED_HEADER_END -->
 </head>
 <body>
 <div class="header" id="hd-container" title="「⏰ タイムカード」を1回タップ、またはヘッダーをダブルタップで全画面切替">
