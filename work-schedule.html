@@ -7,19 +7,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f4f6f8;
+      --bg: #f5f0eb;
       --card: #ffffff;
-      --pri: #2e5c40;
-      --pri-light: #e8f5e9;
+      --pri: #2b6cb0;
+      --pri-dark: #1e4e8c;
+      --pri-light: #e0f2fe;
       --acc: #d97706;
-      --txt: #1e293b;
-      --sub: #64748b;
-      --bdr: #e2e8f0;
+      --txt: #2c2c2c;
+      --sub: #6b6b6b;
+      --bdr: #e0d8d0;
       --break-bg: #fffbeb;
       --break-bdr: #fcd34d;
       --absent-bg: #fef2f2;
-      --off-bg: #f1f5f9;
-      --shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+      --off-bg: #f5f2ee;
+      --shadow: 0 3px 14px rgba(44, 44, 44, 0.06);
     }
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -39,7 +40,7 @@
 
     /* Header */
     .app-header {
-      background: linear-gradient(135deg, #244a33 0%, #2e5c40 60%, #1e3f2b 100%);
+      background: linear-gradient(135deg, #1e4e8c 0%, #2b6cb0 55%, #2c7a7b 100%);
       color: #fff;
       padding: 12px 20px;
       display: flex;
@@ -47,7 +48,7 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+      box-shadow: 0 3px 12px rgba(30, 78, 140, 0.18);
       position: sticky;
       top: 0;
       z-index: 100;
@@ -69,7 +70,7 @@
     .readonly-badge {
       background: rgba(255,255,255,0.18);
       border: 1px solid rgba(255,255,255,0.35);
-      color: #e2f8ea;
+      color: #e0f2fe;
       font-size: 11px;
       font-weight: 700;
       padding: 3px 10px;
@@ -150,15 +151,15 @@
       transition: all 0.15s;
       white-space: nowrap;
     }
-    .btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .btn:hover { background: #faf6f0; border-color: #cbbba8; }
     .btn:active { transform: scale(0.98); }
     .btn-pri {
       background: var(--pri);
       color: #fff;
       border-color: var(--pri);
-      box-shadow: 0 2px 8px rgba(46, 92, 64, 0.25);
+      box-shadow: 0 2px 8px rgba(43, 108, 176, 0.25);
     }
-    .btn-pri:hover { background: #244a33; border-color: #244a33; }
+    .btn-pri:hover { background: var(--pri-dark); border-color: var(--pri-dark); }
     .btn-acc {
       background: linear-gradient(135deg, #f59e0b, #d97706);
       color: #fff;
@@ -279,7 +280,7 @@
       vertical-align: middle;
     }
     .sched-table thead th {
-      background: #f8fafc;
+      background: #faf6f0;
       color: var(--txt);
       font-weight: 800;
       font-size: 12.5px;
@@ -293,7 +294,7 @@
       color: #b45309;
     }
     .sched-table tbody tr:hover td {
-      background-color: rgba(241, 245, 249, 0.5);
+      background-color: rgba(245, 240, 235, 0.45);
     }
     .user-cell {
       text-align: left !important;
@@ -768,7 +769,7 @@
             </div>
           </div>
 
-          <div style="margin-top:18px;padding:12px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:12px;color:#166534;line-height:1.6;">
+          <div style="margin-top:18px;padding:12px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;font-size:12px;color:#0369a1;line-height:1.6;">
             <strong>🔒 Porte非干渉設計について</strong><br>
             ・Porteからは「利用者名」「通所予定曜日」「当日の出欠・開始終了時刻」のみを読み取ります。<br>
             ・ここで設定した作業種別・熟練度・作成したスケジュールは独立して保存され、Porteの日報や出欠データには一切影響しません。
