@@ -866,8 +866,8 @@
       { id: 't_roast_pack',  name: '珈琲ドリップ包装・計量', icon: '⚖️', color: '#ffedd5', durationMode: '2', minPeople: 2, maxPeople: 5, period: 'all' },
       { id: 't_dagashi',     name: '駄菓子値付け・品出し', icon: '🍬', color: '#fce7f3', durationMode: '1', minPeople: 2, maxPeople: 5, period: 'all' },
       { id: 't_lightwork',   name: '内職・軽作業（箱折り・封入）', icon: '📦', color: '#e0f2fe', durationMode: '2', minPeople: 3, maxPeople: 10, period: 'all' },
-      { id: 't_bento_prep',  name: 'お弁当盛付・配膳補助', icon: '🍱', color: '#dcfce7', durationMode: '1', minPeople: 1, maxPeople: 4, period: 'am' },
-      { id: 't_clean',       name: '清掃・片付け・消毒', icon: '🧹', color: '#ede9fe', durationMode: '1', minPeople: 1, maxPeople: 6, period: 'pm' }
+      { id: 't_bento_prep',  name: 'お弁当盛付・配膳補助', icon: '🍱', color: '#dcfce7', durationMode: '1', minPeople: 1, maxPeople: 4, period: 'all' },
+      { id: 't_clean',       name: '清掃・片付け・消毒', icon: '🧹', color: '#ede9fe', durationMode: '1', minPeople: 1, maxPeople: 6, period: 'all' }
     ];
 
     var DEFAULT_CFG = {
@@ -885,6 +885,16 @@
     var PORTE_CLOSED_DAYS_BY_YM = {};
 
     var TASKS = loadLocal(STORAGE_KEYS.TASKS, DEFAULT_TASKS);
+    // 初期設定で清掃が「pm（午後のみ）」になっていた既存の保存データを「all（終日）」へ自動マイグレーション（午前のみの利用者にも清掃が入るように）
+    if (!localStorage.getItem('work_sched_period_migrated_v1')) {
+      TASKS.forEach(function(t) {
+        if ((t.id === 't_clean' && t.period === 'pm') || (t.id === 't_bento_prep' && t.period === 'am')) {
+          t.period = 'all';
+        }
+      });
+      saveLocal(STORAGE_KEYS.TASKS, TASKS);
+      try { localStorage.setItem('work_sched_period_migrated_v1', '1'); } catch(e) {}
+    }
     var PROFICIENCY = loadLocal(STORAGE_KEYS.PROF, {}); // { [userId]: { [taskId]: 0|1|2|3 } }
     var TIME_CFG = Object.assign({}, DEFAULT_CFG, loadLocal(STORAGE_KEYS.CFG, DEFAULT_CFG));
     var SAVED_SCHEDULES = loadLocal(STORAGE_KEYS.DAYS, {}); // { [dateStr]: { [userId]: { [hour]: { taskId, spanInfo, manualStatus } } } }
