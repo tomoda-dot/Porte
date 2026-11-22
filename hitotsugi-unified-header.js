@@ -249,25 +249,21 @@
       '',
       '/* === ポップオーバーメニュー === */',
       '.hu-popover {',
-      '  position: fixed; z-index: 99999; width: 300px; max-width: calc(100vw - 24px);',
+      '  position: fixed; z-index: 99999; width: 336px; max-width: calc(100vw - 24px);',
       '  background: #ffffff; color: #1e293b; border-radius: 16px;',
       '  box-shadow: 0 14px 40px rgba(15,23,42,0.28), 0 0 0 1px rgba(15,23,42,0.08);',
       '  padding: 12px; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif; display: none;',
       '}',
       '.hu-popover.open { display: block; animation: huPopIn 0.14s ease-out; }',
       '@keyframes huPopIn { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }',
-      '.hu-user-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: #f8fafc; border-radius: 10px; margin-bottom: 10px; border: 1px solid #e2e8f0; }',
-      '.hu-user-info { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #334155; min-width: 0; }',
-      '.hu-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }',
-      '.hu-user-action { border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 8px; padding: 4px 8px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; text-decoration: none; }',
-      '.hu-user-action:hover { background: #f1f5f9; color: #0f172a; }',
-      '.hu-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }',
-      '.hu-act-btn { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 9px 8px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; color: #1e293b; font-size: 12.5px; font-weight: 700; cursor: pointer; text-decoration: none; }',
+      '.hu-actions { display: block; margin-bottom: 10px; }',
+      '.hu-act-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; color: #1e293b; font-size: 13.5px; font-weight: 800; cursor: pointer; text-decoration: none; }',
       '.hu-act-btn:hover { background: #f1f5f9; }',
       '.hu-act-btn.primary { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }',
-      '.hu-sec-title { font-size: 11px; font-weight: 700; color: #64748b; margin: 4px 2px 6px; }',
+      '.hu-act-btn.primary:hover { background: #ffedd5; }',
+      '.hu-sec-title { font-size: 11.5px; font-weight: 700; color: #64748b; margin: 4px 2px 6px; }',
       '.hu-app-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }',
-      '.hu-app-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 4px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; color: #334155; text-decoration: none; font-size: 11px; font-weight: 700; text-align: center; line-height: 1.25; }',
+      '.hu-app-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 10px 4px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; color: #334155; text-decoration: none; font-size: 11.5px; font-weight: 700; text-align: center; line-height: 1.25; }',
       '.hu-app-item:hover { background: #f8fafc; border-color: #cbd5e1; }',
       '.hu-app-item.current { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }',
       '.hu-app-ico { font-size: 18px; line-height: 1; }',
@@ -309,18 +305,7 @@
 
   function renderPopoverContent() {
     var pop = buildPopover();
-    var user = getSessionUser();
     var topUrl = getTopUrl();
-
-    var userHtml = user
-      ? '<div class="hu-user-bar">' +
-          '<div class="hu-user-info"><span>👤</span><span class="hu-user-name">' + escapeHtml(user.name) + '</span></div>' +
-          '<button type="button" class="hu-user-action" id="hu-logout-btn">切替 / ログアウト</button>' +
-        '</div>'
-      : '<div class="hu-user-bar">' +
-          '<div class="hu-user-info"><span>👤</span><span class="hu-user-name">未ログイン</span></div>' +
-          '<a class="hu-user-action" href="' + topUrl + '">ログインへ</a>' +
-        '</div>';
 
     var appsHtml = APPS.map(function (app) {
       var isCurrent = _opts.appId && _opts.appId === app.id;
@@ -331,24 +316,17 @@
     }).join('');
 
     pop.innerHTML =
-      userHtml +
       '<div class="hu-actions">' +
-        '<button type="button" class="hu-act-btn" id="hu-pop-back">← 1つ前に戻る</button>' +
-        '<a class="hu-act-btn primary" href="' + topUrl + '">🏠 ストアTOP</a>' +
+        '<a class="hu-act-btn primary" href="' + topUrl + '">🏠 ストアTOPへ戻る</a>' +
       '</div>' +
       '<div class="hu-sec-title">🔄 他のシステムへ切替</div>' +
       '<div class="hu-app-grid">' + appsHtml + '</div>';
-
-    var backBtn = pop.querySelector('#hu-pop-back');
-    if (backBtn) backBtn.addEventListener('click', goBack);
-    var logoutBtn = pop.querySelector('#hu-logout-btn');
-    if (logoutBtn) logoutBtn.addEventListener('click', clearSessionAndGoLogin);
   }
 
   function positionPopover() {
     if (!_triggerEl || !_popoverEl) return;
     var rect = _triggerEl.getBoundingClientRect();
-    var left = Math.max(12, Math.min(rect.left, global.innerWidth - 312));
+    var left = Math.max(12, Math.min(rect.left, global.innerWidth - 348));
     var top = rect.bottom + 8;
     _popoverEl.style.left = left + 'px';
     _popoverEl.style.top = top + 'px';
