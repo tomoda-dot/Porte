@@ -373,7 +373,6 @@
       '</div>';
     document.body.appendChild(ov);
     var close = function () { ov.remove(); };
-    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
     ov.querySelector('#hu-lm-no').addEventListener('click', close);
     ov.querySelector('#hu-lm-yes').addEventListener('click', function () {
       close();
