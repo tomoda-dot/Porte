@@ -1358,6 +1358,12 @@ async function _calcAnnualWageDetail(fiscalYear) {
   var allAtt = [];
   for (var mi = 0; mi < months.length; mi++) { try { var ma = await _getLike('出欠', 'date', months[mi]); allAtt = allAtt.concat(ma); } catch (e) { } }
   var attByMonth = {}; months.forEach(function (ym) { attByMonth[ym] = allAtt.filter(function (a) { return String(a.date).indexOf(ym) === 0; }); });
+  var annConfiguredAls = [];
+  try { annConfiguredAls = JSON.parse(settings.allowances || '[]'); } catch (e) { }
+  var annActiveAls = annConfiguredAls.filter(function (a) { return a.enabled !== false; });
+  var annUserOverrideMap = {};
+  try { annUserOverrideMap = JSON.parse(settings.userAllowanceMap || '{}'); } catch (e) { }
+  var ANN_KAIKIN_BONUS = 3000;
   var result = [];
   us.forEach(function (user) {
     var monthData = [], yearDays = 0, yearHours = 0, yearWage = 0;
@@ -1366,8 +1372,32 @@ async function _calcAnnualWageDetail(fiscalYear) {
       var recs = att.filter(function (a) { return String(a.userId) === String(user.id) && _isAttend(a); });
       var days = recs.length, hours = 0, wage = 0;
       recs.forEach(function (rec) { var cw = _calcRecWage(rec, wts, user); hours += cw.netH; wage += cw.wage; });
-      monthData.push({ ym: ym, days: days, hours: Math.round(hours * 100) / 100, wage: Math.round(wage) });
-      yearDays += days; yearHours += hours; yearWage += wage;
+      var annBonus = 0;
+      if (days > 0) {
+        var annKk = _checkKaikin(user, att, ym);
+        if (annActiveAls.length > 0) {
+          annActiveAls.forEach(function (al) {
+            var key = ym + '_' + user.id + '_' + al.name;
+            var overrideVal = annUserOverrideMap[key];
+            var match = false;
+            if (overrideVal === true) { match = true; }
+            else if (overrideVal === false) { match = false; }
+            else {
+              if (al.condition === 'kaikin') { match = annKk.kaikin; }
+              else if (al.condition === 'seikin') { match = !annKk.kaikin && annKk.ng <= 2 && annKk.ok > 0; }
+              else if (al.condition === 'all') { match = recs.length > 0; }
+              else if (al.condition === 'birthday') { if (user.birthdate) { var annBd = String(user.birthdate).substring(5, 7); var annCm = ym.split('-')[1]; match = annBd === annCm; } }
+              else if (al.condition === 'days_over') { var annThr = parseInt(al.conditionValue) || 0; match = recs.length >= annThr; }
+              else if (al.condition === 'no_pickup') { var annUp = user.pickup; if (recs.length > 0 && typeof getUserScheduleForDate === 'function') { annUp = getUserScheduleForDate(user, recs[0].date).pickup; } match = recs.length > 0 && !_isPickupUser(annUp); }
+            }
+            if (match) { annBonus += Number(al.amount) || 0; }
+          });
+        } else {
+          if (annKk.kaikin) { annBonus = ANN_KAIKIN_BONUS; }
+        }
+      }
+      monthData.push({ ym: ym, days: days, hours: Math.round(hours * 100) / 100, wage: Math.round(wage + annBonus) });
+      yearDays += days; yearHours += hours; yearWage += wage + annBonus;
     });
     if (yearDays === 0) return;
     var initials = ''; var fn = user.furigana || '';
