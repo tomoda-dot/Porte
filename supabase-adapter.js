@@ -1350,6 +1350,7 @@ async function _calcServiceRecordData(srYm) {
 async function _calcAnnualWageDetail(fiscalYear) {
   var fy = Number(fiscalYear);
   var us = await _getAll('利用者'); var wts = await _getAll('作業種別');
+  var settings = await _getSettings();
   var months = [];
   for (var m = 4; m <= 12; m++)months.push(fy + '-' + String(m).padStart(2, '0'));
   for (var m2 = 1; m2 <= 3; m2++)months.push((fy + 1) + '-' + String(m2).padStart(2, '0'));
@@ -1375,11 +1376,28 @@ async function _calcAnnualWageDetail(fiscalYear) {
   });
   var monthTotals = [];
   for (var mi2 = 0; mi2 < months.length; mi2++) {
+    var ym2 = months[mi2];
+    var mp2 = ym2.split('-');
+    var myr2 = Number(mp2[0]), mmo2 = Number(mp2[1]);
+    var dim2 = new Date(myr2, mmo2, 0).getDate();
+    var closed = [];
+    try {
+      var cs = settings['closedDays_' + ym2];
+      if (cs) closed = JSON.parse(cs);
+    } catch (e) { }
+    var bizDays = 0;
+    if (Array.isArray(closed) && closed.length > 0) {
+      bizDays = Math.max(0, dim2 - closed.length);
+    } else {
+      var sunCount = 0;
+      for (var sd = 1; sd <= dim2; sd++) {
+        if (new Date(myr2, mmo2 - 1, sd).getDay() === 0) sunCount++;
+      }
+      bizDays = dim2 - sunCount;
+    }
     var td = 0, th = 0, tw = 0;
     result.forEach(function (u) { td += u.months[mi2].days; th += u.months[mi2].hours; tw += u.months[mi2].wage; });
-    var mAtt = attByMonth[months[mi2]] || [];
-    var uniqueDates = {}; mAtt.forEach(function (a) { if (_isAttend(a)) uniqueDates[a.date] = 1; });
-    monthTotals.push({ ym: months[mi2], bizDays: Object.keys(uniqueDates).length, totalDays: td, totalHours: Math.round(th * 100) / 100, totalWage: Math.round(tw) });
+    monthTotals.push({ ym: ym2, bizDays: bizDays, totalDays: td, totalHours: Math.round(th * 100) / 100, totalWage: Math.round(tw) });
   }
   return { fiscalYear: fy, users: result, monthTotals: monthTotals };
 }
