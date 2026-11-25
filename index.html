@@ -11074,19 +11074,24 @@ async function loadE(){
       return tr;
     }).join('');
     if(!isCurrent()) return;
-    // 平均工賃月額の算定
-    var annAvgDailyUsers = gtBiz > 0 ? Math.round((gtDays / gtBiz) * 100) / 100 : 0;
-    var annAvgMonthlyWage = (gtBiz > 0 && annAvgDailyUsers > 0) ? Math.round(gtWage / gtBiz / annAvgDailyUsers) : 0;
+    // 平均工賃月額の算定（厚労省方式）
+    // 1日平均利用者数: 小数第2位以下切り上げ（国の算定ルール）
+    var annAvgDailyUsers = gtBiz > 0 ? Math.ceil((gtDays / gtBiz) * 10) / 10 : 0;
+    // 対象月数: 実績のある月数（通常12、開設初年度等は実績月数）
+    var annTargetMonths = mt.filter(function(m){ return m.totalDays > 0; }).length || 12;
+    // 平均工賃月額 = 年間工賃支払総額 ÷ 1日平均利用者数 ÷ 対象月数
+    var annAvgMonthlyWage = (annAvgDailyUsers > 0) ? Math.round(gtWage / annAvgDailyUsers / annTargetMonths) : 0;
     var annSummaryBox = '<div style="display:flex;justify-content:flex-end;margin-bottom:12px">'+
-      '<div style="background:#faf8f5;border:1px solid #e0d8ce;border-radius:8px;padding:12px 18px;font-size:12px;min-width:260px">'+
-      '<div style="font-size:11px;color:var(--sub);font-weight:700;margin-bottom:8px">📊 平均工賃月額</div>'+
+      '<div style="background:#faf8f5;border:1px solid #e0d8ce;border-radius:8px;padding:12px 18px;font-size:12px;min-width:280px">'+
+      '<div style="font-size:11px;color:var(--sub);font-weight:700;margin-bottom:8px">📊 平均工賃月額（厚労省方式）</div>'+
       '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline">'+
       '<span style="color:var(--sub);font-size:11px">年間工賃支払総額</span><span style="font-weight:700;text-align:right">¥'+gtWage.toLocaleString()+'</span>'+
       '<span style="color:var(--sub);font-size:11px">年間開所日数</span><span style="font-weight:700;text-align:right">'+gtBiz+'日</span>'+
-      '<span style="color:var(--sub);font-size:11px">1日平均利用者数</span><span style="font-weight:700;text-align:right">'+annAvgDailyUsers.toFixed(2)+'人</span>'+
+      '<span style="color:var(--sub);font-size:11px">1日平均利用者数 <span style="font-size:10px;opacity:.7">（切り上げ）</span></span><span style="font-weight:700;text-align:right">'+annAvgDailyUsers.toFixed(1)+'人</span>'+
+      '<span style="color:var(--sub);font-size:11px">対象月数</span><span style="font-weight:700;text-align:right">'+annTargetMonths+'ヶ月</span>'+
       '</div>'+
       '<div style="border-top:1px solid #e0d8ce;margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;align-items:baseline">'+
-      '<span style="font-size:11px;color:var(--sub)">平均工賃月額（÷開所日÷平均利用者）</span>'+
+      '<span style="font-size:11px;color:var(--sub)">平均工賃月額（÷1日平均利用者÷'+annTargetMonths+'ヶ月）</span>'+
       '<span style="font-size:18px;font-weight:700;color:var(--pri)">¥'+annAvgMonthlyWage.toLocaleString()+'</span>'+
       '</div>'+
       '</div></div>';
