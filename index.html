@@ -3216,7 +3216,16 @@ function openUserModal(u, isTabSwitch){
     '<div class="grid2"><div class="field"><label>障がい者手帳</label><select id="uf-hbook" style="width:100%">'+bookOptions.map(function(o){return'<option value="'+o+'"'+(d.handicapBook===o?' selected':'')+'>'+(o||'選択')+'</option>';}).join('')+'</select></div>'+
     '<div class="field"><label>等級</label><select id="uf-hgrade" style="width:100%">'+gradeOptions.map(function(o){return'<option value="'+o+'"'+(d.handicapGrade===o?' selected':'')+'>'+(o||'選択')+'</option>';}).join('')+'</select></div></div>'+
     '<div class="grid2"><div class="field"><label>自立支援医療</label><select id="uf-jiritsu" style="width:100%">'+yesNo.map(function(o){return'<option value="'+o+'"'+((d.jiritsuMedical||'')===o?' selected':'')+'>'+(o||'選択')+'</option>';}).join('')+'</select></div>'+
-    '<div class="field"><label>重度障がい者医療</label><select id="uf-severe" style="width:100%">'+yesNo.map(function(o){return'<option value="'+o+'"'+((d.severeDisMedical||'')===o?' selected':'')+'>'+(o||'選択')+'</option>';}).join('')+'</select></div></div></div>';
+    '<div class="field"><label>重度障がい者医療</label><select id="uf-severe" style="width:100%">'+yesNo.map(function(o){return'<option value="'+o+'"'+((d.severeDisMedical||'')===o?' selected':'')+'>'+(o||'選択')+'</option>';}).join('')+'</select></div></div>'+
+    (function(){
+      var exMap={};try{exMap=JSON.parse((S.settings&&S.settings.svcTimeExcludeMap)||'{}');}catch(e){}
+      var isEx=!!(d.id&&exMap[d.id]);
+      return '<div style="margin-top:8px;padding:10px 12px;background:#faf8f5;border:1px solid #e0d8ce;border-radius:7px">'+
+        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;font-size:12px;color:#333;font-weight:600">'+
+        '<input type="checkbox" id="uf-svc-exclude"'+(isEx?' checked':'')+' style="width:16px;height:16px">'+
+        '<span>支援時間の配慮措置：医師の診断書等により4時間未満の見込みが高い（平均時間算定から除外）</span>'+
+        '</label></div>';
+    })()+'</div>';
 
   // 収入・年金情報
   html+='<div class="card" style="margin-bottom:12px"><div class="section-title" style="margin-top:0">収入・年金・福祉</div>'+
@@ -4907,7 +4916,7 @@ async function saveUser(id){
     workHistory:gv('uf-workhist',existing.workHistory||''),otherHistory:gv('uf-otherhist',existing.otherHistory||'')
   };
   if(!data.name){unlockUI();await cAlert('氏名を入力してください');return;}
-  try{if(id){data.id=id;await gas('updateUser',data);}else{var res=await gas('addUser',data);if(res&&res.id)id=res.id;}S.users=await gas('getUsers');var updated=S.users.find(function(x){return x.id===id;});if(updated){window._ueCurrentData=updated;openUserModal(updated, false);}else{window._ueInitialSnapshot=null;renderUsers(document.getElementById('content'));}toast('保存しました');}
+  try{if(id){data.id=id;await gas('updateUser',data);}else{var res=await gas('addUser',data);if(res&&res.id)id=res.id;}var exChk=document.getElementById('uf-svc-exclude');if(exChk&&id){var exMap={};try{exMap=JSON.parse((S.settings&&S.settings.svcTimeExcludeMap)||'{}');}catch(e){}if(exChk.checked){exMap[id]=true;}else{delete exMap[id];}var exStr=JSON.stringify(exMap);await gas('updateSetting','svcTimeExcludeMap',exStr);if(S.settings)S.settings.svcTimeExcludeMap=exStr;}S.users=await gas('getUsers');var updated=S.users.find(function(x){return x.id===id;});if(updated){window._ueCurrentData=updated;openUserModal(updated, false);}else{window._ueInitialSnapshot=null;renderUsers(document.getElementById('content'));}toast('保存しました');}
   catch(e){await cAlert('保存に失敗: '+e);}finally{unlockUI();}
 }
 async function delUser(id){
@@ -11074,8 +11083,9 @@ async function loadE(){
       return tr;
     }).join('');
     if(!isCurrent()) return;
-    // 平均工賃月額 & 平均サービス提供時間の算定（厚労省方式・期間切替対応・年度通算を基本）
+    // 平均工賃月額 & 平均サービス提供時間 & 障害の程度サマリー（厚労省方式・期間切替対応・年度通算を基本）
     window._annMt = mt;
+    window._annUsers = data.users || [];
     window._annMLabels = mLabels;
     window._annCurAvg = null;
     function getSvcTierInfo(avgH) {
@@ -11084,6 +11094,31 @@ async function loadE(){
       if (avgH >= 4) return { label: '4時間以上〜5時間未満', bg: '#fff3e0', fg: '#e65100', bd: '#ffcc80' };
       return { label: '4時間未満', bg: '#ffebee', fg: '#b71c1c', bd: '#ef9a9a' };
     }
+    function getWageTierLabelR9(w) {
+      if (w >= 70000) return '7万円以上（最高区分）';
+      if (w >= 50000) return '5万円〜7万円未満';
+      if (w >= 40000) return '4万円〜5万円未満';
+      if (w >= 30000) return '3万円〜4万円未満';
+      if (w >= 25000) return '2万5千円〜3万円未満';
+      if (w >= 20000) return '2万円〜2万5千円未満';
+      if (w >= 15000) return '1万5千円〜2万円未満';
+      if (w >= 13000) return '1万3千円〜1万5千円未満';
+      return '1万3千円未満（最低区分）';
+    }
+    function calcSvcForIndices(indices) {
+      var svcH = 0, svcDays = 0, exCount = 0;
+      (window._annUsers || []).forEach(function(u) {
+        if (u.svcExcluded) { exCount++; return; }
+        indices.forEach(function(idx) {
+          var m = u.months && u.months[idx];
+          if (m && m.days > 0) {
+            svcDays += m.days;
+            svcH += (m.serviceHours || 0);
+          }
+        });
+      });
+      return { svcH: svcH, svcDays: svcDays, exCount: exCount };
+    }
     window.recalcAnnAvg = function() {
       var amt = window._annMt || [];
       var modeEl = document.getElementById('ann-avg-mode');
@@ -11091,10 +11126,12 @@ async function loadE(){
       var customWrap = document.getElementById('ann-avg-custom-wrap');
       if (customWrap) customWrap.style.display = (mode === 'custom') ? 'flex' : 'none';
       var slice = [];
+      var indices = [];
       var targetMonths = 12;
       var modeLabel = '年度通算（4月〜3月）';
       if (mode === 'fy') {
         slice = amt;
+        for (var k = 0; k < amt.length; k++) indices.push(k);
         targetMonths = 12;
         modeLabel = '年度通算（4月〜3月）';
       } else if (mode === 'custom') {
@@ -11102,21 +11139,24 @@ async function loadE(){
         var eIdx = Number((document.getElementById('ann-avg-end') || {}).value || 11);
         if (sIdx > eIdx) { var tmp = sIdx; sIdx = eIdx; eIdx = tmp; }
         slice = amt.slice(sIdx, eIdx + 1);
+        for (var k2 = sIdx; k2 <= eIdx; k2++) indices.push(k2);
         targetMonths = slice.length || 1;
         modeLabel = mLabels[sIdx] + '〜' + mLabels[eIdx];
       } else {
-        slice = amt.filter(function(m){ return m.totalDays > 0; });
+        for (var k3 = 0; k3 < amt.length; k3++) {
+          if (amt[k3].totalDays > 0) { slice.push(amt[k3]); indices.push(k3); }
+        }
         targetMonths = slice.length || 12;
-        if (slice.length === 0) slice = amt;
+        if (slice.length === 0) { slice = amt; for (var k4 = 0; k4 < amt.length; k4++) indices.push(k4); }
         modeLabel = '実績月のみ（' + targetMonths + 'ヶ月）';
       }
       var sumWage = slice.reduce(function(s, m){ return s + m.totalWage; }, 0);
       var sumDays = slice.reduce(function(s, m){ return s + m.totalDays; }, 0);
       var sumBiz = slice.reduce(function(s, m){ return s + m.bizDays; }, 0);
-      var sumSvcH = slice.reduce(function(s, m){ return s + (m.totalServiceHours || 0); }, 0);
+      var svcStats = calcSvcForIndices(indices);
       var avgUsers = sumBiz > 0 ? Math.ceil((sumDays / sumBiz) * 10) / 10 : 0;
       var avgWage = (avgUsers > 0 && targetMonths > 0) ? Math.round(sumWage / avgUsers / targetMonths) : 0;
-      var avgSvcH = sumDays > 0 ? Math.round((sumSvcH / sumDays) * 100) / 100 : 0;
+      var avgSvcH = svcStats.svcDays > 0 ? Math.round((svcStats.svcH / svcStats.svcDays) * 100) / 100 : 0;
       var tier = getSvcTierInfo(avgSvcH);
       window._annCurAvg = { modeLabel: modeLabel, sumWage: sumWage, sumBiz: sumBiz, avgUsers: avgUsers, targetMonths: targetMonths, avgWage: avgWage };
       var elW = document.getElementById('ann-val-wage');
@@ -11135,8 +11175,9 @@ async function loadE(){
       var elSD = document.getElementById('ann-svc-days');
       var elSA = document.getElementById('ann-svc-avg');
       var elST = document.getElementById('ann-svc-tier');
-      if (elSH) elSH.textContent = sumSvcH.toFixed(1) + '時間';
-      if (elSD) elSD.textContent = sumDays + '日';
+      var elWT = document.getElementById('ann-wage-tier');
+      if (elSH) elSH.textContent = svcStats.svcH.toFixed(1) + '時間';
+      if (elSD) elSD.textContent = svcStats.svcDays + '日' + (svcStats.exCount > 0 ? '（除外' + svcStats.exCount + '名）' : '');
       if (elSA) elSA.textContent = avgSvcH.toFixed(2) + '時間/日';
       if (elST) {
         elST.textContent = tier.label;
@@ -11144,15 +11185,22 @@ async function loadE(){
         elST.style.color = tier.fg;
         elST.style.borderColor = tier.bd;
       }
+      if (elWT) elWT.textContent = getWageTierLabelR9(avgWage);
     };
     // 基本表示：年度通算（4月〜3月）
     var annTargetMonths = 12;
     var annActiveBiz = gtBiz;
     var annAvgDailyUsers = annActiveBiz > 0 ? Math.ceil((gtDays / annActiveBiz) * 10) / 10 : 0;
     var annAvgMonthlyWage = (annAvgDailyUsers > 0) ? Math.round(gtWage / annAvgDailyUsers / annTargetMonths) : 0;
-    var gtSvcHours = mt.reduce(function(s, m){ return s + (m.totalServiceHours || 0); }, 0);
-    var annAvgSvcHours = gtDays > 0 ? Math.round((gtSvcHours / gtDays) * 100) / 100 : 0;
+    var allIndices = mt.map(function(_, idx){ return idx; });
+    var initSvcStats = calcSvcForIndices(allIndices);
+    var annAvgSvcHours = initSvcStats.svcDays > 0 ? Math.round((initSvcStats.svcH / initSvcStats.svcDays) * 100) / 100 : 0;
     var annSvcTier = getSvcTierInfo(annAvgSvcHours);
+    var annUsersTotal = (data.users || []).length;
+    var annDegreeUsers = (data.users || []).filter(function(u){ return u.isTargetDegree; });
+    var annDegreeCount = annDegreeUsers.length;
+    var annDegreePct = annUsersTotal > 0 ? Math.round((annDegreeCount / annUsersTotal) * 1000) / 10 : 0;
+    var annMissingInfoCount = (data.users || []).filter(function(u){ return !u.category && !u.handicapBook; }).length;
     window._annCurAvg = { modeLabel: '年度通算（4月〜3月）', sumWage: gtWage, sumBiz: annActiveBiz, avgUsers: annAvgDailyUsers, targetMonths: annTargetMonths, avgWage: annAvgMonthlyWage };
     window._annPrintData = { fy: fy2, fn: fn, data: data, mLabels: mLabels, mt: mt, gtDays: gtDays, gtHours: gtHours, gtWage: gtWage, gtBiz: gtBiz };
     var firstActiveIdx = mt.findIndex(function(m){ return m.totalDays > 0; });
@@ -11162,11 +11210,20 @@ async function loadE(){
     var mOptsS = mLabels.map(function(lb, idx){ return '<option value="'+idx+'"'+(idx===firstActiveIdx?' selected':'')+'>'+lb+'</option>'; }).join('');
     var mOptsE = mLabels.map(function(lb, idx){ return '<option value="'+idx+'"'+(idx===lastActiveIdx?' selected':'')+'>'+lb+'</option>'; }).join('');
     var annSummaryBox = '<div style="display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px">'+
+      '<div style="background:#faf8f5;border:1px solid #e0d8ce;border-radius:8px;padding:12px 18px;font-size:12px;min-width:250px">'+
+      '<div style="font-size:11px;color:var(--sub);font-weight:700;margin-bottom:8px">🧩 障害の程度・区分目安 <span style="font-size:10px;font-weight:400">（令和9年度案）</span></div>'+
+      '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline">'+
+      '<span style="color:var(--sub);font-size:11px">重度・精神手帳等対象</span><span style="font-weight:700;text-align:right">'+annDegreeCount+'名 / '+annUsersTotal+'名（'+annDegreePct.toFixed(1)+'%）</span>'+
+      '<span style="color:var(--sub);font-size:11px">該当者</span><span style="font-size:10.5px;text-align:right;color:#333">'+(annDegreeCount>0?annDegreeUsers.map(function(u){return esc(u.name);}).join('・'):'なし')+'</span>'+
+      '<span style="color:var(--sub);font-size:11px">工賃区分目安</span><span id="ann-wage-tier" style="font-weight:700;font-size:11px;text-align:right;color:var(--pri)">'+getWageTierLabelR9(annAvgMonthlyWage)+'</span>'+
+      '</div>'+
+      (annMissingInfoCount>0?'<div style="margin-top:8px;font-size:10.5px;color:#b45309">※区分・手帳未登録が'+annMissingInfoCount+'名います（利用者画面で設定可）</div>':'')+
+      '</div>'+
       '<div style="background:#faf8f5;border:1px solid #e0d8ce;border-radius:8px;padding:12px 18px;font-size:12px;min-width:260px">'+
       '<div style="font-size:11px;color:var(--sub);font-weight:700;margin-bottom:8px">⏱ 平均サービス提供時間 <span style="font-size:10px;font-weight:400">（休憩含む・令和9年度案）</span></div>'+
       '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline">'+
-      '<span style="color:var(--sub);font-size:11px">総サービス提供時間</span><span id="ann-svc-hours" style="font-weight:700;text-align:right">'+gtSvcHours.toFixed(1)+'時間</span>'+
-      '<span style="color:var(--sub);font-size:11px">延べ利用日数</span><span id="ann-svc-days" style="font-weight:700;text-align:right">'+gtDays+'日</span>'+
+      '<span style="color:var(--sub);font-size:11px">総サービス提供時間</span><span id="ann-svc-hours" style="font-weight:700;text-align:right">'+initSvcStats.svcH.toFixed(1)+'時間</span>'+
+      '<span style="color:var(--sub);font-size:11px">算定対象日数</span><span id="ann-svc-days" style="font-weight:700;text-align:right">'+initSvcStats.svcDays+'日'+(initSvcStats.exCount>0?'（除外'+initSvcStats.exCount+'名）':'')+'</span>'+
       '<span style="color:var(--sub);font-size:11px">区分目安</span><span style="text-align:right"><span id="ann-svc-tier" style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10.5px;font-weight:700;border:1px solid '+annSvcTier.bd+';background:'+annSvcTier.bg+';color:'+annSvcTier.fg+'">'+annSvcTier.label+'</span></span>'+
       '</div>'+
       '<div style="border-top:1px solid #e0d8ce;margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;align-items:baseline;gap:12px">'+

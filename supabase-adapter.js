@@ -1364,6 +1364,8 @@ async function _calcAnnualWageDetail(fiscalYear) {
   var annUserOverrideMap = {};
   try { annUserOverrideMap = JSON.parse(settings.userAllowanceMap || '{}'); } catch (e) { }
   var ANN_KAIKIN_BONUS = 3000;
+  var svcExcludeMap = {};
+  try { svcExcludeMap = JSON.parse(settings.svcTimeExcludeMap || '{}'); } catch (e) { }
   var result = [];
   us.forEach(function (user) {
     var monthData = [], yearDays = 0, yearHours = 0, yearServiceHours = 0, yearWage = 0;
@@ -1413,7 +1415,13 @@ async function _calcAnnualWageDetail(fiscalYear) {
     if (yearDays === 0) return;
     var initials = ''; var fn = user.furigana || '';
     if (fn) { var parts = fn.replace(/\s+/g, ' ').trim().split(' '); initials = parts.map(function (p) { return p.charAt(0).toUpperCase(); }).join('.'); }
-    result.push({ name: user.name, initials: initials, months: monthData, totalDays: yearDays, totalHours: Math.round(yearHours * 100) / 100, totalServiceHours: Math.round(yearServiceHours * 100) / 100, totalWage: Math.round(yearWage) });
+    var isTargetDegree = (
+      ['区分4', '区分5', '区分6'].indexOf(user.category || '') >= 0 ||
+      (user.handicapBook === '身体障害者手帳' && ['1級', '2級'].indexOf(user.handicapGrade || '') >= 0) ||
+      (user.handicapBook === '療育手帳' && String(user.handicapGrade || '').indexOf('A') >= 0) ||
+      (user.handicapBook === '精神障害者保健福祉手帳')
+    );
+    result.push({ id: user.id, name: user.name, initials: initials, category: user.category || '', handicapBook: user.handicapBook || '', handicapGrade: user.handicapGrade || '', svcExcluded: !!svcExcludeMap[user.id], isTargetDegree: isTargetDegree, months: monthData, totalDays: yearDays, totalHours: Math.round(yearHours * 100) / 100, totalServiceHours: Math.round(yearServiceHours * 100) / 100, totalWage: Math.round(yearWage) });
   });
   var monthTotals = [];
   for (var mi2 = 0; mi2 < months.length; mi2++) {
