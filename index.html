@@ -10753,6 +10753,7 @@ async function renderExport(c){
     menuH+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">';
     menuH+='<button onclick="eT=\'incidents\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">⚠️ ヒヤリハット</button>';
     menuH+='<button onclick="eT=\'complaints\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📞 苦情・相談</button>';
+    menuH+='<button onclick="eT=\'training\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📚 研修・事例検討会</button>';
     menuH+='</div>';
     c.innerHTML=menuH;
     return;
@@ -10760,6 +10761,7 @@ async function renderExport(c){
   // 管理記録：専用画面に遷移
   if(eT==='incidents'){renderIncidents(c);return;}
   if(eT==='complaints'){renderComplaints(c);return;}
+  if(eT==='training'){renderTraining(c);return;}
 
   var curGroup = groups.find(function(g){
     return g.items.some(function(item){ return item[0] === eT; });
@@ -15086,6 +15088,7 @@ function loadTrainingList(){
   var fyData=_trainData.filter(function(t){return(t.date||'')>=fyStart&&(t.date||'')<=fyEnd;});
   var kenshu=fyData.filter(function(x){return x.category==='研修';}).length;
   var iinkai=fyData.filter(function(x){return x.category==='委員会';}).length;
+  var jirei=fyData.filter(function(x){return x.category==='事例検討会';}).length;
   var upcoming=fyData.filter(function(x){return(x.date||'')>=today();}).length;
 
   var h='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">';
@@ -15102,6 +15105,7 @@ function loadTrainingList(){
   h+='<div class="stat"><div class="stat-l">年度合計</div><div class="stat-v">'+fyData.length+'</div></div>';
   h+='<div class="stat" style="border-color:#1565c0"><div class="stat-l">📖 研修</div><div class="stat-v" style="color:#1565c0">'+kenshu+'</div></div>';
   h+='<div class="stat" style="border-color:#2e7d32"><div class="stat-l">🏛️ 委員会</div><div class="stat-v" style="color:#2e7d32">'+iinkai+'</div></div>';
+  h+='<div class="stat" style="border-color:#e65100"><div class="stat-l">💬 事例検討会</div><div class="stat-v" style="color:#e65100">'+jirei+'</div></div>';
   h+='<div class="stat" style="border-color:#ff9800"><div class="stat-l">📅 今後</div><div class="stat-v" style="color:#ff9800">'+upcoming+'</div></div>';
   h+='</div>';
 
@@ -15125,8 +15129,8 @@ function loadTrainingList(){
     }else{
       mEvents.sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
       mEvents.forEach(function(ev){
-        var catColor=ev.category==='研修'?'#1565c0':'#2e7d32';
-        var catBg=ev.category==='研修'?'#e3f2fd':'#e8f5e9';
+        var catColor=ev.category==='研修'?'#1565c0':(ev.category==='事例検討会'?'#e65100':'#2e7d32');
+        var catBg=ev.category==='研修'?'#e3f2fd':(ev.category==='事例検討会'?'#fff3e0':'#e8f5e9');
         var day=parseInt((ev.date||'').split('-')[2])||'';
         h+='<div onclick="openTrainingDetail(\''+ev.id+'\')" style="font-size:10.5px;padding:4px 6px;margin-bottom:4px;background:'+catBg+';color:'+catColor+';border-radius:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600" title="'+esc(ev.title||'')+'">';
         h+=day+'日 '+esc(ev.title||ev.type||'');
@@ -15139,6 +15143,7 @@ function loadTrainingList(){
   h+='<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:#666;justify-content:center">';
   h+='<span><span style="display:inline-block;width:12px;height:12px;background:#e3f2fd;border-radius:2px;vertical-align:middle;margin-right:3px"></span>研修</span>';
   h+='<span><span style="display:inline-block;width:12px;height:12px;background:#e8f5e9;border-radius:2px;vertical-align:middle;margin-right:3px"></span>委員会</span>';
+  h+='<span><span style="display:inline-block;width:12px;height:12px;background:#fff3e0;border-radius:2px;vertical-align:middle;margin-right:3px"></span>事例検討会</span>';
   h+='</div></div>';
 
   // 一覧テーブル
@@ -15148,8 +15153,8 @@ function loadTrainingList(){
   }
   var sorted=fyData.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
   sorted.forEach(function(tr){
-    var catColor=tr.category==='研修'?'#1565c0':'#2e7d32';
-    var catBg=tr.category==='研修'?'#e3f2fd':'#e8f5e9';
+    var catColor=tr.category==='研修'?'#1565c0':(tr.category==='事例検討会'?'#e65100':'#2e7d32');
+    var catBg=tr.category==='研修'?'#e3f2fd':(tr.category==='事例検討会'?'#fff3e0':'#e8f5e9');
     var reports=_trainReports.filter(function(r){return r.trainingId===tr.id;});
     var submitted=reports.filter(function(r){return r.report&&r.report.length>0;}).length;
     var attended=reports.filter(function(r){return r.attended==='出席';}).length;
@@ -15235,12 +15240,12 @@ function openTrainingForm(id, defaultDate, targetMonth){
   h+='<div class="grid2">';
   h+='<div class="field"><label>日程 *</label><input type="date" id="trn-date" value="'+(tr.date||'')+'" style="width:100%"></div>';
   h+='<div class="field"><label>区分 *</label><select id="trn-cat" style="width:100%">';
-  ['研修','委員会'].forEach(function(s){h+='<option'+(tr.category===s?' selected':'')+'>'+s+'</option>';});
+  ['研修','委員会','事例検討会'].forEach(function(s){h+='<option'+(tr.category===s?' selected':'')+'>'+s+'</option>';});
   h+='</select></div></div>';
 
   h+='<div class="grid2">';
   h+='<div class="field"><label>種別</label><select id="trn-type" style="width:100%"><option value="">-- 選択 --</option>';
-  ['虐待防止','身体拘束適正化','感染症対策','救急救命','防災訓練','交通安全','個人情報保護','衛生管理','人権研修','外部研修','運営委員会','虐待防止委員会','身体拘束適正化委員会','感染症対策委員会','防災委員会','その他'].forEach(function(s){h+='<option'+(tr.type===s?' selected':'')+'>'+s+'</option>';});
+  ['事例検討会','ケース会議','虐待防止','身体拘束適正化','感染症対策','救急救命','防災訓練','交通安全','個人情報保護','衛生管理','人権研修','外部研修','運営委員会','虐待防止委員会','身体拘束適正化委員会','感染症対策委員会','防災委員会','その他'].forEach(function(s){h+='<option'+(tr.type===s?' selected':'')+'>'+s+'</option>';});
   h+='</select></div>';
   h+='<div class="field"><label>参加区分</label><select id="trn-req" style="width:100%">';
   ['必須','任意'].forEach(function(s){h+='<option'+(tr.required===s?' selected':'')+'>'+s+'</option>';});
