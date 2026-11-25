@@ -6714,8 +6714,9 @@
       var h = '';
       h += '<div style="display:flex;flex-direction:column;gap:12px;">';
       h += '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
-      h += '    <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">委員会種別</label>';
+      h += '    <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">会議・委員会種別</label>';
       h += '      <select id="cm-category" onchange="onCommitteeTypeChange()" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">';
+      h += '        <option value="事例検討会（ケース会議）">事例検討会（ケース会議）</option>';
       h += '        <option value="身体拘束適正化委員会">身体拘束適正化委員会</option>';
       h += '        <option value="虐待防止委員会">虐待防止委員会</option>';
       h += '        <option value="感染症対策委員会">感染症対策委員会</option>';
@@ -6825,12 +6826,13 @@
       _committeeMinutes.unshift(cm);
       await saveStorageData('porte_committee_minutes', _committeeMinutes);
 
-      // Porte本体の「研修（委員会）」テーブルにも自動同期
+      // Porte本体の「研修（委員会・事例検討会）」テーブルにも自動同期
       try {
         if (typeof gas === 'function') {
+          var syncCat = (cat.indexOf('事例検討会') >= 0) ? '事例検討会' : '委員会';
           await gas('addTraining', {
             date: date,
-            category: '委員会',
+            category: syncCat,
             type: cat,
             title: title,
             location: '事業所内',
@@ -6869,7 +6871,7 @@
 
       html += '<table>';
       html += '<tr><th>事業所名</th><td>' + esc(getFacilityFullName()) + '</td></tr>';
-      html += '<tr><th>委員会区分</th><td>' + esc(cm.category || '法定委員会') + '</td></tr>';
+      html += '<tr><th>会議・委員会区分</th><td>' + esc(cm.category || '法定委員会') + '</td></tr>';
       html += '<tr><th>開催日時</th><td>' + cm.date + '</td></tr>';
       html += '<tr><th>出席者</th><td>' + esc(cm.attendees) + '</td></tr>';
       html += '<tr><th>議題・協議事項</th><td style="white-space:pre-wrap;">' + esc(cm.agenda) + '</td></tr>';
