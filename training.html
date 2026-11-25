@@ -6712,6 +6712,15 @@
 
       var staffNames = STAFF.map(function (s) { return s.name; }).join('、');
 
+      var isCase = !!(type && type.indexOf('事例検討会') >= 0);
+      var defTitle = isCase ? '令和8年度 事例検討会（ケース会議）' : '令和8年度 第2回 身体拘束適正化委員会';
+      var defAgenda = isCase
+        ? '1. 対象利用者の最近の状況（体調・作業ペース・対人関係・意欲面）の共有\n2. 強み・得意な作業と、困りごと・つまずきやすい場面の整理\n3. 個別支援計画に基づく環境調整・声かけ・道具や作業工程の工夫の検討'
+        : '1. 事業所における身体拘束ゼロの継続確認\n2. 現場におけるスピーチロック（言葉の拘束）のヒヤリハット事例共有\n3. 11月スタッフ研修「スピーチロック防止と代替支援」の実施および受講状況確認';
+      var defDecisions = isCase
+        ? '・本人の強みを活かした作業工程・役割分担を継続し、達成感につながる声かけを行う。\n・集中しやすい環境調整や休憩タイミングの工夫を取り入れ、日々の支援記録に反映する。\n・1ヶ月後のモニタリングで支援効果と本人の意向を改めて振り返る。'
+        : '・「ちょっと待って」ではなく具体的な見通し（◯分後など）を伝える声かけを全職員で徹底する。\n・言葉遣いに違和感があった場合、責めずに前向きに共有できる職場環境づくりを継続する。\n・全スタッフに11月中のスピーチロック研修受講およびテスト合格を義務付ける。';
+
       var h = '';
       h += '<div style="display:flex;flex-direction:column;gap:12px;">';
       h += '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
@@ -6727,17 +6736,17 @@
       h += '    </div>';
       h += '    <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">開催日</label><input type="date" id="cm-date" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + todayStr() + '"></div>';
       h += '  </div>';
-      h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">会議名</label><input type="text" id="cm-title" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="令和8年度 第2回 身体拘束適正化委員会"></div>';
+      h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">会議名</label><input type="text" id="cm-title" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + esc(defTitle) + '"></div>';
       h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">出席者</label><input type="text" id="cm-attendees" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + esc(staffNames) + '"></div>';
 
       h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">';
-      h += '    <span style="font-size:12px;color:var(--sub);">委員会種別に合わせてAIが実地指導基準の議題と決定事項を起案します</span>';
+      h += '    <span style="font-size:12px;color:var(--sub);">種別に合わせてAIが検討内容と支援方針・決定事項を起案します</span>';
       h += '    <button type="button" id="btn-ai-committee" onclick="generateCommitteeWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12.5px;">🤖 AIで議題と決定事項を自動生成</button>';
       h += '  </div>';
 
-      h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">協議事項・議題</label><textarea id="cm-agenda" rows="4" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">1. 事業所における身体拘束ゼロの継続確認\n2. 現場におけるスピーチロック（言葉の拘束）のヒヤリハット事例共有\n3. 11月スタッフ研修「スピーチロック防止と代替支援」の実施および受講状況確認</textarea></div>';
-      h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">決定事項・改善策</label><textarea id="cm-decisions" rows="4" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">・「ちょっと待って」ではなく具体的な見通し（◯分後など）を伝える声かけを全職員で徹底する。\n・言葉遣いに違和感があった場合、責めずに前向きに共有できる職場環境づくりを継続する。\n・全スタッフに11月中のスピーチロック研修受講およびテスト合格を義務付ける。</textarea></div>';
-      h += '  <button type="button" class="training-start-btn" style="background:var(--accent);margin-top:10px;" onclick="saveCommitteeMinutes()">💾 委員会議事録を保存する</button>';
+      h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">協議事項・検討内容</label><textarea id="cm-agenda" rows="4" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">' + esc(defAgenda) + '</textarea></div>';
+      h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">決定事項・今後の支援方針</label><textarea id="cm-decisions" rows="4" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">' + esc(defDecisions) + '</textarea></div>';
+      h += '  <button type="button" class="training-start-btn" style="background:var(--accent);margin-top:10px;" onclick="saveCommitteeMinutes()">💾 議事録を保存する</button>';
       h += '</div>';
 
       body.innerHTML = h;
@@ -6761,13 +6770,22 @@
       var btn = el('btn-ai-committee');
       if (btn) { btn.disabled = true; btn.textContent = '⏳ AI起案中...'; }
 
-      var prompt = 'あなたは' + getFacilityFullName() + 'の管理者です。\n' +
-        '実地指導（運営指導）の監査基準を満たす「' + cat + '」の議事録として、「協議事項・議題（3項目）」と「決定事項・改善策（3項目）」をJSON形式のみで出力してください。\n' +
-        '{\n' +
-        '  "title": "令和8年度 第○回 ' + cat + '",\n' +
-        '  "agenda": "1. ...\\n2. ...\\n3. ...",\n' +
-        '  "decisions": "・...\\n・...\\n・..."\n' +
-        '}';
+      var isCaseAi = (cat.indexOf('事例検討会') >= 0);
+      var prompt = isCaseAi
+        ? ('あなたは就労継続支援B型事業所「' + getFacilityFullName() + '」のサービス管理責任者です。\n' +
+          '月1回の「事例検討会（ケース会議）」の記録として、利用者の強み・課題の共有、環境や作業の工夫、今後の支援方針を、実名を出さず仮名（Aさん等）でJSON形式のみで出力してください。\n' +
+          '{\n' +
+          '  "title": "令和8年度 第○回 事例検討会（ケース会議）",\n' +
+          '  "agenda": "1. ...\\n2. ...\\n3. ...",\n' +
+          '  "decisions": "・...\\n・...\\n・..."\n' +
+          '}')
+        : ('あなたは' + getFacilityFullName() + 'の管理者です。\n' +
+          '実地指導（運営指導）の監査基準を満たす「' + cat + '」の議事録として、「協議事項・議題（3項目）」と「決定事項・改善策（3項目）」をJSON形式のみで出力してください。\n' +
+          '{\n' +
+          '  "title": "令和8年度 第○回 ' + cat + '",\n' +
+          '  "agenda": "1. ...\\n2. ...\\n3. ...",\n' +
+          '  "decisions": "・...\\n・...\\n・..."\n' +
+          '}');
 
       var res = await callPorteAI(prompt);
       var parsed = res ? extractJsonFromText(res.text) : null;
@@ -6777,6 +6795,10 @@
         if (el('cm-decisions')) el('cm-decisions').value = parsed.decisions;
       } else {
         var presets = {
+          '事例検討会（ケース会議）': {
+            agenda: '1. 対象利用者（Aさん）の最近の体調・通所リズム・作業意欲の共有\n2. 得意な作業（細かな仕分け・梱包等）と負担を感じやすい場面の整理\n3. 作業環境の調整（席配置・手順書・声かけ方法）の検討',
+            decisions: '・強みを活かした作業工程と役割分担を継続し、成功体験につながるフィードバックを行う。\n・手順の視覚化（チェックリスト等）と適宜休憩の声かけを取り入れ、安心して作業できる環境を整える。\n・1ヶ月後に支援経過を振り返り、個別支援計画の達成状況を確認する。'
+          },
           '身体拘束適正化委員会': {
             agenda: '1. 事業所における身体拘束ゼロの継続確認と指針の点検\n2. 現場におけるスピーチロック（言葉の拘束）のヒヤリハット事例共有\n3. 法定研修「スピーチロック防止と代替支援」の受講進捗確認',
             decisions: '・「ちょっと待って」ではなく具体的な見通し（◯分後など）を伝える声かけを全職員で徹底する。\n・作業環境や動線を調整し、利用者が落ち着いて過ごせる環境づくりを継続する。\n・全職員の法定研修受講100%達成と日々の振り返りを徹底する。'
@@ -6882,7 +6904,10 @@
       html += '<tr><th>出席者</th><td>' + esc(cm.attendees) + '</td></tr>';
       html += '<tr><th>議題・協議事項</th><td style="white-space:pre-wrap;">' + esc(cm.agenda) + '</td></tr>';
       html += '<tr><th>決定事項・対応策</th><td style="white-space:pre-wrap;">' + esc(cm.decisions) + '</td></tr>';
-      html += '<tr><th>周知・共有方法</th><td>全職員へ議事録を回覧・共有し、関連するeラーニング研修を通じて現場実践を徹底する。</td></tr>';
+      var shareNote = (String(cm.category || '').indexOf('事例検討会') >= 0)
+        ? '全支援員で支援方針を共有し、日々の支援記録および次回のモニタリング・個別支援計画に反映する。'
+        : '全職員へ議事録を回覧・共有し、関連するeラーニング研修を通じて現場実践を徹底する。';
+      html += '<tr><th>周知・共有方法</th><td>' + shareNote + '</td></tr>';
       html += '</table>';
 
       html += '<div style="text-align:center;margin-top:30px;"><button onclick="window.print()" style="padding:10px 24px;font-size:14px;cursor:pointer;background:#2d5a3a;color:#fff;border:none;border-radius:8px;font-weight:bold;">🖨️ 議事録をA4印刷する</button></div>';
