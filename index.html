@@ -12612,7 +12612,7 @@ function downloadPadV2Csv(){
       var dropoffCol=(isAttend&&d.dropoff)?'1':'';
       var mealCol=(isAttend&&d.meal)?'1':'';
       var offsiteCol=(isAttend&&d.offsiteSupport)?'1':'';
-      var notesCol=(isAttend||isAbsAdd)?toFullWidth(cleanNotesText(d.notes||'')):'';
+      var notesCol=isAttend?toFullWidth(cleanNotesText(d.notes||'')):'';
       lines.push([
         escCsv(rNum),
         escCsv(u.name),
