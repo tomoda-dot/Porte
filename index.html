@@ -11074,10 +11074,16 @@ async function loadE(){
       return tr;
     }).join('');
     if(!isCurrent()) return;
-    // 平均工賃月額の算定（厚労省方式・期間切替対応・年度通算を基本）
+    // 平均工賃月額 & 平均サービス提供時間の算定（厚労省方式・期間切替対応・年度通算を基本）
     window._annMt = mt;
     window._annMLabels = mLabels;
     window._annCurAvg = null;
+    function getSvcTierInfo(avgH) {
+      if (avgH >= 6) return { label: '6時間以上', bg: '#e8f5e9', fg: '#1b5e20', bd: '#a5d6a7' };
+      if (avgH >= 5) return { label: '5時間以上〜6時間未満', bg: '#e0f2f1', fg: '#004d40', bd: '#80cbc4' };
+      if (avgH >= 4) return { label: '4時間以上〜5時間未満', bg: '#fff3e0', fg: '#e65100', bd: '#ffcc80' };
+      return { label: '4時間未満', bg: '#ffebee', fg: '#b71c1c', bd: '#ef9a9a' };
+    }
     window.recalcAnnAvg = function() {
       var amt = window._annMt || [];
       var modeEl = document.getElementById('ann-avg-mode');
@@ -11107,8 +11113,11 @@ async function loadE(){
       var sumWage = slice.reduce(function(s, m){ return s + m.totalWage; }, 0);
       var sumDays = slice.reduce(function(s, m){ return s + m.totalDays; }, 0);
       var sumBiz = slice.reduce(function(s, m){ return s + m.bizDays; }, 0);
+      var sumSvcH = slice.reduce(function(s, m){ return s + (m.totalServiceHours || 0); }, 0);
       var avgUsers = sumBiz > 0 ? Math.ceil((sumDays / sumBiz) * 10) / 10 : 0;
       var avgWage = (avgUsers > 0 && targetMonths > 0) ? Math.round(sumWage / avgUsers / targetMonths) : 0;
+      var avgSvcH = sumDays > 0 ? Math.round((sumSvcH / sumDays) * 100) / 100 : 0;
+      var tier = getSvcTierInfo(avgSvcH);
       window._annCurAvg = { modeLabel: modeLabel, sumWage: sumWage, sumBiz: sumBiz, avgUsers: avgUsers, targetMonths: targetMonths, avgWage: avgWage };
       var elW = document.getElementById('ann-val-wage');
       var elB = document.getElementById('ann-val-biz');
@@ -11122,12 +11131,28 @@ async function loadE(){
       if (elM) elM.textContent = targetMonths + 'ヶ月';
       if (elLbl) elLbl.textContent = '平均工賃月額（÷1日平均利用者÷' + targetMonths + 'ヶ月）';
       if (elRes) elRes.textContent = '¥' + avgWage.toLocaleString();
+      var elSH = document.getElementById('ann-svc-hours');
+      var elSD = document.getElementById('ann-svc-days');
+      var elSA = document.getElementById('ann-svc-avg');
+      var elST = document.getElementById('ann-svc-tier');
+      if (elSH) elSH.textContent = sumSvcH.toFixed(1) + '時間';
+      if (elSD) elSD.textContent = sumDays + '日';
+      if (elSA) elSA.textContent = avgSvcH.toFixed(2) + '時間/日';
+      if (elST) {
+        elST.textContent = tier.label;
+        elST.style.background = tier.bg;
+        elST.style.color = tier.fg;
+        elST.style.borderColor = tier.bd;
+      }
     };
     // 基本表示：年度通算（4月〜3月）
     var annTargetMonths = 12;
     var annActiveBiz = gtBiz;
     var annAvgDailyUsers = annActiveBiz > 0 ? Math.ceil((gtDays / annActiveBiz) * 10) / 10 : 0;
     var annAvgMonthlyWage = (annAvgDailyUsers > 0) ? Math.round(gtWage / annAvgDailyUsers / annTargetMonths) : 0;
+    var gtSvcHours = mt.reduce(function(s, m){ return s + (m.totalServiceHours || 0); }, 0);
+    var annAvgSvcHours = gtDays > 0 ? Math.round((gtSvcHours / gtDays) * 100) / 100 : 0;
+    var annSvcTier = getSvcTierInfo(annAvgSvcHours);
     window._annCurAvg = { modeLabel: '年度通算（4月〜3月）', sumWage: gtWage, sumBiz: annActiveBiz, avgUsers: annAvgDailyUsers, targetMonths: annTargetMonths, avgWage: annAvgMonthlyWage };
     window._annPrintData = { fy: fy2, fn: fn, data: data, mLabels: mLabels, mt: mt, gtDays: gtDays, gtHours: gtHours, gtWage: gtWage, gtBiz: gtBiz };
     var firstActiveIdx = mt.findIndex(function(m){ return m.totalDays > 0; });
@@ -11136,7 +11161,19 @@ async function loadE(){
     for (var li = mt.length - 1; li >= 0; li--) { if (mt[li].totalDays > 0) { lastActiveIdx = li; break; } }
     var mOptsS = mLabels.map(function(lb, idx){ return '<option value="'+idx+'"'+(idx===firstActiveIdx?' selected':'')+'>'+lb+'</option>'; }).join('');
     var mOptsE = mLabels.map(function(lb, idx){ return '<option value="'+idx+'"'+(idx===lastActiveIdx?' selected':'')+'>'+lb+'</option>'; }).join('');
-    var annSummaryBox = '<div style="display:flex;justify-content:flex-end;margin-bottom:12px">'+
+    var annSummaryBox = '<div style="display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px">'+
+      '<div style="background:#faf8f5;border:1px solid #e0d8ce;border-radius:8px;padding:12px 18px;font-size:12px;min-width:260px">'+
+      '<div style="font-size:11px;color:var(--sub);font-weight:700;margin-bottom:8px">⏱ 平均サービス提供時間 <span style="font-size:10px;font-weight:400">（休憩含む・令和9年度案）</span></div>'+
+      '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline">'+
+      '<span style="color:var(--sub);font-size:11px">総サービス提供時間</span><span id="ann-svc-hours" style="font-weight:700;text-align:right">'+gtSvcHours.toFixed(1)+'時間</span>'+
+      '<span style="color:var(--sub);font-size:11px">延べ利用日数</span><span id="ann-svc-days" style="font-weight:700;text-align:right">'+gtDays+'日</span>'+
+      '<span style="color:var(--sub);font-size:11px">区分目安</span><span style="text-align:right"><span id="ann-svc-tier" style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10.5px;font-weight:700;border:1px solid '+annSvcTier.bd+';background:'+annSvcTier.bg+';color:'+annSvcTier.fg+'">'+annSvcTier.label+'</span></span>'+
+      '</div>'+
+      '<div style="border-top:1px solid #e0d8ce;margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;align-items:baseline;gap:12px">'+
+      '<span style="font-size:11px;color:var(--sub)">1日平均サービス提供時間</span>'+
+      '<span id="ann-svc-avg" style="font-size:18px;font-weight:700;color:var(--pri)">'+annAvgSvcHours.toFixed(2)+'時間/日</span>'+
+      '</div>'+
+      '</div>'+
       '<div style="background:#faf8f5;border:1px solid #e0d8ce;border-radius:8px;padding:12px 18px;font-size:12px;min-width:300px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">'+
       '<span style="font-size:11px;color:var(--sub);font-weight:700">📊 平均工賃月額（厚労省方式）</span>'+
@@ -11175,9 +11212,19 @@ async function loadE(){
     function minToHM(m){var h=Math.floor(m/60);var mm=m%60;return h+':'+String(mm).padStart(2,'0');}
     var gDays=0,gWork=0,gBreak=0,gNet=0,gBonus=0,gWage=0,gBento=0,gTotal=0;
     aList.forEach(function(x){gDays+=x.days;gWork+=x.workMin;gBreak+=x.breakMin;gNet+=x.netMin;gBonus+=x.bonus;gWage+=x.wage;gBento+=x.bentoDed;gTotal+=x.total;});
+    var attAvgSvcH = gDays > 0 ? Math.round((gWork / 60 / gDays) * 100) / 100 : 0;
+    var attTierLabel = attAvgSvcH >= 6 ? '6時間以上' : (attAvgSvcH >= 5 ? '5時間以上〜6時間未満' : (attAvgSvcH >= 4 ? '4時間以上〜5時間未満' : '4時間未満'));
+    var attTierColor = attAvgSvcH >= 6 ? '#1b5e20' : (attAvgSvcH >= 5 ? '#004d40' : (attAvgSvcH >= 4 ? '#e65100' : '#b71c1c'));
+    var attTierBg = attAvgSvcH >= 6 ? '#e8f5e9' : (attAvgSvcH >= 5 ? '#e0f2f1' : (attAvgSvcH >= 4 ? '#fff3e0' : '#ffebee'));
     if(!isCurrent()) return;
     document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">勤怠状況一覧（'+fmtMonth(eM)+'）</span></div>'+
-      '<p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'　　弁当代: ¥'+aBentoPrice.toLocaleString()+'/食</p>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">'+
+      '<p style="margin:0;font-size:12px;color:var(--sub)">'+esc(fn)+'　　弁当代: ¥'+aBentoPrice.toLocaleString()+'/食</p>'+
+      '<div style="display:inline-flex;align-items:center;gap:8px;background:#faf8f5;border:1px solid #e0d8ce;border-radius:8px;padding:5px 12px;font-size:12px">'+
+      '<span style="color:var(--sub);font-size:11px">⏱ 1日平均サービス提供時間:</span>'+
+      '<span style="font-weight:700;color:var(--pri)">'+attAvgSvcH.toFixed(2)+'時間/日</span>'+
+      '<span style="padding:1px 8px;border-radius:10px;font-size:10.5px;font-weight:700;background:'+attTierBg+';color:'+attTierColor+'">'+attTierLabel+'</span>'+
+      '</div></div>'+
       '<div style="overflow:auto"><table style="font-size:12px;white-space:nowrap"><thead><tr>'+
       '<th>対象月</th><th>種別</th><th>氏名</th><th style="text-align:right">算定日数</th><th style="text-align:right">サービス提供時間</th><th style="text-align:right">休憩時間</th><th style="text-align:right">実稼働時間</th><th style="text-align:right">平均/日</th><th style="text-align:right">手当</th><th style="text-align:right">弁当代</th><th style="text-align:right">賃金計</th>'+
       '</tr></thead><tbody>'+

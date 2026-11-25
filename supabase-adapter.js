@@ -1366,12 +1366,23 @@ async function _calcAnnualWageDetail(fiscalYear) {
   var ANN_KAIKIN_BONUS = 3000;
   var result = [];
   us.forEach(function (user) {
-    var monthData = [], yearDays = 0, yearHours = 0, yearWage = 0;
+    var monthData = [], yearDays = 0, yearHours = 0, yearServiceHours = 0, yearWage = 0;
     months.forEach(function (ym) {
       var att = attByMonth[ym] || [];
       var recs = att.filter(function (a) { return String(a.userId) === String(user.id) && _isAttend(a); });
-      var days = recs.length, hours = 0, wage = 0;
-      recs.forEach(function (rec) { var cw = _calcRecWage(rec, wts, user); hours += cw.netH; wage += cw.wage; });
+      var days = recs.length, hours = 0, svcMin = 0, wage = 0;
+      recs.forEach(function (rec) {
+        var cw = _calcRecWage(rec, wts, user); hours += cw.netH; wage += cw.wage;
+        var effU = (user && rec && rec.date && typeof getUserScheduleForDate === 'function') ? Object.assign({}, user, getUserScheduleForDate(user, rec.date)) : user;
+        var sTime = rec.startTime || rec.in || rec.clockIn || rec.scheduleStart || (effU ? effU.scheduleStart : '') || '10:00';
+        var eTime = rec.endTime || rec.out || rec.clockOut || rec.scheduleEnd || (effU ? effU.scheduleEnd : '') || '16:00';
+        var sp = String(sTime).split(':'), ep = String(eTime).split(':');
+        if (sp.length >= 2 && ep.length >= 2) {
+          var wm = Number(ep[0]) * 60 + Number(ep[1]) - (Number(sp[0]) * 60 + Number(sp[1]));
+          if (!isNaN(wm) && wm > 0) svcMin += wm;
+        }
+      });
+      var svcH = svcMin / 60;
       var annBonus = 0;
       if (days > 0) {
         var annKk = _checkKaikin(user, att, ym);
@@ -1396,13 +1407,13 @@ async function _calcAnnualWageDetail(fiscalYear) {
           if (annKk.kaikin) { annBonus = ANN_KAIKIN_BONUS; }
         }
       }
-      monthData.push({ ym: ym, days: days, hours: Math.round(hours * 100) / 100, wage: Math.round(wage + annBonus) });
-      yearDays += days; yearHours += hours; yearWage += wage + annBonus;
+      monthData.push({ ym: ym, days: days, hours: Math.round(hours * 100) / 100, serviceHours: Math.round(svcH * 100) / 100, wage: Math.round(wage + annBonus) });
+      yearDays += days; yearHours += hours; yearServiceHours += svcH; yearWage += wage + annBonus;
     });
     if (yearDays === 0) return;
     var initials = ''; var fn = user.furigana || '';
     if (fn) { var parts = fn.replace(/\s+/g, ' ').trim().split(' '); initials = parts.map(function (p) { return p.charAt(0).toUpperCase(); }).join('.'); }
-    result.push({ name: user.name, initials: initials, months: monthData, totalDays: yearDays, totalHours: Math.round(yearHours * 100) / 100, totalWage: Math.round(yearWage) });
+    result.push({ name: user.name, initials: initials, months: monthData, totalDays: yearDays, totalHours: Math.round(yearHours * 100) / 100, totalServiceHours: Math.round(yearServiceHours * 100) / 100, totalWage: Math.round(yearWage) });
   });
   var monthTotals = [];
   for (var mi2 = 0; mi2 < months.length; mi2++) {
@@ -1425,9 +1436,9 @@ async function _calcAnnualWageDetail(fiscalYear) {
       }
       bizDays = dim2 - sunCount;
     }
-    var td = 0, th = 0, tw = 0;
-    result.forEach(function (u) { td += u.months[mi2].days; th += u.months[mi2].hours; tw += u.months[mi2].wage; });
-    monthTotals.push({ ym: ym2, bizDays: bizDays, totalDays: td, totalHours: Math.round(th * 100) / 100, totalWage: Math.round(tw) });
+    var td = 0, th = 0, tsh = 0, tw = 0;
+    result.forEach(function (u) { td += u.months[mi2].days; th += u.months[mi2].hours; tsh += (u.months[mi2].serviceHours || 0); tw += u.months[mi2].wage; });
+    monthTotals.push({ ym: ym2, bizDays: bizDays, totalDays: td, totalHours: Math.round(th * 100) / 100, totalServiceHours: Math.round(tsh * 100) / 100, totalWage: Math.round(tw) });
   }
   return { fiscalYear: fy, users: result, monthTotals: monthTotals };
 }
