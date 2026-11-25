@@ -3497,6 +3497,7 @@
       h += '    <span style="font-size:22px;font-weight:700;color:var(--pri-dark);">📚 研修・委員会管理</span>';
       h += '  </div>';
       h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;">';
+      h += '    <button type="button" class="btn-print" style="background:#e65100;font-size:12px;padding:7px 14px;" onclick="openCommitteeModal(\'事例検討会（ケース会議）\')">💬 事例検討会・議事録を作成</button>';
       h += '    <button type="button" class="btn-print" style="background:#2e7d32;font-size:12px;padding:7px 14px;" onclick="previewAutoFillAnnualCommittees()">✨ 委員会の年間予定を一括配置</button>';
       h += '    <button type="button" class="btn-print" style="background:var(--accent);font-size:12px;padding:7px 14px;" onclick="previewAutoFill12MonthPlan()">✨ 推奨研修テーマ一括配置</button>';
       h += '  </div>';
@@ -6740,6 +6741,11 @@
       h += '</div>';
 
       body.innerHTML = h;
+      if (type && el('cm-category')) {
+        el('cm-category').value = type;
+        var titleEl = el('cm-title');
+        if (titleEl) titleEl.value = '令和8年度 ' + type;
+      }
       el('committee-modal-overlay').classList.add('active');
     }
 
