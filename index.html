@@ -11263,7 +11263,7 @@ async function loadE(){
       '<span id="ann-val-res" style="font-size:18px;font-weight:700;color:var(--pri)">¥'+annAvgMonthlyWage.toLocaleString()+'</span>'+
       '</div>'+
       '</div></div>';
-    document.getElementById('e-c').innerHTML='<div class="card-hd"><span class="card-t">'+fy2+'年度 工賃支払明細書</span></div>'+
+    document.getElementById('e-c').innerHTML='<div class="card-hd" style="flex-wrap:wrap;gap:8px"><span class="card-t">'+fy2+'年度 工賃支払明細書</span><button class="ba no-print" onclick="openAnnualWageNoticeModal()" style="font-size:12px;padding:5px 12px">📢 年間工賃実績・目標工賃のお知らせを印刷</button></div>'+
       '<p style="margin-bottom:10px;font-size:12px;color:var(--sub)">'+esc(fn)+'</p>'+
       annSummaryBox+
       '<div style="overflow:auto"><table style="font-size:12px;white-space:nowrap"><thead>'+hdr1+hdr2+hdr3+'</thead><tbody>'+totRow+uRows+'</tbody></table></div>';
@@ -12967,6 +12967,99 @@ async function saveSRSign(userId,dateStr){
     await cAlert('保存失敗: '+e);
     btn.disabled=false;btn.textContent='サインを保存';
   }
+}
+
+function openAnnualWageNoticeModal(){
+  var p=window._annPrintData;
+  if(!p||!p.data||!p.data.users||p.data.users.length===0){cAlert('出力できる利用者データがありません');return;}
+  var curAvg=(window._annCurAvg&&window._annCurAvg.avgWage)||0;
+  var savedTarget=(S.settings&&S.settings.nextYearTargetWage)||String(Math.max(15000,Math.ceil((curAvg+1000)/1000)*1000));
+  var savedEffort=(S.settings&&S.settings.nextYearWageEffort)||'新しい作業の拡大や作業工程の工夫、販路の充実に取り組み、工賃のさらなる向上を目指します。';
+  var userChks=p.data.users.map(function(u,idx){
+    return '<label style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid #d5cec4;border-radius:6px;background:#fff;font-size:12px;cursor:pointer">'+
+      '<input type="checkbox" class="wn-uchk" value="'+idx+'" checked> '+esc(u.name)+'（¥'+u.totalWage.toLocaleString()+'）</label>';
+  }).join('');
+  var h='<div class="overlay" onclick="closeModal(\'wt-modal\')"><div class="modal" style="width:540px;max-width:95vw" onclick="event.stopPropagation()">'+
+    '<div class="modal-hd"><h3>📢 年間工賃実績・目標工賃のお知らせ</h3><button class="modal-close" onclick="closeModal(\'wt-modal\')">✕</button></div>'+
+    '<p style="font-size:12px;color:var(--sub);margin:0 0 12px">利用者お一人おひとりにお渡しするA4通知書（ふりがな付き・就労選択支援のご案内入り）を作成します。</p>'+
+    '<div class="field"><label>来年度（'+(p.fy+1)+'年度）事業所の目標平均工賃月額（円）</label>'+
+    '<input type="number" id="wn-target" value="'+esc(savedTarget)+'" style="width:100%"></div>'+
+    '<div class="field"><label>目標達成に向けた事業所の取り組み（お知らせ欄）</label>'+
+    '<textarea id="wn-effort" rows="2" style="width:100%">'+esc(savedEffort)+'</textarea></div>'+
+    '<div class="field"><label>印刷する利用者</label><div style="display:flex;flex-wrap:wrap;gap:6px;max-height:140px;overflow-y:auto;padding:4px 0">'+userChks+'</div></div>'+
+    '<div class="btns"><button class="bg" onclick="closeModal(\'wt-modal\')">閉じる</button>'+
+    '<button class="bp" onclick="printAnnualWageNotices()">🖨️ 通知書をA4印刷する</button></div>'+
+    '</div></div>';
+  document.getElementById('wt-modal').innerHTML=h;
+}
+
+async function printAnnualWageNotices(){
+  var p=window._annPrintData;
+  if(!p)return;
+  var targetWage=Number((document.getElementById('wn-target')||{}).value)||0;
+  var effort=((document.getElementById('wn-effort')||{}).value||'').trim();
+  try{
+    await gas('updateSetting','nextYearTargetWage',String(targetWage));
+    await gas('updateSetting','nextYearWageEffort',effort);
+    if(S.settings){S.settings.nextYearTargetWage=String(targetWage);S.settings.nextYearWageEffort=effort;}
+  }catch(e){}
+  var idxs=[];
+  document.querySelectorAll('.wn-uchk:checked').forEach(function(cb){idxs.push(Number(cb.value));});
+  if(idxs.length===0){cAlert('印刷する利用者を1名以上選択してください');return;}
+  closeModal('wt-modal');
+  var avg=window._annCurAvg||{avgWage:0};
+  var reiwa=p.fy-2018;
+  var todayDisp=today().replace(/^(\d{4})-(\d{2})-(\d{2})$/,function(_,y,m,d){return '令和'+(Number(y)-2018)+'年'+Number(m)+'月'+Number(d)+'日';});
+  var pages=idxs.map(function(idx){
+    var u=p.data.users[idx];
+    if(!u)return '';
+    var activeM=u.months.filter(function(m){return m.days>0;}).length||1;
+    var uMonthlyAvg=Math.round(u.totalWage/activeM);
+    return '<div class="wn-page">'+
+      '<div class="wn-date">'+esc(todayDisp)+'</div>'+
+      '<h1><ruby>令和<rt>れいわ</rt></ruby>'+reiwa+'<ruby>年度<rt>ねんど</rt></ruby> <ruby>工賃実績<rt>こうちんじっせき</rt></ruby>および<ruby>次年度<rt>じねんど</rt></ruby><ruby>目標工賃<rt>もくひょうこうちん</rt></ruby>のお<ruby>知<rt>し</rt></ruby>らせ</h1>'+
+      '<div class="wn-to"><u>'+esc(u.name)+'</u> <ruby>様<rt>さま</rt></ruby></div>'+
+      '<div class="wn-from"><ruby>事業所名<rt>じぎょうしょめい</rt></ruby>：'+esc(p.fn)+'</div>'+
+      '<p class="wn-lead">いつも<ruby>事業所<rt>じぎょうしょ</rt></ruby>での<ruby>作業<rt>さぎょう</rt></ruby>にお<ruby>取<rt>と</rt></ruby>り<ruby>組<rt>く</rt></ruby>みいただき、ありがとうございます。<ruby>今年度<rt>こんねんど</rt></ruby>の<ruby>工賃実績<rt>こうちんじっせき</rt></ruby>と、<ruby>来年度<rt>らいねんど</rt></ruby>の<ruby>目標<rt>もくひょう</rt></ruby>をお<ruby>知<rt>し</rt></ruby>らせいたします。</p>'+
+      '<div class="wn-sec">① あなたの<ruby>令和<rt>れいわ</rt></ruby>'+reiwa+'<ruby>年度<rt>ねんど</rt></ruby> <ruby>工賃実績<rt>こうちんじっせき</rt></ruby>（'+activeM+'か月<ruby>分<rt>ぶん</rt></ruby>）</div>'+
+      '<table>'+
+      '<tr><th><ruby>出勤日数<rt>しゅっきんにっすう</rt></ruby></th><td><b>'+u.totalDays+' <ruby>日<rt>にち</rt></ruby></b></td><th><ruby>作業時間<rt>さぎょうじかん</rt></ruby></th><td><b>'+u.totalHours.toFixed(1)+' <ruby>時間<rt>じかん</rt></ruby></b></td></tr>'+
+      '<tr><th><ruby>年間<rt>ねんかん</rt></ruby><ruby>支払<rt>しはらい</rt></ruby><ruby>工賃<rt>こうちん</rt></ruby>（<ruby>手当込<rt>てあてこ</rt></ruby>）</th><td><b style="font-size:13pt;color:#2f4a31">¥'+u.totalWage.toLocaleString()+'</b></td><th>1か月<ruby>平均<rt>へいきん</rt></ruby></th><td><b>¥'+uMonthlyAvg.toLocaleString()+'</b></td></tr>'+
+      '</table>'+
+      '<div class="wn-sec">② <ruby>事業所全体<rt>じぎょうしょぜんたい</rt></ruby>の<ruby>実績<rt>じっせき</rt></ruby>と <ruby>来年度<rt>らいねんど</rt></ruby>の<ruby>目標工賃<rt>もくひょうこうちん</rt></ruby></div>'+
+      '<table>'+
+      '<tr><th style="width:42%"><ruby>今年度<rt>こんねんど</rt></ruby>の<ruby>平均工賃月額<rt>へいきんこうちんげつがく</rt></ruby>（<ruby>事業所全体<rt>じぎょうしょぜんたい</rt></ruby>）</th><td><b>¥'+Number(avg.avgWage||0).toLocaleString()+'</b></td></tr>'+
+      '<tr><th><ruby>来年度<rt>らいねんど</rt></ruby>の<ruby>目標<rt>もくひょう</rt></ruby><ruby>平均工賃月額<rt>へいきんこうちんげつがく</rt></ruby></th><td><b style="font-size:13pt;color:#c07830">¥'+targetWage.toLocaleString()+'</b></td></tr>'+
+      '<tr><th><ruby>目標達成<rt>もくひょうたっせい</rt></ruby>に<ruby>向<rt>む</rt></ruby>けた<ruby>取<rt>と</rt></ruby>り<ruby>組<rt>く</rt></ruby>み</th><td style="white-space:pre-wrap">'+esc(effort)+'</td></tr>'+
+      '</table>'+
+      '<div class="wn-guide">'+
+      '<div class="wn-gt">③ <ruby>今後<rt>こんご</rt></ruby>の<ruby>働<rt>はたら</rt></ruby>き<ruby>方<rt>かた</rt></ruby>・<ruby>就労選択支援<rt>しゅうろうせんたくしえん</rt></ruby>のご<ruby>案内<rt>あんない</rt></ruby></div>'+
+      '<div>ご<ruby>自身<rt>じしん</rt></ruby>の<ruby>働<rt>はたら</rt></ruby>き<ruby>方<rt>かた</rt></ruby>や<ruby>今後<rt>こんご</rt></ruby>の<ruby>進路<rt>しんろ</rt></ruby>・<ruby>希望<rt>きぼう</rt></ruby>について<ruby>整理<rt>せいり</rt></ruby>したい<ruby>場合<rt>ばあい</rt></ruby>は、「<ruby>就労選択支援<rt>しゅうろうせんたくしえん</rt></ruby>」の<ruby>利用<rt>りよう</rt></ruby>や<ruby>関係機関<rt>かんけいきかん</rt></ruby>との<ruby>連携<rt>れんけい</rt></ruby>についてご<ruby>案内<rt>あんない</rt></ruby>できます。ご<ruby>希望<rt>きぼう</rt></ruby>やご<ruby>相談<rt>そうだん</rt></ruby>がありましたら、いつでもスタッフにお<ruby>声<rt>こえ</rt></ruby>がけください。</div>'+
+      '</div>'+
+      '</div>';
+  }).join('');
+  var w=window.open('','_blank');if(!w){cAlert('ポップアップがブロックされました');return;}
+  var h='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>工賃実績・目標工賃のお知らせ</title><style>'+
+    '@page{size:A4 portrait;margin:14mm}'+
+    'body{font-family:"Noto Sans JP","Yu Gothic",sans-serif;color:#222;font-size:10.5pt;line-height:1.8;margin:0}'+
+    'rt{font-size:6.5pt;color:#555}'+
+    '.wn-page{page-break-after:always;break-after:page}'+
+    '.wn-page:last-child{page-break-after:auto;break-after:auto}'+
+    '.wn-date{text-align:right;font-size:10pt;color:#444;margin-bottom:8px}'+
+    'h1{font-size:15pt;text-align:center;border-bottom:2px solid #3d5a3e;padding-bottom:8px;margin:0 0 16px}'+
+    '.wn-to{font-size:13pt;font-weight:700;margin-bottom:4px}'+
+    '.wn-from{text-align:right;font-size:10.5pt;margin-bottom:14px}'+
+    '.wn-lead{margin:0 0 14px}'+
+    '.wn-sec{font-weight:700;font-size:11pt;color:#2f4a31;margin:14px 0 6px}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:12px}'+
+    'th,td{border:1px solid #666;padding:8px 10px;text-align:left}'+
+    'th{background:#f5f3ee;font-weight:700}'+
+    '.wn-guide{margin-top:16px;padding:12px 14px;background:#faf8f5;border:1px solid #bbb;border-radius:8px;font-size:9.8pt}'+
+    '.wn-gt{font-weight:700;color:#2f4a31;margin-bottom:4px}'+
+    '@media print{button{display:none!important}}'+
+    '</style></head><body>'+pages+
+    '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>';
+  w.document.open();w.document.write(h);w.document.close();
 }
 
 function printExport(){
@@ -15706,37 +15799,36 @@ function printBlankSurveySheet(){
   var fn=(S.settings&&S.settings.facilityName)||'ひとつぎ豊中小曽根';
   var w=window.open('','_blank');if(!w){cAlert('ポップアップがブロックされました');return;}
   var h='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>利用者アンケート用紙</title><style>'+
-    '@page{size:A4 portrait;margin:12mm}'+
-    'body{font-family:"Noto Sans JP","Yu Gothic",sans-serif;color:#222;font-size:10.5pt;line-height:1.8;margin:0}'+
-    'rt{font-size:6.5pt;color:#555}'+
-    'h1{font-size:15.5pt;text-align:center;margin:0 0 6px;border-bottom:2px solid #3d5a3e;padding-bottom:6px}'+
-    '.intro{background:#f7f5f0;border:1px solid #d5cec4;border-radius:8px;padding:8px 12px;font-size:9.8pt;margin-bottom:10px}'+
-    '.qbox{border:1px solid #bbb;border-radius:8px;padding:8px 12px;margin-bottom:10px}'+
-    '.qt{font-weight:700;font-size:11pt;margin-bottom:6px;color:#2f4a31}'+
-    '.opts{display:flex;gap:20px;flex-wrap:wrap;font-size:10.5pt}'+
+    '@page{size:A4 portrait;margin:14mm}'+
+    'body{font-family:"Noto Sans JP","Yu Gothic",sans-serif;color:#222;font-size:11pt;line-height:1.65;margin:0}'+
+    'h1{font-size:16pt;text-align:center;margin:0 0 6px;border-bottom:2px solid #3d5a3e;padding-bottom:6px}'+
+    '.intro{background:#f7f5f0;border:1px solid #d5cec4;border-radius:8px;padding:10px 14px;font-size:10pt;margin-bottom:14px}'+
+    '.qbox{border:1px solid #bbb;border-radius:8px;padding:10px 14px;margin-bottom:12px}'+
+    '.qt{font-weight:700;font-size:11.5pt;margin-bottom:8px;color:#2f4a31}'+
+    '.opts{display:flex;gap:22px;flex-wrap:wrap;font-size:11pt}'+
     '.chk{display:inline-flex;align-items:center;gap:6px}'+
-    '.circle{display:inline-block;width:15px;height:15px;border:1.5px solid #333;border-radius:3px;flex-shrink:0}'+
-    '.lines{height:44px;border-bottom:1px dashed #aaa;margin-top:6px}'+
+    '.circle{display:inline-block;width:16px;height:16px;border:1.5px solid #333;border-radius:3px;flex-shrink:0}'+
+    '.lines{height:58px;border-bottom:1px dashed #aaa;margin-top:8px}'+
     '@media print{button{display:none!important}}'+
     '</style></head><body>'+
-    '<h1><ruby>令和<rt>れいわ</rt></ruby>'+(fy-2018)+'<ruby>年度<rt>ねんど</rt></ruby> <ruby>利用者<rt>りようしゃ</rt></ruby>アンケート</h1>'+
-    '<div style="text-align:right;font-size:9.5pt;margin-bottom:8px"><ruby>事業所名<rt>じぎょうしょめい</rt></ruby>：'+esc(fn)+'　／　お<ruby>名前<rt>なまえ</rt></ruby>（<ruby>書<rt>か</rt></ruby>かなくても<ruby>大丈夫<rt>だいじょうぶ</rt></ruby>です）：<u>　　　　　　　　　　</u></div>'+
-    '<div class="intro">みなさんがより<ruby>楽<rt>たの</rt></ruby>しく・<ruby>安心<rt>あんしん</rt></ruby>して<ruby>通<rt>かよ</rt></ruby>える<ruby>事業所<rt>じぎょうしょ</rt></ruby>にするためのアンケートです。あてはまる <b>□</b> の<ruby>中<rt>なか</rt></ruby>に <b>✔</b>（または <b>○</b>）をつけてください。（<ruby>率直<rt>そっちょく</rt></ruby>なご<ruby>意見<rt>いけん</rt></ruby>をお<ruby>聞<rt>き</rt></ruby>かせください）</div>'+
-    '<div class="qbox"><div class="qt">Q1. <ruby>事業所<rt>じぎょうしょ</rt></ruby>での<ruby>過<rt>す</rt></ruby>ごしやすさはどうですか？</div><div class="opts">'+
-    '<span class="chk"><span class="circle"></span> とても<ruby>良<rt>よ</rt></ruby>い</span>'+
+    '<h1>令和'+(fy-2018)+'年度 利用者アンケート</h1>'+
+    '<div style="text-align:right;font-size:10pt;margin-bottom:8px">事業所名：'+esc(fn)+'　／　お名前（書かなくても大丈夫です）：<u>　　　　　　　　　　</u></div>'+
+    '<div class="intro">みなさんがより楽しく・安心して通える事業所にするためのアンケートです。あてはまる <b>□</b> の中に <b>✔</b>（または <b>○</b>）をつけてください。（率直なご意見をお聞かせください）</div>'+
+    '<div class="qbox"><div class="qt">Q1. 事業所での過ごしやすさはどうですか？</div><div class="opts">'+
+    '<span class="chk"><span class="circle"></span> とても良い</span>'+
     '<span class="chk"><span class="circle"></span> まあまあ</span>'+
-    '<span class="chk"><span class="circle"></span> <ruby>改善<rt>かいぜん</rt></ruby>してほしいところがある</span></div></div>'+
-    '<div class="qbox"><div class="qt">Q2. <ruby>今<rt>いま</rt></ruby>の<ruby>作業内容<rt>さぎょうないよう</rt></ruby>や<ruby>量<rt>りょう</rt></ruby>はどうですか？</div><div class="opts">'+
-    '<span class="chk"><span class="circle"></span> ちょうど<ruby>良<rt>よ</rt></ruby>い</span>'+
-    '<span class="chk"><span class="circle"></span> <ruby>新<rt>あたら</rt></ruby>しい<ruby>作業<rt>さぎょう</rt></ruby>にも<ruby>挑戦<rt>ちょうせん</rt></ruby>したい</span>'+
-    '<span class="chk"><span class="circle"></span> <ruby>少<rt>すこ</rt></ruby>し<ruby>負担<rt>ふたん</rt></ruby>が<ruby>大<rt>おお</rt></ruby>きい</span></div></div>'+
-    '<div class="qbox"><div class="qt">Q3. スタッフへの<ruby>相談<rt>そうだん</rt></ruby>のしやすさはどうですか？</div><div class="opts">'+
-    '<span class="chk"><span class="circle"></span> <ruby>話<rt>はな</rt></ruby>しやすい</span>'+
+    '<span class="chk"><span class="circle"></span> 改善してほしいところがある</span></div></div>'+
+    '<div class="qbox"><div class="qt">Q2. 今の作業内容や量はどうですか？</div><div class="opts">'+
+    '<span class="chk"><span class="circle"></span> ちょうど良い</span>'+
+    '<span class="chk"><span class="circle"></span> 新しい作業にも挑戦したい</span>'+
+    '<span class="chk"><span class="circle"></span> 少し負担が大きい</span></div></div>'+
+    '<div class="qbox"><div class="qt">Q3. スタッフへの相談のしやすさはどうですか？</div><div class="opts">'+
+    '<span class="chk"><span class="circle"></span> 話しやすい</span>'+
     '<span class="chk"><span class="circle"></span> ふつう</span>'+
-    '<span class="chk"><span class="circle"></span> <ruby>話<rt>はな</rt></ruby>しにくいことがある</span></div></div>'+
-    '<div class="qbox"><div class="qt">Q4. <ruby>今後<rt>こんご</rt></ruby>やってみたい<ruby>作業<rt>さぎょう</rt></ruby>・イベントや、「こうしてほしい」と<ruby>思<rt>おも</rt></ruby>うことはありますか？</div><div class="lines"></div><div class="lines" style="height:34px"></div></div>'+
-    '<div class="qbox"><div class="qt">Q5. <ruby>工賃<rt>こうちん</rt></ruby>の<ruby>目標<rt>もくひょう</rt></ruby>について、<ruby>感<rt>かん</rt></ruby>じていることや<ruby>希望<rt>きぼう</rt></ruby>があれば<ruby>教<rt>おし</rt></ruby>えてください。</div><div class="lines" style="height:40px"></div></div>'+
-    '<div style="text-align:center;font-size:9.8pt;color:#555;margin-top:8px">ご<ruby>協力<rt>きょうりょく</rt></ruby>ありがとうございました！<ruby>回収箱<rt>かいしゅうばこ</rt></ruby>またはスタッフまでお<ruby>渡<rt>わた</rt></ruby>しください。</div>'+
+    '<span class="chk"><span class="circle"></span> 話しにくいことがある</span></div></div>'+
+    '<div class="qbox"><div class="qt">Q4. 今後やってみたい作業・イベントや、「こうしてほしい」と思うことはありますか？</div><div class="lines"></div><div class="lines" style="height:36px"></div></div>'+
+    '<div class="qbox"><div class="qt">Q5. 工賃の目標について、感じていることや希望があれば教えてください。</div><div class="lines" style="height:44px"></div></div>'+
+    '<div style="text-align:center;font-size:10pt;color:#555;margin-top:10px">ご協力ありがとうございました！回収箱またはスタッフまでお渡しください。</div>'+
     '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>';
   w.document.open();w.document.write(h);w.document.close();
 }
