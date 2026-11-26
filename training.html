@@ -6706,11 +6706,26 @@
     }
 
     // ─── 委員会議事録 入力モーダル（AI自動起案対応） ──────────
-    function openCommitteeModal(type) {
+    var _cmUsersCache = null;
+    async function _ensureCmUsers() {
+      if (_cmUsersCache) return _cmUsersCache;
+      try {
+        if (typeof gas === 'function') {
+          var list = await gas('getUsers');
+          _cmUsersCache = (list || []).filter(function(u){ return !u.userStatus || u.userStatus === '利用中'; });
+        }
+      } catch(e) { _cmUsersCache = []; }
+      return _cmUsersCache || [];
+    }
+
+    async function openCommitteeModal(type) {
       var body = el('committee-modal-body');
       if (!body) return;
 
       var staffNames = STAFF.map(function (s) { return s.name; }).join('、');
+      var users = await _ensureCmUsers();
+      var userOpts = '<option value="">-- 仮名（Aさん）で作成 --</option>' +
+        users.map(function(u){ return '<option value="' + esc(u.id) + '">' + esc(u.name) + '</option>'; }).join('');
 
       var isCase = !!(type && type.indexOf('事例検討会') >= 0);
       var defTitle = isCase ? '令和8年度 事例検討会（ケース会議）' : '令和8年度 第2回 身体拘束適正化委員会';
@@ -6736,6 +6751,13 @@
       h += '    </div>';
       h += '    <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">開催日</label><input type="date" id="cm-date" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + todayStr() + '"></div>';
       h += '  </div>';
+      h += '  <div id="cm-case-panel" style="display:' + (isCase ? 'block' : 'none') + ';background:#fff8f0;border:1.5px solid #ffcc80;border-radius:10px;padding:10px 12px;">';
+      h += '    <div style="font-size:12px;font-weight:bold;color:#e65100;margin-bottom:8px;">👤 事例検討の対象・気になる点（AI起案に反映されます）</div>';
+      h += '    <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:8px;">';
+      h += '      <div><label style="font-size:11.5px;font-weight:bold;color:#555;">対象利用者（任意）</label><select id="cm-case-user" style="width:100%;padding:6px 8px;border:1px solid #e0c8a8;border-radius:6px;background:#fff;font-size:12.5px;">' + userOpts + '</select></div>';
+      h += '      <div><label style="font-size:11.5px;font-weight:bold;color:#555;">テーマ・気になる点（任意）</label><input type="text" id="cm-case-topic" placeholder="例：午後の集中力維持、新作業の手順、体調の波など" style="width:100%;padding:6px 8px;border:1px solid #e0c8a8;border-radius:6px;font-size:12.5px;"></div>';
+      h += '    </div>';
+      h += '  </div>';
       h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">会議名</label><input type="text" id="cm-title" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + esc(defTitle) + '"></div>';
       h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">出席者</label><input type="text" id="cm-attendees" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + esc(staffNames) + '"></div>';
 
@@ -6760,8 +6782,11 @@
 
     function onCommitteeTypeChange() {
       var cat = el('cm-category').value;
+      var isCase = (cat.indexOf('事例検討会') >= 0);
+      var panel = el('cm-case-panel');
+      if (panel) panel.style.display = isCase ? 'block' : 'none';
       var titleEl = el('cm-title');
-      if (titleEl) titleEl.value = '令和8年度 ' + cat + '（定例会議）';
+      if (titleEl) titleEl.value = isCase ? '令和8年度 事例検討会（ケース会議）' : ('令和8年度 ' + cat + '（定例会議）');
       generateCommitteeWithAI();
     }
 
@@ -6771,9 +6796,38 @@
       if (btn) { btn.disabled = true; btn.textContent = '⏳ AI起案中...'; }
 
       var isCaseAi = (cat.indexOf('事例検討会') >= 0);
+      var caseContext = '';
+      if (isCaseAi) {
+        var uId = el('cm-case-user') ? el('cm-case-user').value : '';
+        var topic = el('cm-case-topic') ? el('cm-case-topic').value.trim() : '';
+        if (uId && _cmUsersCache) {
+          var uObj = _cmUsersCache.find(function(u){ return String(u.id) === String(uId); });
+          if (uObj) {
+            var initials = (uObj.furigana || '').trim().split(/\s+/).map(function(p){ return p.charAt(0); }).join('.') || '対象者';
+            caseContext += '【対象者情報（イニシャル: ' + initials + '）】\n';
+            if (uObj.disability) caseContext += '・障がい種別: ' + uObj.disability + (uObj.disabilityName ? '（' + uObj.disabilityName + '）' : '') + '\n';
+            if (uObj.category) caseContext += '・障害支援区分: ' + uObj.category + '\n';
+            if (uObj.notes) caseContext += '・配慮メモ: ' + String(uObj.notes).slice(0, 120) + '\n';
+            try {
+              if (typeof gas === 'function') {
+                var ym = todayStr().slice(0, 7);
+                var reps = await gas('getReports', ym);
+                var uReps = (reps || []).filter(function(r){ return String(r.userId) === String(uId) && r.content; }).slice(-4);
+                if (uReps.length > 0) {
+                  caseContext += '・直近の作業・支援メモ:\n' + uReps.map(function(r){ return '  (' + r.date + ') ' + String(r.content).replace(/\s+/g, ' ').slice(0, 60); }).join('\n') + '\n';
+                }
+              }
+            } catch(e) {}
+          }
+        }
+        if (topic) caseContext += '【今回の検討テーマ・気になる点】\n' + topic + '\n';
+      }
+
       var prompt = isCaseAi
         ? ('あなたは就労継続支援B型事業所「' + getFacilityFullName() + '」のサービス管理責任者です。\n' +
-          '月1回の「事例検討会（ケース会議）」の記録として、利用者の強み・課題の共有、環境や作業の工夫、今後の支援方針を、実名を出さず仮名（Aさん等）でJSON形式のみで出力してください。\n' +
+          '月1回の「事例検討会（ケース会議）」の記録として、以下の情報（ある場合）を踏まえて、利用者の強み・課題の分析、環境や作業工程の工夫、今後の具体的支援方針をJSON形式のみで出力してください。\n' +
+          '※個人情報保護のため、出力文面では実名を出さずイニシャルまたは「Aさん」等の仮名にしてください。\n' +
+          (caseContext ? '\n' + caseContext + '\n' : '') +
           '{\n' +
           '  "title": "令和8年度 第○回 事例検討会（ケース会議）",\n' +
           '  "agenda": "1. ...\\n2. ...\\n3. ...",\n' +
