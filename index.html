@@ -15652,7 +15652,7 @@ function openSurveyInputForm(){
   h+='<div class="field"><label>Q2. 作業内容について</label><select id="sa-q2" style="width:100%"><option>ちょうど良い</option><option>新しいことにも挑戦したい</option><option>少し負担が大きい</option></select></div>';
   h+='<div class="field"><label>Q3. 職員への相談しやすさ</label><select id="sa-q3" style="width:100%"><option>話しやすい</option><option>普通</option><option>話しにくい</option></select></div></div>';
   h+='<div class="field"><label>Q4. やってみたい作業・行事・ご意見</label><textarea id="sa-q4" rows="3" style="width:100%" placeholder="紙に書かれた自由意見をそのまま入力"></textarea></div>';
-  h+='<div class="field"><label>Q5. 現在の作業内容・今後の目標について</label><input id="sa-q5" style="width:100%" placeholder="例：今の作業が合っていて楽しい、もう少し丁寧にできるようになりたい等"></div>';
+  h+='<div class="field"><label>Q5. 現在の作業内容・工賃の目標について</label><input id="sa-q5" style="width:100%" placeholder="例：今の作業が楽しい、月1万円を目指したい等"></div>';
   h+='<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="bp" onclick="saveSurveyAnswer()">💾 回答を登録する</button></div></div>';
   el.innerHTML=h;
 }
@@ -15734,7 +15734,7 @@ function printBlankSurveySheet(){
     '<span class="chk"><span class="circle"></span> 🙂 ふつう</span>'+
     '<span class="chk"><span class="circle"></span> 💬 話しにくいことがある</span></div></div>'+
     '<div class="qbox"><div class="qt">Q4. 今後やってみたい作業・イベントや、「こうしてほしい」と思うことはありますか？</div><div class="lines"></div><div class="lines" style="height:36px"></div></div>'+
-    '<div class="qbox"><div class="qt">Q5. 現在の作業内容や、今後の目標について感じていることがあれば教えてください。</div><div class="lines" style="height:44px"></div></div>'+
+    '<div class="qbox"><div class="qt">Q5. 現在の作業内容や、工賃の目標について感じていることがあれば教えてください。</div><div class="lines" style="height:44px"></div></div>'+
     '<div style="text-align:center;font-size:10pt;color:#555;margin-top:10px">ご協力ありがとうございました！回収箱またはスタッフまでお渡しください。</div>'+
     '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>';
   w.document.open();w.document.write(h);w.document.close();
