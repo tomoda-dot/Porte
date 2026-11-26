@@ -10755,6 +10755,8 @@ async function renderExport(c){
     menuH+='<button onclick="eT=\'complaints\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📞 苦情・相談</button>';
     menuH+='<button onclick="eT=\'training\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📚 研修・事例検討会</button>';
     menuH+='<button onclick="eT=\'community\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">🤝 地域連携活動</button>';
+    menuH+='<button onclick="eT=\'userSurvey\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📊 利用者アンケート</button>';
+    menuH+='<button onclick="eT=\'wageInterview\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">🗣️ 工賃時面談・目標記録</button>';
     menuH+='</div>';
     c.innerHTML=menuH;
     return;
@@ -10764,6 +10766,8 @@ async function renderExport(c){
   if(eT==='complaints'){renderComplaints(c);return;}
   if(eT==='training'){renderTraining(c);return;}
   if(eT==='community'){renderCommunityActivities(c);return;}
+  if(eT==='userSurvey'){renderUserSurvey(c);return;}
+  if(eT==='wageInterview'){renderWageInterview(c);return;}
 
   var curGroup = groups.find(function(g){
     return g.items.some(function(item){ return item[0] === eT; });
@@ -15572,6 +15576,297 @@ function printCommunityActivities(){
       }).join(''))+
     '</tbody></table>'+
     '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>';
+  w.document.open();w.document.write(h);w.document.close();
+}
+
+// ═══ 利用者アンケート（配布用A4印刷・回収集計・運営改善記録）═══
+var _survData={answers:[],improvements:{}},_survFY=null;
+function renderUserSurvey(c){
+  if(!_survFY)_survFY=_getFY();
+  try{_survData=JSON.parse((S.settings&&S.settings.userSurveys)||'{"answers":[],"improvements":{}}');}catch(e){_survData={answers:[],improvements:{}};}
+  if(!_survData||typeof _survData!=='object')_survData={answers:[],improvements:{}};
+  if(!Array.isArray(_survData.answers))_survData.answers=[];
+  if(!_survData.improvements)_survData.improvements={};
+  c.innerHTML='<div class="hd-row"><h2>📊 利用者アンケート（運営改善）</h2><button class="bg" onclick="eT=\'menu\';renderExport(document.getElementById(\'content\'))" style="font-size:12px">← 帳票一覧</button></div><div id="surv-area"></div>';
+  loadUserSurveyView();
+}
+function loadUserSurveyView(){
+  var el=document.getElementById('surv-area');if(!el)return;
+  var fy=_survFY||_getFY();
+  var list=_survData.answers.filter(function(a){return Number(a.fy)===fy;});
+  var q1Good=list.filter(function(a){return a.q1==='とても良い';}).length;
+  var q1Ok=list.filter(function(a){return a.q1==='まあまあ';}).length;
+  var q1Bad=list.filter(function(a){return a.q1==='改善してほしい';}).length;
+  var q3Good=list.filter(function(a){return a.q3==='話しやすい';}).length;
+  var impText=_survData.improvements[String(fy)]||'';
+
+  var h='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">';
+  h+='<div style="display:flex;align-items:center;gap:10px">';
+  h+='<button class="bg" onclick="_survFY--;loadUserSurveyView()" style="padding:4px 10px">◀</button>';
+  h+='<span style="font-size:16px;font-weight:700">令和'+(fy-2018)+'年度 利用者アンケート</span>';
+  h+='<button class="bg" onclick="_survFY++;loadUserSurveyView()" style="padding:4px 10px">▶</button></div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  h+='<button class="ba" onclick="printBlankSurveySheet()" style="font-size:12px">🖨️ 配布用アンケート用紙をA4印刷</button>';
+  h+='<button class="bg" onclick="copySurveyForWam()" style="font-size:12px">📋 WAM NET公表用をコピー</button>';
+  h+='<button class="bg" onclick="printSurveyReport()" style="font-size:12px">🖨️ 集計・改善報告書をA4印刷</button>';
+  h+='<button class="bp" onclick="openSurveyInputForm()">＋ 回収結果を入力</button>';
+  h+='</div></div>';
+
+  h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">';
+  h+='<div class="stat"><div class="stat-l">回答数</div><div class="stat-v">'+list.length+'件</div></div>';
+  h+='<div class="stat" style="border-color:#2e7d32"><div class="stat-l">😊 過ごしやすさ（良い/まあまあ）</div><div class="stat-v" style="color:#2e7d32">'+(q1Good+q1Ok)+'件</div><div class="stat-s">改善要望: '+q1Bad+'件</div></div>';
+  h+='<div class="stat" style="border-color:#1565c0"><div class="stat-l">💬 相談のしやすさ（話しやすい）</div><div class="stat-v" style="color:#1565c0">'+q3Good+'件</div></div>';
+  h+='</div>';
+
+  h+='<div class="card" style="margin-bottom:16px">';
+  h+='<div class="card-hd"><span class="card-t">🛠️ アンケートを受けての運営改善・振り返り</span></div>';
+  h+='<p style="font-size:11.5px;color:var(--sub);margin:0 0 8px">集まった声をもとに改善した内容や今後の取り組みを記入して保存してください（公表用テキスト・報告書に反映されます）。</p>';
+  h+='<textarea id="surv-imp-txt" rows="3" style="width:100%;margin-bottom:8px" placeholder="例：休憩時間の過ごし方について意見があったため、静かに休めるスペースを整理しました。">'+esc(impText)+'</textarea>';
+  h+='<div style="display:flex;justify-content:flex-end"><button class="bp" onclick="saveSurveyImprovement()" style="font-size:12px">💾 改善内容を保存</button></div></div>';
+
+  h+='<div class="card" style="overflow-x:auto"><div class="card-hd"><span class="card-t">📋 回収済みアンケート一覧</span></div>';
+  h+='<table><thead><tr><th>日付</th><th>お名前</th><th>過ごしやすさ</th><th>作業内容</th><th>相談しやすさ</th><th>やってみたい作業・ご意見</th><th>操作</th></tr></thead><tbody>';
+  if(list.length===0){
+    h+='<tr><td colspan="7" style="text-align:center;color:var(--sub);padding:20px">まだ回答が登録されていません。「配布用アンケート用紙をA4印刷」で配布し、回収後に入力してください。</td></tr>';
+  }
+  list.slice().sort(function(a,b){return(b.date||'').localeCompare(a.date||'');}).forEach(function(a){
+    h+='<tr><td style="font-size:12px;white-space:nowrap">'+fmtDate(a.date)+'</td>';
+    h+='<td style="font-size:12px">'+esc(a.respondent||'無記名')+'</td>';
+    h+='<td style="font-size:12px">'+esc(a.q1||'')+'</td>';
+    h+='<td style="font-size:12px">'+esc(a.q2||'')+'</td>';
+    h+='<td style="font-size:12px">'+esc(a.q3||'')+'</td>';
+    h+='<td style="font-size:12px">'+esc(a.q4||'')+(a.q5?'<div style="color:var(--sub);font-size:11px">目標等: '+esc(a.q5)+'</div>':'')+'</td>';
+    h+='<td><button class="br" onclick="deleteSurveyAnswer(\''+a.id+'\')" style="font-size:11px;padding:2px 8px">削除</button></td></tr>';
+  });
+  h+='</tbody></table></div>';
+  el.innerHTML=h;
+}
+function openSurveyInputForm(){
+  var el=document.getElementById('surv-area');if(!el)return;
+  var uOpts='<option value="無記名">無記名</option>'+S.users.filter(function(u){return!u.userStatus||u.userStatus==='利用中';}).map(function(u){return'<option value="'+esc(u.name)+'">'+esc(u.name)+'</option>';}).join('');
+  var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h3 style="margin:0">📝 回収アンケートの入力</h3><button class="bg" onclick="loadUserSurveyView()" style="font-size:12px">← 一覧に戻る</button></div>';
+  h+='<div class="grid2"><div class="field"><label>回収日</label><input type="date" id="sa-date" value="'+today()+'" style="width:100%"></div>';
+  h+='<div class="field"><label>お名前（無記名可）</label><select id="sa-resp" style="width:100%">'+uOpts+'</select></div></div>';
+  h+='<div class="grid3">';
+  h+='<div class="field"><label>Q1. 過ごしやすさ</label><select id="sa-q1" style="width:100%"><option>とても良い</option><option>まあまあ</option><option>改善してほしい</option></select></div>';
+  h+='<div class="field"><label>Q2. 作業内容について</label><select id="sa-q2" style="width:100%"><option>ちょうど良い</option><option>新しいことにも挑戦したい</option><option>少し負担が大きい</option></select></div>';
+  h+='<div class="field"><label>Q3. 職員への相談しやすさ</label><select id="sa-q3" style="width:100%"><option>話しやすい</option><option>普通</option><option>話しにくい</option></select></div></div>';
+  h+='<div class="field"><label>Q4. やってみたい作業・行事・ご意見</label><textarea id="sa-q4" rows="3" style="width:100%" placeholder="紙に書かれた自由意見をそのまま入力"></textarea></div>';
+  h+='<div class="field"><label>Q5. 工賃目標・通所ペースの希望</label><input id="sa-q5" style="width:100%" placeholder="例：月1万円を目指したい、週4日通いたい等"></div>';
+  h+='<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="bp" onclick="saveSurveyAnswer()">💾 回答を登録する</button></div></div>';
+  el.innerHTML=h;
+}
+async function saveSurveyAnswer(){
+  var fy=_survFY||_getFY();
+  var item={
+    id:'sa_'+Date.now(),fy:fy,
+    date:document.getElementById('sa-date').value||today(),
+    respondent:document.getElementById('sa-resp').value||'無記名',
+    q1:document.getElementById('sa-q1').value,
+    q2:document.getElementById('sa-q2').value,
+    q3:document.getElementById('sa-q3').value,
+    q4:document.getElementById('sa-q4').value.trim(),
+    q5:document.getElementById('sa-q5').value.trim()
+  };
+  if(!lockUI())return;
+  try{
+    _survData.answers.push(item);
+    var jsonStr=JSON.stringify(_survData);
+    await gas('updateSetting','userSurveys',jsonStr);
+    if(S.settings)S.settings.userSurveys=jsonStr;
+    toast('✅ アンケート回答を登録しました');
+    loadUserSurveyView();
+  }catch(e){await cAlert('保存エラー: '+e);}finally{unlockUI();}
+}
+async function deleteSurveyAnswer(id){
+  if(!await cConfirm('この回答を削除しますか？'))return;
+  if(!lockUI())return;
+  try{
+    _survData.answers=_survData.answers.filter(function(a){return a.id!==id;});
+    var jsonStr=JSON.stringify(_survData);
+    await gas('updateSetting','userSurveys',jsonStr);
+    if(S.settings)S.settings.userSurveys=jsonStr;
+    toast('削除しました');loadUserSurveyView();
+  }catch(e){await cAlert('削除エラー: '+e);}finally{unlockUI();}
+}
+async function saveSurveyImprovement(){
+  var fy=_survFY||_getFY();
+  var txt=document.getElementById('surv-imp-txt').value.trim();
+  if(!lockUI())return;
+  try{
+    _survData.improvements[String(fy)]=txt;
+    var jsonStr=JSON.stringify(_survData);
+    await gas('updateSetting','userSurveys',jsonStr);
+    if(S.settings)S.settings.userSurveys=jsonStr;
+    toast('✅ 運営改善内容を保存しました');
+  }catch(e){await cAlert('保存エラー: '+e);}finally{unlockUI();}
+}
+function printBlankSurveySheet(){
+  var fy=_survFY||_getFY();
+  var fn=(S.settings&&S.settings.facilityName)||'ひとつぎ豊中小曽根';
+  var w=window.open('','_blank');if(!w){cAlert('ポップアップがブロックされました');return;}
+  var h='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>利用者アンケート用紙</title><style>'+
+    '@page{size:A4 portrait;margin:14mm}'+
+    'body{font-family:"Noto Sans JP","Yu Gothic",sans-serif;color:#222;font-size:11pt;line-height:1.65;margin:0}'+
+    'h1{font-size:16pt;text-align:center;margin:0 0 6px;border-bottom:2px solid #3d5a3e;padding-bottom:6px}'+
+    '.intro{background:#f7f5f0;border:1px solid #d5cec4;border-radius:8px;padding:10px 14px;font-size:10pt;margin-bottom:14px}'+
+    '.qbox{border:1px solid #bbb;border-radius:8px;padding:10px 14px;margin-bottom:12px}'+
+    '.qt{font-weight:700;font-size:11.5pt;margin-bottom:8px;color:#2f4a31}'+
+    '.opts{display:flex;gap:22px;flex-wrap:wrap;font-size:11pt}'+
+    '.chk{display:inline-flex;align-items:center;gap:6px}'+
+    '.circle{display:inline-block;width:16px;height:16px;border:1.5px solid #333;border-radius:50%}'+
+    '.lines{height:58px;border-bottom:1px dashed #aaa;margin-top:8px}'+
+    '@media print{button{display:none!important}}'+
+    '</style></head><body>'+
+    '<h1>令和'+(fy-2018)+'年度 利用者アンケート</h1>'+
+    '<div style="text-align:right;font-size:10pt;margin-bottom:8px">事業所名：'+esc(fn)+'　／　お名前（書かなくても大丈夫です）：<u>　　　　　　　　　　</u></div>'+
+    '<div class="intro">みなさんがより楽しく・安心して通える事業所にするためのアンケートです。あてはまるものに <b>○</b> をつけてください。（率直なご意見をお聞かせください）</div>'+
+    '<div class="qbox"><div class="qt">Q1. 事業所での過ごしやすさはどうですか？</div><div class="opts">'+
+    '<span class="chk"><span class="circle"></span> 😊 とても良い</span>'+
+    '<span class="chk"><span class="circle"></span> 🙂 まあまあ</span>'+
+    '<span class="chk"><span class="circle"></span> 🤔 改善してほしいところがある</span></div></div>'+
+    '<div class="qbox"><div class="qt">Q2. 今の作業内容や量はどうですか？</div><div class="opts">'+
+    '<span class="chk"><span class="circle"></span> ⭕ ちょうど良い</span>'+
+    '<span class="chk"><span class="circle"></span> ✨ 新しい作業にも挑戦したい</span>'+
+    '<span class="chk"><span class="circle"></span> 💦 少し負担が大きい</span></div></div>'+
+    '<div class="qbox"><div class="qt">Q3. スタッフへの相談のしやすさはどうですか？</div><div class="opts">'+
+    '<span class="chk"><span class="circle"></span> 😊 話しやすい</span>'+
+    '<span class="chk"><span class="circle"></span> 🙂 ふつう</span>'+
+    '<span class="chk"><span class="circle"></span> 💬 話しにくいことがある</span></div></div>'+
+    '<div class="qbox"><div class="qt">Q4. 今後やってみたい作業・イベントや、「こうしてほしい」と思うことはありますか？</div><div class="lines"></div><div class="lines" style="height:36px"></div></div>'+
+    '<div class="qbox"><div class="qt">Q5. 工賃の目標や、通うペースについて希望があれば教えてください。</div><div class="lines" style="height:44px"></div></div>'+
+    '<div style="text-align:center;font-size:10pt;color:#555;margin-top:10px">ご協力ありがとうございました！回収箱またはスタッフまでお渡しください。</div>'+
+    '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>';
+  w.document.open();w.document.write(h);w.document.close();
+}
+async function copySurveyForWam(){
+  var fy=_survFY||_getFY();
+  var list=_survData.answers.filter(function(a){return Number(a.fy)===fy;});
+  var fn=(S.settings&&S.settings.facilityName)||'事業所';
+  var q1g=list.filter(function(a){return a.q1==='とても良い';}).length;
+  var q1o=list.filter(function(a){return a.q1==='まあまあ';}).length;
+  var q3g=list.filter(function(a){return a.q3==='話しやすい';}).length;
+  var imp=_survData.improvements[String(fy)]||'（未入力）';
+  var txt='【'+fn+'】令和'+(fy-2018)+'年度 利用者アンケート結果および運営改善\n'+
+    '・回答数: '+list.length+'名\n'+
+    '・過ごしやすさ（良い/まあまあ）: '+(q1g+q1o)+'名\n'+
+    '・相談しやすさ（話しやすい）: '+q3g+'名\n'+
+    '【改善・振り返り】\n'+imp+'\n';
+  try{await navigator.clipboard.writeText(txt);toast('📋 公表用テキストをコピーしました');}catch(e){await cAlert(txt);}
+}
+function printSurveyReport(){
+  var fy=_survFY||_getFY();
+  var list=_survData.answers.filter(function(a){return Number(a.fy)===fy;});
+  var fn=(S.settings&&S.settings.facilityName)||'事業所';
+  var imp=_survData.improvements[String(fy)]||'（未入力）';
+  var w=window.open('','_blank');if(!w){cAlert('ポップアップがブロックされました');return;}
+  var h='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>利用者アンケート集計報告書</title><style>'+
+    '@page{size:A4 portrait;margin:14mm}body{font-family:"Noto Sans JP",sans-serif;font-size:10pt;color:#222;line-height:1.5}'+
+    'h1{font-size:14pt;text-align:center;margin:0 0 6px}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{border:1px solid #444;padding:6px 8px}th{background:#f2efe9;text-align:left}'+
+    '</style></head><body><h1>令和'+(fy-2018)+'年度 利用者アンケート集計・運営改善報告書</h1>'+
+    '<div style="text-align:center;color:#555;margin-bottom:14px">事業所名：'+esc(fn)+'　／　回答数：'+list.length+'件</div>'+
+    '<table><tr><th style="width:160px">改善・振り返り内容</th><td style="white-space:pre-wrap">'+esc(imp)+'</td></tr></table>'+
+    '<table><thead><tr><th>回収日</th><th>過ごしやすさ</th><th>作業内容</th><th>相談しやすさ</th><th>ご意見・希望</th></tr></thead><tbody>'+
+    list.map(function(a){return'<tr><td>'+esc(a.date)+'</td><td>'+esc(a.q1)+'</td><td>'+esc(a.q2)+'</td><td>'+esc(a.q3)+'</td><td>'+esc(a.q4)+(a.q5?' / '+esc(a.q5):'')+'</td></tr>';}).join('')+
+    '</tbody></table><scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>';
+  w.document.open();w.document.write(h);w.document.close();
+}
+
+// ═══ 工賃時面談・目標記録（毎月の工賃渡し時聞き取り・キャリア形成）═══
+var _wiData=[],_wiMonth=null;
+function renderWageInterview(c){
+  if(!_wiMonth)_wiMonth=today().slice(0,7);
+  try{_wiData=JSON.parse((S.settings&&S.settings.wageInterviews)||'[]');}catch(e){_wiData=[];}
+  if(!Array.isArray(_wiData))_wiData=[];
+  c.innerHTML='<div class="hd-row"><h2>🗣️ 工賃お渡し時 面談・目標記録</h2><button class="bg" onclick="eT=\'menu\';renderExport(document.getElementById(\'content\'))" style="font-size:12px">← 帳票一覧</button></div><div id="wi-area"></div>';
+  loadWageInterviewList();
+}
+function loadWageInterviewList(){
+  var el=document.getElementById('wi-area');if(!el)return;
+  var ym=_wiMonth||today().slice(0,7);
+  var activeUsers=S.users.filter(function(u){return!u.userStatus||u.userStatus==='利用中';});
+  var monthRecs=_wiData.filter(function(r){return r.ym===ym;});
+
+  var h='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">';
+  h+='<div style="display:flex;align-items:center;gap:10px">';
+  h+='<label style="font-size:12px;font-weight:700">対象月:</label>';
+  h+='<input type="month" value="'+ym+'" onchange="_wiMonth=this.value;loadWageInterviewList()" style="padding:5px 10px;font-size:13px">';
+  h+='<span style="font-size:12px;color:var(--sub)">記録済み: <b>'+monthRecs.length+'</b> / '+activeUsers.length+'名</span></div>';
+  h+='<button class="bg" onclick="printWageInterviews()" style="font-size:12px">🖨️ この月の面談記録をA4印刷</button></div>';
+
+  h+='<div class="card" style="overflow-x:auto"><table><thead><tr><th>氏名</th><th>状況</th><th>面談日</th><th>目標工賃／日数</th><th>今後チャレンジしたいこと・希望</th><th>配慮・メモ</th><th>操作</th></tr></thead><tbody>';
+  activeUsers.forEach(function(u){
+    var rec=monthRecs.find(function(r){return String(r.userId)===String(u.id);});
+    h+='<tr><td style="font-weight:700;white-space:nowrap">'+esc(u.name)+'</td>';
+    h+='<td>'+(rec?'<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">記録済</span>':'<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">未記録</span>')+'</td>';
+    h+='<td style="font-size:12px;white-space:nowrap">'+(rec?fmtDate(rec.date):'−')+'</td>';
+    h+='<td style="font-size:12px">'+(rec&&rec.targetWage?('¥'+Number(rec.targetWage).toLocaleString()+(rec.targetDays?' / '+rec.targetDays+'日':'')):'−')+'</td>';
+    h+='<td style="font-size:12px">'+(rec?esc(rec.challenge||'−'):'−')+'</td>';
+    h+='<td style="font-size:12px;color:var(--sub)">'+(rec?esc(rec.reflection||'−'):'−')+'</td>';
+    h+='<td><button class="bp" onclick="openWageInterviewForm(\''+u.id+'\')" style="font-size:11px;padding:3px 10px">'+(rec?'編集':'記録する')+'</button></td></tr>';
+  });
+  h+='</tbody></table></div>';
+  el.innerHTML=h;
+}
+function openWageInterviewForm(userId){
+  var ym=_wiMonth||today().slice(0,7);
+  var u=S.users.find(function(x){return String(x.id)===String(userId);})||{};
+  var rec=_wiData.find(function(r){return r.ym===ym&&String(r.userId)===String(userId);});
+  if(!rec)rec={date:today(),staffName:(getSession()&&getSession().name)||'',targetWage:'',targetDays:'',challenge:'',reflection:''};
+  var el=document.getElementById('wi-area');if(!el)return;
+  var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  h+='<h3 style="margin:0">🗣️ '+esc(u.name)+' さんの工賃お渡し時 面談記録（'+fmtMonth(ym)+'）</h3>';
+  h+='<button class="bg" onclick="loadWageInterviewList()" style="font-size:12px">← 一覧に戻る</button></div>';
+  h+='<div class="grid2"><div class="field"><label>面談日</label><input type="date" id="wi-date" value="'+(rec.date||today())+'" style="width:100%"></div>';
+  h+='<div class="field"><label>聞き取り担当者</label><input id="wi-staff" value="'+esc(rec.staffName||'')+'" style="width:100%"></div></div>';
+  h+='<div class="grid2"><div class="field"><label>次月の目標工賃（円）</label><input type="number" id="wi-twage" value="'+esc(rec.targetWage||'')+'" placeholder="例: 15000" style="width:100%"></div>';
+  h+='<div class="field"><label>目標通所日数（日）</label><input type="number" id="wi-tdays" value="'+esc(rec.targetDays||'')+'" placeholder="例: 16" style="width:100%"></div></div>';
+  h+='<div class="field"><label>今後チャレンジしたいこと・やってみたい作業（希望）</label><textarea id="wi-chal" rows="3" style="width:100%" placeholder="例：珈琲豆の計量を一人でできるようになりたい、駄菓子屋のレジをやってみたい等">'+esc(rec.challenge||'')+'</textarea></div>';
+  h+='<div class="field"><label>今月の振り返り・体調や環境面の配慮メモ</label><textarea id="wi-ref" rows="3" style="width:100%" placeholder="例：今月は休まず通えて自信がついた様子。午後疲れる日は小休憩を入れる。">'+esc(rec.reflection||'')+'</textarea></div>';
+  h+='<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="bp" onclick="saveWageInterview(\''+userId+'\')">💾 面談記録を保存</button></div></div>';
+  el.innerHTML=h;
+}
+async function saveWageInterview(userId){
+  var ym=_wiMonth||today().slice(0,7);
+  var item={
+    id:'wi_'+ym+'_'+userId,ym:ym,userId:userId,
+    date:document.getElementById('wi-date').value||today(),
+    staffName:document.getElementById('wi-staff').value.trim(),
+    targetWage:document.getElementById('wi-twage').value,
+    targetDays:document.getElementById('wi-tdays').value,
+    challenge:document.getElementById('wi-chal').value.trim(),
+    reflection:document.getElementById('wi-ref').value.trim()
+  };
+  if(!lockUI())return;
+  try{
+    var idx=_wiData.findIndex(function(r){return r.ym===ym&&String(r.userId)===String(userId);});
+    if(idx>=0)_wiData[idx]=item;else _wiData.push(item);
+    var jsonStr=JSON.stringify(_wiData);
+    await gas('updateSetting','wageInterviews',jsonStr);
+    if(S.settings)S.settings.wageInterviews=jsonStr;
+    toast('✅ 面談記録を保存しました');
+    loadWageInterviewList();
+  }catch(e){await cAlert('保存エラー: '+e);}finally{unlockUI();}
+}
+function printWageInterviews(){
+  var ym=_wiMonth||today().slice(0,7);
+  var recs=_wiData.filter(function(r){return r.ym===ym;});
+  var fn=(S.settings&&S.settings.facilityName)||'事業所';
+  var w=window.open('','_blank');if(!w){cAlert('ポップアップがブロックされました');return;}
+  var h='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>工賃お渡し時 面談記録</title><style>'+
+    '@page{size:A4 portrait;margin:12mm}body{font-family:"Noto Sans JP",sans-serif;font-size:9.5pt;color:#222;line-height:1.45}'+
+    'h1{font-size:14pt;text-align:center;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #444;padding:6px 8px;vertical-align:top}th{background:#f2efe9;text-align:left}'+
+    '</style></head><body><h1>'+fmtMonth(ym)+' 工賃お渡し時 面談・目標記録</h1>'+
+    '<div style="text-align:center;color:#555;margin-bottom:10px">事業所名：'+esc(fn)+'</div>'+
+    '<table><thead><tr><th style="width:90px">氏名</th><th style="width:78px">面談日/担当</th><th style="width:90px">目標工賃/日数</th><th>チャレンジしたいこと・希望</th><th>振り返り・配慮メモ</th></tr></thead><tbody>'+
+    (recs.length===0?'<tr><td colspan="5" style="text-align:center;padding:20px">記録がありません</td></tr>':
+      recs.map(function(r){
+        var u=S.users.find(function(x){return String(x.id)===String(r.userId);})||{};
+        return'<tr><td><b>'+esc(u.name||'')+'</b></td><td>'+esc(r.date)+'<br><span style="font-size:8pt;color:#555">'+esc(r.staffName)+'</span></td>'+
+          '<td>'+(r.targetWage?'¥'+Number(r.targetWage).toLocaleString():'-')+(r.targetDays?'<br>'+r.targetDays+'日':'')+'</td>'+
+          '<td style="white-space:pre-wrap">'+esc(r.challenge||'-')+'</td><td style="white-space:pre-wrap">'+esc(r.reflection||'-')+'</td></tr>';
+      }).join(''))+
+    '</tbody></table><scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>';
   w.document.open();w.document.write(h);w.document.close();
 }
 
