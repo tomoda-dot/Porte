@@ -11113,7 +11113,7 @@ async function loadE(){
       if (w >= 13000) return '1万3千円〜1万5千円未満';
       return '1万3千円未満（最低区分）';
     }
-    function calcSvcForIndices(indices) {
+    function calcSvcForIndices(indices, svcMode) {
       var svcH = 0, svcDays = 0, exCount = 0;
       (window._annUsers || []).forEach(function(u) {
         if (u.svcExcluded) { exCount++; return; }
@@ -11121,7 +11121,7 @@ async function loadE(){
           var m = u.months && u.months[idx];
           if (m && m.days > 0) {
             svcDays += m.days;
-            svcH += (m.serviceHours || 0);
+            svcH += (svcMode === 'excl') ? (m.hours || 0) : (m.serviceHours || 0);
           }
         });
       });
@@ -11131,6 +11131,8 @@ async function loadE(){
       var amt = window._annMt || [];
       var modeEl = document.getElementById('ann-avg-mode');
       var mode = modeEl ? modeEl.value : 'fy';
+      var svcModeEl = document.getElementById('ann-svc-mode');
+      var svcMode = svcModeEl ? svcModeEl.value : 'incl';
       var customWrap = document.getElementById('ann-avg-custom-wrap');
       if (customWrap) customWrap.style.display = (mode === 'custom') ? 'flex' : 'none';
       var slice = [];
@@ -11161,7 +11163,7 @@ async function loadE(){
       var sumWage = slice.reduce(function(s, m){ return s + m.totalWage; }, 0);
       var sumDays = slice.reduce(function(s, m){ return s + m.totalDays; }, 0);
       var sumBiz = slice.reduce(function(s, m){ return s + m.bizDays; }, 0);
-      var svcStats = calcSvcForIndices(indices);
+      var svcStats = calcSvcForIndices(indices, svcMode);
       var avgUsers = sumBiz > 0 ? Math.ceil((sumDays / sumBiz) * 10) / 10 : 0;
       var avgWage = (avgUsers > 0 && targetMonths > 0) ? Math.round(sumWage / avgUsers / targetMonths) : 0;
       var avgSvcH = svcStats.svcDays > 0 ? Math.round((svcStats.svcH / svcStats.svcDays) * 100) / 100 : 0;
@@ -11180,10 +11182,14 @@ async function loadE(){
       if (elLbl) elLbl.textContent = '平均工賃月額（÷1日平均利用者÷' + targetMonths + 'ヶ月）';
       if (elRes) elRes.textContent = '¥' + avgWage.toLocaleString();
       var elSH = document.getElementById('ann-svc-hours');
+      var elSHLbl = document.getElementById('ann-svc-hlbl');
       var elSD = document.getElementById('ann-svc-days');
       var elSA = document.getElementById('ann-svc-avg');
+      var elSALbl = document.getElementById('ann-svc-albl');
       var elST = document.getElementById('ann-svc-tier');
       var elWT = document.getElementById('ann-wage-tier');
+      if (elSHLbl) elSHLbl.textContent = (svcMode === 'excl') ? '総実支援時間（休憩除く）' : '総サービス提供時間';
+      if (elSALbl) elSALbl.textContent = (svcMode === 'excl') ? '1日平均実支援時間' : '1日平均サービス提供時間';
       if (elSH) elSH.textContent = svcStats.svcH.toFixed(1) + '時間';
       if (elSD) elSD.textContent = svcStats.svcDays + '日' + (svcStats.exCount > 0 ? '（除外' + svcStats.exCount + '名）' : '');
       if (elSA) elSA.textContent = avgSvcH.toFixed(2) + '時間/日';
@@ -11201,7 +11207,7 @@ async function loadE(){
     var annAvgDailyUsers = annActiveBiz > 0 ? Math.ceil((gtDays / annActiveBiz) * 10) / 10 : 0;
     var annAvgMonthlyWage = (annAvgDailyUsers > 0) ? Math.round(gtWage / annAvgDailyUsers / annTargetMonths) : 0;
     var allIndices = mt.map(function(_, idx){ return idx; });
-    var initSvcStats = calcSvcForIndices(allIndices);
+    var initSvcStats = calcSvcForIndices(allIndices, 'incl');
     var annAvgSvcHours = initSvcStats.svcDays > 0 ? Math.round((initSvcStats.svcH / initSvcStats.svcDays) * 100) / 100 : 0;
     var annSvcTier = getSvcTierInfo(annAvgSvcHours);
     var annUsersTotal = (data.users || []).length;
@@ -11227,15 +11233,20 @@ async function loadE(){
       '</div>'+
       (annMissingInfoCount>0?'<div style="margin-top:8px;font-size:10.5px;color:#b45309">※区分・手帳未登録が'+annMissingInfoCount+'名います（利用者画面で設定可）</div>':'')+
       '</div>'+
-      '<div style="background:#faf8f5;border:1px solid #e0d8ce;border-radius:8px;padding:12px 18px;font-size:12px;min-width:260px">'+
-      '<div style="font-size:11px;color:var(--sub);font-weight:700;margin-bottom:8px">⏱ 平均サービス提供時間 <span style="font-size:10px;font-weight:400">（休憩含む・令和9年度案）</span></div>'+
+      '<div style="background:#faf8f5;border:1px solid #e0d8ce;border-radius:8px;padding:12px 18px;font-size:12px;min-width:280px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">'+
+      '<span style="font-size:11px;color:var(--sub);font-weight:700">⏱ 平均サービス提供時間</span>'+
+      '<select id="ann-svc-mode" onchange="recalcAnnAvg()" style="font-size:11px;padding:2px 6px;border-radius:5px;border:1px solid #d0c8be;background:#fff">'+
+      '<option value="incl" selected>休憩含む（滞在時間）</option>'+
+      '<option value="excl">休憩除く（実支援時間）</option>'+
+      '</select></div>'+
       '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline">'+
-      '<span style="color:var(--sub);font-size:11px">総サービス提供時間</span><span id="ann-svc-hours" style="font-weight:700;text-align:right">'+initSvcStats.svcH.toFixed(1)+'時間</span>'+
+      '<span id="ann-svc-hlbl" style="color:var(--sub);font-size:11px">総サービス提供時間</span><span id="ann-svc-hours" style="font-weight:700;text-align:right">'+initSvcStats.svcH.toFixed(1)+'時間</span>'+
       '<span style="color:var(--sub);font-size:11px">算定対象日数</span><span id="ann-svc-days" style="font-weight:700;text-align:right">'+initSvcStats.svcDays+'日'+(initSvcStats.exCount>0?'（除外'+initSvcStats.exCount+'名）':'')+'</span>'+
       '<span style="color:var(--sub);font-size:11px">区分目安</span><span style="text-align:right"><span id="ann-svc-tier" style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:10.5px;font-weight:700;border:1px solid '+annSvcTier.bd+';background:'+annSvcTier.bg+';color:'+annSvcTier.fg+'">'+annSvcTier.label+'</span></span>'+
       '</div>'+
       '<div style="border-top:1px solid #e0d8ce;margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;align-items:baseline;gap:12px">'+
-      '<span style="font-size:11px;color:var(--sub)">1日平均サービス提供時間</span>'+
+      '<span id="ann-svc-albl" style="font-size:11px;color:var(--sub)">1日平均サービス提供時間</span>'+
       '<span id="ann-svc-avg" style="font-size:18px;font-weight:700;color:var(--pri)">'+annAvgSvcHours.toFixed(2)+'時間/日</span>'+
       '</div>'+
       '</div>'+
