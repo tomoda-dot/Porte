@@ -6752,23 +6752,32 @@
       h += '    <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">開催日</label><input type="date" id="cm-date" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + todayStr() + '"></div>';
       h += '  </div>';
       h += '  <div id="cm-case-panel" style="display:' + (isCase ? 'block' : 'none') + ';background:#fff8f0;border:1.5px solid #ffcc80;border-radius:10px;padding:10px 12px;">';
-      h += '    <div style="font-size:12px;font-weight:bold;color:#e65100;margin-bottom:8px;">👤 事例検討の対象・気になる点（AI起案に反映されます）</div>';
-      h += '    <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:8px;">';
+      h += '    <div style="font-size:12px;font-weight:bold;color:#e65100;margin-bottom:8px;">👤 事例の入力（入力内容からAIが「問題定義・検討・対策・報告書」を自動作成します）</div>';
+      h += '    <div style="display:flex;flex-direction:column;gap:8px;">';
       h += '      <div><label style="font-size:11.5px;font-weight:bold;color:#555;">対象利用者（任意）</label><select id="cm-case-user" style="width:100%;padding:6px 8px;border:1px solid #e0c8a8;border-radius:6px;background:#fff;font-size:12.5px;">' + userOpts + '</select></div>';
-      h += '      <div><label style="font-size:11.5px;font-weight:bold;color:#555;">テーマ・気になる点（任意）</label><input type="text" id="cm-case-topic" placeholder="例：午後の集中力維持、新作業の手順、体調の波など" style="width:100%;padding:6px 8px;border:1px solid #e0c8a8;border-radius:6px;font-size:12.5px;"></div>';
+      h += '      <div><label style="font-size:11.5px;font-weight:bold;color:#555;">事例・起きた出来事・気になる状況 *</label><textarea id="cm-case-topic" rows="3" placeholder="例：最近、午後になると集中が切れて席を離れることが増えている。本人も周囲の音が気になりイライラしている様子がある。" style="width:100%;padding:7px 8px;border:1px solid #e0c8a8;border-radius:6px;font-size:12.5px;"></textarea></div>';
       h += '    </div>';
       h += '  </div>';
       h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">会議名</label><input type="text" id="cm-title" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + esc(defTitle) + '"></div>';
       h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">出席者</label><input type="text" id="cm-attendees" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + esc(staffNames) + '"></div>';
 
-      h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">';
-      h += '    <span style="font-size:12px;color:var(--sub);">種別に合わせてAIが検討内容と支援方針・決定事項を起案します</span>';
-      h += '    <button type="button" id="btn-ai-committee" onclick="generateCommitteeWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12.5px;">🤖 AIで議題と決定事項を自動生成</button>';
+      h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;gap:8px;flex-wrap:wrap;">';
+      h += '    <span style="font-size:12px;color:var(--sub);">事例を入力してボタンを押すと、下の各項目をAIが自動作成します</span>';
+      h += '    <button type="button" id="btn-ai-committee" onclick="generateCommitteeWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12.5px;">🤖 AIで自動作成する</button>';
       h += '  </div>';
 
-      h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">協議事項・検討内容</label><textarea id="cm-agenda" rows="4" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">' + esc(defAgenda) + '</textarea></div>';
-      h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">決定事項・今後の支援方針</label><textarea id="cm-decisions" rows="4" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">' + esc(defDecisions) + '</textarea></div>';
-      h += '  <button type="button" class="training-start-btn" style="background:var(--accent);margin-top:10px;" onclick="saveCommitteeMinutes()">💾 議事録を保存する</button>';
+      h += '  <div id="cm-case-fields" style="display:' + (isCase ? 'flex' : 'none') + ';flex-direction:column;gap:10px;">';
+      h += '    <div><label style="font-size:12.5px;font-weight:bold;color:#bf360c;">1. 問題定義（課題・背景要因）</label><textarea id="cm-case-problem" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" placeholder="何が課題か、どのような背景・要因が考えられるか"></textarea></div>';
+      h += '    <div><label style="font-size:12.5px;font-weight:bold;color:#1565c0;">2. 検討内容（チームでの視点・アセスメント）</label><textarea id="cm-case-analysis" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" placeholder="本人の強み・特性・環境面の振り返り"></textarea></div>';
+      h += '    <div><label style="font-size:12.5px;font-weight:bold;color:#2e7d32;">3. 対策（環境調整・声かけ・具体的工夫）</label><textarea id="cm-case-measures" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" placeholder="明日から実施する具体的な支援策"></textarea></div>';
+      h += '    <div><label style="font-size:12.5px;font-weight:bold;color:var(--pri-dark);">4. 事例検討 報告書まとめ（今後の支援方針）</label><textarea id="cm-case-report" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" placeholder="記録総括とモニタリング予定"></textarea></div>';
+      h += '  </div>';
+
+      h += '  <div id="cm-std-fields" style="display:' + (isCase ? 'none' : 'flex') + ';flex-direction:column;gap:10px;">';
+      h += '    <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">協議事項・検討内容</label><textarea id="cm-agenda" rows="4" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">' + esc(defAgenda) + '</textarea></div>';
+      h += '    <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">決定事項・今後の支援方針</label><textarea id="cm-decisions" rows="4" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;">' + esc(defDecisions) + '</textarea></div>';
+      h += '  </div>';
+      h += '  <button type="button" class="training-start-btn" style="background:var(--accent);margin-top:10px;" onclick="saveCommitteeMinutes()">💾 保存する（保存後にA4印刷できます）</button>';
       h += '</div>';
 
       body.innerHTML = h;
@@ -6785,9 +6794,13 @@
       var isCase = (cat.indexOf('事例検討会') >= 0);
       var panel = el('cm-case-panel');
       if (panel) panel.style.display = isCase ? 'block' : 'none';
+      var caseFields = el('cm-case-fields');
+      if (caseFields) caseFields.style.display = isCase ? 'flex' : 'none';
+      var stdFields = el('cm-std-fields');
+      if (stdFields) stdFields.style.display = isCase ? 'none' : 'flex';
       var titleEl = el('cm-title');
       if (titleEl) titleEl.value = isCase ? '令和8年度 事例検討会（ケース会議）' : ('令和8年度 ' + cat + '（定例会議）');
-      generateCommitteeWithAI();
+      if (!isCase) generateCommitteeWithAI();
     }
 
     async function generateCommitteeWithAI() {
@@ -6825,13 +6838,15 @@
 
       var prompt = isCaseAi
         ? ('あなたは就労継続支援B型事業所「' + getFacilityFullName() + '」のサービス管理責任者です。\n' +
-          '月1回の「事例検討会（ケース会議）」の記録として、以下の情報（ある場合）を踏まえて、利用者の強み・課題の分析、環境や作業工程の工夫、今後の具体的支援方針をJSON形式のみで出力してください。\n' +
+          '月1回の「事例検討会（ケース会議）」として、以下の事例・状況を踏まえ、「1. 問題定義」「2. 検討内容」「3. 対策」「4. 事例検討 報告書まとめ」をそれぞれ簡潔かつ実践的に作成し、JSON形式のみで出力してください。\n' +
           '※個人情報保護のため、出力文面では実名を出さずイニシャルまたは「Aさん」等の仮名にしてください。\n' +
           (caseContext ? '\n' + caseContext + '\n' : '') +
           '{\n' +
-          '  "title": "令和8年度 第○回 事例検討会（ケース会議）",\n' +
-          '  "agenda": "1. ...\\n2. ...\\n3. ...",\n' +
-          '  "decisions": "・...\\n・...\\n・..."\n' +
+          '  "title": "令和8年度 事例検討会（ケース会議）",\n' +
+          '  "problem": "【課題】...\n【背景要因】...",\n' +
+          '  "analysis": "・強み・特性：...\n・支援視点：...",\n' +
+          '  "measures": "1. 環境調整：...\n2. 声かけ・支援：...\n3. 作業工程の工夫：...",\n' +
+          '  "report": "検討の結果、...を今後1ヶ月実践し、次回ケース会議で経過と本人の意向をモニタリングする。"\n' +
           '}')
         : ('あなたは' + getFacilityFullName() + 'の管理者です。\n' +
           '実地指導（運営指導）の監査基準を満たす「' + cat + '」の議事録として、「協議事項・議題（3項目）」と「決定事項・改善策（3項目）」をJSON形式のみで出力してください。\n' +
@@ -6843,10 +6858,22 @@
 
       var res = await callPorteAI(prompt);
       var parsed = res ? extractJsonFromText(res.text) : null;
-      if (parsed && parsed.agenda && parsed.decisions) {
+      if (isCaseAi && parsed && (parsed.problem || parsed.measures || parsed.report)) {
+        if (parsed.title && el('cm-title')) el('cm-title').value = parsed.title;
+        if (el('cm-case-problem')) el('cm-case-problem').value = parsed.problem || '';
+        if (el('cm-case-analysis')) el('cm-case-analysis').value = parsed.analysis || '';
+        if (el('cm-case-measures')) el('cm-case-measures').value = parsed.measures || '';
+        if (el('cm-case-report')) el('cm-case-report').value = parsed.report || '';
+      } else if (!isCaseAi && parsed && parsed.agenda && parsed.decisions) {
         if (parsed.title && el('cm-title')) el('cm-title').value = parsed.title;
         if (el('cm-agenda')) el('cm-agenda').value = parsed.agenda;
         if (el('cm-decisions')) el('cm-decisions').value = parsed.decisions;
+      } else if (isCaseAi) {
+        var rawTopic = (el('cm-case-topic') && el('cm-case-topic').value.trim()) || '作業集中・体調ペースの維持と本人に合った役割づくり';
+        if (el('cm-case-problem')) el('cm-case-problem').value = '【課題】' + rawTopic + 'に関する負担や不安が見られる。\n【背景要因】作業環境や見通しの提示方法、休息リズムとのズレが影響している可能性がある。';
+        if (el('cm-case-analysis')) el('cm-case-analysis').value = '・強み：丁寧に取り組める工程や得意分野があり、安定した環境下では力を発揮できる。\n・支援視点：本人のペースを尊重しつつ、困りごとを言語化しやすい関わりが必要。';
+        if (el('cm-case-measures')) el('cm-case-measures').value = '1. 環境調整：刺激や動線を整理し、落ち着いて作業できる席配置・休憩ルールを設定する。\n2. 声かけ・支援：作業開始時と区切りごとに見通しを伝え、できた点を具体的にフィードバックする。\n3. 作業工程の工夫：手順の視覚化と適度な小分け工程を取り入れる。';
+        if (el('cm-case-report')) el('cm-case-report').value = '上記対策を全支援員で共有し、日々の支援記録に経過を残す。1ヶ月後に本人の意向と変化を振り返り、必要に応じて個別支援計画を見直す。';
       } else {
         var presets = {
           '事例検討会（ケース会議）': {
@@ -6888,11 +6915,23 @@
 
     async function saveCommitteeMinutes() {
       var cat = el('cm-category') ? el('cm-category').value : '身体拘束適正化委員会';
+      var isCase = (cat.indexOf('事例検討会') >= 0);
       var date = el('cm-date').value || todayStr();
       var title = el('cm-title').value || (cat + ' 議事録');
       var attendees = el('cm-attendees').value || '';
-      var agenda = el('cm-agenda').value || '';
-      var decisions = el('cm-decisions').value || '';
+      var caseData = null;
+      var agenda = el('cm-agenda') ? el('cm-agenda').value : '';
+      var decisions = el('cm-decisions') ? el('cm-decisions').value : '';
+      if (isCase) {
+        var cTopic = el('cm-case-topic') ? el('cm-case-topic').value.trim() : '';
+        var cProb = el('cm-case-problem') ? el('cm-case-problem').value.trim() : '';
+        var cAna = el('cm-case-analysis') ? el('cm-case-analysis').value.trim() : '';
+        var cMea = el('cm-case-measures') ? el('cm-case-measures').value.trim() : '';
+        var cRep = el('cm-case-report') ? el('cm-case-report').value.trim() : '';
+        caseData = { topic: cTopic, problem: cProb, analysis: cAna, measures: cMea, report: cRep };
+        agenda = (cTopic ? '【事例概要】\n' + cTopic + '\n\n' : '') + '【1. 問題定義】\n' + cProb + '\n\n【2. 検討内容】\n' + cAna;
+        decisions = '【3. 対策】\n' + cMea + '\n\n【4. 報告書まとめ】\n' + cRep;
+      }
 
       var cm = {
         id: 'cm_' + Date.now(),
@@ -6902,6 +6941,7 @@
         attendees: attendees,
         agenda: agenda,
         decisions: decisions,
+        caseData: caseData,
         createdAt: new Date().toISOString()
       };
 
@@ -6948,17 +6988,26 @@
       html += '@media print { button { display: none !important; } }';
       html += '</style></head><body>';
 
+      var isCasePrint = (String(cm.category || '').indexOf('事例検討会') >= 0);
       html += '<div class="stamp-box"><table class="stamp-table"><tr><th>管理者</th><th>サビ管</th><th>記録者</th></tr><tr><td></td><td></td><td></td></tr></table></div>';
-      html += '<h1>' + esc(cm.title) + ' 議事録</h1>';
+      html += '<h1>' + esc(cm.title) + (isCasePrint ? ' 報告書' : ' 議事録') + '</h1>';
 
       html += '<table>';
       html += '<tr><th>事業所名</th><td>' + esc(getFacilityFullName()) + '</td></tr>';
       html += '<tr><th>会議・委員会区分</th><td>' + esc(cm.category || '法定委員会') + '</td></tr>';
       html += '<tr><th>開催日時</th><td>' + cm.date + '</td></tr>';
       html += '<tr><th>出席者</th><td>' + esc(cm.attendees) + '</td></tr>';
-      html += '<tr><th>議題・協議事項</th><td style="white-space:pre-wrap;">' + esc(cm.agenda) + '</td></tr>';
-      html += '<tr><th>決定事項・対応策</th><td style="white-space:pre-wrap;">' + esc(cm.decisions) + '</td></tr>';
-      var shareNote = (String(cm.category || '').indexOf('事例検討会') >= 0)
+      if (isCasePrint && cm.caseData) {
+        if (cm.caseData.topic) html += '<tr><th>事例・状況概要</th><td style="white-space:pre-wrap;">' + esc(cm.caseData.topic) + '</td></tr>';
+        html += '<tr><th>1. 問題定義</th><td style="white-space:pre-wrap;">' + esc(cm.caseData.problem || '') + '</td></tr>';
+        html += '<tr><th>2. 検討内容</th><td style="white-space:pre-wrap;">' + esc(cm.caseData.analysis || '') + '</td></tr>';
+        html += '<tr><th>3. 対策</th><td style="white-space:pre-wrap;">' + esc(cm.caseData.measures || '') + '</td></tr>';
+        html += '<tr><th>4. 報告書まとめ</th><td style="white-space:pre-wrap;">' + esc(cm.caseData.report || '') + '</td></tr>';
+      } else {
+        html += '<tr><th>議題・協議事項</th><td style="white-space:pre-wrap;">' + esc(cm.agenda) + '</td></tr>';
+        html += '<tr><th>決定事項・対応策</th><td style="white-space:pre-wrap;">' + esc(cm.decisions) + '</td></tr>';
+      }
+      var shareNote = isCasePrint
         ? '全支援員で支援方針を共有し、日々の支援記録および次回のモニタリング・個別支援計画に反映する。'
         : '全職員へ議事録を回覧・共有し、関連するeラーニング研修を通じて現場実践を徹底する。';
       html += '<tr><th>周知・共有方法</th><td>' + shareNote + '</td></tr>';
