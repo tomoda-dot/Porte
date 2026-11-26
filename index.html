@@ -15714,25 +15714,25 @@ function printBlankSurveySheet(){
     '.qt{font-weight:700;font-size:11.5pt;margin-bottom:8px;color:#2f4a31}'+
     '.opts{display:flex;gap:22px;flex-wrap:wrap;font-size:11pt}'+
     '.chk{display:inline-flex;align-items:center;gap:6px}'+
-    '.circle{display:inline-block;width:16px;height:16px;border:1.5px solid #333;border-radius:50%}'+
+    '.circle{display:inline-block;width:16px;height:16px;border:1.5px solid #333;border-radius:3px;flex-shrink:0}'+
     '.lines{height:58px;border-bottom:1px dashed #aaa;margin-top:8px}'+
     '@media print{button{display:none!important}}'+
     '</style></head><body>'+
     '<h1>令和'+(fy-2018)+'年度 利用者アンケート</h1>'+
     '<div style="text-align:right;font-size:10pt;margin-bottom:8px">事業所名：'+esc(fn)+'　／　お名前（書かなくても大丈夫です）：<u>　　　　　　　　　　</u></div>'+
-    '<div class="intro">みなさんがより楽しく・安心して通える事業所にするためのアンケートです。あてはまるものに <b>○</b> をつけてください。（率直なご意見をお聞かせください）</div>'+
+    '<div class="intro">みなさんがより楽しく・安心して通える事業所にするためのアンケートです。あてはまる <b>□</b> の中に <b>✔</b>（または <b>○</b>）をつけてください。（率直なご意見をお聞かせください）</div>'+
     '<div class="qbox"><div class="qt">Q1. 事業所での過ごしやすさはどうですか？</div><div class="opts">'+
-    '<span class="chk"><span class="circle"></span> 😊 とても良い</span>'+
-    '<span class="chk"><span class="circle"></span> 🙂 まあまあ</span>'+
-    '<span class="chk"><span class="circle"></span> 🤔 改善してほしいところがある</span></div></div>'+
+    '<span class="chk"><span class="circle"></span> とても良い</span>'+
+    '<span class="chk"><span class="circle"></span> まあまあ</span>'+
+    '<span class="chk"><span class="circle"></span> 改善してほしいところがある</span></div></div>'+
     '<div class="qbox"><div class="qt">Q2. 今の作業内容や量はどうですか？</div><div class="opts">'+
-    '<span class="chk"><span class="circle"></span> ⭕ ちょうど良い</span>'+
-    '<span class="chk"><span class="circle"></span> ✨ 新しい作業にも挑戦したい</span>'+
-    '<span class="chk"><span class="circle"></span> 💦 少し負担が大きい</span></div></div>'+
+    '<span class="chk"><span class="circle"></span> ちょうど良い</span>'+
+    '<span class="chk"><span class="circle"></span> 新しい作業にも挑戦したい</span>'+
+    '<span class="chk"><span class="circle"></span> 少し負担が大きい</span></div></div>'+
     '<div class="qbox"><div class="qt">Q3. スタッフへの相談のしやすさはどうですか？</div><div class="opts">'+
-    '<span class="chk"><span class="circle"></span> 😊 話しやすい</span>'+
-    '<span class="chk"><span class="circle"></span> 🙂 ふつう</span>'+
-    '<span class="chk"><span class="circle"></span> 💬 話しにくいことがある</span></div></div>'+
+    '<span class="chk"><span class="circle"></span> 話しやすい</span>'+
+    '<span class="chk"><span class="circle"></span> ふつう</span>'+
+    '<span class="chk"><span class="circle"></span> 話しにくいことがある</span></div></div>'+
     '<div class="qbox"><div class="qt">Q4. 今後やってみたい作業・イベントや、「こうしてほしい」と思うことはありますか？</div><div class="lines"></div><div class="lines" style="height:36px"></div></div>'+
     '<div class="qbox"><div class="qt">Q5. 工賃の目標について、感じていることや希望があれば教えてください。</div><div class="lines" style="height:44px"></div></div>'+
     '<div style="text-align:center;font-size:10pt;color:#555;margin-top:10px">ご協力ありがとうございました！回収箱またはスタッフまでお渡しください。</div>'+
