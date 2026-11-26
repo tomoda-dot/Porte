@@ -10754,6 +10754,7 @@ async function renderExport(c){
     menuH+='<button onclick="eT=\'incidents\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">⚠️ ヒヤリハット</button>';
     menuH+='<button onclick="eT=\'complaints\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📞 苦情・相談</button>';
     menuH+='<button onclick="eT=\'training\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">📚 研修・事例検討会</button>';
+    menuH+='<button onclick="eT=\'community\';renderExport(document.getElementById(\'content\'))" style="padding:16px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--pri);color:#fff;text-align:center" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">🤝 地域連携活動</button>';
     menuH+='</div>';
     c.innerHTML=menuH;
     return;
@@ -10762,6 +10763,7 @@ async function renderExport(c){
   if(eT==='incidents'){renderIncidents(c);return;}
   if(eT==='complaints'){renderComplaints(c);return;}
   if(eT==='training'){renderTraining(c);return;}
+  if(eT==='community'){renderCommunityActivities(c);return;}
 
   var curGroup = groups.find(function(g){
     return g.items.some(function(item){ return item[0] === eT; });
@@ -15405,6 +15407,172 @@ function printTrainingSummary(id){
 
   html+='<' + 'script>window.onload=function(){setTimeout(function(){window.print();},300);};</' + 'script></body></html>';
   w.document.write(html);w.document.close();
+}
+
+// ═══ 地域連携活動記録（令和9年度 地域連携活動 0〜15点対策）═══
+var _commData=[],_commFY=null;
+function renderCommunityActivities(c){
+  if(!_commFY)_commFY=_getFY();
+  try{_commData=JSON.parse((S.settings&&S.settings.communityActivities)||'[]');}catch(e){_commData=[];}
+  if(!Array.isArray(_commData))_commData=[];
+  c.innerHTML='<div class="hd-row"><h2>🤝 地域連携活動 記録</h2><button class="bg" onclick="eT=\'menu\';renderExport(document.getElementById(\'content\'))" style="font-size:12px">← 帳票一覧</button></div><div id="comm-area"></div>';
+  loadCommunityList();
+}
+function loadCommunityList(){
+  var el=document.getElementById('comm-area');
+  if(!el)return;
+  var fy=_commFY||_getFY();
+  var fyStart=fy+'-04-01',fyEnd=(fy+1)+'-03-31';
+  var fyList=_commData.filter(function(x){return(x.date||'')>=fyStart&&(x.date||'')<=fyEnd;}).sort(function(a,b){return(b.date||'').localeCompare(a.date||'');});
+  var cntProd=fyList.filter(function(x){return x.category==='地域と協働した生産活動';}).length;
+  var cntContrib=fyList.filter(function(x){return x.category==='地域貢献活動';}).length;
+  var cntOffsite=fyList.filter(function(x){return x.category==='施設外就労';}).length;
+
+  var h='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">';
+  h+='<div style="display:flex;align-items:center;gap:10px">';
+  h+='<button class="bg" onclick="_commFY--;loadCommunityList()" style="padding:4px 10px">◀</button>';
+  h+='<span style="font-size:16px;font-weight:700">令和'+(fy-2018)+'年度（'+fy+'年4月〜'+(fy+1)+'年3月）</span>';
+  h+='<button class="bg" onclick="_commFY++;loadCommunityList()" style="padding:4px 10px">▶</button></div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  h+='<button class="bg" onclick="copyCommunityForWam()" style="font-size:12px">📋 WAM NET公表用テキストをコピー</button>';
+  h+='<button class="bg" onclick="printCommunityActivities()" style="font-size:12px">🖨️ A4印刷（公表・控え用）</button>';
+  h+='<button class="bp" onclick="openCommunityForm()">＋ 活動を記録</button>';
+  h+='</div></div>';
+
+  h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">';
+  h+='<div class="stat"><div class="stat-l">年度合計</div><div class="stat-v">'+fyList.length+'</div></div>';
+  h+='<div class="stat" style="border-color:#e65100"><div class="stat-l">🏪 地域協働生産</div><div class="stat-v" style="color:#e65100">'+cntProd+'</div></div>';
+  h+='<div class="stat" style="border-color:#2e7d32"><div class="stat-l">🌱 地域貢献活動</div><div class="stat-v" style="color:#2e7d32">'+cntContrib+'</div></div>';
+  h+='<div class="stat" style="border-color:#1565c0"><div class="stat-l">🏢 施設外就労</div><div class="stat-v" style="color:#1565c0">'+cntOffsite+'</div></div>';
+  h+='</div>';
+
+  h+='<div class="card" style="overflow-x:auto"><table><thead><tr><th style="width:95px">実施日</th><th>活動区分</th><th>活動名・内容</th><th>連携先・相手先</th><th>参加状況</th><th>操作</th></tr></thead><tbody>';
+  if(fyList.length===0){
+    h+='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:24px">この年度の記録がありません。「＋ 活動を記録」から追加してください。</td></tr>';
+  }
+  fyList.forEach(function(it){
+    var col=it.category==='地域と協働した生産活動'?'#e65100':(it.category==='地域貢献活動'?'#2e7d32':'#1565c0');
+    var bg=it.category==='地域と協働した生産活動'?'#fff3e0':(it.category==='地域貢献活動'?'#e8f5e9':'#e3f2fd');
+    h+='<tr>';
+    h+='<td style="font-size:12px;white-space:nowrap">'+fmtDate(it.date)+'</td>';
+    h+='<td><span style="background:'+bg+';color:'+col+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap">'+esc(it.category||'')+'</span></td>';
+    h+='<td><div style="font-weight:700;font-size:13px">'+esc(it.title||'')+'</div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">'+esc(it.content||'').substring(0,70)+(String(it.content||'').length>70?'...':'')+'</div></td>';
+    h+='<td style="font-size:12px">'+esc(it.partner||'-')+'</td>';
+    h+='<td style="font-size:12px">'+esc(it.participants||'-')+'</td>';
+    h+='<td><button class="bg" onclick="openCommunityForm(\''+it.id+'\')" style="font-size:11px;padding:2px 8px">編集</button></td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  el.innerHTML=h;
+}
+function openCommunityForm(id){
+  var it=id?_commData.find(function(x){return x.id===id;}):null;
+  var isEdit=!!it;
+  if(!it)it={date:today(),category:'地域と協働した生産活動',title:'',partner:'',participants:'',content:''};
+  var el=document.getElementById('comm-area');
+  var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  h+='<h3 style="margin:0">'+(isEdit?'📝 地域連携活動を編集':'🤝 地域連携活動の記録')+'</h3>';
+  h+='<button class="bg" onclick="loadCommunityList()" style="font-size:12px">← 一覧に戻る</button></div>';
+  h+='<div class="grid2">';
+  h+='<div class="field"><label>実施日 *</label><input type="date" id="comm-date" value="'+(it.date||'')+'" style="width:100%"></div>';
+  h+='<div class="field"><label>活動区分 *</label><select id="comm-cat" style="width:100%">';
+  ['地域と協働した生産活動','地域貢献活動','施設外就労'].forEach(function(o){h+='<option'+(it.category===o?' selected':'')+'>'+o+'</option>';});
+  h+='</select></div></div>';
+  h+='<div class="field"><label>活動名・イベント名 *</label><input id="comm-title" value="'+esc(it.title||'')+'" placeholder="例：駄菓子屋ひとつぎ 地域交流販売、町内会清掃活動など" style="width:100%"></div>';
+  h+='<div class="grid2">';
+  h+='<div class="field"><label>連携先・相手先</label><input id="comm-partner" value="'+esc(it.partner||'')+'" placeholder="例：地域住民、○○町会、豊中市など" style="width:100%"></div>';
+  h+='<div class="field"><label>参加状況</label><input id="comm-part" value="'+esc(it.participants||'')+'" placeholder="例：利用者3名・職員2名" style="width:100%"></div></div>';
+  h+='<div class="field"><label>活動内容・地域との関わり</label><textarea id="comm-content" rows="4" style="width:100%" placeholder="実施した内容、利用者の役割、地域からの反応など">'+esc(it.content||'')+'</textarea></div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px">';
+  h+=(isEdit?'<button class="br" onclick="deleteCommunityActivity(\''+it.id+'\')" style="font-size:12px">🗑️ 削除</button>':'<div></div>');
+  h+='<button class="bp" onclick="saveCommunityActivity(\''+(isEdit?it.id:'')+'\')">💾 保存する</button></div></div>';
+  el.innerHTML=h;
+}
+async function saveCommunityActivity(id){
+  var date=document.getElementById('comm-date').value;
+  var category=document.getElementById('comm-cat').value;
+  var title=document.getElementById('comm-title').value.trim();
+  var partner=document.getElementById('comm-partner').value.trim();
+  var participants=document.getElementById('comm-part').value.trim();
+  var content=document.getElementById('comm-content').value.trim();
+  if(!date||!title){await cAlert('実施日と活動名を入力してください');return;}
+  if(!lockUI())return;
+  try{
+    if(id){
+      var idx=_commData.findIndex(function(x){return x.id===id;});
+      if(idx>=0)_commData[idx]={id:id,date:date,category:category,title:title,partner:partner,participants:participants,content:content};
+    }else{
+      _commData.push({id:'comm_'+Date.now(),date:date,category:category,title:title,partner:partner,participants:participants,content:content});
+    }
+    var jsonStr=JSON.stringify(_commData);
+    await gas('updateSetting','communityActivities',jsonStr);
+    if(S.settings)S.settings.communityActivities=jsonStr;
+    toast('✅ 地域連携活動を保存しました');
+    loadCommunityList();
+  }catch(e){await cAlert('保存エラー: '+e);}finally{unlockUI();}
+}
+async function deleteCommunityActivity(id){
+  if(!await cConfirm('この記録を削除しますか？'))return;
+  if(!lockUI())return;
+  try{
+    _commData=_commData.filter(function(x){return x.id!==id;});
+    var jsonStr=JSON.stringify(_commData);
+    await gas('updateSetting','communityActivities',jsonStr);
+    if(S.settings)S.settings.communityActivities=jsonStr;
+    toast('削除しました');
+    loadCommunityList();
+  }catch(e){await cAlert('削除エラー: '+e);}finally{unlockUI();}
+}
+async function copyCommunityForWam(){
+  var fy=_commFY||_getFY();
+  var fyStart=fy+'-04-01',fyEnd=(fy+1)+'-03-31';
+  var fyList=_commData.filter(function(x){return(x.date||'')>=fyStart&&(x.date||'')<=fyEnd;}).sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+  if(fyList.length===0){await cAlert('コピーする記録がありません');return;}
+  var fn=(S.settings&&S.settings.facilityName)||'事業所';
+  var txt='【'+fn+'】令和'+(fy-2018)+'年度 地域連携活動の実績報告\n\n';
+  fyList.forEach(function(it,idx){
+    txt+=(idx+1)+'. '+it.date+' ['+it.category+'] '+it.title+'\n';
+    if(it.partner)txt+='   連携先: '+it.partner+'\n';
+    if(it.participants)txt+='   参加: '+it.participants+'\n';
+    if(it.content)txt+='   内容: '+it.content.replace(/\n+/g,' ')+'\n';
+    txt+='\n';
+  });
+  try{
+    await navigator.clipboard.writeText(txt);
+    toast('📋 WAM NET公表用テキストをコピーしました');
+  }catch(e){
+    await cAlert(txt);
+  }
+}
+function printCommunityActivities(){
+  var fy=_commFY||_getFY();
+  var fyStart=fy+'-04-01',fyEnd=(fy+1)+'-03-31';
+  var fyList=_commData.filter(function(x){return(x.date||'')>=fyStart&&(x.date||'')<=fyEnd;}).sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+  var fn=(S.settings&&S.settings.facilityName)||'事業所';
+  var w=window.open('','_blank');
+  if(!w){cAlert('ポップアップがブロックされました');return;}
+  var h='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>地域連携活動実績</title><style>'+
+    '@page{size:A4 portrait;margin:12mm}'+
+    'body{font-family:"Noto Sans JP","Yu Gothic",sans-serif;font-size:9.5pt;color:#222;margin:0;line-height:1.5}'+
+    'h1{font-size:14pt;text-align:center;margin:0 0 4px}'+
+    '.sub{text-align:center;font-size:9.5pt;color:#555;margin-bottom:14px}'+
+    'table{width:100%;border-collapse:collapse}'+
+    'th,td{border:1px solid #444;padding:6px 8px;vertical-align:top}'+
+    'th{background:#f2efe9;font-weight:700;text-align:left}'+
+    '@media print{button{display:none!important}}'+
+    '</style></head><body>'+
+    '<h1>令和'+(fy-2018)+'年度 地域連携活動 実施一覧</h1>'+
+    '<div class="sub">事業所名：'+esc(fn)+'　（計 '+fyList.length+'件）</div>'+
+    '<table><thead><tr><th style="width:82px">実施日</th><th style="width:125px">活動区分</th><th>活動名・内容</th><th style="width:110px">連携先／参加</th></tr></thead><tbody>'+
+    (fyList.length===0?'<tr><td colspan="4" style="text-align:center;padding:20px">記録がありません</td></tr>':
+      fyList.map(function(it){
+        return'<tr><td>'+esc(it.date)+'</td><td>'+esc(it.category)+'</td>'+
+          '<td><b>'+esc(it.title)+'</b>'+(it.content?'<div style="margin-top:3px;white-space:pre-wrap">'+esc(it.content)+'</div>':'')+'</td>'+
+          '<td>'+esc(it.partner||'-')+(it.participants?'<div style="color:#555;font-size:8.5pt;margin-top:2px">'+esc(it.participants)+'</div>':'')+'</td></tr>';
+      }).join(''))+
+    '</tbody></table>'+
+    '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>';
+  w.document.open();w.document.write(h);w.document.close();
 }
 
 var _settingsOpenSections={};
