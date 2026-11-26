@@ -6997,8 +6997,10 @@
       } catch (e) { }
 
       closeCommitteeModal();
+      renderFyCalendar();
       renderCommitteeList();
-      alert('🏛️ 委員会議事録を保存しました。実地指導用A4印刷が可能です。');
+      renderPublishedCoursesList();
+      alert(isCase ? '💬 事例検討会報告書を保存しました。カレンダーおよび一覧からA4印刷が可能です。' : '🏛️ 委員会議事録を保存しました。実地指導用A4印刷が可能です。');
     }
 
     function printCommitteeMinutes(id) {
