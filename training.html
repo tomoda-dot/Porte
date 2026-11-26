@@ -1450,23 +1450,53 @@
     <div class="container">
 
       <!-- ══════════════════════════════════════════════
-       1. スタッフ視聴側画面（ログインした本人の受講・未受講・受講済リスト）
+       1. スタッフ視聴側画面（研修 / 委員会・事例検討会 分離タブ）
        ══════════════════════════════════════════════ -->
       <div id="view-staff" class="staff-view">
 
-        <!-- マイ受講ステータス ＆ 進捗ダッシュボード -->
-        <div class="viewer-hero-card" id="viewer-hero-area">
-          <!-- 動的描画 -->
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;background:#fff;padding:8px 12px;border-radius:14px;border:1.5px solid var(--bdr);box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+          <button type="button" id="staff-tab-training" onclick="switchStaffMainTab('training')" style="flex:1;min-width:160px;padding:10px 16px;border-radius:10px;border:none;background:var(--pri);color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            📖 法定研修・テスト
+          </button>
+          <button type="button" id="staff-tab-minutes" onclick="switchStaffMainTab('minutes')" style="flex:1;min-width:160px;padding:10px 16px;border-radius:10px;border:1.5px solid var(--bdr);background:#faf8f5;color:var(--pri-dark);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            💬 委員会・事例検討会 <span id="staff-minutes-badge" style="font-size:11px;background:#e65100;color:#fff;padding:1px 7px;border-radius:10px;display:none;">0</span>
+          </button>
         </div>
 
-        <!-- 絞り込みタブ（すべて / ⏳未受講のみ / ✅受講済みのみ） -->
-        <div class="viewer-filter-tabs" id="viewer-filter-bar">
-          <!-- 動的描画 -->
+        <div id="staff-training-section">
+          <!-- マイ受講ステータス ＆ 進捗ダッシュボード -->
+          <div class="viewer-hero-card" id="viewer-hero-area">
+            <!-- 動的描画 -->
+          </div>
+
+          <!-- 絞り込みタブ（すべて / ⏳未受講のみ / ✅受講済みのみ） -->
+          <div class="viewer-filter-tabs" id="viewer-filter-bar">
+            <!-- 動的描画 -->
+          </div>
+
+          <!-- 研修カードリスト（未受講セクション ＆ 受講済みセクション） -->
+          <div id="training-card-list">
+            <!-- 動的描画 -->
+          </div>
         </div>
 
-        <!-- 研修カードリスト（未受講セクション ＆ 受講済みセクション） -->
-        <div id="training-card-list">
-          <!-- 動的描画 -->
+        <div id="staff-minutes-section" style="display:none;">
+          <div class="card" style="padding:16px 20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+              <div>
+                <div style="font-size:16px;font-weight:700;color:var(--pri-dark);">💬 委員会・事例検討会 議事録・報告書（共有閲覧）</div>
+                <div style="font-size:12px;color:var(--sub);margin-top:2px;">事業所内で実施した事例検討会・各種委員会の内容を確認・印刷できます</div>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;" id="staff-min-filter-bar">
+                <button type="button" class="template-chip" onclick="setStaffMinutesFilter('all')" id="sm-flt-all" style="background:var(--pri);color:#fff;border-color:var(--pri);">すべて</button>
+                <button type="button" class="template-chip" onclick="setStaffMinutesFilter('case')" id="sm-flt-case">💬 事例検討会</button>
+                <button type="button" class="template-chip" onclick="setStaffMinutesFilter('committee')" id="sm-flt-committee">🏛️ 委員会</button>
+              </div>
+            </div>
+            <div id="staff-minutes-list">
+              <!-- 動的描画 -->
+            </div>
+          </div>
         </div>
 
       </div>
@@ -2783,7 +2813,100 @@
         '</div>';
     }
 
+    var _staffMainTab = 'training';
+    var _staffMinutesFilter = 'all';
+    function switchStaffMainTab(tab) {
+      _staffMainTab = tab || 'training';
+      var trSec = el('staff-training-section');
+      var mnSec = el('staff-minutes-section');
+      var bTr = el('staff-tab-training');
+      var bMn = el('staff-tab-minutes');
+      if (trSec) trSec.style.display = (_staffMainTab === 'training') ? 'block' : 'none';
+      if (mnSec) mnSec.style.display = (_staffMainTab === 'minutes') ? 'block' : 'none';
+      if (bTr) {
+        bTr.style.background = (_staffMainTab === 'training') ? 'var(--pri)' : '#faf8f5';
+        bTr.style.color = (_staffMainTab === 'training') ? '#fff' : 'var(--pri-dark)';
+        bTr.style.border = (_staffMainTab === 'training') ? 'none' : '1.5px solid var(--bdr)';
+      }
+      if (bMn) {
+        bMn.style.background = (_staffMainTab === 'minutes') ? 'var(--pri)' : '#faf8f5';
+        bMn.style.color = (_staffMainTab === 'minutes') ? '#fff' : 'var(--pri-dark)';
+        bMn.style.border = (_staffMainTab === 'minutes') ? 'none' : '1.5px solid var(--bdr)';
+      }
+      if (_staffMainTab === 'minutes') renderStaffMinutesList();
+    }
+    function setStaffMinutesFilter(flt) {
+      _staffMinutesFilter = flt || 'all';
+      ['all', 'case', 'committee'].forEach(function (k) {
+        var b = el('sm-flt-' + k);
+        if (!b) return;
+        var act = (k === _staffMinutesFilter);
+        b.style.background = act ? 'var(--pri)' : '#fff';
+        b.style.color = act ? '#fff' : '';
+        b.style.borderColor = act ? 'var(--pri)' : '';
+      });
+      renderStaffMinutesList();
+    }
+    function renderStaffMinutesList() {
+      var badge = el('staff-minutes-badge');
+      if (badge) {
+        badge.textContent = _committeeMinutes.length;
+        badge.style.display = _committeeMinutes.length > 0 ? 'inline-block' : 'none';
+      }
+      var listEl = el('staff-minutes-list');
+      if (!listEl) return;
+      var items = (_committeeMinutes || []).filter(function (cm) {
+        var isCase = String(cm.category || '').indexOf('事例検討会') >= 0;
+        if (_staffMinutesFilter === 'case') return isCase;
+        if (_staffMinutesFilter === 'committee') return !isCase;
+        return true;
+      }).slice().sort(function (a, b) {
+        return String(b.date || '').localeCompare(String(a.date || ''));
+      });
+      if (items.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center;padding:28px;color:var(--sub);">表示できる議事録・事例検討会がありません</div>';
+        return;
+      }
+      listEl.innerHTML = items.map(function (cm) {
+        var isCase = String(cm.category || '').indexOf('事例検討会') >= 0;
+        var bg = isCase ? '#fffaf4' : '#fbfefb';
+        var bd = isCase ? '#ffcc80' : '#a5d6a7';
+        var pri = isCase ? '#e65100' : '#2e7d32';
+        var dark = isCase ? '#bf360c' : '#1b5e20';
+        var tagBg = isCase ? '#fff3e0' : '#e8f5e9';
+        var tagLabel = isCase ? '💬 事例検討会' : ('🏛️ 委員会 / ' + esc(cm.category || ''));
+        var bodyHtml = '';
+        if (isCase && cm.caseData) {
+          if (cm.caseData.topic) bodyHtml += '<div style="margin-bottom:8px;"><div style="font-size:11.5px;font-weight:700;color:#e65100;">📝 事例・状況概要</div><div style="font-size:12.5px;white-space:pre-wrap;color:#333;">' + esc(cm.caseData.topic) + '</div></div>';
+          bodyHtml += '<div style="margin-bottom:8px;"><div style="font-size:11.5px;font-weight:700;color:#bf360c;">1. 問題定義</div><div style="font-size:12.5px;white-space:pre-wrap;color:#333;">' + esc(cm.caseData.problem || '') + '</div></div>';
+          bodyHtml += '<div style="margin-bottom:8px;"><div style="font-size:11.5px;font-weight:700;color:#1565c0;">2. 検討内容</div><div style="font-size:12.5px;white-space:pre-wrap;color:#333;">' + esc(cm.caseData.analysis || '') + '</div></div>';
+          bodyHtml += '<div style="margin-bottom:8px;"><div style="font-size:11.5px;font-weight:700;color:#2e7d32;">3. 対策</div><div style="font-size:12.5px;white-space:pre-wrap;color:#333;">' + esc(cm.caseData.measures || '') + '</div></div>';
+          bodyHtml += '<div><div style="font-size:11.5px;font-weight:700;color:#333;">4. 報告書まとめ</div><div style="font-size:12.5px;white-space:pre-wrap;color:#333;">' + esc(cm.caseData.report || '') + '</div></div>';
+        } else {
+          bodyHtml += '<div style="margin-bottom:8px;"><div style="font-size:11.5px;font-weight:700;color:' + dark + ';">' + (isCase ? '📋 事例・問題定義・検討内容' : '📋 協議事項・議題') + '</div><div style="font-size:12.5px;white-space:pre-wrap;color:#333;">' + esc(cm.agenda || '（未入力）') + '</div></div>';
+          bodyHtml += '<div><div style="font-size:11.5px;font-weight:700;color:' + dark + ';">' + (isCase ? '✅ 対策・報告書まとめ' : '✅ 決定事項・改善策') + '</div><div style="font-size:12.5px;white-space:pre-wrap;color:#333;">' + esc(cm.decisions || '（未入力）') + '</div></div>';
+        }
+        return '<details style="background:' + bg + ';border:1.5px solid ' + bd + ';border-radius:12px;padding:12px 16px;margin-bottom:10px;">' +
+          '<summary style="cursor:pointer;list-style:none;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:4px;">' +
+          '<span style="font-size:11px;font-weight:700;background:' + tagBg + ';color:' + pri + ';padding:2px 8px;border-radius:6px;">' + tagLabel + '</span>' +
+          '<span style="font-size:11.5px;color:' + pri + ';font-weight:700;">内容を見る ▼</span>' +
+          '</div>' +
+          '<div style="font-size:15px;font-weight:700;color:' + dark + ';">' + esc(cm.title || '') + '</div>' +
+          '<div style="font-size:12px;color:var(--sub);margin-top:3px;">開催日: ' + esc(cm.date || '-') + ' ｜ 出席者: ' + esc(cm.attendees || '-') + '</div>' +
+          '</summary>' +
+          '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed ' + bd + ';">' +
+          '<div style="background:#fff;border:1px solid #eee;border-radius:10px;padding:12px;line-height:1.6;">' + bodyHtml + '</div>' +
+          '<div style="display:flex;justify-content:flex-end;margin-top:8px;">' +
+          '<button type="button" onclick="printCommitteeMinutes(\'' + cm.id + '\')" style="font-size:12px;padding:6px 14px;border-radius:8px;border:none;background:' + pri + ';color:#fff;font-weight:700;cursor:pointer;">🖨️ A4印刷</button>' +
+          '</div>' +
+          '</div>' +
+          '</details>';
+      }).join('');
+    }
+
     function renderStaffTrainingList() {
+      renderStaffMinutesList();
       var heroEl = el('viewer-hero-area');
       var filterEl = el('viewer-filter-bar');
       var listEl = el('training-card-list');
