@@ -15706,36 +15706,37 @@ function printBlankSurveySheet(){
   var fn=(S.settings&&S.settings.facilityName)||'ひとつぎ豊中小曽根';
   var w=window.open('','_blank');if(!w){cAlert('ポップアップがブロックされました');return;}
   var h='<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>利用者アンケート用紙</title><style>'+
-    '@page{size:A4 portrait;margin:14mm}'+
-    'body{font-family:"Noto Sans JP","Yu Gothic",sans-serif;color:#222;font-size:11pt;line-height:1.65;margin:0}'+
-    'h1{font-size:16pt;text-align:center;margin:0 0 6px;border-bottom:2px solid #3d5a3e;padding-bottom:6px}'+
-    '.intro{background:#f7f5f0;border:1px solid #d5cec4;border-radius:8px;padding:10px 14px;font-size:10pt;margin-bottom:14px}'+
-    '.qbox{border:1px solid #bbb;border-radius:8px;padding:10px 14px;margin-bottom:12px}'+
-    '.qt{font-weight:700;font-size:11.5pt;margin-bottom:8px;color:#2f4a31}'+
-    '.opts{display:flex;gap:22px;flex-wrap:wrap;font-size:11pt}'+
+    '@page{size:A4 portrait;margin:12mm}'+
+    'body{font-family:"Noto Sans JP","Yu Gothic",sans-serif;color:#222;font-size:10.5pt;line-height:1.8;margin:0}'+
+    'rt{font-size:6.5pt;color:#555}'+
+    'h1{font-size:15.5pt;text-align:center;margin:0 0 6px;border-bottom:2px solid #3d5a3e;padding-bottom:6px}'+
+    '.intro{background:#f7f5f0;border:1px solid #d5cec4;border-radius:8px;padding:8px 12px;font-size:9.8pt;margin-bottom:10px}'+
+    '.qbox{border:1px solid #bbb;border-radius:8px;padding:8px 12px;margin-bottom:10px}'+
+    '.qt{font-weight:700;font-size:11pt;margin-bottom:6px;color:#2f4a31}'+
+    '.opts{display:flex;gap:20px;flex-wrap:wrap;font-size:10.5pt}'+
     '.chk{display:inline-flex;align-items:center;gap:6px}'+
-    '.circle{display:inline-block;width:16px;height:16px;border:1.5px solid #333;border-radius:3px;flex-shrink:0}'+
-    '.lines{height:58px;border-bottom:1px dashed #aaa;margin-top:8px}'+
+    '.circle{display:inline-block;width:15px;height:15px;border:1.5px solid #333;border-radius:3px;flex-shrink:0}'+
+    '.lines{height:44px;border-bottom:1px dashed #aaa;margin-top:6px}'+
     '@media print{button{display:none!important}}'+
     '</style></head><body>'+
-    '<h1>令和'+(fy-2018)+'年度 利用者アンケート</h1>'+
-    '<div style="text-align:right;font-size:10pt;margin-bottom:8px">事業所名：'+esc(fn)+'　／　お名前（書かなくても大丈夫です）：<u>　　　　　　　　　　</u></div>'+
-    '<div class="intro">みなさんがより楽しく・安心して通える事業所にするためのアンケートです。あてはまる <b>□</b> の中に <b>✔</b>（または <b>○</b>）をつけてください。（率直なご意見をお聞かせください）</div>'+
-    '<div class="qbox"><div class="qt">Q1. 事業所での過ごしやすさはどうですか？</div><div class="opts">'+
-    '<span class="chk"><span class="circle"></span> とても良い</span>'+
+    '<h1><ruby>令和<rt>れいわ</rt></ruby>'+(fy-2018)+'<ruby>年度<rt>ねんど</rt></ruby> <ruby>利用者<rt>りようしゃ</rt></ruby>アンケート</h1>'+
+    '<div style="text-align:right;font-size:9.5pt;margin-bottom:8px"><ruby>事業所名<rt>じぎょうしょめい</rt></ruby>：'+esc(fn)+'　／　お<ruby>名前<rt>なまえ</rt></ruby>（<ruby>書<rt>か</rt></ruby>かなくても<ruby>大丈夫<rt>だいじょうぶ</rt></ruby>です）：<u>　　　　　　　　　　</u></div>'+
+    '<div class="intro">みなさんがより<ruby>楽<rt>たの</rt></ruby>しく・<ruby>安心<rt>あんしん</rt></ruby>して<ruby>通<rt>かよ</rt></ruby>える<ruby>事業所<rt>じぎょうしょ</rt></ruby>にするためのアンケートです。あてはまる <b>□</b> の<ruby>中<rt>なか</rt></ruby>に <b>✔</b>（または <b>○</b>）をつけてください。（<ruby>率直<rt>そっちょく</rt></ruby>なご<ruby>意見<rt>いけん</rt></ruby>をお<ruby>聞<rt>き</rt></ruby>かせください）</div>'+
+    '<div class="qbox"><div class="qt">Q1. <ruby>事業所<rt>じぎょうしょ</rt></ruby>での<ruby>過<rt>す</rt></ruby>ごしやすさはどうですか？</div><div class="opts">'+
+    '<span class="chk"><span class="circle"></span> とても<ruby>良<rt>よ</rt></ruby>い</span>'+
     '<span class="chk"><span class="circle"></span> まあまあ</span>'+
-    '<span class="chk"><span class="circle"></span> 改善してほしいところがある</span></div></div>'+
-    '<div class="qbox"><div class="qt">Q2. 今の作業内容や量はどうですか？</div><div class="opts">'+
-    '<span class="chk"><span class="circle"></span> ちょうど良い</span>'+
-    '<span class="chk"><span class="circle"></span> 新しい作業にも挑戦したい</span>'+
-    '<span class="chk"><span class="circle"></span> 少し負担が大きい</span></div></div>'+
-    '<div class="qbox"><div class="qt">Q3. スタッフへの相談のしやすさはどうですか？</div><div class="opts">'+
-    '<span class="chk"><span class="circle"></span> 話しやすい</span>'+
+    '<span class="chk"><span class="circle"></span> <ruby>改善<rt>かいぜん</rt></ruby>してほしいところがある</span></div></div>'+
+    '<div class="qbox"><div class="qt">Q2. <ruby>今<rt>いま</rt></ruby>の<ruby>作業内容<rt>さぎょうないよう</rt></ruby>や<ruby>量<rt>りょう</rt></ruby>はどうですか？</div><div class="opts">'+
+    '<span class="chk"><span class="circle"></span> ちょうど<ruby>良<rt>よ</rt></ruby>い</span>'+
+    '<span class="chk"><span class="circle"></span> <ruby>新<rt>あたら</rt></ruby>しい<ruby>作業<rt>さぎょう</rt></ruby>にも<ruby>挑戦<rt>ちょうせん</rt></ruby>したい</span>'+
+    '<span class="chk"><span class="circle"></span> <ruby>少<rt>すこ</rt></ruby>し<ruby>負担<rt>ふたん</rt></ruby>が<ruby>大<rt>おお</rt></ruby>きい</span></div></div>'+
+    '<div class="qbox"><div class="qt">Q3. スタッフへの<ruby>相談<rt>そうだん</rt></ruby>のしやすさはどうですか？</div><div class="opts">'+
+    '<span class="chk"><span class="circle"></span> <ruby>話<rt>はな</rt></ruby>しやすい</span>'+
     '<span class="chk"><span class="circle"></span> ふつう</span>'+
-    '<span class="chk"><span class="circle"></span> 話しにくいことがある</span></div></div>'+
-    '<div class="qbox"><div class="qt">Q4. 今後やってみたい作業・イベントや、「こうしてほしい」と思うことはありますか？</div><div class="lines"></div><div class="lines" style="height:36px"></div></div>'+
-    '<div class="qbox"><div class="qt">Q5. 工賃の目標について、感じていることや希望があれば教えてください。</div><div class="lines" style="height:44px"></div></div>'+
-    '<div style="text-align:center;font-size:10pt;color:#555;margin-top:10px">ご協力ありがとうございました！回収箱またはスタッフまでお渡しください。</div>'+
+    '<span class="chk"><span class="circle"></span> <ruby>話<rt>はな</rt></ruby>しにくいことがある</span></div></div>'+
+    '<div class="qbox"><div class="qt">Q4. <ruby>今後<rt>こんご</rt></ruby>やってみたい<ruby>作業<rt>さぎょう</rt></ruby>・イベントや、「こうしてほしい」と<ruby>思<rt>おも</rt></ruby>うことはありますか？</div><div class="lines"></div><div class="lines" style="height:34px"></div></div>'+
+    '<div class="qbox"><div class="qt">Q5. <ruby>工賃<rt>こうちん</rt></ruby>の<ruby>目標<rt>もくひょう</rt></ruby>について、<ruby>感<rt>かん</rt></ruby>じていることや<ruby>希望<rt>きぼう</rt></ruby>があれば<ruby>教<rt>おし</rt></ruby>えてください。</div><div class="lines" style="height:40px"></div></div>'+
+    '<div style="text-align:center;font-size:9.8pt;color:#555;margin-top:8px">ご<ruby>協力<rt>きょうりょく</rt></ruby>ありがとうございました！<ruby>回収箱<rt>かいしゅうばこ</rt></ruby>またはスタッフまでお<ruby>渡<rt>わた</rt></ruby>しください。</div>'+
     '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},300);};</scr'+'ipt></body></html>';
   w.document.open();w.document.write(h);w.document.close();
 }
