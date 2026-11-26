@@ -2848,14 +2848,19 @@
       renderStaffMinutesList();
     }
     function renderStaffMinutesList() {
+      var curYm = todayStr().slice(0, 7);
+      var visibleAll = (_committeeMinutes || []).filter(function (cm) {
+        if (!cm.date) return true;
+        return String(cm.date).slice(0, 7) <= curYm;
+      });
       var badge = el('staff-minutes-badge');
       if (badge) {
-        badge.textContent = _committeeMinutes.length;
-        badge.style.display = _committeeMinutes.length > 0 ? 'inline-block' : 'none';
+        badge.textContent = visibleAll.length;
+        badge.style.display = visibleAll.length > 0 ? 'inline-block' : 'none';
       }
       var listEl = el('staff-minutes-list');
       if (!listEl) return;
-      var items = (_committeeMinutes || []).filter(function (cm) {
+      var items = visibleAll.filter(function (cm) {
         var isCase = String(cm.category || '').indexOf('事例検討会') >= 0;
         if (_staffMinutesFilter === 'case') return isCase;
         if (_staffMinutesFilter === 'committee') return !isCase;
