@@ -6,7 +6,7 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="google" content="notranslate">
-  <title>Porte 研修アカデミー | AI自動研修・実地指導管理システム</title>
+  <title>Porte 研修アカデミー | 研修・実地指導管理システム</title>
   <link rel="icon" type="image/jpeg" href="favicon-kuma.jpg">
   <link rel="apple-touch-icon" href="favicon-kuma.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1667,7 +1667,7 @@
   <div class="modal-overlay" id="committee-modal-overlay">
     <div class="modal-box">
       <div class="modal-header" style="background:linear-gradient(135deg, var(--pri) 0%, var(--pri-dark) 100%);">
-        <div class="modal-title" id="committee-modal-title">法定委員会 議事録作成（AI自動起案）</div>
+        <div class="modal-title" id="committee-modal-title">委員会・事例検討会 議事録作成</div>
         <button type="button" class="modal-close-btn" onclick="closeCommitteeModal()">✕</button>
       </div>
       <div class="modal-body" id="committee-modal-body">
@@ -2771,7 +2771,7 @@
       var isDone = !!rec;
       var qCount = (tc.quizzes && tc.quizzes.length) || 4;
       var hasVideo = !!(tc.videoEmbedUrl && !tc.noVideo);
-      var matLabel = hasVideo ? '動画視聴' : 'AIスライド・事例読本';
+      var matLabel = hasVideo ? '動画視聴' : 'スライド・事例読本';
       var btnHtml = '';
 
       if (isDone) {
@@ -2804,7 +2804,7 @@
         '<h3 class="training-title" style="width:100%;margin-bottom:6px;">' + esc(tc.title) + '</h3>' +
         '<div class="training-meta" style="margin-bottom:10px;">' +
         '<span>⏳ 受講期限: <b>' + esc(tc.dueText || '月末まで') + '</b></span>' +
-        '<span>' + (hasVideo ? '🎬 教材: <b>動画＋レジュメ</b>' : '📖 教材: <b>AIスライド・事例読本</b>') + '</span>' +
+        '<span>' + (hasVideo ? '🎬 教材: <b>動画＋レジュメ</b>' : '📖 教材: <b>スライド・事例読本</b>') + '</span>' +
         '<span>📝 理解度テスト: <b>全' + qCount + '問</b></span>' +
         '</div>' +
         '<div class="training-desc">' + esc(tc.desc) + '</div>' +
@@ -3092,7 +3092,7 @@
       var savedReflection = el('f-training-reflection') ? el('f-training-reflection').value : '';
       var h = '';
 
-      // 1. 動画プレイヤー（動画ありの場合）または AIスライド・事例読本（動画なし／併用の場合）
+      // 1. 動画プレイヤー（動画ありの場合）または スライド・事例読本（動画なし／併用の場合）
       var embedUrl = (!_curTraining.noVideo && _curTraining.videoEmbedUrl) ? _curTraining.videoEmbedUrl : '';
       if (embedUrl.indexOf('watch?v=') >= 0) {
         embedUrl = embedUrl.replace('watch?v=', 'embed/');
@@ -3195,7 +3195,7 @@
       var btn = el('btn-ai-reflection');
       var tf = el('f-training-reflection');
       if (!tf) return;
-      if (btn) { btn.disabled = true; btn.textContent = '🤖 作成中...'; }
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ 作成中...'; }
 
       var kpText = (_curTraining.keypoints || []).map(function (k) { return k.replace(/<[^>]+>/g, ''); }).join(' / ');
       var prompt = 'あなたは' + getFacilityFullName() + 'のスタッフ（' + (_curStaff ? _curStaff.role : '支援員') + '）です。\n' +
@@ -3209,7 +3209,7 @@
       } else {
         tf.value = '「' + _curTraining.category + '」の重要ポイントを再確認しました。日々の作業支援において利用者様の立場に立った丁寧な声かけと環境調整を心がけ、チーム全体で情報共有を徹底してまいります。';
       }
-      if (btn) { btn.disabled = false; btn.textContent = '🤖 AIで所感文を自動作成'; }
+      if (btn) { btn.disabled = false; btn.textContent = '✨ 所感文を自動作成'; }
     }
 
     function answerQuiz(qIdx, choiceIdx) {
@@ -3782,7 +3782,7 @@
       h += '  </div>';
       h += '  <div style="display:flex;gap:20px;margin-top:12px;font-size:12px;color:#555;justify-content:center;font-weight:700;flex-wrap:wrap;">';
       h += '    <span><span style="display:inline-block;width:13px;height:13px;background:#e3f2fd;border:1px solid #90caf9;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>研修（青・右の数字は受講完了人数）</span>';
-      h += '    <span><span style="display:inline-block;width:13px;height:13px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>委員会（緑・AI議事録対応）</span>';
+      h += '    <span><span style="display:inline-block;width:13px;height:13px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>委員会（緑・議事録対応）</span>';
       h += '    <span><span style="display:inline-block;width:13px;height:13px;background:#fff3e0;border:1px solid #ffcc80;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>事例検討会（オレンジ・報告書対応）</span>';
       h += '  </div>';
       h += '</div>';
@@ -4063,7 +4063,7 @@
           h += '    <div style="background:#fff;border:1px solid #cfe2f3;border-radius:10px;padding:10px 12px;">';
           h += '      <div style="font-size:12px;font-weight:700;color:#0d47a1;margin-bottom:6px;">🔍 教材タイプの選択</div>';
           if (isSlideMode) {
-            h += '      <div style="font-size:12.5px;font-weight:600;color:#4527a0;">📄 動画なしで作る（AIスライド・現場事例読本のみ）</div>';
+            h += '      <div style="font-size:12.5px;font-weight:600;color:#4527a0;">📄 動画なしで作る（スライド・現場事例読本のみ）</div>';
           } else {
             h += '      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
             if (vidIdRo) {
@@ -4187,7 +4187,7 @@
           h += '<div style="background:var(--pri-light);border:1.5px solid var(--bdr);border-radius:16px;padding:16px;margin-bottom:16px;">';
           h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
           h += '    <div style="font-size:14.5px;font-weight:700;color:var(--pri-dark);">【STEP 1】💡 研修区分を選んで、下の「切り口別テーマ候補」から選択してください</div>';
-          h += '    <button type="button" id="btn-ai-suggest-themes" onclick="suggestThemesWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12px;">🤖 AIに「' + esc(_wizFilterCat) + '」のさらに違う切り口を5つ提案させる</button>';
+          h += '    <button type="button" id="btn-ai-suggest-themes" onclick="suggestThemesWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12px;">✨ 「' + esc(_wizFilterCat) + '」のさらに違う切り口を5つ提案</button>';
           h += '  </div>';
 
           // ① 法定必須研修・訓練（5項目）ボタン群
@@ -4220,7 +4220,7 @@
           sortedEntries.forEach(function (entry, idx) {
             var t = entry.item;
             var st = entry.status;
-            var angleLabel = t.angle || (t.isAi ? '【🤖 AI新規切り口】' : '【実践テーマ】');
+            var angleLabel = t.angle || (t.isAi ? '【新規切り口】' : '【実践テーマ】');
             var cardBg = st.currentMonth ? '#fafafa' : '#fff';
             var cardOpacity = st.currentMonth ? 'opacity:0.72;' : '';
             h += '    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:' + cardBg + ';border:1.5px solid ' + (t.isAi ? '#b39ddb' : 'var(--bdr)') + ';border-radius:10px;padding:9px 12px;flex-wrap:wrap;' + cardOpacity + '">';
@@ -4273,7 +4273,7 @@
 
           if (_wizMaterialMode === 'slide_only') {
             h += '  <input type="hidden" id="cr-video" value="">';
-            h += '  <input type="hidden" id="cr-video-title" value="AIスライド・現場事例読本">';
+            h += '  <input type="hidden" id="cr-video-title" value="スライド・現場事例読本">';
           } else {
             h += '  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
             h += '    <input type="text" id="yt-search-query" value="' + esc(initYtQuery) + '" placeholder="検索キーワード（YouTube・厚労省定番動画を一括検索）" style="flex:1;min-width:220px;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 12px;font-size:13.5px;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();searchYouTubeVideosLive();}">';
@@ -4307,16 +4307,16 @@
           h += '<div style="background:#fbf9ff;border:1.5px solid #b39ddb;border-radius:16px;padding:16px;" id="wiz-step3-box">';
           h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">';
           h += '    <div>';
-          h += '      <div style="font-size:14.5px;font-weight:700;color:#4527a0;">【STEP 3】🤖 スライド事例読本・要点レジュメ・4択クイズ（全4問）をAI生成 ➔ 登録</div>';
-          h += '      <div style="font-size:12px;color:var(--sub);" id="ai-engine-status-text">選択した切り口テーマに合わせて、現場ケーススタディ読本（3枚）＋要点まとめ＋4択テストをAIが自動作成します</div>';
+          h += '      <div style="font-size:14.5px;font-weight:700;color:#4527a0;">【STEP 3】✨ スライド事例読本・要点レジュメ・4択クイズ（全4問）を作成 ➔ 登録</div>';
+          h += '      <div style="font-size:12px;color:var(--sub);" id="ai-engine-status-text">選択した切り口テーマに合わせて、現場ケーススタディ読本（3枚）＋要点まとめ＋4択テストを自動作成します</div>';
           h += '    </div>';
           h += '    <button type="button" class="ai-gen-btn" id="btn-run-ai-course" onclick="generateCourseWithAI()">';
-          h += '      <span>🤖 スライド読本＆要点＆4択クイズをAI生成</span>';
+          h += '      <span>✨ スライド読本＆要点＆4択クイズを作成</span>';
           h += '    </button>';
           h += '  </div>';
 
           h += '  <div class="form-field" style="margin-bottom:12px;">';
-          h += '    <label style="color:var(--ai-purple);font-size:12px;">💡 AIへの追加リクエスト・現場の課題（任意：入力するとスライド読本やクイズに反映されます）</label>';
+          h += '    <label style="color:var(--ai-purple);font-size:12px;">💡 追加リクエスト・現場の課題（任意：入力するとスライド読本やクイズに反映されます）</label>';
           h += '    <input type="text" id="cr-ai-prompt-notes" value="' + esc(curNotesVal) + '" placeholder="例：珈琲焙煎室での火傷防止、送迎時の声かけ、ノロウイルス嘔吐物処理手順など" style="border-color:#b39ddb;background:#fff;">';
           h += '  </div>';
 
@@ -4324,7 +4324,7 @@
           if (_aiGeneratedDraft) {
             h += '<!-- renderAiPreviewで描画 -->';
           } else {
-            h += '    <div style="font-size:12.5px;color:var(--sub);text-align:center;padding:14px 0;">上の「🤖 スライド読本＆要点＆4択クイズをAI生成」を押すと、ここに教材スライド・要点・4択クイズ（全4問）のエディタが展開されます</div>';
+            h += '    <div style="font-size:12.5px;color:var(--sub);text-align:center;padding:14px 0;">上の「✨ スライド読本＆要点＆4択クイズを作成」を押すと、ここに教材スライド・要点・4択クイズ（全4問）のエディタが展開されます</div>';
           }
           h += '  </div>';
 
@@ -4346,7 +4346,7 @@
 
         } else {
           // ─────────────────────────────────────────────────
-          // 🏛️ 委員会・議事録作成（AI自動起案）
+          // 🏛️ 委員会・議事録作成
           // ─────────────────────────────────────────────────
           var mNum = parseInt(String(mLabel).replace('月', ''), 10) || 11;
           var yr = (mNum >= 4) ? _calFY : (_calFY + 1);
@@ -4355,8 +4355,8 @@
 
           h += '<div style="background:#f1f8e9;border:1.5px solid #a5d6a7;border-radius:16px;padding:16px;">';
           h += '  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
-          h += '    <div style="font-size:14.5px;font-weight:700;color:#1b5e20;">🏛️ 「' + mLabel + '」の法定委員会・議事録を作成（AI自動起案）</div>';
-          h += '    <button type="button" id="btn-ai-committee" onclick="generateCommitteeWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12px;">🤖 AIで議題と決定事項を自動起案</button>';
+          h += '    <div style="font-size:14.5px;font-weight:700;color:#1b5e20;">🏛️ 「' + mLabel + '」の法定委員会・議事録を作成</div>';
+          h += '    <button type="button" id="btn-ai-committee" onclick="generateCommitteeWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12px;">✨ 議題と決定事項を自動作成</button>';
           h += '  </div>';
 
           // 1クリック即時追加バー
@@ -4432,7 +4432,7 @@
       if (el('yt-search-query')) el('yt-search-query').value = chosen.ytQuery || ('障害福祉 ' + chosen.category + ' 研修');
 
       if (_wizMaterialMode === 'slide_only') {
-        // 動画なし（AI読本モード）なら、そのままSTEP 3へスクロールしてAI生成を実行！
+        // 動画なし（AI読本モード）なら、そのままSTEP 3へスクロールして作成を実行！
         var step3 = el('wiz-step3-box');
         if (step3) step3.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         await generateCourseWithAI();
@@ -4458,7 +4458,7 @@
       var mLabel = _activeAssignMonth;
       var cat = _wizFilterCat || (el('cr-category') ? el('cr-category').value : '身体拘束適正化');
       var btn = el('btn-ai-suggest-themes');
-      if (btn) { btn.disabled = true; btn.textContent = '⏳ AIが別切り口のテーマを考案中...'; }
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ 別切り口のテーマを考案中...'; }
 
       var existingTitles = THEME_SUGGESTIONS_MASTER.filter(function (t) { return t.category === cat; }).map(function (t) { return t.title; }).join(' / ');
 
@@ -4467,7 +4467,7 @@
         '{\n' +
         '  "themes": [\n' +
         '    {\n' +
-        '      "angle": "【🤖 新切り口：○○編】",\n' +
+        '      "angle": "【新切り口：○○編】",\n' +
         '      "category": "' + cat + '",\n' +
         '      "title": "' + cat + '研修「...」",\n' +
         '      "desc": "研修のねらいと具体的内容（60〜90文字）",\n' +
@@ -4482,7 +4482,7 @@
         var newAiList = parsed.themes.map(function (t) {
           return {
             isAi: true,
-            angle: t.angle || '【🤖 AI新規切り口】',
+            angle: t.angle || '【新規切り口】',
             month: mLabel,
             category: cat,
             title: t.title || (cat + '研修'),
@@ -4494,7 +4494,7 @@
       } else {
         _wizAiThemes.unshift({
           isAi: true,
-          angle: '【🤖 現場ケース深掘り編】',
+          angle: '【現場ケース深掘り編】',
           month: mLabel,
           category: cat,
           title: cat + '研修「珈琲作業・日常支援におけるケーススタディと声かけの改善ワーク」',
@@ -4503,7 +4503,7 @@
         });
       }
 
-      if (btn) { btn.disabled = false; btn.textContent = '🤖 AIに「' + cat + '」のさらに違う切り口を5つ提案させる'; }
+      if (btn) { btn.disabled = false; btn.textContent = '✨ 「' + cat + '」のさらに違う切り口を5つ提案させる'; }
       renderMonthAssignModalBody();
     }
 
@@ -5644,7 +5644,7 @@
       resetCreatorForm();
       if (el('cr-month')) el('cr-month').value = monthLabel;
       if (el('cr-due')) el('cr-due').value = getDueTextForMonth(monthLabel, _calFY);
-      el('creator-form-title').textContent = '✨ ' + monthLabel + '度の新規研修を作成・AI自動生成';
+      el('creator-form-title').textContent = '✨ ' + monthLabel + '度の新規研修を作成';
       window.scrollTo({ top: el('subtab-content-creator').offsetTop - 20, behavior: 'smooth' });
     }
 
@@ -5871,7 +5871,7 @@
       };
 
       var st = el('ai-engine-status-text');
-      if (st) st.innerHTML = '⚡ <b>テンプレート読込完了</b>：このまま配信するか、下の「🤖 AIで要点とテストを自動生成」でさらにカスタマイズできます。';
+      if (st) st.innerHTML = '⚡ <b>テンプレート読込完了</b>：このまま配信するか、下の「✨ 要点とテストを自動作成」でさらにカスタマイズできます。';
 
       renderAiPreview();
     }
@@ -5895,11 +5895,11 @@
 
       var btn = el('btn-run-ai-course');
       var st = el('ai-engine-status-text');
-      if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳ AIがスライド読本・要点・4択クイズを生成中...</span>'; }
+      if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳ スライド読本・要点・4択クイズを作成中...</span>'; }
       if (st) {
         st.innerHTML = isSlideOnly
-          ? '🤖 AIエンジンが<b>動画なし向け・詳細解説版</b>（スライド読本5枚＋要点＋4択クイズ4問）を生成しています...'
-          : '🤖 AIエンジン（ai-config.js連携）が「現場ケーススタディ読本（3枚）＋要点＋4択クイズ4問」を生成しています...';
+          ? '✨ <b>動画なし向け・詳細解説版</b>（スライド読本5枚＋要点＋4択クイズ4問）を生成しています...'
+          : '✨ 「現場ケーススタディ読本（3枚）＋要点＋4択クイズ4問」を生成しています...';
       }
 
       var slideSpecPrompt = isSlideOnly
@@ -5997,7 +5997,7 @@
             };
           })
         };
-        if (st) st.innerHTML = '✨ <b>AI自動生成完了（' + esc(aiResult.provider) + '）</b>：スライド読本・要点・4択クイズを下のエディタで自由に微調整できます。';
+        if (st) st.innerHTML = '✨ <b>作成完了</b>：スライド読本・要点・4択クイズを下のエディタで自由に微調整できます。';
       } else {
         // オフライン・フォールバック（テーマに合わせたスライド読本3枚＋要点＋4択クイズを生成）
         var finalTitle = title || (cat + '研修「現場における基本指針の理解と実践ケーススタディ」');
@@ -6110,11 +6110,11 @@
         if (st) st.innerHTML = '✨ <b>スライド読本＆テスト生成完了</b>：下のエディタで自由に編集・微調整できます。';
       }
 
-      if (btn) { btn.disabled = false; btn.innerHTML = '<span>🤖 スライド読本＆要点＆4択クイズをAI生成</span>'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<span>✨ スライド読本＆要点＆4択クイズを作成</span>'; }
       renderAiPreview();
     }
 
-    // ─── AI生成結果の手動編集エディタ描画（スライド読本＋要点＋クイズ） ───
+    // ─── 作成結果の手動編集エディタ描画（スライド読本＋要点＋クイズ） ───
     function renderAiPreview() {
       var c = el('cr-ai-preview');
       if (!c || !_aiGeneratedDraft) return;
@@ -6128,7 +6128,7 @@
       h += '    <button type="button" onclick="addDraftSlide()" style="background:#fff;border:1.5px solid #5e35b1;color:#5e35b1;border-radius:10px;padding:3px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">＋ スライドを追加</button>';
       h += '  </div>';
       if (_aiGeneratedDraft.caseSlides.length === 0) {
-        h += '  <div style="font-size:12px;color:var(--sub);padding:6px 0;">※「＋ スライドを追加」または上の「🤖 AI生成」で、現場ケーススタディ読本（❌NG例 ⇔ ⭕OK例など）を追加できます。</div>';
+        h += '  <div style="font-size:12px;color:var(--sub);padding:6px 0;">※「＋ スライドを追加」または上の「✨ 作成」で、現場ケーススタディ読本（❌NG例 ⇔ ⭕OK例など）を追加できます。</div>';
       } else {
         _aiGeneratedDraft.caseSlides.forEach(function (sl, sIdx) {
           h += '  <div style="background:#fbf9ff;border:1.5px solid #d1c4e9;border-radius:10px;padding:10px;margin-bottom:8px;">';
@@ -6684,7 +6684,7 @@
       if (!c) return;
 
       if (_committeeMinutes.length === 0) {
-        c.innerHTML = '<div style="text-align:center;padding:24px;color:var(--sub);font-size:13px;">まだ登録された委員会議事録はありません。上の「🏛️ 新規 委員会議事録を作成」からAIで自動起案できます。</div>';
+        c.innerHTML = '<div style="text-align:center;padding:24px;color:var(--sub);font-size:13px;">まだ登録された委員会議事録はありません。上の「🏛️ 新規 委員会議事録を作成」から自動作成できます。</div>';
         return;
       }
 
@@ -6899,7 +6899,7 @@
       h += '    <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">開催日</label><input type="date" id="cm-date" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + todayStr() + '"></div>';
       h += '  </div>';
       h += '  <div id="cm-case-panel" style="display:' + (isCase ? 'block' : 'none') + ';background:#fff8f0;border:1.5px solid #ffcc80;border-radius:10px;padding:10px 12px;">';
-      h += '    <div style="font-size:12px;font-weight:bold;color:#e65100;margin-bottom:8px;">👤 事例の入力（入力内容からAIが「問題定義・検討・対策・報告書」を自動作成します）</div>';
+      h += '    <div style="font-size:12px;font-weight:bold;color:#e65100;margin-bottom:8px;">👤 事例の入力（入力内容から「問題定義・検討・対策・報告書」を自動作成します）</div>';
       h += '    <div style="display:flex;flex-direction:column;gap:8px;">';
       h += '      <div><label style="font-size:11.5px;font-weight:bold;color:#555;">対象利用者（任意）</label><select id="cm-case-user" style="width:100%;padding:6px 8px;border:1px solid #e0c8a8;border-radius:6px;background:#fff;font-size:12.5px;">' + userOpts + '</select></div>';
       h += '      <div><label style="font-size:11.5px;font-weight:bold;color:#555;">事例・起きた出来事・気になる状況 *</label><textarea id="cm-case-topic" rows="3" placeholder="例：最近、午後になると集中が切れて席を離れることが増えている。本人も周囲の音が気になりイライラしている様子がある。" style="width:100%;padding:7px 8px;border:1px solid #e0c8a8;border-radius:6px;font-size:12.5px;"></textarea></div>';
@@ -6909,8 +6909,8 @@
       h += '  <div><label style="font-size:13px;font-weight:bold;color:var(--pri-dark);">出席者</label><input type="text" id="cm-attendees" style="width:100%;padding:8px;border:1.5px solid var(--bdr);border-radius:8px;" value="' + esc(staffNames) + '"></div>';
 
       h += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;gap:8px;flex-wrap:wrap;">';
-      h += '    <span style="font-size:12px;color:var(--sub);">事例を入力してボタンを押すと、下の各項目をAIが自動作成します</span>';
-      h += '    <button type="button" id="btn-ai-committee" onclick="generateCommitteeWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12.5px;">🤖 AIで自動作成する</button>';
+      h += '    <span style="font-size:12px;color:var(--sub);">事例を入力してボタンを押すと、下の各項目を自動作成します</span>';
+      h += '    <button type="button" id="btn-ai-committee" onclick="generateCommitteeWithAI()" class="ai-gen-btn" style="padding:7px 14px;font-size:12.5px;">✨ 自動作成する</button>';
       h += '  </div>';
 
       h += '  <div id="cm-case-fields" style="display:' + (isCase ? 'flex' : 'none') + ';flex-direction:column;gap:10px;">';
@@ -6953,7 +6953,7 @@
     async function generateCommitteeWithAI() {
       var cat = el('cm-category') ? el('cm-category').value : '身体拘束適正化委員会';
       var btn = el('btn-ai-committee');
-      if (btn) { btn.disabled = true; btn.textContent = '⏳ AI起案中...'; }
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ 作成中...'; }
 
       var isCaseAi = (cat.indexOf('事例検討会') >= 0);
       var caseContext = '';
@@ -7066,7 +7066,7 @@
         if (el('cm-decisions')) el('cm-decisions').value = p.decisions;
       }
 
-      if (btn) { btn.disabled = false; btn.textContent = '🤖 AIで議題と決定事項を自動生成'; }
+      if (btn) { btn.disabled = false; btn.textContent = '✨ 議題と決定事項を自動作成'; }
     }
 
     function closeCommitteeModal() {
