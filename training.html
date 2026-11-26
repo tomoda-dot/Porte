@@ -6840,12 +6840,13 @@
         ? ('あなたは就労継続支援B型事業所「' + getFacilityFullName() + '」のサービス管理責任者です。\n' +
           '月1回の「事例検討会（ケース会議）」として、以下の事例・状況を踏まえ、「1. 問題定義」「2. 検討内容」「3. 対策」「4. 事例検討 報告書まとめ」をそれぞれ簡潔かつ実践的に作成し、JSON形式のみで出力してください。\n' +
           '※個人情報保護のため、出力文面では実名を出さずイニシャルまたは「Aさん」等の仮名にしてください。\n' +
+          '※各フィールドの値（title, problem, analysis, measures, report）は必ず1つの文字列（String）とし、ネストしたオブジェクトや配列にはしないでください。\n' +
           (caseContext ? '\n' + caseContext + '\n' : '') +
           '{\n' +
           '  "title": "令和8年度 事例検討会（ケース会議）",\n' +
-          '  "problem": "【課題】...\n【背景要因】...",\n' +
-          '  "analysis": "・強み・特性：...\n・支援視点：...",\n' +
-          '  "measures": "1. 環境調整：...\n2. 声かけ・支援：...\n3. 作業工程の工夫：...",\n' +
+          '  "problem": "【課題】...\\n【背景要因】...",\n' +
+          '  "analysis": "・強み・特性：...\\n・支援視点：...",\n' +
+          '  "measures": "1. 環境調整：...\\n2. 声かけ・支援：...\\n3. 作業工程の工夫：...",\n' +
           '  "report": "検討の結果、...を今後1ヶ月実践し、次回ケース会議で経過と本人の意向をモニタリングする。"\n' +
           '}')
         : ('あなたは' + getFacilityFullName() + 'の管理者です。\n' +
@@ -6858,16 +6859,28 @@
 
       var res = await callPorteAI(prompt);
       var parsed = res ? extractJsonFromText(res.text) : null;
+      function _cmFmtVal(v) {
+        if (v === null || v === undefined) return '';
+        if (typeof v === 'string') return v;
+        if (Array.isArray(v)) return v.map(_cmFmtVal).filter(Boolean).join('\n');
+        if (typeof v === 'object') {
+          return Object.keys(v).map(function(k) {
+            var val = _cmFmtVal(v[k]);
+            return val ? ('【' + k + '】\n' + val) : '';
+          }).filter(Boolean).join('\n');
+        }
+        return String(v);
+      }
       if (isCaseAi && parsed && (parsed.problem || parsed.measures || parsed.report)) {
-        if (parsed.title && el('cm-title')) el('cm-title').value = parsed.title;
-        if (el('cm-case-problem')) el('cm-case-problem').value = parsed.problem || '';
-        if (el('cm-case-analysis')) el('cm-case-analysis').value = parsed.analysis || '';
-        if (el('cm-case-measures')) el('cm-case-measures').value = parsed.measures || '';
-        if (el('cm-case-report')) el('cm-case-report').value = parsed.report || '';
+        if (parsed.title && el('cm-title')) el('cm-title').value = _cmFmtVal(parsed.title);
+        if (el('cm-case-problem')) el('cm-case-problem').value = _cmFmtVal(parsed.problem);
+        if (el('cm-case-analysis')) el('cm-case-analysis').value = _cmFmtVal(parsed.analysis);
+        if (el('cm-case-measures')) el('cm-case-measures').value = _cmFmtVal(parsed.measures);
+        if (el('cm-case-report')) el('cm-case-report').value = _cmFmtVal(parsed.report);
       } else if (!isCaseAi && parsed && parsed.agenda && parsed.decisions) {
-        if (parsed.title && el('cm-title')) el('cm-title').value = parsed.title;
-        if (el('cm-agenda')) el('cm-agenda').value = parsed.agenda;
-        if (el('cm-decisions')) el('cm-decisions').value = parsed.decisions;
+        if (parsed.title && el('cm-title')) el('cm-title').value = _cmFmtVal(parsed.title);
+        if (el('cm-agenda')) el('cm-agenda').value = _cmFmtVal(parsed.agenda);
+        if (el('cm-decisions')) el('cm-decisions').value = _cmFmtVal(parsed.decisions);
       } else if (isCaseAi) {
         var rawTopic = (el('cm-case-topic') && el('cm-case-topic').value.trim()) || '作業集中・体調ペースの維持と本人に合った役割づくり';
         if (el('cm-case-problem')) el('cm-case-problem').value = '【課題】' + rawTopic + 'に関する負担や不安が見られる。\n【背景要因】作業環境や見通しの提示方法、休息リズムとのズレが影響している可能性がある。';
